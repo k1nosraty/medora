@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.dp
 import android.app.Application
+import androidx.compose.ui.graphics.asAndroidBitmap
 import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
@@ -48,6 +49,10 @@ class WellnessUiTest {
     }
 
     private fun launch(dark: Boolean = false, language: String = "fa", compact: Boolean = false) {
+        compose.waitUntil(15000) { model.data != null && !model.busy }
+        instrumentation.runOnMainSync {
+            model.data?.let { it.settings = it.settings.copy(language = language) }
+        }
         compose.setContent {
             CompositionLocalProvider(LocalLanguage provides language, LocalCalendar provides "jalali",
                 LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr) {
@@ -62,10 +67,13 @@ class WellnessUiTest {
         compose.waitForIdle()
     }
 
+    @OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
     private fun capture(name: String) {
         compose.waitForIdle()
         val directory = File(application.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
-        val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
+        val bitmap = compose.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap()
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
