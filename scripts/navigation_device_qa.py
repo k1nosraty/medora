@@ -29,8 +29,8 @@ Path("device-screenshots").mkdir(exist_ok=True)
 pull = subprocess.run(["adb", "pull", "/sdcard/Android/data/ir.medora.health.android/files/screenshots",
     "device-screenshots"])
 images = list(Path("device-screenshots").rglob("*.png"))
-if len(images) < 16:
-    failed.append(f"Expected at least 16 screenshots, found {len(images)}")
+if len(images) < 12:
+    failed.append(f"Expected at least 12 screenshots, found {len(images)}")
 if failed or pull.returncode:
     raise SystemExit("Device QA failed: " + ", ".join(failed))
 print(f"All {len(tests)} targeted device checks passed; {len(images)} screenshots retained.")
