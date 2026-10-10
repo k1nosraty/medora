@@ -73,7 +73,7 @@ class WellnessUiTest {
         val directory = File(application.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
         compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
-        val bitmap = compose.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap()
+        val bitmap = (if (name.contains("settings")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
@@ -150,6 +150,7 @@ class WellnessUiTest {
         compose.onNodeWithTag("nav-3").performClick()
         compose.onNodeWithText("ویزیت متخصص قلب").assertExists()
         compose.onNodeWithTag("settings").performClick()
+        compose.onNodeWithText(localizedText("settings.title", language)).assertExists()
         capture("compact-$language-$dark-settings")
     }
 

@@ -12,6 +12,9 @@ val LocalLanguage = staticCompositionLocalOf { "fa" }
 val LocalCalendar = staticCompositionLocalOf { "jalali" }
 
 private val copy = mapOf(
+    "nav.settings.short" to ("تنظیمات" to "Settings"),
+    "nav.medications.short" to ("داروها" to "Meds"),
+    "nav.appointments.short" to ("قرارها" to "Visits"),
     "nav.insights" to ("گزارش و تقویم" to "Insights"),
     "water.history" to ("مشاهدهٔ سابقهٔ آب" to "View water history"),
     "welcome.tagline" to ("همراه سلامتی، هر روز" to "Your daily care companion"),

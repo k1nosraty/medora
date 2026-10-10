@@ -42,7 +42,13 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically) {
                     destinations.forEach { destination ->
                         val active = selected == destination.id
-                        val label = tr(destination.label)
+                        val label = tr(when (destination.id) {
+                            "settings" -> "nav.settings.short"
+                            "medications" -> "nav.medications.short"
+                            "appointments" -> "nav.appointments.short"
+                            else -> destination.label
+                        })
+                        val description = tr(destination.label)
                         Column(Modifier.weight(1f).heightIn(min = 78.dp)
                             .selectable(selected = active, role = Role.Tab, onClick = { onSelect(destination.id) })
                             .testTag(destination.tag).padding(horizontal = 2.dp, vertical = 2.dp),
@@ -52,7 +58,7 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                                 Surface(shape = CircleShape, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
                                     contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
                                     shadowElevation = if (active) 3.dp else 0.dp, modifier = Modifier.size(50.dp)) {
-                                    Box(contentAlignment = Alignment.Center) { Icon(destination.icon, label, Modifier.size(26.dp)) }
+                                    Box(contentAlignment = Alignment.Center) { Icon(destination.icon, description, Modifier.size(26.dp)) }
                                 }
                             } else {
                                 Box(Modifier.height(50.dp), contentAlignment = Alignment.Center) {
