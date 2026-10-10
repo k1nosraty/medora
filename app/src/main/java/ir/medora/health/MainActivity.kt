@@ -1,258 +1,776 @@
 package ir.medora.health
 
 import android.Manifest
-import android.app.*
-import android.content.Intent
+import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.res.Configuration
-import java.util.Locale
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings as AndroidSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.ViewModelProvider
-import androidx.compose.foundation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.*
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.*
-import androidx.compose.ui.unit.*
-import androidx.compose.ui.window.*
-import java.time.*
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
-val Green=Color(0xFF176B58)
-val Blue=Color(0xFF2775A4)
-val Ink=Color(0xFF183A34)
-val PersianFont=FontFamily(Font(R.font.vazirmatn))
-fun fa(value:Any)=value.toString().map { if(it in '0'..'9') "۰۱۲۳۴۵۶۷۸۹"[it-'0'] else it }.joinToString("")
-fun labelDate(day:LocalDate)=fa(day.toString().replace('-','/'))
-fun statusLabel(s:DoseStatus)=when(s) { DoseStatus.PENDING->"در انتظار";DoseStatus.TAKEN->"مصرف شد";DoseStatus.SNOOZED->"به تعویق افتاده";DoseStatus.SKIPPED->"مصرف نشد" }
-val weekDays=linkedMapOf(6 to "شنبه",7 to "یکشنبه",1 to "دوشنبه",2 to "سه‌شنبه",3 to "چهارشنبه",4 to "پنجشنبه",5 to "جمعه")
+class MainActivity : ComponentActivity() {
+    private lateinit var model: HealthViewModel
+    private var clockReceiverRegistered = false
+    private val rolloverHandler = Handler(Looper.getMainLooper())
+    private val rolloverTask = object : Runnable {
+        override fun run() {
+            if (::model.isInitialized) model.refresh()
+            scheduleRolloverRefresh()
+        }
+    }
+    private val clockReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (::model.isInitialized) model.refresh()
+            scheduleRolloverRefresh()
+        }
+    }
+    private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        model.change({ it.settings = it.settings.copy(consent = granted) })
+    }
 
-class MainActivity:ComponentActivity() {
-    private lateinit var model:HealthViewModel
-    private val permission=registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        model.change({ it.settings=it.settings.copy(consent=granted) })
-    }
-    override fun attachBaseContext(base:Context) {
-        val config=Configuration(base.resources.configuration).apply { setLocale(Locale("fa"));setLayoutDirection(Locale("fa")) }
-        super.attachBaseContext(base.createConfigurationContext(config))
-    }
-    override fun onCreate(state:Bundle?) {
+    override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        model=ViewModelProvider(this)[HealthViewModel::class.java]
+        model = ViewModelProvider(this)[HealthViewModel::class.java]
         setContent {
-            val base=Typography()
-            val typography=Typography(
-                displayLarge=base.displayLarge.copy(fontFamily=PersianFont),
-                headlineLarge=base.headlineLarge.copy(fontFamily=PersianFont),headlineMedium=base.headlineMedium.copy(fontFamily=PersianFont),
-                titleLarge=base.titleLarge.copy(fontFamily=PersianFont),titleMedium=base.titleMedium.copy(fontFamily=PersianFont),
-                titleSmall=base.titleSmall.copy(fontFamily=PersianFont),bodyLarge=base.bodyLarge.copy(fontFamily=PersianFont),
-                bodyMedium=base.bodyMedium.copy(fontFamily=PersianFont),bodySmall=base.bodySmall.copy(fontFamily=PersianFont),
-                labelLarge=base.labelLarge.copy(fontFamily=PersianFont),labelMedium=base.labelMedium.copy(fontFamily=PersianFont),labelSmall=base.labelSmall.copy(fontFamily=PersianFont)
-            )
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                MaterialTheme(colorScheme=lightColorScheme(primary=Green,secondary=Blue,background=Color(0xFFF5F8F5),onBackground=Ink),typography=typography) {
-                    HealthScreen(model,::requestNotifications,::openNotificationSettings,::openExactSettings)
+            val language = model.data?.settings?.language ?: "fa"
+            val calendar = model.data?.settings?.calendar ?: "jalali"
+            CompositionLocalProvider(
+                LocalLanguage provides language,
+                LocalCalendar provides calendar,
+                androidx.compose.ui.platform.LocalLayoutDirection provides
+                    if (language == "fa") androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr
+            ) {
+                MaterialTheme(colorScheme = medoraColorScheme(), typography = medoraTypography(language)) {
+                    HealthScreen(model, ::requestNotifications, ::openNotificationSettings, ::openExactSettings)
                 }
             }
         }
     }
-    override fun onResume() { super.onResume();if(::model.isInitialized && !model.busy)model.refresh() }
+
+    override fun onStart() {
+        super.onStart()
+        if (!clockReceiverRegistered) {
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_DATE_CHANGED)
+                addAction(Intent.ACTION_TIME_CHANGED)
+                addAction(Intent.ACTION_TIMEZONE_CHANGED)
+            }
+            if (Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(clockReceiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("DEPRECATION")
+                registerReceiver(clockReceiver, filter)
+            }
+            clockReceiverRegistered = true
+        }
+        scheduleRolloverRefresh()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::model.isInitialized && !model.busy) model.refresh()
+        scheduleRolloverRefresh()
+    }
+
+    override fun onStop() {
+        rolloverHandler.removeCallbacks(rolloverTask)
+        if (clockReceiverRegistered) {
+            unregisterReceiver(clockReceiver)
+            clockReceiverRegistered = false
+        }
+        super.onStop()
+    }
+
+    private fun scheduleRolloverRefresh() {
+        rolloverHandler.removeCallbacks(rolloverTask)
+        if (!::model.isInitialized) return
+        val now = ZonedDateTime.now()
+        val nextDay = now.toLocalDate().plusDays(1).atStartOfDay(now.zone).plusSeconds(1)
+        val delay = (nextDay.toInstant().toEpochMilli() - Instant.now().toEpochMilli()).coerceAtLeast(1)
+        rolloverHandler.postDelayed(rolloverTask, delay)
+    }
+
     private fun requestNotifications() {
-        if(Build.VERSION.SDK_INT>=33)permission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        else model.change({ it.settings=it.settings.copy(consent=true) })
+        if (Build.VERSION.SDK_INT >= 33) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        else model.change({ it.settings = it.settings.copy(consent = true) })
     }
-    private fun openNotificationSettings()=startActivity(Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(AndroidSettings.EXTRA_APP_PACKAGE,packageName))
+
+    private fun openNotificationSettings() = startActivity(
+        Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(AndroidSettings.EXTRA_APP_PACKAGE, packageName)
+    )
+
     private fun openExactSettings() {
-        if(Build.VERSION.SDK_INT>=31)startActivity(Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:$packageName")))
+        if (Build.VERSION.SDK_INT >= 31) startActivity(
+            Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName"))
+        )
     }
 }
-data class Editor(val kind:String,val water:Water?=null,val medication:Medication?=null,val appointment:Appointment?=null)
 
-@Composable fun Panel(color:Color=Color.White,content:@Composable ColumnScope.()->Unit) {
-    Surface(shape=RoundedCornerShape(24.dp),color=color,border=BorderStroke(1.dp,Color(0xFFE2EAE4)),modifier=Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp),content=content)
+data class Editor(val kind: String, val water: Water? = null, val medication: Medication? = null, val appointment: Appointment? = null)
+private data class PendingDeletion(val messageKey: String, val mutation: (HealthData) -> Unit)
+
+@Composable
+fun Panel(
+    color: Color = MaterialTheme.colorScheme.surface,
+    compact: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = color,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            Modifier.padding(if (compact) 14.dp else 18.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
+            content = content
+        )
     }
 }
-@Composable fun Heading(text:String) { Text(text,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=12.dp)) }
-@Composable fun Empty(text:String) { Panel { Text(text,color=Green) } }
-@Composable fun Gap()=Spacer(Modifier.height(10.dp))
-@OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
-@Composable fun HealthScreen(vm:HealthViewModel,requestPermission:()->Unit,openNotification:()->Unit,openExact:()->Unit) {
-    val d=vm.data
-    var tab by rememberSaveableState(0)
-    var history by remember { mutableStateOf(LocalDate.now()) }
+
+@Composable
+fun Heading(text: String, modifier: Modifier = Modifier) {
+    Text(text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = modifier)
+}
+
+@Composable
+fun Empty(text: String, action: (@Composable () -> Unit)? = null) {
+    Panel(color = MaterialTheme.colorScheme.surfaceVariant, compact = true) {
+        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+        action?.invoke()
+    }
+}
+
+@Composable
+fun displayDate(day: LocalDate, includeWeekday: Boolean = false): String =
+    CalendarSupport.formatDate(day, LocalCalendar.current, LocalLanguage.current, includeWeekday)
+
+@Composable
+fun displayTime(time: Any): String = localizedNumber(time, LocalLanguage.current)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotification: () -> Unit, openExact: () -> Unit) {
+    val data = vm.data
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var history by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
+    var showHistoryPicker by remember { mutableStateOf(false) }
     var editor by remember { mutableStateOf<Editor?>(null) }
-    var deletion by remember { mutableStateOf<Pair<String,(HealthData)->Unit>?>(null) }
-    val context=LocalContext.current
-    if(d==null) {
-        Box(Modifier.fillMaxSize().padding(24.dp),contentAlignment=Alignment.Center) {
-            if(vm.error==null)CircularProgressIndicator() else Column { Text(vm.error!!);Button(onClick=vm::refresh){Text("تلاش دوباره")} }
-        };return
+    var deletion by remember { mutableStateOf<PendingDeletion?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val language = LocalLanguage.current
+    val calendar = LocalCalendar.current
+
+    if (data == null) {
+        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+            if (vm.error == null) CircularProgressIndicator()
+            else Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(tr(vm.error!!), color = MaterialTheme.colorScheme.error)
+                Button(onClick = vm::refresh) { Text(tr("common.retry")) }
+            }
+        }
+        return
     }
-    fun selectHistory() {
-        DatePickerDialog(context,{_,y,m,day->history=LocalDate.of(y,m+1,day)},history.year,history.monthValue-1,history.dayOfMonth)
-            .apply { datePicker.maxDate=System.currentTimeMillis() }.show()
-    }
+    val historyDate = LocalDate.parse(history)
+    val tabs = listOf(
+        Triple("nav.today", Icons.Default.Dashboard, "nav.today"),
+        Triple("nav.water", Icons.Default.WaterDrop, "nav.water"),
+        Triple("nav.medications", Icons.Default.Medication, "nav.medications"),
+        Triple("nav.appointments", Icons.Default.CalendarMonth, "nav.appointments")
+    )
+
     Scaffold(
-        topBar={TopAppBar(title={Row(verticalAlignment=Alignment.CenterVertically) { Image(painterResource(R.drawable.ic_brand),null,modifier=Modifier.size(28.dp));Spacer(Modifier.width(8.dp));Text(stringResource(R.string.app_name),fontWeight=FontWeight.Bold) }},
-            actions={IconButton(onClick={editor=Editor("settings")}){Icon(Icons.Default.Tune,"تنظیمات")}})},
-        bottomBar={NavigationBar { listOf("امروز" to Icons.Default.Dashboard,"آب" to Icons.Default.WaterDrop,"داروها" to Icons.Default.Medication,"قرارها" to Icons.Default.CalendarMonth).forEachIndexed { i,pair ->
-            NavigationBarItem(selected=tab==i,onClick={tab=i},icon={Icon(pair.second,null)},label={Text(pair.first)})
-        } } }
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding),horizontalAlignment=Alignment.CenterHorizontally) {
-            if(vm.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
-            Column(Modifier.widthIn(max=760.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                vm.error?.let { Panel(Color(0xFFFFF1D9)){Text(it)} }
-                if(!d.settings.consent || !vm.enabled)Panel(Color(0xFFEAF3ED)) {
-                    Text("یادآوری‌ها به اجازه شما نیاز دارند",fontWeight=FontWeight.Bold)
-                    Text("برای یادآوری هنگام بسته‌بودن برنامه، اعلان‌ها را فعال کنید.")
-                    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) { Button(onClick=requestPermission){Text("فعال‌کردن اعلان‌ها")};TextButton(onClick=openNotification){Text("تنظیمات گوشی")} }
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(painterResource(R.drawable.ic_brand), contentDescription = null, modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Medora", fontWeight = FontWeight.Bold)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { editor = Editor("settings") }, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.Tune, contentDescription = tr("a11y.settings"))
+                    }
                 }
-                when(tab) {
-                    0 -> {
-                        Text("${weekDays[LocalDate.now().dayOfWeek.value]}، ${labelDate(LocalDate.now())}",color=Green)
-                        Text("هر روز، کمی مراقبت",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
-                        Text("آب، دارو و قرارهای شما؛ همه در یک جا.")
-                        WaterSummary(d,LocalDate.now()) { ml->vm.change({it.addWater(ml,ZonedDateTime.now())}) }
-                        FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                            Button(onClick={editor=Editor("water")}){Icon(Icons.Default.Add,null);Text("ثبت آب")}
-                            OutlinedButton(onClick={editor=Editor("medication")}){Text("داروی جدید")}
-                            OutlinedButton(onClick={editor=Editor("appointment")}){Text("قرار جدید")}
-                        }
-                        Heading("داروهای امروز")
-                        val doses=d.dayDoses(LocalDate.now().toString())
-                        if(doses.isEmpty())Empty("دارویی برای امروز ثبت نشده است")
-                        doses.forEach { dose->DoseCard(dose,vm) }
-                        Heading("در پیش دارید")
-                        vm.next?.let { r->Panel { Text(r.title,fontWeight=FontWeight.Bold);Text(fa(Instant.ofEpochMilli(r.at).atZone(ZoneId.systemDefault()).toLocalDateTime().toString().replace('T',' '))) } }
-                        val nearest=d.appointments.filter { !it.cancelled && it.instant().isAfter(Instant.now()) }.minByOrNull { it.instant() }
-                        if(nearest!=null)AppointmentCard(nearest,{editor=Editor("appointment",appointment=nearest)},
-                            {vm.change({data->data.appointments.replace(nearest.copy(cancelled=!nearest.cancelled))})},
-                            {deletion="این قرار حذف شود؟" to { data->data.appointments.removeAll{it.id==nearest.id} }})
-                        if(vm.next==null && nearest==null)Empty("یادآوری یا قرار آینده‌ای ندارید")
-                    }
-                    1 -> {
-                        Heading("آب و سوابق")
-                        OutlinedButton(onClick={selectHistory()}) { Icon(Icons.Default.History,null);Text(labelDate(history)) }
-                        WaterSummary(d,history) { ml->vm.change({it.addWater(ml,ZonedDateTime.of(history,LocalTime.now(),ZoneId.systemDefault()))}) }
-                        Button(onClick={editor=Editor("water")}){Text("ثبت مقدار دلخواه")}
-                        val entries=d.water.filter { it.day==history.toString() }.sortedByDescending { it.at }
-                        if(entries.isEmpty())Empty("در این روز آبی ثبت نشده است")
-                        entries.forEach { w->Panel {
-                            Row(verticalAlignment=Alignment.CenterVertically) {
-                                Icon(Icons.Default.WaterDrop,null,tint=Blue);Spacer(Modifier.width(10.dp))
-                                Column(Modifier.weight(1f)){Text("${fa(w.ml)} میلی‌لیتر",fontWeight=FontWeight.Bold);Text(fa(Instant.ofEpochMilli(w.at).atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0)))}
-                                IconButton(onClick={editor=Editor("water",water=w)}){Icon(Icons.Default.Edit,"ویرایش ثبت آب")}
-                                IconButton(onClick={deletion="این ثبت آب حذف شود؟" to { it.water.removeAll { e->e.id==w.id } }}){Icon(Icons.Default.DeleteOutline,"حذف ثبت آب")}
-                            }
-                        } }
-                    }
-                    2 -> {
-                        Heading("برنامه داروها")
-                        Button(onClick={editor=Editor("medication")}){Text("داروی جدید")}
-                        if(d.medications.isEmpty())Empty("برنامه دارویی ثبت نشده است")
-                        d.medications.forEach { med->Panel {
-                            Row(verticalAlignment=Alignment.CenterVertically) {
-                                Text(med.name,Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
-                                Switch(checked=med.active,onCheckedChange={active->vm.change({it.changeMedication(med.copy(active=active),ZonedDateTime.now())})})
-                            }
-                            if(med.instructions.isNotEmpty())Text(med.instructions)
-                            Text(med.times.joinToString(" • "){fa(it)})
-                            Text(if(med.dates.isNotEmpty())med.dates.joinToString("، "){fa(it)} else med.weekdays.joinToString("، "){weekDays[it].orEmpty()})
-                            Row {
-                                TextButton(onClick={editor=Editor("medication",medication=med)}){Text("ویرایش")}
-                                TextButton(onClick={deletion="برنامه حذف شود؟ سوابق مصرف حفظ می‌شوند." to {it.deleteMedication(med.id,ZonedDateTime.now())}}){Text("حذف")}
-                            }
-                        } }
-                        Heading("سوابق و وضعیت مصرف")
-                        OutlinedButton(onClick={selectHistory()}){Text(labelDate(history))}
-                        val doses=d.dayDoses(history.toString());if(doses.isEmpty())Empty("نوبتی برای این روز وجود ندارد")
-                        doses.forEach { DoseCard(it,vm) }
-                    }
-                    3 -> {
-                        Heading("قرارهای پزشکی");Button(onClick={editor=Editor("appointment")}){Text("قرار جدید")}
-                        val future=d.appointments.filter { !it.cancelled && !it.instant().isBefore(Instant.now()) }.sortedBy { it.instant() }
-                        val past=d.appointments.filter { it.cancelled || it.instant().isBefore(Instant.now()) }.sortedByDescending { it.instant() }
-                        if(future.isEmpty())Empty("قرار آینده‌ای ثبت نشده است")
-                        (future+past).forEachIndexed { i,a->
-                            if(i==future.size && past.isNotEmpty())Heading("گذشته و لغوشده")
-                            AppointmentCard(a,{editor=Editor("appointment",appointment=a)},
-                                {vm.change({it.appointments.replace(a.copy(cancelled=!a.cancelled))})},
-                                {deletion="این قرار حذف شود؟" to {it.appointments.removeAll{v->v.id==a.id}}})
-                        }
-                    }
+            )
+        },
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                tonalElevation = 0.dp
+            ) {
+                tabs.forEachIndexed { index, (key, icon, descriptionKey) ->
+                    NavigationBarItem(
+                        selected = tab == index,
+                        onClick = { tab = index },
+                        icon = { Icon(icon, contentDescription = tr(descriptionKey), modifier = Modifier.size(22.dp)) },
+                        label = { Text(tr(key), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        alwaysShowLabel = true,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
+            }
+        }
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (vm.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            Column(
+                Modifier.widthIn(max = 760.dp).fillMaxWidth().weight(1f)
+                    .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                vm.error?.let { ErrorNotice(tr(it)) }
+                when (tab) {
+                    0 -> TodayScreen(data, vm, requestPermission, openNotification) { editor = it }
+                    1 -> WaterScreen(data, historyDate, { showHistoryPicker = true }, { editor = it }, { deletion = it }, vm)
+                    2 -> MedicationScreen(data, historyDate, { showHistoryPicker = true }, { editor = it }, { deletion = it }, vm)
+                    else -> AppointmentScreen(data, { editor = it }, { deletion = it }, vm)
                 }
             }
         }
     }
-    deletion?.let { pair->AlertDialog(onDismissRequest={deletion=null},title={Text("حذف")},text={Text(pair.first)},
-        confirmButton={Button(onClick={vm.change(pair.second){deletion=null}},enabled=!vm.busy){Text("حذف")}},
-        dismissButton={TextButton(onClick={deletion=null}){Text("انصراف")}}) }
-    editor?.let { e->key(e) { EditDialog(e,vm,{editor=null},requestPermission,openNotification,openExact) } }
+
+    if (showHistoryPicker) {
+        CalendarDatePickerDialog(
+            selectedDate = historyDate,
+            calendar = calendar,
+            language = language,
+            maximumDate = LocalDate.now(),
+            onDismiss = { showHistoryPicker = false },
+            onSelect = { history = it.toString(); showHistoryPicker = false }
+        )
+    }
+    deletion?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { deletion = null },
+            title = { Text(tr("common.delete")) },
+            text = { Text(tr(pending.messageKey)) },
+            confirmButton = {
+                Button(onClick = { vm.change(pending.mutation) { deletion = null } }, enabled = !vm.busy) {
+                    Text(tr("common.delete"))
+                }
+            },
+            dismissButton = { TextButton(onClick = { deletion = null }) { Text(tr("common.cancel")) } }
+        )
+    }
+    editor?.let { current ->
+        key(current) {
+            EditDialog(
+                current,
+                vm,
+                close = { editor = null },
+                onSaved = {
+                    editor = null
+                    val currentLanguage = vm.data?.settings?.language ?: language
+                    snackbarScope.launch { snackbarHostState.showSnackbar(localizedText("feedback.saved", currentLanguage)) }
+                },
+                requestPermission = requestPermission,
+                openNotifications = openNotification,
+                openExact = openExact
+            )
+        }
+    }
 }
-// Primitive navigation state survives Activity recreation without retaining Context.
-@Composable fun rememberSaveableState(initial:Int)=androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initial) }
-fun MutableList<Appointment>.replace(a:Appointment) { removeAll{it.id==a.id};add(a) }
+
+@Composable
+private fun ErrorNotice(text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(text, Modifier.padding(14.dp), style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun TodayScreen(
+    data: HealthData,
+    vm: HealthViewModel,
+    requestPermission: () -> Unit,
+    openNotification: () -> Unit,
+    openEditor: (Editor) -> Unit
+) {
+    val today = LocalDate.now()
+    val doses = data.dayDoses(today.toString())
+    val taken = doses.count { it.status == DoseStatus.TAKEN }
+    val activeDoses = doses.sortedWith(
+        compareBy<Dose> { if (it.status == DoseStatus.TAKEN || it.status == DoseStatus.SKIPPED) 1 else 0 }
+            .thenBy { it.wall }
+    )
+    val nextAppointment = data.appointments
+        .filter { !it.cancelled && it.instant().isAfter(Instant.now()) }
+        .minByOrNull { it.instant() }
+
+    if (!data.settings.consent || !vm.enabled) {
+        Panel(color = MedoraColors.WarningContainer, compact = true) {
+            Text(tr("permission.title"), fontWeight = FontWeight.SemiBold, color = MedoraColors.Warning)
+            Text(tr("permission.body"), style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = requestPermission, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(tr("permission.enable"))
+                }
+                TextButton(onClick = openNotification) { Text(tr("permission.phoneSettings")) }
+            }
+        }
+    }
+
+    Text(displayDate(today, includeWeekday = true), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+    Text(tr("today.title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+
+    Panel(color = MedoraColors.PrimaryContainer, compact = true) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(tr("today.progress", n(taken), n(doses.size)), fontWeight = FontWeight.SemiBold, color = MedoraColors.OnPrimaryContainer)
+                Text(tr("today.waterCompact"), style = MaterialTheme.typography.labelMedium, color = MedoraColors.OnPrimaryContainer)
+                Text(
+                    tr("water.progress", n(data.total(today.toString())), n(data.settings.goal)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MedoraColors.OnPrimaryContainer
+                )
+            }
+            CircularProgressIndicator(
+                progress = { if (doses.isEmpty()) 0f else taken.toFloat() / doses.size },
+                modifier = Modifier.size(42.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surface.copy(alpha = .65f),
+                strokeWidth = 4.dp
+            )
+        }
+        LinearProgressIndicator(
+            progress = { data.progress(today.toString()) },
+            modifier = Modifier.fillMaxWidth(),
+            color = MedoraColors.Water,
+            trackColor = MaterialTheme.colorScheme.surface.copy(alpha = .75f)
+        )
+    }
+
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Heading(tr("today.schedule"), Modifier.weight(1f))
+        if (activeDoses.isNotEmpty()) {
+            TextButton(onClick = { openEditor(Editor("medication")) }) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(tr("today.addMedicine"))
+            }
+        }
+    }
+    if (activeDoses.isEmpty()) {
+        Empty(tr("today.noMedicationAction")) {
+            Button(onClick = { openEditor(Editor("medication")) }) { Text(tr("today.addMedicine")) }
+        }
+    } else {
+        activeDoses.forEach { DoseCard(it, vm) }
+        if (taken == doses.size && doses.isNotEmpty()) {
+            Text(tr("today.allDone"), color = MedoraColors.Success, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+
+    if (nextAppointment != null) {
+        Heading(tr("today.upcomingAppointment"))
+        AppointmentCard(
+            nextAppointment,
+            edit = { openEditor(Editor("appointment", appointment = nextAppointment)) },
+            toggle = { vm.change { it.appointments.replace(nextAppointment.copy(cancelled = !nextAppointment.cancelled)) } },
+            delete = { },
+            showDelete = false
+        )
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { openEditor(Editor("water")) }, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.WaterDrop, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(tr("today.waterAction"), maxLines = 1)
+        }
+        OutlinedButton(onClick = { openEditor(Editor("appointment")) }, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.Event, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(tr("today.appointmentAction"), maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun WaterScreen(
+    data: HealthData,
+    day: LocalDate,
+    chooseDate: () -> Unit,
+    openEditor: (Editor) -> Unit,
+    requestDelete: (PendingDeletion) -> Unit,
+    vm: HealthViewModel
+) {
+    Heading(tr("water.history"))
+    OutlinedButton(onClick = chooseDate, modifier = Modifier.heightIn(min = 48.dp)) {
+        Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(displayDate(day))
+    }
+    WaterSummary(data, day) { ml ->
+        vm.change { it.addWater(ml, ZonedDateTime.of(day, LocalTime.now(), ZoneId.systemDefault())) }
+    }
+    Button(onClick = { openEditor(Editor("water")) }) { Text(tr("water.custom")) }
+    val entries = data.water.filter { it.day == day.toString() }.sortedByDescending { it.at }
+    if (entries.isEmpty()) Empty(tr("water.empty"))
+    entries.forEach { entry ->
+        Panel(compact = true) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.WaterDrop, contentDescription = null, tint = MedoraColors.Water)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(tr("water.ml", n(entry.ml)), fontWeight = FontWeight.SemiBold)
+                    Text(displayTime(Instant.ofEpochMilli(entry.at).atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0)),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = { openEditor(Editor("water", water = entry)) }, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = tr("a11y.editWater"))
+                }
+                IconButton(onClick = {
+                    requestDelete(PendingDeletion("water.deleteConfirm") { it.water.removeAll { item -> item.id == entry.id } })
+                }, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.DeleteOutline, contentDescription = tr("a11y.deleteWater"))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WaterSummary(data: HealthData, day: LocalDate, add: (Int) -> Unit) {
+    Panel(color = MedoraColors.WaterContainer, compact = true) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("water.title"), fontWeight = FontWeight.SemiBold)
+            Text(tr("water.percent", n((data.progress(day.toString()) * 100).toInt())), color = MedoraColors.Water, fontWeight = FontWeight.SemiBold)
+        }
+        Text(
+            tr("water.progress", n(data.total(day.toString())), n(data.settings.goal)),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        LinearProgressIndicator(
+            progress = { data.progress(day.toString()) },
+            modifier = Modifier.fillMaxWidth(),
+            color = MedoraColors.Water
+        )
+        Text(tr("water.remaining", n(data.remaining(day.toString()))), style = MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(150, 250, 500).forEach { ml ->
+                val label = tr("water.quickAdd", n(ml))
+                FilledTonalButton(
+                    onClick = { add(ml) },
+                    modifier = Modifier.weight(1f).semantics { contentDescription = label },
+                    contentPadding = PaddingValues(horizontal = 6.dp)
+                ) {
+                    Text("+${n(ml)}", maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MedicationScreen(
+    data: HealthData,
+    history: LocalDate,
+    chooseDate: () -> Unit,
+    openEditor: (Editor) -> Unit,
+    requestDelete: (PendingDeletion) -> Unit,
+    vm: HealthViewModel
+) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Heading(tr("medication.title"), Modifier.weight(1f))
+        Button(onClick = { openEditor(Editor("medication")) }) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(tr("medication.new"))
+        }
+    }
+    if (data.medications.isEmpty()) Empty(tr("medication.empty"))
+    data.medications.forEach { medication ->
+        Panel {
+            val switchDescription = "${tr("medication.active")}: ${medication.name}"
+            val switchState = tr(if (medication.active) "common.enabled" else "common.disabled")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(medication.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Switch(
+                    checked = medication.active,
+                    onCheckedChange = { active -> vm.change { it.changeMedication(medication.copy(active = active), ZonedDateTime.now()) } },
+                    modifier = Modifier.semantics {
+                        contentDescription = switchDescription
+                        stateDescription = switchState
+                    }
+                )
+            }
+            Text(
+                if (medication.active) tr("medication.active") else tr("medication.paused"),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (medication.active) MedoraColors.Success else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (medication.instructions.isNotBlank()) Text(medication.instructions)
+            Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { displayTime(it) })
+            val schedule = if (medication.dates.isNotEmpty()) {
+                medication.dates.sorted().joinToString(if (LocalLanguage.current == "fa") "، " else ", ") { date -> displayDate(LocalDate.parse(date)) }
+            } else if (medication.weekdays.size == 7) {
+                tr("medication.everyDay")
+            } else {
+                CalendarSupport.weekdayOrder(LocalLanguage.current).filter { it in medication.weekdays }
+                    .joinToString(if (LocalLanguage.current == "fa") "، " else ", ") { day -> weekdayName(day) }
+            }
+            Text(schedule, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("medication.startDate") + ": " + displayDate(LocalDate.parse(medication.startDay)),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = { openEditor(Editor("medication", medication = medication)) }) { Text(tr("common.edit")) }
+                TextButton(onClick = {
+                    requestDelete(PendingDeletion("medication.deleteConfirm") {
+                        it.deleteMedication(medication.id, ZonedDateTime.now())
+                    })
+                }) { Text(tr("common.delete"), color = MaterialTheme.colorScheme.error) }
+            }
+        }
+    }
+    Heading(tr("medication.status"))
+    OutlinedButton(onClick = chooseDate, modifier = Modifier.heightIn(min = 48.dp)) { Text(displayDate(history)) }
+    val doses = data.dayDoses(history.toString())
+    if (doses.isEmpty()) Empty(tr("medication.historyEmpty"))
+    doses.forEach { DoseCard(it, vm) }
+}
+
+@Composable
+private fun AppointmentScreen(
+    data: HealthData,
+    openEditor: (Editor) -> Unit,
+    requestDelete: (PendingDeletion) -> Unit,
+    vm: HealthViewModel
+) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Heading(tr("appointment.title"), Modifier.weight(1f))
+        Button(onClick = { openEditor(Editor("appointment")) }) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(tr("appointment.new"))
+        }
+    }
+    val future = data.appointments.filter { !it.cancelled && !it.instant().isBefore(Instant.now()) }.sortedBy { it.instant() }
+    val past = data.appointments.filter { it.cancelled || it.instant().isBefore(Instant.now()) }.sortedByDescending { it.instant() }
+    if (future.isEmpty()) Empty(tr("appointment.empty"))
+    (future + past).forEachIndexed { index, appointment ->
+        if (index == future.size && past.isNotEmpty()) Heading(tr("appointment.past"))
+        AppointmentCard(
+            appointment,
+            edit = { openEditor(Editor("appointment", appointment = appointment)) },
+            toggle = { vm.change { it.appointments.replace(appointment.copy(cancelled = !appointment.cancelled)) } },
+            delete = {
+                requestDelete(PendingDeletion("appointment.deleteConfirm") {
+                    it.appointments.removeAll { existing -> existing.id == appointment.id }
+                })
+            },
+            showDelete = true
+        )
+    }
+}
+
+@Composable
+fun DoseCard(dose: Dose, vm: HealthViewModel) {
+    var menu by remember { mutableStateOf(false) }
+    val statusKey = when (dose.status) {
+        DoseStatus.PENDING -> "dose.pending"
+        DoseStatus.TAKEN -> "dose.taken"
+        DoseStatus.SNOOZED -> "dose.snoozed"
+        DoseStatus.SKIPPED -> "dose.skipped"
+    }
+    val stateColor = when (dose.status) {
+        DoseStatus.TAKEN -> MedoraColors.Success
+        DoseStatus.SKIPPED -> MedoraColors.Error
+        DoseStatus.SNOOZED -> MedoraColors.Warning
+        DoseStatus.PENDING -> MaterialTheme.colorScheme.primary
+    }
+    Panel(compact = true) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(dose.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(tr("dose.time", displayTime(dose.wall.substring(11))), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Surface(color = stateColor.copy(alpha = .10f), shape = RoundedCornerShape(50)) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        when (dose.status) {
+                            DoseStatus.TAKEN -> Icons.Default.CheckCircle
+                            DoseStatus.SKIPPED -> Icons.Default.RemoveCircleOutline
+                            DoseStatus.SNOOZED -> Icons.Default.Snooze
+                            DoseStatus.PENDING -> Icons.Default.Schedule
+                        },
+                        contentDescription = null,
+                        tint = stateColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(tr(statusKey), color = stateColor, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            Box {
+                IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.MoreVert, contentDescription = tr("a11y.changeDoseStatus"))
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DoseStatus.entries.forEach { status ->
+                        val key = when (status) {
+                            DoseStatus.PENDING -> "dose.pending"
+                            DoseStatus.TAKEN -> "dose.taken"
+                            DoseStatus.SNOOZED -> "dose.snoozed"
+                            DoseStatus.SKIPPED -> "dose.skipped"
+                        }
+                        DropdownMenuItem(
+                            text = { Text(tr(key)) },
+                            onClick = {
+                                vm.change({ it.mark(dose, status, Instant.now()) })
+                                menu = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        if (dose.instructions.isNotBlank()) Text(dose.instructions, style = MaterialTheme.typography.bodyMedium)
+        if (dose.status == DoseStatus.PENDING || dose.status == DoseStatus.SNOOZED) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { vm.change({ it.mark(dose, DoseStatus.TAKEN, Instant.now()) }) },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                ) { Text(tr("dose.take"), maxLines = 1) }
+                OutlinedButton(
+                    onClick = { vm.change({ it.mark(dose, DoseStatus.SNOOZED, Instant.now()) }) },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                ) { Text(tr("dose.snooze"), maxLines = 1) }
+            }
+        }
+        if (dose.status == DoseStatus.SNOOZED) {
+            Text(
+                tr("dose.until", displayTime(Instant.ofEpochMilli(dose.snoozeUntil).atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0))),
+                style = MaterialTheme.typography.bodySmall,
+                color = MedoraColors.Warning
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun WaterSummary(d:HealthData,day:LocalDate,add:(Int)->Unit) {
-    Panel(Color(0xFFEAF4F8)) {
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text("آب روزانه",fontWeight=FontWeight.Bold);Text("${fa((d.progress(day.toString())*100).toInt())}٪",color=Blue) }
-        Text("${fa(d.total(day.toString()))} از ${fa(d.settings.goal)} میلی‌لیتر",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
-        LinearProgressIndicator(progress={d.progress(day.toString())},modifier=Modifier.fillMaxWidth(),color=Blue)
-        Text("${fa(d.remaining(day.toString()))} میلی‌لیتر تا هدف فعلی")
-        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf(150,250,500).forEach{ml->FilledTonalButton(onClick={add(ml)}){Text("+ ${fa(ml)}")}}}
-    }
-}
-@OptIn(ExperimentalLayoutApi::class)
-@Composable fun DoseCard(dose:Dose,vm:HealthViewModel) {
-    var menu by remember { mutableStateOf(false) }
-    Panel {
-        Row(verticalAlignment=Alignment.CenterVertically) {
-            Icon(if(dose.status==DoseStatus.TAKEN)Icons.Default.CheckCircle else Icons.Default.Medication,null,tint=Green)
-            Spacer(Modifier.width(8.dp));Text(dose.name,Modifier.weight(1f),fontWeight=FontWeight.Bold)
-            Text(fa(dose.wall.substring(11)))
-            Box { IconButton(onClick={menu=true}){Icon(Icons.Default.MoreVert,"تغییر وضعیت")}
-                DropdownMenu(expanded=menu,onDismissRequest={menu=false}){DoseStatus.entries.forEach { status->
-                    DropdownMenuItem(text={Text(statusLabel(status))},onClick={vm.change({it.mark(dose,status,Instant.now())});menu=false})
-                }} }
-        }
-        if(dose.instructions.isNotEmpty())Text(dose.instructions)
-        FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            AssistChip(onClick={menu=true},label={Text(statusLabel(dose.status))})
-            if(dose.status==DoseStatus.PENDING || dose.status==DoseStatus.SNOOZED) {
-                TextButton(onClick={vm.change({it.mark(dose,DoseStatus.TAKEN,Instant.now())})}){Text("مصرف کردم")}
-                TextButton(onClick={vm.change({it.mark(dose,DoseStatus.SNOOZED,Instant.now())})}){Text("۱۰ دقیقه بعد")}
+@Composable
+fun AppointmentCard(
+    appointment: Appointment,
+    edit: () -> Unit,
+    toggle: () -> Unit,
+    delete: () -> Unit,
+    showDelete: Boolean = true
+) {
+    val local = java.time.LocalDateTime.parse(appointment.wall)
+    Panel(compact = true) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(appointment.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "${displayDate(local.toLocalDate())} · ${displayTime(local.toLocalTime())}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
+            if (appointment.cancelled) Text(tr("appointment.cancelled"), color = MedoraColors.Error, style = MaterialTheme.typography.labelMedium)
         }
-        if(dose.status==DoseStatus.SNOOZED)Text("تا ${fa(Instant.ofEpochMilli(dose.snoozeUntil).atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0))}")
+        if (appointment.zone != ZoneId.systemDefault().id) {
+            Text(appointment.zone, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (appointment.location.isNotBlank()) Text(tr("appointment.locationLabel", appointment.location))
+        if (appointment.contact.isNotBlank()) Text(tr("appointment.contactLabel", appointment.contact))
+        if (appointment.notes.isNotBlank()) Text(appointment.notes)
+        if (appointment.offsets.isNotEmpty()) {
+            val offsets = appointment.offsets.sortedDescending().joinToString(" · ") { offsetLabel(it) }
+            Text(tr("appointment.reminderLabel", offsets), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = edit) { Text(tr("common.edit")) }
+            TextButton(onClick = toggle) {
+                Text(if (appointment.cancelled) tr("appointment.reactivate") else tr("appointment.cancel"))
+            }
+            if (showDelete) TextButton(onClick = delete) { Text(tr("common.delete"), color = MaterialTheme.colorScheme.error) }
+        }
     }
 }
-@Composable fun AppointmentCard(a:Appointment,edit:()->Unit,toggle:()->Unit,delete:()->Unit) {
-    Panel {
-        Text(a.title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
-        Text("${fa(a.wall.replace('T',' '))} • ${a.zone}")
-        if(a.cancelled)Text("لغو شده",color=Color(0xFF9B3E2C))
-        if(a.location.isNotEmpty())Text("مکان: ${a.location}")
-        if(a.contact.isNotEmpty())Text("تماس: ${a.contact}")
-        if(a.notes.isNotEmpty())Text(a.notes)
-        Text("یادآوری: ${a.offsets.sortedDescending().joinToString("، "){"${fa(it)} دقیقه قبل"}}")
-        Row { TextButton(onClick=edit){Text("ویرایش")};TextButton(onClick=toggle){Text(if(a.cancelled)"فعال‌کردن" else "لغو قرار")};TextButton(onClick=delete){Text("حذف")} }
-    }
+
+@Composable
+private fun weekdayName(day: Int): String = when (day) {
+    1 -> tr("weekday.mon")
+    2 -> tr("weekday.tue")
+    3 -> tr("weekday.wed")
+    4 -> tr("weekday.thu")
+    5 -> tr("weekday.fri")
+    6 -> tr("weekday.sat")
+    else -> tr("weekday.sun")
+}
+
+@Composable
+private fun offsetLabel(minutes: Int): String = when (minutes) {
+    60 -> tr("appointment.oneHourBefore")
+    120 -> tr("appointment.twoHoursBefore")
+    1440 -> tr("appointment.dayBefore")
+    else -> tr("appointment.minutesBefore", n(minutes))
+}
+
+private fun MutableList<Appointment>.replace(appointment: Appointment) {
+    removeAll { it.id == appointment.id }
+    add(appointment)
 }
