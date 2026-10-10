@@ -11,15 +11,18 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings as AndroidSettings
+import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -32,6 +35,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -75,7 +81,7 @@ class MainActivity : ComponentActivity() {
                 androidx.compose.ui.platform.LocalLayoutDirection provides
                     if (language == "fa") androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr
             ) {
-                MaterialTheme(colorScheme = medoraColorScheme(), typography = medoraTypography(language)) {
+                MaterialTheme(colorScheme = medoraColorScheme(), typography = medoraTypography(language), shapes = MedoraShapes) {
                     HealthScreen(model, ::requestNotifications, ::openNotificationSettings, ::openExactSettings)
                 }
             }
@@ -142,7 +148,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-data class Editor(val kind: String, val water: Water? = null, val medication: Medication? = null, val appointment: Appointment? = null)
+data class Editor(val kind: String, val water: Water? = null, val medication: Medication? = null, val appointment: Appointment? = null, val date: String? = null)
 private data class PendingDeletion(val messageKey: String, val mutation: (HealthData) -> Unit)
 
 @Composable
@@ -152,13 +158,13 @@ fun Panel(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         color = color,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 1.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            Modifier.padding(if (compact) 14.dp else 18.dp),
+            Modifier.padding(if (compact) 14.dp else MedoraSpacing.Card),
             verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
             content = content
         )
@@ -167,7 +173,7 @@ fun Panel(
 
 @Composable
 fun Heading(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = modifier)
+    Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = modifier)
 }
 
 @Composable
@@ -190,6 +196,12 @@ fun displayTime(time: Any): String = localizedNumber(time, LocalLanguage.current
 fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotification: () -> Unit, openExact: () -> Unit) {
     val data = vm.data
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var secondary by rememberSaveable { mutableStateOf<String?>(null) }
+    var moreMenu by remember { mutableStateOf(false) }
+    BackHandler(enabled = secondary != null) { secondary = null }
+    val context = LocalContext.current
+    val intro = remember { context.getSharedPreferences("medora_ui", Context.MODE_PRIVATE) }
+    var welcomed by rememberSaveable { mutableStateOf(intro.getBoolean("welcomed", false)) }
     var history by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
     var showHistoryPicker by remember { mutableStateOf(false) }
     var editor by remember { mutableStateOf<Editor?>(null) }
@@ -209,9 +221,18 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
         }
         return
     }
+    val hasExistingData = data.water.isNotEmpty() || data.medications.isNotEmpty() ||
+        data.appointments.isNotEmpty() || data.doses.isNotEmpty() || data.settings != Settings()
+    if (!welcomed && !hasExistingData) {
+        WelcomeScreen {
+            intro.edit().putBoolean("welcomed", true).apply()
+            welcomed = true
+        }
+        return
+    }
     val historyDate = LocalDate.parse(history)
     val tabs = listOf(
-        Triple("nav.today", Icons.Default.Dashboard, "nav.today"),
+        Triple("nav.today", Icons.Default.Home, "nav.today"),
         Triple("nav.water", Icons.Default.WaterDrop, "nav.water"),
         Triple("nav.medications", Icons.Default.Medication, "nav.medications"),
         Triple("nav.appointments", Icons.Default.CalendarMonth, "nav.appointments")
@@ -224,14 +245,32 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(painterResource(R.drawable.ic_brand), contentDescription = null, modifier = Modifier.size(28.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Medora", fontWeight = FontWeight.Bold)
+                    if (secondary != null) Text(tr(if (secondary == "calendar") "nav.calendar" else "nav.reports"),
+                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    else if (tab == 0) Column {
+                        Text(tr("today.greeting"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(displayDate(LocalDate.now(), true), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else Text(tr(tabs[tab].first), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                },
+                navigationIcon = {
+                    if (secondary != null) IconButton(onClick = { secondary = null }) {
+                        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, tr("common.close"))
                     }
                 },
                 actions = {
-                    IconButton(onClick = { editor = Editor("settings") }, modifier = Modifier.size(48.dp)) {
+                    if (secondary == null) Box {
+                        IconButton(onClick = { moreMenu = true }, modifier = Modifier.testTag("more-pages")) {
+                            Icon(Icons.Default.MoreVert, tr("water.more"))
+                        }
+                        DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                            listOf("calendar" to "nav.calendar", "reports" to "nav.reports").forEach { (page, key) ->
+                                DropdownMenuItem(text = { Text(tr(key)) }, modifier = Modifier.testTag("page-$page"),
+                                    onClick = { secondary = page; moreMenu = false })
+                            }
+                        }
+                    }
+                    IconButton(onClick = { editor = Editor("settings") }, modifier = Modifier.size(48.dp).testTag("settings")) {
                         Icon(Icons.Default.Tune, contentDescription = tr("a11y.settings"))
                     }
                 }
@@ -245,15 +284,16 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             ) {
                 tabs.forEachIndexed { index, (key, icon, descriptionKey) ->
                     NavigationBarItem(
-                        selected = tab == index,
-                        onClick = { tab = index },
+                        modifier = Modifier.testTag("nav-$index"),
+                        selected = tab == index && secondary == null,
+                        onClick = { tab = index; secondary = null },
                         icon = { Icon(icon, contentDescription = tr(descriptionKey), modifier = Modifier.size(22.dp)) },
                         label = { Text(tr(key), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         alwaysShowLabel = true,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            indicatorColor = Color.Transparent,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -269,13 +309,15 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             if (vm.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             Column(
                 Modifier.widthIn(max = 760.dp).fillMaxWidth().weight(1f)
-                    .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 14.dp),
+                    .verticalScroll(rememberScrollState()).padding(horizontal = MedoraSpacing.Page, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 vm.error?.let { ErrorNotice(tr(it)) }
-                when (tab) {
-                    0 -> TodayScreen(data, vm, requestPermission, openNotification) { editor = it }
-                    1 -> WaterScreen(data, historyDate, { showHistoryPicker = true }, { editor = it }, { deletion = it }, vm)
+                if (secondary == "calendar") ActivityCalendarScreen(data, vm, { editor = it })
+                else if (secondary == "reports") ReportsScreen(data)
+                else when (tab) {
+                    0 -> TodayScreen(data, vm, requestPermission, openNotification, { tab = 2; history = LocalDate.now().toString() }) { editor = it }
+                    1 -> WaterScreen(data, historyDate, { showHistoryPicker = true }, { editor = it.copy(date = history) }, { deletion = it }, vm)
                     2 -> MedicationScreen(data, historyDate, { showHistoryPicker = true }, { editor = it }, { deletion = it }, vm)
                     else -> AppointmentScreen(data, { editor = it }, { deletion = it }, vm)
                 }
@@ -343,116 +385,51 @@ private fun TodayScreen(
     vm: HealthViewModel,
     requestPermission: () -> Unit,
     openNotification: () -> Unit,
+    viewMedications: () -> Unit,
     openEditor: (Editor) -> Unit
 ) {
     val today = LocalDate.now()
     val doses = data.dayDoses(today.toString())
     val taken = doses.count { it.status == DoseStatus.TAKEN }
-    val activeDoses = doses.sortedWith(
-        compareBy<Dose> { if (it.status == DoseStatus.TAKEN || it.status == DoseStatus.SKIPPED) 1 else 0 }
-            .thenBy { it.wall }
-    )
-    val nextAppointment = data.appointments
-        .filter { !it.cancelled && it.instant().isAfter(Instant.now()) }
-        .minByOrNull { it.instant() }
-
+    val nextDose = doses.filter { it.status == DoseStatus.PENDING || it.status == DoseStatus.SNOOZED }.minByOrNull { it.wall }
+    val appointment = data.appointments.filter { !it.cancelled && it.instant().isAfter(Instant.now()) }.minByOrNull { it.instant() }
+    Surface(color = wellnessTint(MedoraColors.WaterContainer), shape = RoundedCornerShape(14.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Default.Spa, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            Text(tr("today.title"), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+    WaterProgressCard(data, today) { openEditor(Editor("water")) }
+    Panel(compact = true) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            WellnessIcon(Icons.Default.Medication, MedoraColors.Medication)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(tr("today.medicationCompact"), fontWeight = FontWeight.Bold)
+                Text(if (doses.isEmpty()) tr("today.noMedication") else tr("today.progress", n(taken), n(doses.size)),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = viewMedications) { Text(tr("today.viewAll"), style = MaterialTheme.typography.labelMedium) }
+        }
+    }
+    if (nextDose != null) DoseCard(nextDose, vm)
+    else if (doses.isNotEmpty()) Empty(if (taken == doses.size) tr("today.allDone") else tr("today.progress", n(taken), n(doses.size)))
+    else PrimaryAction(tr("today.addMedicine"), { openEditor(Editor("medication")) })
+    if (appointment != null) {
+        Heading(tr("today.upcomingAppointment"))
+        AppointmentCard(appointment,
+            edit = { openEditor(Editor("appointment", appointment = appointment)) },
+            toggle = { vm.change({ it.appointments.replace(appointment.copy(cancelled = !appointment.cancelled)) }) },
+            delete = {}, showDelete = false)
+    } else PrimaryAction(tr("today.appointmentAction"), { openEditor(Editor("appointment")) })
     if (!data.settings.consent || !vm.enabled) {
-        Panel(color = MedoraColors.WarningContainer, compact = true) {
-            Text(tr("permission.title"), fontWeight = FontWeight.SemiBold, color = MedoraColors.Warning)
+        Panel(color = wellnessTint(MedoraColors.WarningContainer), compact = true) {
+            Text(tr("permission.title"), fontWeight = FontWeight.SemiBold)
             Text(tr("permission.body"), style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = requestPermission, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(tr("permission.enable"))
-                }
+                TextButton(onClick = requestPermission) { Text(tr("permission.enable")) }
                 TextButton(onClick = openNotification) { Text(tr("permission.phoneSettings")) }
             }
-        }
-    }
-
-    Text(displayDate(today, includeWeekday = true), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-    Text(tr("today.title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
-    Panel(color = MedoraColors.WaterContainer, compact = true) {
-        Text(tr("today.waterCompact"), fontWeight = FontWeight.SemiBold, color = MedoraColors.Water)
-        Text(
-            tr("water.progress", n(data.total(today.toString())), n(data.settings.goal)),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        LinearProgressIndicator(
-            progress = { data.progress(today.toString()) },
-            modifier = Modifier.fillMaxWidth(),
-            color = MedoraColors.Water
-        )
-        Text(
-            if (data.remaining(today.toString()) == 0) tr("water.goalReached")
-            else tr("water.remaining", n(data.remaining(today.toString()))),
-            style = MaterialTheme.typography.bodySmall
-        )
-    }
-    Panel(color = MedoraColors.PrimaryContainer, compact = true) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(tr("today.medicationCompact"), fontWeight = FontWeight.SemiBold, color = MedoraColors.OnPrimaryContainer)
-                Text(
-                    if (doses.isEmpty()) tr("today.noMedication")
-                    else tr("today.progress", n(taken), n(doses.size)),
-                    color = MedoraColors.OnPrimaryContainer
-                )
-            }
-            if (doses.isNotEmpty()) {
-                CircularProgressIndicator(
-                    progress = { taken.toFloat() / doses.size },
-                    modifier = Modifier.size(42.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surface.copy(alpha = .65f),
-                    strokeWidth = 4.dp
-                )
-            }
-        }
-    }
-
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Heading(tr("today.schedule"), Modifier.weight(1f))
-        if (activeDoses.isNotEmpty()) {
-            TextButton(onClick = { openEditor(Editor("medication")) }) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(tr("today.addMedicine"))
-            }
-        }
-    }
-    if (activeDoses.isEmpty()) {
-        Empty(tr("today.noMedication")) {
-            Button(onClick = { openEditor(Editor("medication")) }) { Text(tr("today.addMedicine")) }
-        }
-    } else {
-        activeDoses.forEach { DoseCard(it, vm) }
-        if (taken == doses.size && doses.isNotEmpty()) {
-            Text(tr("today.allDone"), color = MedoraColors.Success, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-
-    if (nextAppointment != null) {
-        Heading(tr("today.upcomingAppointment"))
-        AppointmentCard(
-            nextAppointment,
-            edit = { openEditor(Editor("appointment", appointment = nextAppointment)) },
-            toggle = { vm.change({ it.appointments.replace(nextAppointment.copy(cancelled = !nextAppointment.cancelled)) }) },
-            delete = { },
-            showDelete = false
-        )
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { openEditor(Editor("water")) }, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.WaterDrop, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(tr("today.waterAction"), maxLines = 1)
-        }
-        OutlinedButton(onClick = { openEditor(Editor("appointment")) }, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Event, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(tr("today.appointmentAction"), maxLines = 1)
         }
     }
 }
@@ -466,22 +443,18 @@ private fun WaterScreen(
     requestDelete: (PendingDeletion) -> Unit,
     vm: HealthViewModel
 ) {
-    Heading(tr("water.history"))
-    OutlinedButton(onClick = chooseDate, modifier = Modifier.heightIn(min = 48.dp)) {
-        Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(displayDate(day))
-    }
+    DaySelector(day, chooseDate, {}, showArrows = false)
     WaterSummary(data, day) { ml ->
         vm.change({ it.addWater(ml, ZonedDateTime.of(day, LocalTime.now(), ZoneId.systemDefault())) })
     }
-    Button(onClick = { openEditor(Editor("water")) }) { Text(tr("water.custom")) }
+    PrimaryAction(tr("water.custom"), { openEditor(Editor("water")) })
+    Heading(tr("water.consumption"))
     val entries = data.water.filter { it.day == day.toString() }.sortedByDescending { it.at }
     if (entries.isEmpty()) Empty(tr("water.empty"))
     entries.forEach { entry ->
         Panel(compact = true) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.WaterDrop, contentDescription = null, tint = MedoraColors.Water)
+                WellnessIcon(Icons.Default.WaterDrop, MedoraColors.Water)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(tr("water.ml", n(entry.ml)), fontWeight = FontWeight.SemiBold)
@@ -503,36 +476,32 @@ private fun WaterScreen(
 
 @Composable
 fun WaterSummary(data: HealthData, day: LocalDate, add: (Int) -> Unit) {
-    Panel(color = MedoraColors.WaterContainer, compact = true) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("water.title"), fontWeight = FontWeight.SemiBold)
-            Text(tr("water.percent", n((data.progress(day.toString()) * 100).toInt())), color = MedoraColors.Water, fontWeight = FontWeight.SemiBold)
+    val key = day.toString()
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        WaterGlass(data.progress(key))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(if (day == LocalDate.now()) tr("date.today") else displayDate(day), fontWeight = FontWeight.SemiBold)
+            Text(tr("water.progress", n(data.total(key)), n(data.settings.goal)),
+                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            LinearProgressIndicator(progress = { data.progress(key) }, modifier = Modifier.fillMaxWidth(),
+                color = wellnessAccent(MedoraColors.Water), trackColor = wellnessTint(MedoraColors.WaterContainer))
+            Text(if (data.remaining(key) == 0) tr("water.goalReached") else tr("water.remaining", n(data.remaining(key))),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(
-            tr("water.progress", n(data.total(day.toString())), n(data.settings.goal)),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        LinearProgressIndicator(
-            progress = { data.progress(day.toString()) },
-            modifier = Modifier.fillMaxWidth(),
-            color = MedoraColors.Water
-        )
-        Text(
-            if (data.remaining(day.toString()) == 0) tr("water.goalReached")
-            else tr("water.remaining", n(data.remaining(day.toString()))),
-            style = MaterialTheme.typography.bodySmall
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(150, 250, 500).forEach { ml ->
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        listOf(150, 250, 500).forEach { ml ->
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 val label = tr("water.quickAdd", n(ml))
-                FilledTonalButton(
-                    onClick = { add(ml) },
-                    modifier = Modifier.weight(1f).semantics { contentDescription = label },
-                    contentPadding = PaddingValues(horizontal = 6.dp)
-                ) {
-                    Text(tr("water.ml", "+${n(ml)}"))
+                FilledTonalButton(onClick = { add(ml) }, enabled = !day.isAfter(LocalDate.now()),
+                    shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = wellnessTint(MedoraColors.WaterContainer), contentColor = wellnessAccent(MedoraColors.Water)),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp).semantics { contentDescription = label },
+                    contentPadding = PaddingValues(horizontal = 6.dp)) {
+                    Text("+${n(ml)}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 }
+                Text(tr("unit.ml"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -557,6 +526,22 @@ private fun MedicationScreen(
             Text(tr("medication.new"))
         }
     }
+    DaySelector(history, chooseDate, { }, showArrows = false)
+    val doses = data.calendarDoses(history)
+    val taken = doses.count { it.status == DoseStatus.TAKEN }
+    if (doses.isNotEmpty()) Panel(color = wellnessTint(MedoraColors.PrimaryContainer), compact = true) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("reports.summary", n(taken), n(doses.size)), style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(tr("reports.taken"), style = MaterialTheme.typography.bodySmall)
+            }
+            ProgressRing(taken.toFloat() / doses.size, MedoraColors.Primary)
+        }
+    }
+    if (doses.isEmpty()) Empty(tr("medication.historyEmpty"))
+    doses.forEach { DoseCard(it, vm, actionable = !history.isAfter(LocalDate.now())) }
+    Heading(tr("medication.plans"))
     if (data.medications.isEmpty()) Empty(tr("medication.empty"))
     data.medications.forEach { medication ->
         Panel {
@@ -576,7 +561,7 @@ private fun MedicationScreen(
             Text(
                 if (medication.active) tr("medication.active") else tr("medication.paused"),
                 style = MaterialTheme.typography.labelMedium,
-                color = if (medication.active) MedoraColors.Success else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (medication.active) wellnessAccent(MedoraColors.Success) else MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (medication.instructions.isNotBlank()) Text(medication.instructions)
             Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { localizedNumber(it, language) })
@@ -601,11 +586,6 @@ private fun MedicationScreen(
             }
         }
     }
-    Heading(tr("medication.status"))
-    OutlinedButton(onClick = chooseDate, modifier = Modifier.heightIn(min = 48.dp)) { Text(displayDate(history)) }
-    val doses = data.dayDoses(history.toString())
-    if (doses.isEmpty()) Empty(tr("medication.historyEmpty"))
-    doses.forEach { DoseCard(it, vm) }
 }
 
 @Composable
@@ -615,19 +595,16 @@ private fun AppointmentScreen(
     requestDelete: (PendingDeletion) -> Unit,
     vm: HealthViewModel
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Heading(tr("appointment.title"), Modifier.weight(1f))
-        Button(onClick = { openEditor(Editor("appointment")) }) {
-            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(tr("appointment.new"))
-        }
-    }
+    var filter by rememberSaveable { mutableIntStateOf(0) }
+    ChoiceStrip(listOf(tr("appointment.all"), tr("appointment.upcoming"), tr("appointment.past")), filter) { filter = it }
+    PrimaryAction(tr("appointment.new"), { openEditor(Editor("appointment")) })
     val future = data.appointments.filter { !it.cancelled && !it.instant().isBefore(Instant.now()) }.sortedBy { it.instant() }
     val past = data.appointments.filter { it.cancelled || it.instant().isBefore(Instant.now()) }.sortedByDescending { it.instant() }
-    if (future.isEmpty()) Empty(tr("appointment.empty"))
-    (future + past).forEachIndexed { index, appointment ->
-        if (index == future.size && past.isNotEmpty()) Heading(tr("appointment.past"))
+    val shown = when (filter) { 1 -> future; 2 -> past; else -> future + past }
+    if (shown.isEmpty()) Empty(tr("appointment.empty"))
+    shown.forEachIndexed { index, appointment ->
+        if (index == 0 && appointment in future) Heading(tr("appointment.nearest"))
+        if (filter != 2 && index == future.size && past.isNotEmpty()) Heading(tr("appointment.past"))
         AppointmentCard(
             appointment,
             edit = { openEditor(Editor("appointment", appointment = appointment)) },
@@ -643,7 +620,7 @@ private fun AppointmentScreen(
 }
 
 @Composable
-fun DoseCard(dose: Dose, vm: HealthViewModel) {
+fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
     var menu by remember { mutableStateOf(false) }
     val statusKey = when (dose.status) {
         DoseStatus.PENDING -> "dose.pending"
@@ -652,36 +629,21 @@ fun DoseCard(dose: Dose, vm: HealthViewModel) {
         DoseStatus.SKIPPED -> "dose.skipped"
     }
     val stateColor = when (dose.status) {
-        DoseStatus.TAKEN -> MedoraColors.Success
-        DoseStatus.SKIPPED -> MedoraColors.Error
-        DoseStatus.SNOOZED -> MedoraColors.Warning
-        DoseStatus.PENDING -> MaterialTheme.colorScheme.primary
+        DoseStatus.TAKEN -> wellnessAccent(MedoraColors.Success)
+        DoseStatus.SKIPPED -> MaterialTheme.colorScheme.error
+        DoseStatus.SNOOZED -> wellnessAccent(MedoraColors.Warning)
+        DoseStatus.PENDING -> wellnessAccent(MedoraColors.Medication)
     }
-    Panel(compact = true) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    val needsAction = dose.status == DoseStatus.PENDING || dose.status == DoseStatus.SNOOZED
+    Panel(color = if (needsAction) wellnessTint(MedoraColors.WarningContainer) else MaterialTheme.colorScheme.surface, compact = true) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CapsuleIcon()
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(dose.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(tr("dose.time", displayTime(dose.wall.substring(11))), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Surface(color = stateColor.copy(alpha = .10f), shape = RoundedCornerShape(50)) {
-                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        when (dose.status) {
-                            DoseStatus.TAKEN -> Icons.Default.CheckCircle
-                            DoseStatus.SKIPPED -> Icons.Default.RemoveCircleOutline
-                            DoseStatus.SNOOZED -> Icons.Default.Snooze
-                            DoseStatus.PENDING -> Icons.Default.Schedule
-                        },
-                        contentDescription = null,
-                        tint = stateColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(5.dp))
-                    Text(tr(statusKey), color = stateColor, style = MaterialTheme.typography.labelMedium)
-                }
-            }
-            Box {
+            if (actionable) Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.MoreVert, contentDescription = tr("a11y.changeDoseStatus"))
                 }
@@ -704,19 +666,38 @@ fun DoseCard(dose: Dose, vm: HealthViewModel) {
                 }
             }
         }
+        Surface(color = stateColor.copy(alpha = .10f), shape = RoundedCornerShape(50)) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        when (dose.status) {
+                            DoseStatus.TAKEN -> Icons.Default.CheckCircle
+                            DoseStatus.SKIPPED -> Icons.Default.RemoveCircleOutline
+                            DoseStatus.SNOOZED -> Icons.Default.Snooze
+                            DoseStatus.PENDING -> Icons.Default.Schedule
+                        },
+                        contentDescription = null,
+                        tint = stateColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(tr(statusKey), color = stateColor, style = MaterialTheme.typography.labelMedium)
+                }
+            }
         if (dose.instructions.isNotBlank()) Text(dose.instructions, style = MaterialTheme.typography.bodyMedium)
-        if (dose.status == DoseStatus.PENDING || dose.status == DoseStatus.SNOOZED) {
+        if (actionable && needsAction) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { vm.change({ it.mark(dose, DoseStatus.TAKEN, Instant.now()) }) },
-                    modifier = Modifier.weight(1f),
+                    enabled = !vm.busy,
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-                ) { Text(tr("dose.take"), maxLines = 1) }
+                ) { Text(tr("dose.take")) }
                 OutlinedButton(
                     onClick = { vm.change({ it.mark(dose, DoseStatus.SNOOZED, Instant.now()) }) },
-                    modifier = Modifier.weight(1f),
+                    enabled = !vm.busy,
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-                ) { Text(tr("dose.snooze"), maxLines = 1) }
+                ) { Text(tr("dose.snooze")) }
             }
         }
         if (dose.status == DoseStatus.SNOOZED) {
@@ -740,8 +721,9 @@ fun AppointmentCard(
 ) {
     val language = LocalLanguage.current
     val local = java.time.LocalDateTime.parse(appointment.wall)
-    Panel(compact = true) {
-        Row(verticalAlignment = Alignment.Top) {
+    Panel(color = wellnessTint(MedoraColors.Warm), compact = true) {
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            WellnessIcon(Icons.Default.Event, MedoraColors.Appointment)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(appointment.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
