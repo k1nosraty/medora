@@ -1,0 +1,27 @@
+# Gradle / Kotlin build caches and outputs
+.gradle/
+.kotlin/
+**/build/
+.cxx/
+.externalNativeBuild/
+
+# IDE and machine-specific settings
+.idea/
+*.iml
+local.properties
+
+# Local SDK / emulator installation downloads and backups
+/.setup-sdk/
+/.setup-emulator/
+/sdk-platform35.zip
+/sdk-buildtools35.zip
+
+# Signing credentials
+*.jks
+*.keystore
+keystore.properties
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini

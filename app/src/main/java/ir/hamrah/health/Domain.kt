@@ -1,0 +1,185 @@
+package ir.hamrah.health
+
+import java.time.*
+import java.util.UUID
+
+fun id(): String = UUID.randomUUID().toString()
+fun normalize(value: String): String {
+    var s=value
+    "۰۱۲۳۴۵۶۷۸۹".forEachIndexed { i,c -> s=s.replace(c,('0'.code+i).toChar()) }
+    "٠١٢٣٤٥٦٧٨٩".forEachIndexed { i,c -> s=s.replace(c,('0'.code+i).toChar()) }
+    return s
+}
+fun parseTimes(value: String): List<String> = normalize(value).replace('،',',').split(',')
+    .map { LocalTime.parse(it.trim()).withSecond(0).withNano(0).toString() }.distinct().sorted()
+    .also { require(it.size in 1..12) { "بین ۱ تا ۱۲ ساعت وارد کنید" } }
+fun parseDates(value: String): Set<String> = if(value.isBlank()) emptySet() else
+    normalize(value).replace('،',',').split(',').map { LocalDate.parse(it.trim()).toString() }.toSet()
+
+data class Settings(
+    val goal: Int=2000, val waterEnabled: Boolean=false, val start: String="08:00",
+    val end: String="22:00", val interval: Int=60, val repeat: Int=0,
+    val pauseUntil: Long=0, val consent: Boolean=false, val privateNotifications: Boolean=true
+)
+data class Water(val id:String=id(),val ml:Int,val day:String,val at:Long)
+data class Medication(
+    val id:String=id(),val name:String,val instructions:String="",val startDay:String,
+    val times:List<String>,val weekdays:Set<Int> = (1..7).toSet(),val dates:Set<String> = emptySet(),val active:Boolean=true
+) {
+    fun occurs(day:LocalDate):Boolean = active && day.toString()>=startDay &&
+        if(dates.isNotEmpty()) day.toString() in dates else day.dayOfWeek.value in weekdays
+}
+enum class DoseStatus { PENDING, TAKEN, SNOOZED, SKIPPED }
+data class Dose(
+    val id:String,val medicationId:String,val name:String,val instructions:String,val wall:String,
+    val status:DoseStatus=DoseStatus.PENDING,val snoozeUntil:Long=0,val updatedAt:Long=0
+) {
+    companion object {
+        fun of(m:Medication,day:LocalDate,time:String)=Dose("${m.id}|$day|$time",m.id,m.name,m.instructions,"${day}T$time")
+    }
+}
+// An appointment belongs to the timezone of the clinic, not the phone's timezone
+// after travel. The UI shows this explicitly and allows editing the IANA zone.
+data class Appointment(
+    val id:String=id(),val title:String,val wall:String,val zone:String,
+    val location:String="",val notes:String="",val contact:String="",
+    val offsets:Set<Int> = setOf(1440,60),val cancelled:Boolean=false
+) {
+    fun instant():Instant = LocalDateTime.parse(wall).atZone(ZoneId.of(zone)).toInstant()
+}
+data class Reminder(val key:String,val kind:String,val reference:String,val at:Long,
+    val title:String="",val body:String="",val waterBase:String="")
+data class HealthData(
+    var settings:Settings=Settings(),val water:MutableList<Water> = mutableListOf(),
+    val medications:MutableList<Medication> = mutableListOf(),val doses:MutableList<Dose> = mutableListOf(),
+    val appointments:MutableList<Appointment> = mutableListOf(),
+    val waterAcknowledged:MutableSet<String> = mutableSetOf(),val waterSnoozes:MutableMap<String,Long> = mutableMapOf(),
+    val handledActions:MutableList<String> = mutableListOf(),var through:String="",
+    var nextNotificationId:Int=1,val notificationIds:MutableMap<String,Int> = mutableMapOf()
+) {
+    fun total(day:String)=water.filter { it.day==day }.sumOf { it.ml }
+    fun remaining(day:String)=(settings.goal-total(day)).coerceAtLeast(0)
+    fun progress(day:String)=(total(day).toFloat()/settings.goal).coerceIn(0f,1f)
+    fun dayDoses(day:String)=doses.filter { it.wall.startsWith("${day}T") }.sortedBy { it.wall }
+    fun addWater(ml:Int,whenAt:ZonedDateTime) {
+        require(ml in 1..10000) { "مقدار آب باید از ۱ تا ۱۰۰۰۰ میلی‌لیتر باشد" }
+        water += Water(ml=ml,day=whenAt.toLocalDate().toString(),at=whenAt.toInstant().toEpochMilli())
+        val minute=whenAt.hour*60+whenAt.minute
+        val start=LocalTime.parse(settings.start).let { it.hour*60+it.minute }
+        val end=LocalTime.parse(settings.end).let { it.hour*60+it.minute }
+        if(minute in start..end) {
+            val base="water|${whenAt.toLocalDate()}|${start+(minute-start)/settings.interval*settings.interval}"
+            waterAcknowledged += base;waterSnoozes.remove(base)
+        }
+    }
+    fun materialize(now:ZonedDateTime) {
+        val end=now.toLocalDate()
+        var day=if(through.isEmpty()) end else LocalDate.parse(through)
+        while(!day.isAfter(end)) { materializeDay(day);day=day.plusDays(1) }
+        through=end.toString()
+        waterAcknowledged.removeAll { !it.contains(end.toString()) }
+        waterSnoozes.entries.removeAll { it.value<now.minusDays(2).toInstant().toEpochMilli() }
+    }
+    fun materializeDay(day:LocalDate) {
+        val keys=doses.map { it.id }.toMutableSet()
+        medications.filter { it.occurs(day) }.forEach { m -> m.times.forEach { t ->
+            val dose=Dose.of(m,day,t);if(keys.add(dose.id)) doses += dose
+        } }
+    }
+    fun changeMedication(m:Medication,now:ZonedDateTime) {
+        materialize(now);medications.removeAll { it.id==m.id };medications += m
+        doses.removeAll { it.medicationId==m.id && it.status==DoseStatus.PENDING &&
+            LocalDateTime.parse(it.wall).isAfter(now.toLocalDateTime()) }
+        materializeDay(now.toLocalDate())
+    }
+    fun deleteMedication(key:String,now:ZonedDateTime) {
+        materialize(now);medications.removeAll { it.id==key }
+        doses.removeAll { it.medicationId==key && it.status==DoseStatus.PENDING &&
+            LocalDateTime.parse(it.wall).isAfter(now.toLocalDateTime()) }
+    }
+    fun mark(dose:Dose,status:DoseStatus,now:Instant) {
+        doses.removeAll { it.id==dose.id }
+        doses += dose.copy(status=status,updatedAt=now.toEpochMilli(),
+            snoozeUntil=if(status==DoseStatus.SNOOZED) now.plusSeconds(600).toEpochMilli() else 0)
+    }
+    fun notificationId(key:String):Int = notificationIds.getOrPut(key) {
+        require(nextNotificationId<Int.MAX_VALUE-1);nextNotificationId++
+    }
+    fun validate() {
+        require(settings.goal in 1..20000) { "هدف روزانه معتبر نیست" }
+        require(settings.interval in 15..240 && settings.repeat in 0 until settings.interval)
+        require(LocalTime.parse(settings.start)<LocalTime.parse(settings.end)) { "شروع باید قبل از پایان باشد" }
+        require(water.all { it.ml in 1..10000 })
+        medications.forEach { m ->
+            require(m.name.isNotBlank() && m.times.size in 1..12 && (m.weekdays.isNotEmpty() || m.dates.isNotEmpty()))
+            require(m.weekdays.all { it in 1..7 });LocalDate.parse(m.startDay)
+            m.times.forEach { LocalTime.parse(it) };m.dates.forEach { LocalDate.parse(it) }
+        }
+        appointments.forEach { a ->
+            require(a.title.isNotBlank() && a.offsets.isNotEmpty() && a.offsets.all { it in 0..43200 });a.instant()
+        }
+    }
+}
+object Planner {
+    fun plan(data:HealthData,now:ZonedDateTime,days:Int=8):List<Reminder> {
+        if(!data.settings.consent) return emptyList()
+        val s=data.settings;val zone=now.zone;val nowMs=now.toInstant().toEpochMilli()
+        val output=mutableListOf<Reminder>();val existing=data.doses.associateBy { it.id }
+        val candidate=mutableMapOf<String,Dose>()
+        for(i in 0 until days) {
+            val day=now.toLocalDate().plusDays(i.toLong())
+            data.medications.filter { it.occurs(day) }.forEach { m ->m.times.forEach { t ->
+                val dose=Dose.of(m,day,t);candidate[dose.id]=existing[dose.id]?:dose
+            } }
+            if(s.waterEnabled && data.total(day.toString())<s.goal) {
+                val start=LocalTime.parse(s.start).let { it.hour*60+it.minute }
+                val end=LocalTime.parse(s.end).let { it.hour*60+it.minute }
+                for(minute in start..end step s.interval) {
+                    val base="water|$day|$minute"
+                    if(base in data.waterAcknowledged || base in data.waterSnoozes) continue
+                    for(retry in if(s.repeat==0) listOf(0) else listOf(0,s.repeat)) {
+                        if(minute+retry>end) continue
+                        val local=day.atStartOfDay().plusMinutes((minute+retry).toLong())
+                        val at=local.atZone(zone).toInstant().toEpochMilli()
+                        if(at>nowMs && at>=s.pauseUntil) output += Reminder("$base|$retry","water",base,at,"وقت نوشیدن آب","مقدار نوشیده‌شده را ثبت کنید",base)
+                    }
+                }
+            }
+        }
+        data.doses.filter { it.status==DoseStatus.SNOOZED }.forEach { d ->
+            val m=data.medications.find { it.id==d.medicationId && it.active }
+            if(m!=null && d.wall.substring(11) in m.times && m.occurs(LocalDateTime.parse(d.wall).toLocalDate())) candidate[d.id]=d
+        }
+        candidate.values.forEach { d ->
+            if(d.status==DoseStatus.TAKEN || d.status==DoseStatus.SKIPPED) return@forEach
+            val at=if(d.status==DoseStatus.SNOOZED) d.snoozeUntil else LocalDateTime.parse(d.wall).atZone(zone).toInstant().toEpochMilli()
+            if(at>nowMs) output += Reminder("dose|${d.id}|$at","dose",d.id,at,d.name,d.instructions)
+        }
+        if(s.waterEnabled) data.waterSnoozes.forEach { (base,at) ->
+            val local=Instant.ofEpochMilli(at).atZone(zone)
+            if(at>nowMs && at>=s.pauseUntil && base !in data.waterAcknowledged &&
+                local.toLocalTime()>=LocalTime.parse(s.start) && local.toLocalTime()<=LocalTime.parse(s.end) &&
+                data.total(local.toLocalDate().toString())<s.goal)
+                output += Reminder("$base|snooze|$at","water",base,at,"وقت نوشیدن آب","یادآوری به تعویق افتاده",base)
+        }
+        data.appointments.filter { !it.cancelled }.forEach { a ->a.offsets.forEach { offset ->
+            val at=a.instant().minusSeconds(offset*60L).toEpochMilli()
+            if(at>nowMs) output += Reminder("appointment|${a.id}|$offset","appointment",a.id,at,a.title,a.location)
+        } }
+        // Calendar rollover guarantees queue refresh even with no reminder today.
+        val midnight=now.toLocalDate().plusDays(1).atStartOfDay(zone).plusMinutes(1).toInstant().toEpochMilli()
+        output += Reminder("maintenance|${now.toLocalDate()}","maintenance","",midnight)
+        return output.sortedWith(compareBy<Reminder> { it.at }.thenBy { it.key })
+    }
+    fun allowed(data:HealthData,r:Reminder,now:ZonedDateTime):Boolean = data.settings.consent && when(r.kind) {
+        "dose" -> data.doses.find { it.id==r.reference }?.let { dose ->
+            data.medications.any { m -> m.id==dose.medicationId && m.occurs(LocalDateTime.parse(dose.wall).toLocalDate()) && dose.wall.substring(11) in m.times } &&
+                dose.status !in setOf(DoseStatus.TAKEN,DoseStatus.SKIPPED)
+        } == true
+        "water" -> data.settings.waterEnabled && now.toLocalTime()>=LocalTime.parse(data.settings.start) &&
+            now.toLocalTime()<=LocalTime.parse(data.settings.end) && data.total(now.toLocalDate().toString())<data.settings.goal &&
+            r.waterBase !in data.waterAcknowledged && now.toInstant().toEpochMilli()>=data.settings.pauseUntil
+        "appointment" -> data.appointments.any { it.id==r.reference && !it.cancelled }
+        else -> false
+    }
+}
