@@ -1,11 +1,11 @@
 <resources>
-    <style name="Theme.Medora" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.Medora.Base" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">#F6F8F6</item>
-        <item name="android:navigationBarColor">#FFFFFF</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:navigationBarColor">#183A34</item>
         <item name="android:windowBackground">#F6F8F6</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+    <style name="Theme.Medora" parent="Theme.Medora.Base" />
 </resources>
