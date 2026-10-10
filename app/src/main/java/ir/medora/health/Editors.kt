@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.ExpandLess
@@ -27,7 +28,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.time.*
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EditDialog(
     editor: Editor,
@@ -50,7 +51,8 @@ fun EditDialog(
         when {
             editor.water != null -> editor.water.editTime(ZoneId.systemDefault())
             editor.appointment != null -> LocalDateTime.parse(editor.appointment.wall)
-            else -> LocalDateTime.now().plusDays(if (editor.kind == "appointment") 1 else 0).withSecond(0).withNano(0)
+            else -> (editor.date?.let { LocalDate.parse(it).atTime(LocalTime.now()) }
+                ?: LocalDateTime.now().plusDays(if (editor.kind == "appointment") 1 else 0)).withSecond(0).withNano(0)
         }
     }
     var dateTime by remember(editor) { mutableStateOf(initialTime) }
@@ -76,6 +78,9 @@ fun EditDialog(
             it.times.size > 1 || it.weekdays != (1..7).toSet() || it.dates.isNotEmpty() || it.startDay != LocalDate.now().toString()
         } ?: false)
     }
+    var customWater by remember(editor) { mutableStateOf(editor.water != null) }
+    var waterDetails by remember(editor) { mutableStateOf(editor.water != null || editor.date != null && editor.date != LocalDate.now().toString()) }
+    var appointmentDetails by remember(editor) { mutableStateOf(editor.appointment != null) }
     var error by remember(editor) { mutableStateOf<String?>(null) }
     var datePickerTarget by remember { mutableStateOf<String?>(null) }
 
@@ -210,11 +215,14 @@ fun EditDialog(
         }
     }
 
-    Dialog(onDismissRequest = { if (!vm.busy) close() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    ModalBottomSheet(onDismissRequest = { if (!vm.busy) close() },
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.padding(16.dp).widthIn(max = 560.dp).fillMaxWidth()
+            modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().align(Alignment.CenterHorizontally)
         ) {
             Column(
                 Modifier.fillMaxWidth().heightIn(
@@ -223,15 +231,33 @@ fun EditDialog(
                 ).imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = close, enabled = !vm.busy) { Icon(Icons.Default.Close, tr("common.close")) }
+                }
                 when (editor.kind) {
                     "water" -> {
-                        Input(amount, { amount = it }, tr("water.amountField"), keyboardType = KeyboardType.Number)
-                        OutlinedButton(onClick = { datePickerTarget = "date" }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) {
-                            Text(CalendarSupport.formatDate(dateTime.toLocalDate(), calendar, language, includeWeekday = true))
+                        FlowRow(maxItemsInEachRow = 3, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(100, 250, 500, 750, 1000).forEach { ml ->
+                                FilterChip(selected = normalize(amount) == ml.toString() && !customWater,
+                                    onClick = { amount = ml.toString(); customWater = false },
+                                    modifier = Modifier.heightIn(min = 48.dp),
+                                    label = { Text(n(ml)) })
+                            }
+                            FilterChip(selected = customWater, onClick = { customWater = true },
+                                modifier = Modifier.heightIn(min = 48.dp), label = { Text(tr("water.customAmount")) })
                         }
-                        TimeField(tr("medication.time"), dateTime.toLocalTime()) { hour, minute ->
-                            dateTime = dateTime.toLocalDate().atTime(hour, minute)
+                        if (customWater) Input(amount, { amount = normalize(it) }, tr("water.amountField"), keyboardType = KeyboardType.Number)
+                        else Text(tr("water.ml", n(normalize(amount))), style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = { waterDetails = !waterDetails }) { Text(tr("water.more")) }
+                        if (waterDetails) {
+                            OutlinedButton(onClick = { datePickerTarget = "date" }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) {
+                                Text(CalendarSupport.formatDate(dateTime.toLocalDate(), calendar, language, includeWeekday = true))
+                            }
+                            TimeField(tr("medication.time"), dateTime.toLocalTime()) { hour, minute ->
+                                dateTime = dateTime.toLocalDate().atTime(hour, minute)
+                            }
                         }
                     }
                     "medication" -> {
@@ -306,10 +332,13 @@ fun EditDialog(
                         TimeField(tr("medication.time"), dateTime.toLocalTime()) { hour, minute ->
                             dateTime = dateTime.toLocalDate().atTime(hour, minute)
                         }
-                        Input(zone, { zone = it }, tr("appointment.timeZone"), tr("appointment.timeZoneHelp"))
                         Input(location, { location = it }, tr("appointment.location"))
-                        Input(contact, { contact = it }, tr("appointment.contact"))
-                        Input(notes, { notes = it }, tr("appointment.notes"), singleLine = false)
+                        TextButton(onClick = { appointmentDetails = !appointmentDetails }) { Text(tr("water.more")) }
+                        if (appointmentDetails) {
+                            Input(zone, { zone = it }, tr("appointment.timeZone"), tr("appointment.timeZoneHelp"))
+                            Input(contact, { contact = it }, tr("appointment.contact"))
+                            Input(notes, { notes = it }, tr("appointment.notes"), singleLine = false)
+                        }
                         Text(
                             tr("appointment.reminderSummary", displayTime(data.settings.appointmentStart), n(data.settings.appointmentInterval / 60)),
                             style = MaterialTheme.typography.bodySmall,
@@ -389,8 +418,9 @@ fun Input(
 ) {
     val displayedLabel = if (required) "$label · ${tr("common.required")}" else label
     OutlinedTextField(
-        value = value,
+        value = if (keyboardType == KeyboardType.Number) localizedNumber(value, LocalLanguage.current) else value,
         onValueChange = change,
+        shape = RoundedCornerShape(14.dp),
         singleLine = singleLine,
         minLines = if (singleLine) 1 else 2,
         label = { Text(displayedLabel) },
