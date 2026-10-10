@@ -1,10 +1,10 @@
 package ir.medora.health
 
-import android.icu.text.SimpleDateFormat
-import android.icu.util.Calendar
-import android.icu.util.PersianCalendar
-import android.icu.util.ULocale
-import android.icu.util.TimeZone
+import com.ibm.icu.text.SimpleDateFormat
+import com.ibm.icu.util.Calendar
+import com.ibm.icu.util.PersianCalendar
+import com.ibm.icu.util.ULocale
+import com.ibm.icu.util.TimeZone
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
