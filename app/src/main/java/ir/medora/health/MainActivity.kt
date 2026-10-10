@@ -713,7 +713,7 @@ fun AppointmentCard(
 ) {
     val language = LocalLanguage.current
     val local = java.time.LocalDateTime.parse(appointment.wall)
-    Panel(color = wellnessTint(MedoraColors.Warm), compact = true) {
+    Panel(color = wellnessTint(Color(0xFFF5EFFB)), compact = true) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             WellnessIcon(Icons.Default.Event, MedoraColors.Appointment)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
