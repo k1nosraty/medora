@@ -1,6 +1,7 @@
 package ir.medora.health
 
 import android.content.Context
+import android.view.ContextThemeWrapper
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -92,7 +93,7 @@ private val copy = mapOf(
     "today.waterCompact" to ("آب امروز" to "Water today"),
     "today.schedule" to ("برنامهٔ داروها" to "Medication schedule"),
     "today.addMedicine" to ("داروی جدید" to "Add medication"),
-    "today.noMedication" to ("برای امروز نوبتی ندارید." to "No medication doses are scheduled for today."),
+    "today.noMedication" to ("برای امروز نوبت دارویی ندارید." to "No medication doses are scheduled for today."),
     "today.noMedicationAction" to ("برای شروع، یک یادآور دارو بسازید." to "Create a medication reminder to get started."),
     "today.allDone" to ("همهٔ نوبت‌های داروی امروز مصرف شده‌اند." to "All of today’s medication doses are marked as taken."),
     "today.upcomingAppointment" to ("قرار پزشکی بعدی" to "Next appointment"),
@@ -154,7 +155,7 @@ private val copy = mapOf(
     "medication.advanced" to ("تنظیم روزها و ساعت‌های بیشتر" to "More schedule options"),
     "medication.disclaimer" to ("نام و دستور مصرف را خودتان وارد می‌کنید؛ برنامه توصیهٔ پزشکی نمی‌دهد." to "You provide the medication details. Medora does not give medical advice."),
     "medication.status" to ("وضعیت مصرف" to "Dose history"),
-    "medication.historyEmpty" to ("نوبتی برای این روز وجود ندارد." to "No doses are scheduled for this day."),
+    "medication.historyEmpty" to ("برای این روز نوبت مصرف دارو ثبت نشده است." to "No doses are scheduled for this day."),
     "medication.paused" to ("یادآوری دارو متوقف است" to "Medication reminders paused"),
     "medication.active" to ("یادآوری دارو فعال است" to "Medication reminders active"),
     "medication.deleteConfirm" to ("برنامهٔ دارو حذف شود؟ سوابق مصرف حفظ می‌شوند." to "Delete this medication schedule? Dose history will be kept."),
@@ -314,7 +315,10 @@ fun Context.withAppLocale(language: String): Context {
         setLocale(locale)
         setLayoutDirection(locale)
     }
-    return createConfigurationContext(configuration)
+    // Keep the Activity as the base: a configuration-only Context loses the dialog window token.
+    return ContextThemeWrapper(this, R.style.Theme_Medora).apply {
+        applyOverrideConfiguration(configuration)
+    }
 }
 
 @Composable

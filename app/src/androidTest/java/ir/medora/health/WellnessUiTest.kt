@@ -98,6 +98,19 @@ class WellnessUiTest {
         capture("10-settings-fa")
     }
 
+    @Test fun medicationTabDoesNotDisplayAppointmentsAfterNavigation() {
+        launch()
+        compose.onNodeWithTag("nav-3").performClick()
+        compose.onNodeWithText("ویزیت متخصص قلب").assertExists()
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText("ویزیت متخصص قلب").assertDoesNotExist()
+        compose.onNodeWithText("قرار جدید").assertDoesNotExist()
+        compose.onNodeWithTag("nav-0").performClick()
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText("ویزیت متخصص قلب").assertDoesNotExist()
+        compose.onNodeWithText("داروی جدید").assertExists()
+    }
+
     @Test fun darkThemeAndEnglishNavigationRender() {
         launch(dark = true, language = "en")
         capture("11-today-dark-en")
