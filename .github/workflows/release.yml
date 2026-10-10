@@ -21,29 +21,33 @@ jobs:
         with:
           packages: platform-tools
       - run: sdkmanager 'platforms;android-35' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Use official Maven repositories for CI
+        run: sed -i '/maven.aliyun.com/d' settings.gradle.kts
       - run: chmod +x gradlew
       - run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
       - name: Publish installable preview
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk Medora-v0.2.0-preview.apk
-          sha256sum Medora-v0.2.0-preview.apk > SHA256SUMS.txt
+          cp app/build/outputs/apk/debug/app-debug.apk Medora-v0.2.1-preview.apk
+          sha256sum Medora-v0.2.1-preview.apk > SHA256SUMS.txt
           cat > release-notes.md <<'NOTES'
-          Medora 0.2.0 — Soft Wellness preview
+          Medora 0.2.1 — Wellness Navigation preview
 
-          - Redesigned water, medication and appointment screens.
-          - Water progress ring, quick logging and bottom sheet editors.
-          - Activity calendar and water/medication reports using real data.
-          - Persian/English support and dark mode.
-          - Fixes for dose updates, reminder behavior and ambiguous progress labels.
+          - Fixed time-picker crashes when adding medication or appointments.
+          - Medication tab now excludes appointments.
+          - Separate Today medication and appointment sections with lavender appointment cards.
+          - Rounded bottom navigation with a central Today button.
+          - Settings and Reports/calendar are accessible from the bottom dock.
+          - Compact Persian/English labels and light/dark theme support.
 
-          Download Medora-v0.2.0-preview.apk to install on Android 8 or later.
+          Download Medora-v0.2.1-preview.apk to install on Android 8 or later.
           This preview APK uses the Android debug signing key. Updates from an existing installation may require a matching signing key.
-          Validation: unit tests, debug APK build, instrumentation-test compilation and Android lint. Device instrumentation tests are not run by this release workflow.
+          Validation: unit tests, debug APK build, instrumentation-test compilation and Android lint. Six device checks passed on Android 10, covering 320dp Persian/English light/dark navigation, medication isolation and the time dialog. QA screenshots: https://github.com/k1nosraty/medora/actions/runs/38071093125
           NOTES
-          if gh release view v0.2.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release v0.2.0 already exists; leaving it unchanged."
+          if gh release view v0.2.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v0.2.1 already exists; leaving it unchanged."
           else
-            gh release create v0.2.0 Medora-v0.2.0-preview.apk SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Medora 0.2.0 — Soft Wellness Preview" --notes-file release-notes.md --prerelease
+            gh release create v0.2.1 Medora-v0.2.1-preview.apk SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Medora 0.2.1 — Wellness Navigation Preview" --notes-file release-notes.md --prerelease
           fi

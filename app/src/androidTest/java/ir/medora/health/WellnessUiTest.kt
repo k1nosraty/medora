@@ -1,6 +1,10 @@
 package ir.medora.health
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.unit.dp
 import android.app.Application
+import androidx.compose.ui.graphics.asAndroidBitmap
 import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
@@ -44,12 +48,18 @@ class WellnessUiTest {
         instrumentation.runOnMainSync { model = HealthViewModel(application) }
     }
 
-    private fun launch(dark: Boolean = false, language: String = "fa") {
+    private fun launch(dark: Boolean = false, language: String = "fa", compact: Boolean = false) {
+        compose.waitUntil(15000) { model.data != null && !model.busy }
+        instrumentation.runOnMainSync {
+            model.data?.let { it.settings = it.settings.copy(language = language) }
+        }
         compose.setContent {
             CompositionLocalProvider(LocalLanguage provides language, LocalCalendar provides "jalali",
                 LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr) {
                 MaterialTheme(colorScheme = medoraColorScheme(dark), typography = medoraTypography(language), shapes = MedoraShapes) {
-                    HealthScreen(model, {}, {}, {})
+                    androidx.compose.foundation.layout.Box(
+                        androidx.compose.ui.Modifier.then(if (compact) androidx.compose.ui.Modifier.width(320.dp) else androidx.compose.ui.Modifier.fillMaxWidth())
+                    ) { HealthScreen(model, {}, {}, {}) }
                 }
             }
         }
@@ -57,10 +67,13 @@ class WellnessUiTest {
         compose.waitForIdle()
     }
 
+    @OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
     private fun capture(name: String) {
         compose.waitForIdle()
         val directory = File(application.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
-        val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
+        val bitmap = (if (name.contains("settings")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
@@ -75,7 +88,7 @@ class WellnessUiTest {
         compose.onNodeWithText("ذخیره").performScrollTo().performClick()
         compose.waitUntil(15000) { !model.busy && model.data?.total(LocalDate.now().toString()) == 1700 }
         assertEquals(1700, Repository.executor.submit<Int> { Repository.get(application).read().total(LocalDate.now().toString()) }.get())
-        compose.onNodeWithTag("nav-1").performClick()
+        compose.onNodeWithTag("open-water").performScrollTo().performClick()
         capture("03-water-fa")
         compose.onNodeWithTag("nav-2").performClick()
         capture("04-medications-fa")
@@ -87,15 +100,28 @@ class WellnessUiTest {
         compose.onNodeWithText("قرار جدید").performScrollTo().performClick()
         capture("07-appointment-form")
         compose.onNodeWithContentDescription("بستن").performClick()
-        compose.onNodeWithTag("more-pages").performClick()
+        compose.onNodeWithTag("nav-insights").performClick()
         compose.onNodeWithTag("page-calendar").performClick()
         capture("08-calendar-fa")
         compose.onNodeWithContentDescription("بستن").performClick()
-        compose.onNodeWithTag("more-pages").performClick()
+        compose.onNodeWithTag("nav-insights").performClick()
         compose.onNodeWithTag("page-reports").performClick()
         capture("09-reports-fa")
         compose.onNodeWithTag("settings").performClick()
         capture("10-settings-fa")
+    }
+
+    @Test fun medicationTabDoesNotDisplayAppointmentsAfterNavigation() {
+        launch()
+        compose.onNodeWithTag("nav-3").performClick()
+        compose.onNodeWithText("ویزیت متخصص قلب").assertExists()
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText("ویزیت متخصص قلب").assertDoesNotExist()
+        compose.onNodeWithText("قرار جدید").assertDoesNotExist()
+        compose.onNodeWithTag("nav-0").performClick()
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText("ویزیت متخصص قلب").assertDoesNotExist()
+        compose.onNodeWithText("داروی جدید").assertExists()
     }
 
     @Test fun darkThemeAndEnglishNavigationRender() {
@@ -104,6 +130,34 @@ class WellnessUiTest {
         compose.onNodeWithTag("nav-1").performClick()
         capture("12-water-dark-en")
     }
+
+    private fun verifyCompactDock(language: String, dark: Boolean) {
+        launch(dark = dark, language = language, compact = true)
+        val tags = listOf("settings", "nav-insights", "nav-0", "nav-2", "nav-3")
+        tags.forEach { compose.onNodeWithTag(it).assertIsDisplayed() }
+        val bounds = tags.map { compose.onNodeWithTag(it).fetchSemanticsNode().boundsInRoot }
+        bounds.zipWithNext().forEach { (left, right) -> org.junit.Assert.assertTrue(left.right <= right.left + 1f) }
+        compose.onNodeWithTag("nav-0").assertIsSelected()
+        compose.onNodeWithTag("today-medications").assertExists()
+        compose.onNodeWithTag("today-appointments").assertExists()
+        capture("compact-$language-$dark-today")
+        compose.onNodeWithTag("nav-insights").performClick()
+        compose.onNodeWithTag("page-calendar").assertIsDisplayed()
+        compose.onNodeWithTag("page-reports").performClick()
+        capture("compact-$language-$dark-reports")
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText("ویزیت متخصص قلب").assertDoesNotExist()
+        compose.onNodeWithTag("nav-3").performClick()
+        compose.onNodeWithText("ویزیت متخصص قلب").assertExists()
+        compose.onNodeWithTag("settings").performClick()
+        compose.onNodeWithText(localizedText("settings.title", language)).assertExists()
+        capture("compact-$language-$dark-settings")
+    }
+
+    @Test fun compactPersianLightNavigation() = verifyCompactDock("fa", false)
+    @Test fun compactEnglishDarkNavigation() = verifyCompactDock("en", true)
+    @Test fun compactPersianDarkNavigation() = verifyCompactDock("fa", true)
+    @Test fun compactEnglishLightNavigation() = verifyCompactDock("en", false)
 
     @Test fun welcomeRendersWithoutFakeLogin() {
         compose.setContent {

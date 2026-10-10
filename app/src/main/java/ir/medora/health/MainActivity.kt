@@ -197,7 +197,6 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
     val data = vm.data
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var secondary by rememberSaveable { mutableStateOf<String?>(null) }
-    var moreMenu by remember { mutableStateOf(false) }
     BackHandler(enabled = secondary != null) { secondary = null }
     val context = LocalContext.current
     val intro = remember { context.getSharedPreferences("medora_ui", Context.MODE_PRIVATE) }
@@ -231,12 +230,7 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
         return
     }
     val historyDate = LocalDate.parse(history)
-    val tabs = listOf(
-        Triple("nav.today", Icons.Default.Home, "nav.today"),
-        Triple("nav.water", Icons.Default.WaterDrop, "nav.water"),
-        Triple("nav.medications", Icons.Default.Medication, "nav.medications"),
-        Triple("nav.appointments", Icons.Default.CalendarMonth, "nav.appointments")
-    )
+
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -245,61 +239,37 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 title = {
-                    if (secondary != null) Text(tr(if (secondary == "calendar") "nav.calendar" else "nav.reports"),
+                    if (secondary != null) Text(tr(if (secondary == "water") "nav.water" else "nav.insights"),
                         style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     else if (tab == 0) Column {
                         Text(tr("today.greeting"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(displayDate(LocalDate.now(), true), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else Text(tr(tabs[tab].first), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    } else Text(tr(if (tab == 2) "nav.medications" else "nav.appointments"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     if (secondary != null) IconButton(onClick = { secondary = null }) {
                         Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, tr("common.close"))
                     }
                 },
-                actions = {
-                    if (secondary == null) Box {
-                        IconButton(onClick = { moreMenu = true }, modifier = Modifier.testTag("more-pages")) {
-                            Icon(Icons.Default.MoreVert, tr("water.more"))
-                        }
-                        DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
-                            listOf("calendar" to "nav.calendar", "reports" to "nav.reports").forEach { (page, key) ->
-                                DropdownMenuItem(text = { Text(tr(key)) }, modifier = Modifier.testTag("page-$page"),
-                                    onClick = { secondary = page; moreMenu = false })
-                            }
-                        }
-                    }
-                    IconButton(onClick = { editor = Editor("settings") }, modifier = Modifier.size(48.dp).testTag("settings")) {
-                        Icon(Icons.Default.Tune, contentDescription = tr("a11y.settings"))
-                    }
-                }
+                actions = {}
             )
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                tonalElevation = 0.dp
-            ) {
-                tabs.forEachIndexed { index, (key, icon, descriptionKey) ->
-                    NavigationBarItem(
-                        modifier = Modifier.testTag("nav-$index"),
-                        selected = tab == index && secondary == null,
-                        onClick = { tab = index; secondary = null },
-                        icon = { Icon(icon, contentDescription = tr(descriptionKey), modifier = Modifier.size(22.dp)) },
-                        label = { Text(tr(key), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        alwaysShowLabel = true,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = Color.Transparent,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
+            WellnessNavigationDock(
+                selected = if (editor?.kind == "settings") "settings" else if (secondary == "calendar" || secondary == "reports") "insights"
+                    else if (secondary == "water") "today" else when (tab) { 2 -> "medications"; 3 -> "appointments"; else -> "today" },
+                onSelect = { destination ->
+                    when (destination) {
+                        "settings" -> editor = Editor("settings")
+                        "insights" -> secondary = "calendar"
+                        else -> {
+                            tab = when (destination) { "medications" -> 2; "appointments" -> 3; else -> 0 }
+                            secondary = null
+                        }
+                    }
                 }
-            }
+            )
         }
     ) { padding ->
         Column(
@@ -309,17 +279,29 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             if (vm.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             Column(
                 Modifier.widthIn(max = 760.dp).fillMaxWidth().weight(1f)
-                    .verticalScroll(rememberScrollState()).padding(horizontal = MedoraSpacing.Page, vertical = 10.dp),
+                    .verticalScroll(rememberSaveable(tab, secondary, saver = androidx.compose.foundation.ScrollState.Saver) { androidx.compose.foundation.ScrollState(0) }).padding(horizontal = MedoraSpacing.Page, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 vm.error?.let { ErrorNotice(tr(it)) }
-                if (secondary == "calendar") ActivityCalendarScreen(data, vm, { editor = it })
+                androidx.compose.runtime.key(tab, secondary) {
+                if (secondary == "calendar" || secondary == "reports") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("calendar" to "nav.calendar", "reports" to "nav.reports").forEach { (page, label) ->
+                            FilterChip(selected = secondary == page, onClick = { secondary = page },
+                                label = { Text(tr(label)) }, modifier = Modifier.testTag("page-$page"))
+                        }
+                    }
+                }
+                if (secondary == "water") WaterScreen(data, historyDate, { showHistoryPicker = true },
+                    { editor = it.copy(date = history) }, { deletion = it }, vm)
+                else if (secondary == "calendar") ActivityCalendarScreen(data, vm, { editor = it })
                 else if (secondary == "reports") ReportsScreen(data)
                 else when (tab) {
-                    0 -> TodayScreen(data, vm, requestPermission, openNotification, { tab = 2; history = LocalDate.now().toString() }) { editor = it }
+                    0 -> TodayScreen(data, vm, requestPermission, openNotification, { tab = 2; history = LocalDate.now().toString() }, { secondary = "water"; history = LocalDate.now().toString() }) { editor = it }
                     1 -> WaterScreen(data, historyDate, { showHistoryPicker = true }, { editor = it.copy(date = history) }, { deletion = it }, vm)
                     2 -> MedicationScreen(data, historyDate, { showHistoryPicker = true }, { editor = it }, { deletion = it }, vm)
                     else -> AppointmentScreen(data, { editor = it }, { deletion = it }, vm)
+                }
                 }
             }
         }
@@ -386,6 +368,7 @@ private fun TodayScreen(
     requestPermission: () -> Unit,
     openNotification: () -> Unit,
     viewMedications: () -> Unit,
+    viewWater: () -> Unit,
     openEditor: (Editor) -> Unit
 ) {
     val today = LocalDate.now()
@@ -401,6 +384,8 @@ private fun TodayScreen(
         }
     }
     WaterProgressCard(data, today) { openEditor(Editor("water")) }
+    TextButton(onClick = viewWater, modifier = Modifier.testTag("open-water")) { Text(tr("water.history")) }
+    Column(Modifier.fillMaxWidth().testTag("today-medications"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Panel(compact = true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             WellnessIcon(Icons.Default.Medication, MedoraColors.Medication)
@@ -415,13 +400,20 @@ private fun TodayScreen(
     if (nextDose != null) DoseCard(nextDose, vm)
     else if (doses.isNotEmpty()) Empty(if (taken == doses.size) tr("today.allDone") else tr("today.progress", n(taken), n(doses.size)))
     else PrimaryAction(tr("today.addMedicine"), { openEditor(Editor("medication")) })
+    }
+    HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
+    Column(Modifier.fillMaxWidth().testTag("today-appointments"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            WellnessIcon(Icons.Default.Event, MedoraColors.Appointment)
+            Heading(tr("today.upcomingAppointment"))
+        }
     if (appointment != null) {
-        Heading(tr("today.upcomingAppointment"))
         AppointmentCard(appointment,
             edit = { openEditor(Editor("appointment", appointment = appointment)) },
             toggle = { vm.change({ it.appointments.replace(appointment.copy(cancelled = !appointment.cancelled)) }) },
             delete = {}, showDelete = false)
     } else PrimaryAction(tr("today.appointmentAction"), { openEditor(Editor("appointment")) })
+    }
     if (!data.settings.consent || !vm.enabled) {
         Panel(color = wellnessTint(MedoraColors.WarningContainer), compact = true) {
             Text(tr("permission.title"), fontWeight = FontWeight.SemiBold)
@@ -721,7 +713,7 @@ fun AppointmentCard(
 ) {
     val language = LocalLanguage.current
     val local = java.time.LocalDateTime.parse(appointment.wall)
-    Panel(color = wellnessTint(MedoraColors.Warm), compact = true) {
+    Panel(color = wellnessTint(Color(0xFFF5EFFB)), compact = true) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             WellnessIcon(Icons.Default.Event, MedoraColors.Appointment)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
