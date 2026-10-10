@@ -1,4 +1,4 @@
-package ir.hamrah.health
+package ir.medora.health
 import org.junit.Test
 import org.junit.Assert.assertEquals
 class DomainTest {

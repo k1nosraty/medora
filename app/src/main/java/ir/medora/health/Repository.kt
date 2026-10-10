@@ -1,4 +1,4 @@
-package ir.hamrah.health
+package ir.medora.health
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
@@ -16,12 +16,12 @@ class Repository private constructor(private val context:Context) {
     private val queueFile=AtomicFile(File(context.filesDir,"queue-v2.enc"))
     private fun key():SecretKey {
         val store=KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        val existing=store.getKey("hamrah-health-v2",null) as? SecretKey
+        val existing=store.getKey("medora-health-v2",null) as? SecretKey
         if(existing!=null)return existing
         // Never replace a missing key for an existing encrypted dataset.
         check(!stateFile.baseFile.exists() && !File(stateFile.baseFile.path+".bak").exists()) { "کلید اطلاعات موجود در دسترس نیست" }
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES,"AndroidKeyStore").apply {
-            init(KeyGenParameterSpec.Builder("hamrah-health-v2",KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            init(KeyGenParameterSpec.Builder("medora-health-v2",KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(256).setRandomizedEncryptionRequired(true).build())
         }.generateKey()

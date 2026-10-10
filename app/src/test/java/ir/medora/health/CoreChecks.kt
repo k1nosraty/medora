@@ -1,4 +1,4 @@
-package ir.hamrah.health
+package ir.medora.health
 
 import java.time.*
 import java.nio.file.Files
@@ -97,7 +97,7 @@ object CoreChecks {
         val plain=Codec.encode(d).toByteArray(Charsets.UTF_8);val encrypted=Encryption.seal(plain,key)
         expect(!encrypted.contentEquals(plain),"data encrypted")
         expect(!encrypted.contentEquals(Encryption.seal(plain,key)),"fresh IV each write")
-        val file=Files.createTempFile("hamrah-test-",".enc")
+        val file=Files.createTempFile("medora-test-",".enc")
         try { Files.write(file,encrypted);expect(Codec.decode(String(Encryption.open(Files.readAllBytes(file),key),Charsets.UTF_8))==d,"encrypted file close reopen") } finally{Files.delete(file)}
         val tampered=encrypted.copyOf();tampered[tampered.lastIndex]=(tampered.last().toInt() xor 1).toByte()
         rejects("tampering detected"){Encryption.open(tampered,key)}

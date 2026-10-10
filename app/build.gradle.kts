@@ -3,10 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 android {
-    namespace = "ir.hamrah.health"
+    namespace = "ir.medora.health"
     compileSdk = 35
     defaultConfig {
-        applicationId = "ir.hamrah.health.android"
+        applicationId = "ir.medora.health.android"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

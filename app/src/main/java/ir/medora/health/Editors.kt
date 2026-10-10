@@ -1,10 +1,13 @@
-package ir.hamrah.health
+package ir.medora.health
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -27,7 +30,7 @@ import java.time.*
     var dateTime by remember { mutableStateOf(initialTime) }
     var name by remember { mutableStateOf(e.medication?.name?:e.appointment?.title?:"") }
     var instructions by remember { mutableStateOf(e.medication?.instructions?:"") }
-    var times by remember { mutableStateOf(e.medication?.times?.joinToString(", ")?:"08:00") }
+    var times by remember { mutableStateOf(e.medication?.times?.takeIf { it.isNotEmpty() }?:listOf("08:00")) }
     var dates by remember { mutableStateOf(e.medication?.dates?.joinToString(", ")?:"") }
     var specific by remember { mutableStateOf(e.medication?.dates?.isNotEmpty()?:false) }
     var weekdays by remember { mutableStateOf(e.medication?.weekdays?:(1..7).toSet()) }
@@ -46,12 +49,24 @@ import java.time.*
     var privateDetails by remember { mutableStateOf(initialSettings.privateNotifications) }
     var pause by remember { mutableStateOf(initialSettings.pauseUntil) }
     var error by remember { mutableStateOf<String?>(null) }
-    val title=when(e.kind){"water"->if(e.water==null)"ثبت آب" else "ویرایش ثبت آب";"medication"->if(e.medication==null)"داروی جدید" else "ویرایش دارو";"appointment"->if(e.appointment==null)"قرار جدید" else "ویرایش قرار";else->"تنظیمات همراه"}
+    val title=when(e.kind){"water"->if(e.water==null)"ثبت آب" else "ویرایش ثبت آب";"medication"->if(e.medication==null)"داروی جدید" else "ویرایش دارو";"appointment"->if(e.appointment==null)"قرار جدید" else "ویرایش قرار";else->context.getString(R.string.settings_title)}
     fun datePicker() {
         DatePickerDialog(context,{_,y,m,d->dateTime=LocalDate.of(y,m+1,d).atTime(dateTime.toLocalTime())},dateTime.year,dateTime.monthValue-1,dateTime.dayOfMonth)
             .apply { if(e.kind=="water")datePicker.maxDate=System.currentTimeMillis() }.show()
     }
     fun timePicker() { TimePickerDialog(context,{_,h,m->dateTime=dateTime.toLocalDate().atTime(h,m)},dateTime.hour,dateTime.minute,true).show() }
+    fun medicationTimePicker(index:Int?=null) {
+        val initial=LocalTime.parse(if(index==null)times.last() else times[index])
+        TimePickerDialog(context,{_,h,m->
+            val selected=LocalTime.of(h,m).toString()
+            if(times.withIndex().any { it.index!=index && it.value==selected }) {
+                error="این ساعت مصرف قبلاً اضافه شده است"
+            } else {
+                times=if(index==null)times+selected else times.mapIndexed { i,time->if(i==index)selected else time }
+                error=null
+            }
+        },initial.hour,initial.minute,true).show()
+    }
     fun save() {
         try {
             error=null
@@ -64,7 +79,7 @@ import java.time.*
                     } }; action
                 }
                 "medication"->{
-                    val parsedTimes=parseTimes(times);val parsedDates=if(specific)parseDates(dates) else emptySet()
+                    val parsedTimes=parseTimes(times.joinToString(","));val parsedDates=if(specific)parseDates(dates) else emptySet()
                     require(name.isNotBlank()){ "نام دارو را وارد کنید" }
                     require(if(specific)parsedDates.isNotEmpty() else weekdays.isNotEmpty()){ "حداقل یک روز یا تاریخ انتخاب کنید" }
                     val med=Medication(id=e.medication?.id?:id(),name=name.trim(),instructions=instructions.trim(),startDay=e.medication?.startDay?:LocalDate.now().toString(),
@@ -99,7 +114,22 @@ import java.time.*
                     "water"->{Input(amount,{amount=it},"مقدار به میلی‌لیتر");OutlinedButton(onClick={datePicker()}){Text(labelDate(dateTime.toLocalDate()))};OutlinedButton(onClick={timePicker()}){Text(fa(dateTime.toLocalTime()))} }
                     "medication"->{
                         Input(name,{name=it},"نام دارو یا مکمل");Input(instructions,{instructions=it},"مقدار یا توضیح مصرف")
-                        Input(times,{times=it},"ساعت‌های مصرف","مثال: 08:00, 14:00, 22:00")
+                        Text("ساعت‌های مصرف",style=MaterialTheme.typography.titleSmall)
+                        times.forEachIndexed { index,time->
+                            Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                                OutlinedButton(onClick={medicationTimePicker(index)},modifier=Modifier.weight(1f)) {
+                                    Text("ساعت مصرف ${fa(index+1)}: ${fa(time)}")
+                                }
+                                if(times.size>1)IconButton(onClick={times=times.filterIndexed { i,_->i!=index };error=null}) {
+                                    Icon(Icons.Default.Delete,contentDescription="حذف ساعت مصرف ${fa(index+1)}")
+                                }
+                            }
+                        }
+                        TextButton(onClick={medicationTimePicker()},enabled=times.size<12) {
+                            Icon(Icons.Default.Add,contentDescription=null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("افزودن ساعت مصرف")
+                        }
                         SwitchRow("مصرف در تاریخ‌های مشخص",specific){specific=it}
                         if(specific)Input(dates,{dates=it},"تاریخ‌های مصرف","میلادی؛ مثال: 2026-10-09, 2026-10-15")
                         else FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp)) { weekDays.forEach { (day,label)->

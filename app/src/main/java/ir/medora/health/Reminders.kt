@@ -1,4 +1,4 @@
-package ir.hamrah.health
+package ir.medora.health
 
 import android.Manifest
 import android.app.*
@@ -15,7 +15,7 @@ class Reminders(private val context:Context) {
         (Build.VERSION.SDK_INT<33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED)
     fun exact():Boolean = Build.VERSION.SDK_INT<31 || alarms.canScheduleExactAlarms()
     private fun alarmIntent():PendingIntent = PendingIntent.getBroadcast(context,1,
-        Intent(context,ReminderReceiver::class.java).setAction("ir.hamrah.health.FIRE"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        Intent(context,ReminderReceiver::class.java).setAction("ir.medora.health.FIRE"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun rebuild(data:HealthData):List<Reminder> {
         val repo=Repository.get(context)
         alarms.cancel(alarmIntent())
@@ -46,8 +46,8 @@ class Reminders(private val context:Context) {
         return all
     }
     private fun action(r:Reminder,notificationId:Int,action:String):PendingIntent {
-        val intent=Intent(context,ReminderReceiver::class.java).setAction("ir.hamrah.health.ACTION")
-            .setData(Uri.parse("hamrah://action/${Uri.encode(r.key)}/${r.at}/$action"))
+        val intent=Intent(context,ReminderReceiver::class.java).setAction("ir.medora.health.ACTION")
+            .setData(Uri.parse("medora://action/${Uri.encode(r.key)}/${r.at}/$action"))
             .putExtra("key",r.key).putExtra("kind",r.kind).putExtra("reference",r.reference)
             .putExtra("at",r.at).putExtra("waterBase",r.waterBase).putExtra("action",action).putExtra("notificationId",notificationId)
         return PendingIntent.getBroadcast(context,notificationId,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -60,7 +60,7 @@ class Reminders(private val context:Context) {
         val open=PendingIntent.getActivity(context,notificationId,Intent(context,MainActivity::class.java).setAction("open:$notificationId"),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val builder=Notification.Builder(context,"health-v2").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(if(data.settings.privateNotifications)"یادآوری همراه" else r.title)
+            .setContentTitle(if(data.settings.privateNotifications)context.getString(R.string.reminder_title) else r.title)
             .setContentText(if(data.settings.privateNotifications)"برای جزئیات برنامه را باز کنید" else r.body)
             .setContentIntent(open).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setCategory(Notification.CATEGORY_REMINDER)
@@ -75,7 +75,7 @@ class Reminders(private val context:Context) {
 class ReminderReceiver:BroadcastReceiver() {
     override fun onReceive(context:Context,intent:Intent) = background(context) {
         val repo=Repository.get(context);val service=Reminders(context);val now=ZonedDateTime.now()
-        if(intent.action=="ir.hamrah.health.ACTION") {
+        if(intent.action=="ir.medora.health.ACTION") {
             val token="${intent.getStringExtra("key")}|${intent.getLongExtra("at",0)}|${intent.getStringExtra("action")}" 
             repo.update { d ->
                 if(token !in d.handledActions) {
@@ -120,7 +120,7 @@ class RefreshReceiver:BroadcastReceiver() {
 // No Flutter engine, service or continuously running timer is involved.
 fun BroadcastReceiver.background(context:Context,work:()->Unit) {
     val pending=goAsync()
-    val lock=requireNotNull(context.getSystemService(PowerManager::class.java)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"hamrah:reminder").apply { acquire(9000) }
+    val lock=requireNotNull(context.getSystemService(PowerManager::class.java)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"medora:reminder").apply { acquire(9000) }
     Repository.executor.execute {
         try { work() } catch(_:Exception) {
             // Do not log decrypted health information. An app-open refresh retries

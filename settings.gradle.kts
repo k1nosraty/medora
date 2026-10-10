@@ -16,5 +16,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "HamrahAndroid"
+rootProject.name = "Medora"
 include(":app")
