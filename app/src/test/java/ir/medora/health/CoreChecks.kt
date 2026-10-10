@@ -69,7 +69,7 @@ object CoreChecks {
         d.settings=d.settings.copy(goal=2000)
         val a=Appointment(id="visit",title="آزمایش",wall="2026-10-10T12:00",zone=zone.id,location="تهران",offsets=setOf(1440,60))
         d.appointments+=a
-        expect(Planner.plan(d,now).count{it.kind=="appointment"}==2,"multiple appointment reminders")
+        expect(Planner.plan(d,now).count{it.kind=="appointment"}==4,"morning and advance appointment reminders")
         val travel=now.withZoneSameInstant(ZoneId.of("America/New_York"))
         expect(Planner.plan(d,now).filter{it.kind=="appointment"}.map{it.at}==Planner.plan(d,travel).filter{it.kind=="appointment"}.map{it.at},"clinic timezone preserved on travel")
         d.appointments[0]=a.copy(wall="2026-10-11T14:00")
@@ -92,7 +92,7 @@ object CoreChecks {
         d.validate()
         val restored=Codec.decode(Codec.encode(d));expect(restored==d,"all data codec round trip")
         val queue=Planner.plan(d,now);expect(Codec.decodeQueue(Codec.encodeQueue(queue))==queue,"queue round trip")
-        rejects("unknown schema rejected"){Codec.decode(Codec.encode(d).replace("\"schema\":2","\"schema\":99"))}
+        rejects("unknown schema rejected"){Codec.decode(Codec.encode(d).replace("\"schema\":3","\"schema\":99"))}
         val key=KeyGenerator.getInstance("AES").apply{init(256)}.generateKey()
         val plain=Codec.encode(d).toByteArray(Charsets.UTF_8);val encrypted=Encryption.seal(plain,key)
         expect(!encrypted.contentEquals(plain),"data encrypted")

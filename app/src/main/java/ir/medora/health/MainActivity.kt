@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.*
@@ -108,7 +109,7 @@ data class Editor(val kind:String,val water:Water?=null,val medication:Medicatio
             .apply { datePicker.maxDate=System.currentTimeMillis() }.show()
     }
     Scaffold(
-        topBar={TopAppBar(title={Row(verticalAlignment=Alignment.CenterVertically) { Icon(Icons.Default.Spa,null,tint=Green);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.app_name),fontWeight=FontWeight.Bold) }},
+        topBar={TopAppBar(title={Row(verticalAlignment=Alignment.CenterVertically) { Image(painterResource(R.drawable.ic_brand),null,modifier=Modifier.size(28.dp));Spacer(Modifier.width(8.dp));Text(stringResource(R.string.app_name),fontWeight=FontWeight.Bold) }},
             actions={IconButton(onClick={editor=Editor("settings")}){Icon(Icons.Default.Tune,"تنظیمات")}})},
         bottomBar={NavigationBar { listOf("امروز" to Icons.Default.Dashboard,"آب" to Icons.Default.WaterDrop,"داروها" to Icons.Default.Medication,"قرارها" to Icons.Default.CalendarMonth).forEachIndexed { i,pair ->
             NavigationBarItem(selected=tab==i,onClick={tab=i},icon={Icon(pair.second,null)},label={Text(pair.first)})

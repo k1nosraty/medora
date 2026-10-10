@@ -10,8 +10,9 @@ object Codec {
     private fun JSONObject.strings(key:String):List<String> = getJSONArray(key).let { a ->(0 until a.length()).map { a.getString(it) } }
     private fun JSONObject.ints(key:String):Set<Int> = getJSONArray(key).let { a ->(0 until a.length()).map { a.getInt(it) }.toSet() }
     fun encode(d:HealthData):String = obj(
-        "schema" to 2,"settings" to d.settings.let { s ->obj("goal" to s.goal,"waterEnabled" to s.waterEnabled,"start" to s.start,"end" to s.end,
-            "interval" to s.interval,"repeat" to s.repeat,"pauseUntil" to s.pauseUntil,"consent" to s.consent,"private" to s.privateNotifications) },
+        "schema" to 3,"settings" to d.settings.let { s ->obj("goal" to s.goal,"waterEnabled" to s.waterEnabled,"start" to s.start,"end" to s.end,
+            "interval" to s.interval,"repeat" to s.repeat,"pauseUntil" to s.pauseUntil,"consent" to s.consent,"private" to s.privateNotifications,
+            "appointmentStart" to s.appointmentStart,"appointmentInterval" to s.appointmentInterval) },
         "water" to array(d.water.map { obj("id" to it.id,"ml" to it.ml,"day" to it.day,"at" to it.at) }),
         "medications" to array(d.medications.map { obj("id" to it.id,"name" to it.name,"instructions" to it.instructions,"startDay" to it.startDay,
             "times" to array(it.times),"weekdays" to array(it.weekdays),"dates" to array(it.dates),"active" to it.active) }),
@@ -24,10 +25,12 @@ object Codec {
         "notificationIds" to JSONObject(d.notificationIds as Map<*,*>)
     ).toString()
     fun decode(text:String):HealthData {
-        val j=JSONObject(text);require(j.getInt("schema")==2) { "نسخه اطلاعات پشتیبانی نمی‌شود" }
+        val j=JSONObject(text);val schema=j.getInt("schema");require(schema in 2..3) { "نسخه اطلاعات پشتیبانی نمی‌شود" }
         val s=j.getJSONObject("settings")
         val d=HealthData(settings=Settings(s.getInt("goal"),s.getBoolean("waterEnabled"),s.getString("start"),s.getString("end"),
-            s.getInt("interval"),s.getInt("repeat"),s.getLong("pauseUntil"),s.getBoolean("consent"),s.getBoolean("private")),through=j.getString("through"))
+            s.getInt("interval"),s.getInt("repeat"),s.getLong("pauseUntil"),s.getBoolean("consent"),
+            if(schema==2)false else s.optBoolean("private",false),s.optString("appointmentStart","08:00"),
+            s.optInt("appointmentInterval",120)),through=j.getString("through"))
         j.list("water").forEach { d.water += Water(it.getString("id"),it.getInt("ml"),it.getString("day"),it.getLong("at")) }
         j.list("medications").forEach { d.medications += Medication(it.getString("id"),it.getString("name"),it.getString("instructions"),
             it.getString("startDay"),it.strings("times"),it.ints("weekdays"),it.strings("dates").toSet(),it.getBoolean("active")) }

@@ -59,9 +59,13 @@ class Reminders(private val context:Context) {
         })
         val open=PendingIntent.getActivity(context,notificationId,Intent(context,MainActivity::class.java).setAction("open:$notificationId"),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val title=if(data.settings.privateNotifications)context.getString(R.string.reminder_title) else fa(r.title)
+        val body=if(data.settings.privateNotifications)"برای جزئیات برنامه را باز کنید" else fa(r.body)
+        val publicVersion=Notification.Builder(context,"health-v2").setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.reminder_title)).setContentText("برای جزئیات برنامه را باز کنید").build()
         val builder=Notification.Builder(context,"health-v2").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(if(data.settings.privateNotifications)context.getString(R.string.reminder_title) else r.title)
-            .setContentText(if(data.settings.privateNotifications)"برای جزئیات برنامه را باز کنید" else r.body)
+            .setContentTitle(title).setContentText(body)
+            .setStyle(Notification.BigTextStyle().bigText(body)).setPublicVersion(publicVersion)
             .setContentIntent(open).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setCategory(Notification.CATEGORY_REMINDER)
         if(r.kind!="appointment") {
