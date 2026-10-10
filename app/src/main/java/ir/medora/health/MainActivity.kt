@@ -279,7 +279,7 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             if (vm.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             Column(
                 Modifier.widthIn(max = 760.dp).fillMaxWidth().weight(1f)
-                    .verticalScroll(rememberScrollState()).padding(horizontal = MedoraSpacing.Page, vertical = 10.dp),
+                    .verticalScroll(rememberSaveable(tab, secondary, saver = androidx.compose.foundation.ScrollState.Saver) { androidx.compose.foundation.ScrollState(0) }).padding(horizontal = MedoraSpacing.Page, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 vm.error?.let { ErrorNotice(tr(it)) }
