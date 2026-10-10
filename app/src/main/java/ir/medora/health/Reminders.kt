@@ -62,7 +62,7 @@ class Reminders(private val context:Context) {
         repo.save(data)
         return all
     }
-    private fun refreshActive(data:HealthData,now:ZonedDateTime) {
+    internal fun refreshActive(data:HealthData,now:ZonedDateTime) {
         notifications.activeNotifications.forEach { active ->
             val extras=active.notification.extras
             val kind=extras.getString("medora.kind")
