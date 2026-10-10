@@ -134,6 +134,21 @@ class AuditRegressionTest {
         while(callbacks.isNotEmpty())callbacks.removeFirst().invoke()
         assertEquals(1,failed);assertEquals(1,successful);assertEquals(0,queue.pending)
     }
+    @Test fun missedWaterRepeatsRecoverAsOneCurrentPrompt() {
+        val d=HealthData(settings=Settings(consent=true,waterEnabled=true,repeat=10),
+            reminderCheckpoint=before.toInstant().toEpochMilli())
+        val now=before.withHour(12).withMinute(15)
+        val recovered=Planner.overdue(d,now).filter { it.kind=="water" }
+        assertEquals(1,recovered.size)
+        assertEquals(now.withMinute(10).toInstant().toEpochMilli(),recovered.single().at)
+    }
+    @Test fun appointmentRepeatsCoalesceButDistinctMedicineDosesDoNot() {
+        val d=data().apply { appointments+=Appointment(id="a",title="Clinic",wall="2026-10-10T14:00",zone=zone.id,offsets=emptySet()) }
+        val recovered=Planner.overdue(d,before.withHour(13).withMinute(0))
+        assertEquals(1,recovered.count { it.kind=="appointment" })
+        assertEquals(2,recovered.count { it.kind=="dose" })
+        assertEquals(before.withHour(12).withMinute(0).toInstant().toEpochMilli(),recovered.single { it.kind=="appointment" }.at)
+    }
     @Test fun revokedConsentDoesNotRecoverOldReminders() {
         val d=data().apply { settings=settings.copy(consent=false) }
         assertTrue(Planner.overdue(d,before.withHour(8).withMinute(15)).isEmpty())

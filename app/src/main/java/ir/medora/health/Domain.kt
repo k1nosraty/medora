@@ -241,9 +241,15 @@ object Planner {
         }.coerceIn(current-RECOVERY_MILLIS,current)
         val since=Instant.ofEpochMilli(checkpoint).atZone(now.zone)
         val days=ChronoUnit.DAYS.between(since.toLocalDate(),now.toLocalDate()).toInt()+1
-        return plan(data,since,days).filter {
+        val due=plan(data,since,days).filter {
             it.at<=current && it.kind!="maintenance" && it.key !in data.deliveredReminders && allowed(data,it,now)
         }
+        // Repeated water/appointment prompts should not create a burst after
+        // a long delay. Distinct medication doses must each remain visible.
+        val water=due.filter { it.kind=="water" }.maxByOrNull { it.at }
+        val appointments=due.filter { it.kind=="appointment" }.groupBy { it.reference }
+            .values.map { slots ->slots.maxBy { it.at } }
+        return (due.filter { it.kind=="dose" }+appointments+listOfNotNull(water)).sortedBy { it.at }
     }
     fun content(data:HealthData,r:Reminder):Reminder {
         val language=data.settings.language
