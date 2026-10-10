@@ -20,7 +20,8 @@ data class Settings(
     val goal: Int=2000, val waterEnabled: Boolean=false, val start: String="08:00",
     val end: String="22:00", val interval: Int=60, val repeat: Int=0,
     val pauseUntil: Long=0, val consent: Boolean=false, val privateNotifications: Boolean=false,
-    val appointmentStart: String="08:00", val appointmentInterval: Int=120
+    val appointmentStart: String="08:00", val appointmentInterval: Int=120,
+    val language: String="fa", val calendar: String="jalali"
 )
 data class Water(val id:String=id(),val ml:Int,val day:String,val at:Long)
 data class Medication(
@@ -126,6 +127,8 @@ data class HealthData(
         require(LocalTime.parse(settings.start)<LocalTime.parse(settings.end)) { "شروع باید قبل از پایان باشد" }
         LocalTime.parse(settings.appointmentStart)
         require(settings.appointmentInterval in setOf(60,120)) { "فاصله یادآوری قرار باید یک یا دو ساعت باشد" }
+        require(settings.language in setOf("fa", "en"))
+        require(settings.calendar in setOf("jalali", "gregorian"))
         require(water.all { it.ml in 1..10000 })
         medications.forEach { m ->
             require(m.name.isNotBlank() && m.times.size in 1..12 && (m.weekdays.isNotEmpty() || m.dates.isNotEmpty()))
@@ -140,7 +143,7 @@ data class HealthData(
 object Planner {
     fun plan(data:HealthData,now:ZonedDateTime,days:Int=8):List<Reminder> {
         if(!data.settings.consent) return emptyList()
-        val s=data.settings;val zone=now.zone;val nowMs=now.toInstant().toEpochMilli()
+        val s=data.settings;val zone=now.zone;val nowMs=now.toInstant().toEpochMilli();val language=s.language
         val output=mutableListOf<Reminder>();val existing=data.doses.associateBy { it.id }
         val candidate=mutableMapOf<String,Dose>()
         for(i in 0 until days) {
@@ -158,7 +161,11 @@ object Planner {
                         if(minute+retry>end) continue
                         val local=day.atStartOfDay().plusMinutes((minute+retry).toLong())
                         val at=local.atZone(zone).toInstant().toEpochMilli()
-                        if(at>nowMs && at>=s.pauseUntil) output += Reminder("$base|$retry","water",base,at,"وقت نوشیدن آب","مقدار نوشیده‌شده را ثبت کنید",base)
+                        if(at>nowMs && at>=s.pauseUntil) output += Reminder(
+                            "$base|$retry", "water", base, at,
+                            localizedText("notification.waterTitle", language),
+                            localizedText("notification.waterBody", language), base
+                        )
                     }
                 }
             }
@@ -172,8 +179,12 @@ object Planner {
             val at=if(d.status==DoseStatus.SNOOZED) d.snoozeUntil else LocalDateTime.parse(d.wall).atZone(zone).toInstant().toEpochMilli()
             if(at>nowMs) {
                 val time=LocalTime.parse(d.wall.substring(11)).toString()
-                val body=listOf("ساعت مصرف: $time",d.instructions).filter { it.isNotBlank() }.joinToString("\n")
-                output += Reminder("dose|${d.id}|$at","dose",d.id,at,"وقت مصرف ${d.name}",body)
+                val body=listOf(localizedText("notification.doseTime", language, time),d.instructions)
+                    .filter { it.isNotBlank() }.joinToString("\n")
+                output += Reminder(
+                    "dose|${d.id}|$at", "dose", d.id, at,
+                    localizedText("notification.doseTitle", language, d.name), body
+                )
             }
         }
         if(s.waterEnabled) data.waterSnoozes.forEach { (base,at) ->
@@ -181,14 +192,24 @@ object Planner {
             if(at>nowMs && at>=s.pauseUntil && base !in data.waterAcknowledged &&
                 local.toLocalTime()>=LocalTime.parse(s.start) && local.toLocalTime()<=LocalTime.parse(s.end) &&
                 data.total(local.toLocalDate().toString())<s.goal)
-                output += Reminder("$base|snooze|$at","water",base,at,"وقت نوشیدن آب","یادآوری به تعویق افتاده",base)
+                output += Reminder(
+                    "$base|snooze|$at", "water", base, at,
+                    localizedText("notification.waterTitle", language),
+                    localizedText("notification.waterSnoozed", language), base
+                )
         }
         data.appointments.filter { !it.cancelled }.forEach { a ->a.reminderTimes(s).forEach { at ->
             val local=LocalDateTime.parse(a.wall)
-            val body=listOf("زمان نوبت: ${local.toLocalDate()}، ساعت ${local.toLocalTime()}",
-                a.location.takeIf { it.isNotBlank() }?.let { "مکان: $it" }.orEmpty(),a.notes,
-                a.contact.takeIf { it.isNotBlank() }?.let { "تماس: $it" }.orEmpty()).filter { it.isNotBlank() }.joinToString("\n")
-            if(at>nowMs) output += Reminder("appointment|${a.id}|$at","appointment",a.id,at,"قرار پزشکی: ${a.title}",body)
+            val date=local.toLocalDate().toString()
+            val time=local.toLocalTime().toString()
+            val body=listOf(localizedText("notification.appointmentTime", language, date, time),
+                a.location.takeIf { it.isNotBlank() }?.let { localizedText("notification.location", language, it) }.orEmpty(),a.notes,
+                a.contact.takeIf { it.isNotBlank() }?.let { localizedText("notification.contact", language, it) }.orEmpty())
+                .filter { it.isNotBlank() }.joinToString("\n")
+            if(at>nowMs) output += Reminder(
+                "appointment|${a.id}|$at", "appointment", a.id, at,
+                localizedText("notification.appointmentTitle", language, a.title), body
+            )
         } }
         // Calendar rollover guarantees queue refresh even with no reminder today.
         val midnight=now.toLocalDate().plusDays(1).atStartOfDay(zone).plusMinutes(1).toInstant().toEpochMilli()

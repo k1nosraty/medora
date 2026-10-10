@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Medora</string>
+    <string name="settings_title">Medora settings</string>
+    <string name="reminder_title">Medora reminder</string>
+</resources>

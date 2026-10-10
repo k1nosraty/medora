@@ -27,14 +27,14 @@ class HealthViewModel(app:Application):AndroidViewModel(app) {
                 val committed=repo.update(mutation)
                 var scheduleError:String?=null
                 val planned=try { service.rebuild(committed) } catch(_:Exception) {
-                    scheduleError="اطلاعات ذخیره شد؛ زمان‌بندی یادآوری کامل نشد. تنظیمات اعلان را بررسی کنید.";emptyList()
+                    scheduleError="error.schedule";emptyList()
                 }
                 handler.post {
                     data=committed;enabled=service.enabled();exact=service.exact();next=planned.firstOrNull { it.kind!="maintenance" }
                     error=scheduleError;busy=false;onSaved()
                 }
             } catch(e:Exception) {
-                handler.post { error="ذخیره یا خواندن اطلاعات انجام نشد؛ اطلاعات قبلی پاک نشده‌اند.";busy=false }
+                handler.post { error="error.storage";busy=false }
             }
         }
     }

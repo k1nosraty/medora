@@ -8,6 +8,14 @@ import android.net.Uri
 import android.os.*
 import java.time.*
 
+private val reminderIsoDate = Regex("\\b\\d{4}-\\d{2}-\\d{2}\\b")
+
+private fun displayReminderBody(body:String,settings:Settings):String = reminderIsoDate.replace(body) { match ->
+    runCatching {
+        CalendarSupport.formatDate(LocalDate.parse(match.value),settings.calendar,settings.language)
+    }.getOrDefault(match.value)
+}.let { localizedNumber(it,settings.language) }
+
 class Reminders(private val context:Context) {
     private val alarms=requireNotNull(context.getSystemService(AlarmManager::class.java))
     private val notifications=requireNotNull(context.getSystemService(NotificationManager::class.java))
@@ -54,23 +62,35 @@ class Reminders(private val context:Context) {
     }
     fun show(r:Reminder,data:HealthData,notificationId:Int) {
         if(!enabled())return
-        notifications.createNotificationChannel(NotificationChannel("health-v2","یادآوری‌های سلامت",NotificationManager.IMPORTANCE_HIGH).apply {
-            description="آب، دارو و قرارها";lockscreenVisibility=Notification.VISIBILITY_PRIVATE
+        val language=data.settings.language
+        notifications.createNotificationChannel(NotificationChannel(
+            "health-v2", localizedText("notification.channel", language), NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description=localizedText("notification.channelDescription", language)
+            lockscreenVisibility=Notification.VISIBILITY_PRIVATE
         })
         val open=PendingIntent.getActivity(context,notificationId,Intent(context,MainActivity::class.java).setAction("open:$notificationId"),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val title=if(data.settings.privateNotifications)context.getString(R.string.reminder_title) else fa(r.title)
-        val body=if(data.settings.privateNotifications)"برای جزئیات برنامه را باز کنید" else fa(r.body)
+        val title=if(data.settings.privateNotifications)localizedText("notification.brand",language) else localizedNumber(r.title,language)
+        val body=if(data.settings.privateNotifications)localizedText("notification.privateBody",language) else displayReminderBody(r.body,data.settings)
+        val publicTitle=localizedText("notification.brand",language)
+        val privateBody=localizedText("notification.privateBody",language)
         val publicVersion=Notification.Builder(context,"health-v2").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(context.getString(R.string.reminder_title)).setContentText("برای جزئیات برنامه را باز کنید").build()
+            .setContentTitle(publicTitle).setContentText(privateBody).build()
         val builder=Notification.Builder(context,"health-v2").setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title).setContentText(body)
             .setStyle(Notification.BigTextStyle().bigText(body)).setPublicVersion(publicVersion)
             .setContentIntent(open).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setCategory(Notification.CATEGORY_REMINDER)
         if(r.kind!="appointment") {
-            builder.addAction(Notification.Action.Builder(null,if(r.kind=="water")"ثبت ۲۵۰ میلی‌لیتر" else "مصرف کردم",action(r,notificationId,"done")).build())
-            builder.addAction(Notification.Action.Builder(null,"۱۰ دقیقه بعد",action(r,notificationId,"snooze")).build())
+            builder.addAction(Notification.Action.Builder(
+                null,
+                localizedText(if(r.kind=="water")"notification.actionWater" else "notification.actionTaken", language),
+                action(r,notificationId,"done")
+            ).build())
+            builder.addAction(Notification.Action.Builder(
+                null, localizedText("notification.actionSnooze",language), action(r,notificationId,"snooze")
+            ).build())
         }
         notifications.notify(notificationId,builder.build())
     }
