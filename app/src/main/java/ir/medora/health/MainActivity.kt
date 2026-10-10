@@ -313,6 +313,7 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 vm.error?.let { ErrorNotice(tr(it)) }
+                androidx.compose.runtime.key(tab, secondary) {
                 if (secondary == "calendar") ActivityCalendarScreen(data, vm, { editor = it })
                 else if (secondary == "reports") ReportsScreen(data)
                 else when (tab) {
@@ -320,6 +321,7 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
                     1 -> WaterScreen(data, historyDate, { showHistoryPicker = true }, { editor = it.copy(date = history) }, { deletion = it }, vm)
                     2 -> MedicationScreen(data, historyDate, { showHistoryPicker = true }, { editor = it }, { deletion = it }, vm)
                     else -> AppointmentScreen(data, { editor = it }, { deletion = it }, vm)
+                }
                 }
             }
         }
