@@ -286,3 +286,14 @@ fun tr(key: String, vararg args: Any?): String = localizedText(key, LocalLanguag
 
 @Composable
 fun n(value: Any): String = localizedNumber(value, LocalLanguage.current)
+
+fun localizedWeekday(day: Int, language: String): String = localizedText(
+    "weekday." + listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun")[day - 1], language
+)
+
+fun localizedOffsetLabel(minutes: Int, language: String): String = when(minutes) {
+    60 -> localizedText("appointment.oneHourBefore", language)
+    120 -> localizedText("appointment.twoHoursBefore", language)
+    1440 -> localizedText("appointment.dayBefore", language)
+    else -> localizedText("appointment.minutesBefore", language, minutes)
+}

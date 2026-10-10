@@ -54,8 +54,8 @@ object CoreChecks {
         expect(Planner.plan(d,now).none{it.kind=="dose"},"delete cancels schedule")
         val water=Planner.plan(d,now,1).filter{it.kind=="water"}
         expect(water.first().at==now.withHour(8).toInstant().toEpochMilli(),"water window start")
-        expect(water.last().at==now.withHour(22).toInstant().toEpochMilli(),"water window end")
-        expect(water.size==29,"one retry per slot within window")
+        expect(water.last().at==now.withHour(21).withMinute(10).toInstant().toEpochMilli(),"water last slot before exclusive end")
+        expect(water.size==28,"one retry per slot within window")
         d.addWater(250,now.withHour(8).withMinute(2))
         expect(Planner.plan(d,now.withHour(8).withMinute(3),1).none{it.waterBase=="water|$day|480"},"water log suppresses retry")
         val base="water|$day|540";d.waterSnoozes[base]=now.withHour(9).withMinute(10).toInstant().toEpochMilli()
@@ -92,7 +92,7 @@ object CoreChecks {
         d.validate()
         val restored=Codec.decode(Codec.encode(d));expect(restored==d,"all data codec round trip")
         val queue=Planner.plan(d,now);expect(Codec.decodeQueue(Codec.encodeQueue(queue))==queue,"queue round trip")
-        rejects("unknown schema rejected"){Codec.decode(Codec.encode(d).replace("\"schema\":4","\"schema\":99"))}
+        rejects("unknown schema rejected"){Codec.decode(Codec.encode(d).replace("\"schema\":5","\"schema\":99"))}
         val key=KeyGenerator.getInstance("AES").apply{init(256)}.generateKey()
         val plain=Codec.encode(d).toByteArray(Charsets.UTF_8);val encrypted=Encryption.seal(plain,key)
         expect(!encrypted.contentEquals(plain),"data encrypted")

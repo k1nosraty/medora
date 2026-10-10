@@ -425,7 +425,7 @@ private fun TodayScreen(
         AppointmentCard(
             nextAppointment,
             edit = { openEditor(Editor("appointment", appointment = nextAppointment)) },
-            toggle = { vm.change { it.appointments.replace(nextAppointment.copy(cancelled = !nextAppointment.cancelled)) } },
+            toggle = { vm.change({ it.appointments.replace(nextAppointment.copy(cancelled = !nextAppointment.cancelled)) }) },
             delete = { },
             showDelete = false
         )
@@ -460,7 +460,7 @@ private fun WaterScreen(
         Text(displayDate(day))
     }
     WaterSummary(data, day) { ml ->
-        vm.change { it.addWater(ml, ZonedDateTime.of(day, LocalTime.now(), ZoneId.systemDefault())) }
+        vm.change({ it.addWater(ml, ZonedDateTime.of(day, LocalTime.now(), ZoneId.systemDefault())) })
     }
     Button(onClick = { openEditor(Editor("water")) }) { Text(tr("water.custom")) }
     val entries = data.water.filter { it.day == day.toString() }.sortedByDescending { it.at }
@@ -530,6 +530,8 @@ private fun MedicationScreen(
     requestDelete: (PendingDeletion) -> Unit,
     vm: HealthViewModel
 ) {
+    val language = LocalLanguage.current
+    val calendar = LocalCalendar.current
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Heading(tr("medication.title"), Modifier.weight(1f))
         Button(onClick = { openEditor(Editor("medication")) }) {
@@ -547,7 +549,7 @@ private fun MedicationScreen(
                 Text(medication.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Switch(
                     checked = medication.active,
-                    onCheckedChange = { active -> vm.change { it.changeMedication(medication.copy(active = active), ZonedDateTime.now()) } },
+                    onCheckedChange = { active -> vm.change({ it.changeMedication(medication.copy(active = active), ZonedDateTime.now()) }) },
                     modifier = Modifier.semantics {
                         contentDescription = switchDescription
                         stateDescription = switchState
@@ -560,14 +562,14 @@ private fun MedicationScreen(
                 color = if (medication.active) MedoraColors.Success else MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (medication.instructions.isNotBlank()) Text(medication.instructions)
-            Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { displayTime(it) })
+            Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { localizedNumber(it, language) })
             val schedule = if (medication.dates.isNotEmpty()) {
-                medication.dates.sorted().joinToString(if (LocalLanguage.current == "fa") "، " else ", ") { date -> displayDate(LocalDate.parse(date)) }
+                medication.dates.sorted().joinToString(if (language == "fa") "، " else ", ") { date -> CalendarSupport.formatDate(LocalDate.parse(date), calendar, language) }
             } else if (medication.weekdays.size == 7) {
                 tr("medication.everyDay")
             } else {
-                CalendarSupport.weekdayOrder(LocalLanguage.current).filter { it in medication.weekdays }
-                    .joinToString(if (LocalLanguage.current == "fa") "، " else ", ") { day -> weekdayName(day) }
+                CalendarSupport.weekdayOrder(language).filter { it in medication.weekdays }
+                    .joinToString(if (language == "fa") "، " else ", ") { day -> localizedWeekday(day, language) }
             }
             Text(schedule, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(tr("medication.startDate") + ": " + displayDate(LocalDate.parse(medication.startDay)),
@@ -612,7 +614,7 @@ private fun AppointmentScreen(
         AppointmentCard(
             appointment,
             edit = { openEditor(Editor("appointment", appointment = appointment)) },
-            toggle = { vm.change { it.appointments.replace(appointment.copy(cancelled = !appointment.cancelled)) } },
+            toggle = { vm.change({ it.appointments.replace(appointment.copy(cancelled = !appointment.cancelled)) }) },
             delete = {
                 requestDelete(PendingDeletion("appointment.deleteConfirm") {
                     it.appointments.removeAll { existing -> existing.id == appointment.id }
@@ -719,6 +721,7 @@ fun AppointmentCard(
     delete: () -> Unit,
     showDelete: Boolean = true
 ) {
+    val language = LocalLanguage.current
     val local = java.time.LocalDateTime.parse(appointment.wall)
     Panel(compact = true) {
         Row(verticalAlignment = Alignment.Top) {
@@ -738,7 +741,7 @@ fun AppointmentCard(
         if (appointment.contact.isNotBlank()) Text(tr("appointment.contactLabel", appointment.contact))
         if (appointment.notes.isNotBlank()) Text(appointment.notes)
         if (appointment.offsets.isNotEmpty()) {
-            val offsets = appointment.offsets.sortedDescending().joinToString(" · ") { offsetLabel(it) }
+            val offsets = appointment.offsets.sortedDescending().joinToString(" · ") { localizedOffsetLabel(it, language) }
             Text(tr("appointment.reminderLabel", offsets), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -749,28 +752,4 @@ fun AppointmentCard(
             if (showDelete) TextButton(onClick = delete) { Text(tr("common.delete"), color = MaterialTheme.colorScheme.error) }
         }
     }
-}
-
-@Composable
-private fun weekdayName(day: Int): String = when (day) {
-    1 -> tr("weekday.mon")
-    2 -> tr("weekday.tue")
-    3 -> tr("weekday.wed")
-    4 -> tr("weekday.thu")
-    5 -> tr("weekday.fri")
-    6 -> tr("weekday.sat")
-    else -> tr("weekday.sun")
-}
-
-@Composable
-private fun offsetLabel(minutes: Int): String = when (minutes) {
-    60 -> tr("appointment.oneHourBefore")
-    120 -> tr("appointment.twoHoursBefore")
-    1440 -> tr("appointment.dayBefore")
-    else -> tr("appointment.minutesBefore", n(minutes))
-}
-
-private fun MutableList<Appointment>.replace(appointment: Appointment) {
-    removeAll { it.id == appointment.id }
-    add(appointment)
 }

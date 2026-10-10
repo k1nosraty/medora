@@ -70,7 +70,7 @@ class AppointmentReminderTest {
         assertEquals(data.appointments,migrated.appointments)
         assertEquals("08:00",migrated.settings.appointmentStart)
         assertEquals(120,migrated.settings.appointmentInterval)
-        assertFalse(migrated.settings.privateNotifications)
+        assertTrue(migrated.settings.privateNotifications)
         val updated=data.copy(settings=data.settings.copy(appointmentStart="09:00",appointmentInterval=60))
         assertEquals(updated,Codec.decode(Codec.encode(updated)))
     }
