@@ -4,10 +4,12 @@ import android.app.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selectable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -208,7 +210,7 @@ private fun WaterSettings(
             value = localizedNumber(normalize(goal), LocalLanguage.current),
             onValueChange = { onGoal(normalize(it)) },
             singleLine = true,
-            label = { Text(tr("water.amountPlaceholder")) },
+            label = { Text(tr("settings.waterGoal")) },
             suffix = { Text(tr("unit.ml")) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
@@ -292,7 +294,7 @@ private fun NotificationSettings(
 ) {
     Panel(compact = true) {
         SwitchRow(tr("settings.notificationsEnabled"), data.settings.consent && vm.enabled) {
-            if (it) requestPermission() else vm.change { current -> current.settings = current.settings.copy(consent = false) }
+            if (it) requestPermission() else vm.change({ current -> current.settings = current.settings.copy(consent = false) })
         }
         SwitchRow(tr("settings.reminderDetails"), showDetails, onShowDetails)
         Text(

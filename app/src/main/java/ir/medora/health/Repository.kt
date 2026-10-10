@@ -40,6 +40,7 @@ class Repository private constructor(private val context:Context) {
     fun update(change:(HealthData)->Unit):HealthData {
         val d=read();d.materialize(ZonedDateTime.now());change(d);d.validate();write(stateFile,Codec.encode(d));return d
     }
+    fun save(data:HealthData) { data.validate();write(stateFile,Codec.encode(data)) }
     fun saveQueue(q:List<Reminder>)=write(queueFile,Codec.encodeQueue(q))
     fun queue():List<Reminder> = read(queueFile)?.let(Codec::decodeQueue) ?: emptyList()
     companion object {

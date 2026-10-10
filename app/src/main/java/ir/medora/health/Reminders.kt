@@ -26,13 +26,23 @@ class Reminders(private val context:Context) {
         Intent(context,ReminderReceiver::class.java).setAction("ir.medora.health.FIRE"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     fun rebuild(data:HealthData):List<Reminder> {
         val repo=Repository.get(context)
+        val now=ZonedDateTime.now()
+        val nowMs=now.toInstant().toEpochMilli()
+        val queuedAt=runCatching { repo.queue().minOfOrNull { it.at } }.getOrNull()
         alarms.cancel(alarmIntent())
-        if(!data.settings.consent || !enabled()) { repo.saveQueue(emptyList());notifications.cancelAll();return emptyList() }
-        val all=Planner.plan(data,ZonedDateTime.now())
+        if(!data.settings.consent || !enabled()) {
+            repo.saveQueue(emptyList());notifications.cancelAll()
+            data.reminderCheckpoint=nowMs;repo.save(data)
+            return emptyList()
+        }
+        // A persisted checkpoint recovers EVERY due slot, even when Doze skips
+        // multiple slots before the single OS alarm is finally delivered.
+        val due=Planner.overdue(data,now,queuedAt)
+        due.forEach { data.notificationId("${it.kind}:${it.reference}") }
+        repo.save(data) // Stable notification ids survive a crash before posting.
+        val all=Planner.plan(data,now)
         val first=all.firstOrNull()
         val batch=if(first==null)emptyList() else all.takeWhile { it.at==first.at }
-        // Store only the next batch. Each alarm schedules the next one, including
-        // midnight maintenance; the OS alarm count stays bounded.
         repo.saveQueue(batch)
         if(first!=null) {
             try {
@@ -40,19 +50,43 @@ class Reminders(private val context:Context) {
                 else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,first.at,alarmIntent())
             } catch(_:SecurityException) { alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,first.at,alarmIntent()) }
         }
-        // Remove visible notifications whose source is now completed/deleted.
-        data.notificationIds.forEach { (key,n) ->
-            if(key.startsWith("dose:")) {
-                val dose=data.doses.find { it.id==key.removePrefix("dose:") }
-                if(dose==null || dose.status in setOf(DoseStatus.TAKEN,DoseStatus.SKIPPED) ||
-                    data.medications.none { it.id==dose.medicationId && it.active }) notifications.cancel(n)
-            }
-            if(key.startsWith("water:") && (!data.settings.waterEnabled || key.removePrefix("water:") in data.waterAcknowledged ||
-                data.total(java.time.LocalDate.now().toString())>=data.settings.goal)) notifications.cancel(n)
-            if(key.startsWith("appointment:") && data.appointments.none { it.id==key.removePrefix("appointment:") && !it.cancelled }) notifications.cancel(n)
+        refreshActive(data,now)
+        due.forEach { r ->
+            show(Planner.content(data,r),data,data.notificationIds.getValue("${r.kind}:${r.reference}"))
+            data.deliveredReminders[r.key]=r.at
         }
+        // Advance only after delivery succeeded. A failed post is retried from
+        // the old checkpoint, using the same ids to avoid duplicate cards.
+        data.reminderCheckpoint=nowMs
+        data.deliveredReminders.entries.removeAll { it.value<nowMs-Planner.RECOVERY_MILLIS }
+        repo.save(data)
         return all
     }
+    internal fun refreshActive(data:HealthData,now:ZonedDateTime) {
+        notifications.activeNotifications.forEach { active ->
+            val extras=active.notification.extras
+            val kind=extras.getString("medora.kind")
+            if(kind!=null) {
+                val r=Reminder(extras.getString("medora.key").orEmpty(),kind,
+                    extras.getString("medora.reference").orEmpty(),extras.getLong("medora.at"),
+                    waterBase=extras.getString("medora.waterBase").orEmpty())
+                if(!Planner.allowed(data,r,now)) notifications.cancel(active.id)
+                else show(Planner.content(data,r),data,active.id,onlyAlertOnce=true)
+            } else if(data.settings.privateNotifications) {
+                // Upgrade path: pre-fix notifications lack our source metadata.
+                // Remove their old health text immediately, without a new sound.
+                val title=localizedText("notification.brand",data.settings.language)
+                val body=localizedText("notification.privateBody",data.settings.language)
+                notifications.notify(active.id,Notification.Builder.recoverBuilder(context,active.notification)
+                    .setContentTitle(title).setContentText(body)
+                    .setStyle(Notification.BigTextStyle().bigText(body)).setOnlyAlertOnce(true)
+                    .setPublicVersion(publicNotification(data.settings.language)).build())
+            }
+        }
+    }
+    private fun publicNotification(language:String)=Notification.Builder(context,"health-v2")
+        .setSmallIcon(R.drawable.ic_notification).setContentTitle(localizedText("notification.brand",language))
+        .setContentText(localizedText("notification.privateBody",language)).build()
     private fun action(r:Reminder,notificationId:Int,action:String):PendingIntent {
         val intent=Intent(context,ReminderReceiver::class.java).setAction("ir.medora.health.ACTION")
             .setData(Uri.parse("medora://action/${Uri.encode(r.key)}/${r.at}/$action"))
@@ -60,7 +94,7 @@ class Reminders(private val context:Context) {
             .putExtra("at",r.at).putExtra("waterBase",r.waterBase).putExtra("action",action).putExtra("notificationId",notificationId)
         return PendingIntent.getBroadcast(context,notificationId,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
-    fun show(r:Reminder,data:HealthData,notificationId:Int) {
+    fun show(r:Reminder,data:HealthData,notificationId:Int,onlyAlertOnce:Boolean=false) {
         if(!enabled())return
         val language=data.settings.language
         notifications.createNotificationChannel(NotificationChannel(
@@ -73,15 +107,20 @@ class Reminders(private val context:Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val title=if(data.settings.privateNotifications)localizedText("notification.brand",language) else localizedNumber(r.title,language)
         val body=if(data.settings.privateNotifications)localizedText("notification.privateBody",language) else displayReminderBody(r.body,data.settings)
-        val publicTitle=localizedText("notification.brand",language)
-        val privateBody=localizedText("notification.privateBody",language)
-        val publicVersion=Notification.Builder(context,"health-v2").setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(publicTitle).setContentText(privateBody).build()
+        val publicVersion=publicNotification(language)
         val builder=Notification.Builder(context,"health-v2").setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title).setContentText(body)
             .setStyle(Notification.BigTextStyle().bigText(body)).setPublicVersion(publicVersion)
             .setContentIntent(open).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setCategory(Notification.CATEGORY_REMINDER)
+            .setOnlyAlertOnce(onlyAlertOnce || notifications.activeNotifications.any {
+                it.id==notificationId && it.notification.extras.getString("medora.key")==r.key
+            })
+            .addExtras(Bundle().apply {
+                putString("medora.key",r.key);putString("medora.kind",r.kind)
+                putString("medora.reference",r.reference);putLong("medora.at",r.at)
+                putString("medora.waterBase",r.waterBase)
+            })
         if(r.kind!="appointment") {
             builder.addAction(Notification.Action.Builder(
                 null,
@@ -124,13 +163,7 @@ class ReminderReceiver:BroadcastReceiver() {
             }
             service.cancel(intent.getIntExtra("notificationId",0));service.rebuild(repo.read())
         } else {
-            val batch=repo.queue()
-            val due=batch.filter { it.at<=now.toInstant().toEpochMilli()+1000 }
-            val data=repo.update { d ->
-                due.filter { Planner.allowed(d,it,now) }.forEach { r ->d.notificationId("${r.kind}:${r.reference}") }
-            }
-            service.rebuild(data)
-            due.filter { Planner.allowed(data,it,now) }.forEach { r ->service.show(r,data,data.notificationIds.getValue("${r.kind}:${r.reference}")) }
+            service.rebuild(repo.update { })
         }
     }
 }

@@ -2,6 +2,7 @@ package ir.medora.health
 
 import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -47,8 +48,7 @@ fun EditDialog(
     val calendar = LocalCalendar.current
     val initialTime = remember(editor) {
         when {
-            editor.water != null -> Instant.ofEpochMilli(editor.water.at).atZone(ZoneId.systemDefault()).toLocalDateTime()
-                .withSecond(0).withNano(0)
+            editor.water != null -> editor.water.editTime(ZoneId.systemDefault())
             editor.appointment != null -> LocalDateTime.parse(editor.appointment.wall)
             else -> LocalDateTime.now().plusDays(if (editor.kind == "appointment") 1 else 0).withSecond(0).withNano(0)
         }
@@ -121,7 +121,8 @@ fun EditDialog(
                         return
                     }
                     val whenAt = dateTime.atZone(ZoneId.systemDefault())
-                    if (whenAt.toInstant().isAfter(Instant.now())) {
+                    if ((editor.water == null || dateTime != editor.water.editTime(ZoneId.systemDefault())) &&
+                        whenAt.toInstant().isAfter(Instant.now())) {
                         error = "validation.waterFuture"
                         return
                     }
@@ -129,11 +130,7 @@ fun EditDialog(
                         if (editor.water == null) current.addWater(ml, whenAt)
                         else {
                             current.water.removeAll { it.id == editor.water.id }
-                            current.water += editor.water.copy(
-                                ml = ml,
-                                day = dateTime.toLocalDate().toString(),
-                                at = whenAt.toInstant().toEpochMilli()
-                            )
+                            current.water += editor.water.edited(ml, dateTime, ZoneId.systemDefault())
                         }
                     }
                     action
@@ -221,8 +218,8 @@ fun EditDialog(
         ) {
             Column(
                 Modifier.fillMaxWidth().heightIn(
-                    max = LocalContext.current.resources.displayMetrics.heightPixels /
-                        LocalContext.current.resources.displayMetrics.density * .88f
+                    max = (LocalContext.current.resources.displayMetrics.heightPixels /
+                        LocalContext.current.resources.displayMetrics.density * .88f).dp
                 ).imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
