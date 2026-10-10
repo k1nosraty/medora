@@ -210,7 +210,7 @@ private fun WaterSettings(
             value = localizedNumber(normalize(goal), LocalLanguage.current),
             onValueChange = { onGoal(normalize(it)) },
             singleLine = true,
-            label = { Text(tr("water.amountPlaceholder")) },
+            label = { Text(tr("settings.waterGoal")) },
             suffix = { Text(tr("unit.ml")) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()

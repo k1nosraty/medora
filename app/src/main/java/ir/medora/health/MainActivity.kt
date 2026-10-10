@@ -372,31 +372,44 @@ private fun TodayScreen(
     Text(displayDate(today, includeWeekday = true), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
     Text(tr("today.title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
-    Panel(color = MedoraColors.PrimaryContainer, compact = true) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(tr("today.progress", n(taken), n(doses.size)), fontWeight = FontWeight.SemiBold, color = MedoraColors.OnPrimaryContainer)
-                Text(tr("today.waterCompact"), style = MaterialTheme.typography.labelMedium, color = MedoraColors.OnPrimaryContainer)
-                Text(
-                    tr("water.progress", n(data.total(today.toString())), n(data.settings.goal)),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MedoraColors.OnPrimaryContainer
-                )
-            }
-            CircularProgressIndicator(
-                progress = { if (doses.isEmpty()) 0f else taken.toFloat() / doses.size },
-                modifier = Modifier.size(42.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surface.copy(alpha = .65f),
-                strokeWidth = 4.dp
-            )
-        }
+    Panel(color = MedoraColors.WaterContainer, compact = true) {
+        Text(tr("today.waterCompact"), fontWeight = FontWeight.SemiBold, color = MedoraColors.Water)
+        Text(
+            tr("water.progress", n(data.total(today.toString())), n(data.settings.goal)),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
         LinearProgressIndicator(
             progress = { data.progress(today.toString()) },
             modifier = Modifier.fillMaxWidth(),
-            color = MedoraColors.Water,
-            trackColor = MaterialTheme.colorScheme.surface.copy(alpha = .75f)
+            color = MedoraColors.Water
         )
+        Text(
+            if (data.remaining(today.toString()) == 0) tr("water.goalReached")
+            else tr("water.remaining", n(data.remaining(today.toString()))),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    Panel(color = MedoraColors.PrimaryContainer, compact = true) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(tr("today.medicationCompact"), fontWeight = FontWeight.SemiBold, color = MedoraColors.OnPrimaryContainer)
+                Text(
+                    if (doses.isEmpty()) tr("today.noMedication")
+                    else tr("today.progress", n(taken), n(doses.size)),
+                    color = MedoraColors.OnPrimaryContainer
+                )
+            }
+            if (doses.isNotEmpty()) {
+                CircularProgressIndicator(
+                    progress = { taken.toFloat() / doses.size },
+                    modifier = Modifier.size(42.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surface.copy(alpha = .65f),
+                    strokeWidth = 4.dp
+                )
+            }
+        }
     }
 
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -410,7 +423,7 @@ private fun TodayScreen(
         }
     }
     if (activeDoses.isEmpty()) {
-        Empty(tr("today.noMedicationAction")) {
+        Empty(tr("today.noMedication")) {
             Button(onClick = { openEditor(Editor("medication")) }) { Text(tr("today.addMedicine")) }
         }
     } else {
@@ -505,7 +518,11 @@ fun WaterSummary(data: HealthData, day: LocalDate, add: (Int) -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             color = MedoraColors.Water
         )
-        Text(tr("water.remaining", n(data.remaining(day.toString()))), style = MaterialTheme.typography.bodySmall)
+        Text(
+            if (data.remaining(day.toString()) == 0) tr("water.goalReached")
+            else tr("water.remaining", n(data.remaining(day.toString()))),
+            style = MaterialTheme.typography.bodySmall
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(150, 250, 500).forEach { ml ->
                 val label = tr("water.quickAdd", n(ml))
@@ -514,7 +531,7 @@ fun WaterSummary(data: HealthData, day: LocalDate, add: (Int) -> Unit) {
                     modifier = Modifier.weight(1f).semantics { contentDescription = label },
                     contentPadding = PaddingValues(horizontal = 6.dp)
                 ) {
-                    Text("+${n(ml)}", maxLines = 1)
+                    Text(tr("water.ml", "+${n(ml)}"))
                 }
             }
         }
@@ -671,10 +688,10 @@ fun DoseCard(dose: Dose, vm: HealthViewModel) {
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DoseStatus.entries.forEach { status ->
                         val key = when (status) {
-                            DoseStatus.PENDING -> "dose.pending"
-                            DoseStatus.TAKEN -> "dose.taken"
-                            DoseStatus.SNOOZED -> "dose.snoozed"
-                            DoseStatus.SKIPPED -> "dose.skipped"
+                            DoseStatus.PENDING -> "dose.reset"
+                            DoseStatus.TAKEN -> "dose.take"
+                            DoseStatus.SNOOZED -> "dose.snooze"
+                            DoseStatus.SKIPPED -> "dose.skip"
                         }
                         DropdownMenuItem(
                             text = { Text(tr(key)) },
@@ -735,7 +752,7 @@ fun AppointmentCard(
             if (appointment.cancelled) Text(tr("appointment.cancelled"), color = MedoraColors.Error, style = MaterialTheme.typography.labelMedium)
         }
         if (appointment.zone != ZoneId.systemDefault().id) {
-            Text(appointment.zone, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("appointment.timeZoneLabel", appointment.zone), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (appointment.location.isNotBlank()) Text(tr("appointment.locationLabel", appointment.location))
         if (appointment.contact.isNotBlank()) Text(tr("appointment.contactLabel", appointment.contact))
