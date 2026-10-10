@@ -43,15 +43,13 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          script: |
-            ./gradlew connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=ir.medora.health.WellnessUiTest#compactPersianLightNavigation,ir.medora.health.WellnessUiTest#compactEnglishDarkNavigation,ir.medora.health.WellnessUiTest#compactPersianDarkNavigation,ir.medora.health.WellnessUiTest#compactEnglishLightNavigation,ir.medora.health.WellnessUiTest#medicationTabDoesNotDisplayAppointmentsAfterNavigation,ir.medora.health.TimeDialogTest'
-            mkdir -p device-screenshots
-            adb pull /sdcard/Android/data/ir.medora.health.android/files/screenshots device-screenshots
+          script: python3 scripts/navigation_device_qa.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: navigation-qa-results
           path: |
             device-screenshots/
+            device-results/
             app/build/reports/
             app/build/outputs/androidTest-results/
