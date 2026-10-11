@@ -101,6 +101,7 @@ fun medoraTypography(language: String): Typography {
 }
 val MedoraShapes = Shapes(extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp),
     medium = RoundedCornerShape(16.dp), large = RoundedCornerShape(20.dp), extraLarge = RoundedCornerShape(28.dp))
-val MedoraFeatureShape = RoundedCornerShape(topStart = 28.dp, topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 28.dp)
+val MedoraFeatureShape = RoundedCornerShape(20.dp)
 object MedoraSpacing { val Page = 16.dp; val Card = 16.dp; val Gap = 12.dp; val Control = 48.dp }
 @Composable fun isMedoraDark() = MaterialTheme.colorScheme.background != MedoraColors.Background
+

@@ -60,6 +60,10 @@ class WellnessUiTest {
         compose.onAllNodesWithText("قرص آهن").onFirst().performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription(localizedText("a11y.changeDoseStatus","fa")).assertDoesNotExist()
         compose.onNodeWithText("ویزیت متخصص قلب").performScrollTo().assertIsDisplayed()
+        val medicineBounds=compose.onAllNodesWithText("قرص آهن").fetchSemanticsNodes().map {it.boundsInRoot.top}.sorted()
+        val appointmentTop=compose.onNodeWithText("ویزیت متخصص قلب").fetchSemanticsNode().boundsInRoot.top
+        assertEquals(2,medicineBounds.size)
+        org.junit.Assert.assertTrue(medicineBounds[0]<appointmentTop && appointmentTop<medicineBounds[1])
         capture("future-today")
     }
 
