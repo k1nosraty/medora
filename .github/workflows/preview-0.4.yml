@@ -1,0 +1,61 @@
+name: Publish Medora 0.4.0 prerelease
+on:
+  push:
+    branches: [release/0.4.0-preview]
+    paths: [.github/workflows/preview-0.4.yml]
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: medora-preview-0.4.0
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify tested source and successful checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for run in 38156492377 38156492388; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.head_sha + " " + .conclusion' > check.txt
+            test "$(cat check.txt)" = "f77ee0887e3ff76bf81e26dc69ea9868b2470bf2 success"
+          done
+      - name: Download exact tested APK
+        uses: actions/download-artifact@v4
+        with:
+          name: medora-debug-apk
+          run-id: 38156492377
+          github-token: ${{ github.token }}
+          path: apk
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp apk/app-debug.apk Medora-v0.4.0-preview.apk
+          sha256sum Medora-v0.4.0-preview.apk > SHA256SUMS.txt
+          cat > release-notes.md <<'NOTES'
+          ## مدورا ۰.۴.۰ — پیش‌انتشار Emerald Sanctuary
+
+          - هویت سه‌برگی و رنگ‌های هماهنگ در تم روشن و تاریک.
+          - سربرگ ساده‌تر؛ تزئین سمت چپ در فارسی و سمت راست در انگلیسی.
+          - کارت‌ها، فاصله‌ها و ناوبری پایین فشرده‌تر با هدف‌های لمس مناسب.
+          - آب در بالای صفحهٔ امروز.
+          - تایم‌لاین متصل برای داروها و قرارهای همان روز، مرتب‌شده بر اساس ساعت.
+          - نمایش برنامهٔ روزهای آینده با ثبت مصرف غیرفعال.
+          - انتخاب آیکون و رنگ دارو با پیش‌نمایش و تأیید، جزئیات و تاریخچهٔ دارو.
+          - تنظیمات تم و تعویق ۱۰، ۳۰، ۶۰ دقیقه و مقدار سفارشی.
+
+          Validation: 43 unit tests and all 16 targeted emulator scenarios passed; APK/instrumentation builds and lint passed. 32 device screenshots retained.
+          Build: https://github.com/k1nosraty/medora/actions/runs/38156492377
+          Device QA: https://github.com/k1nosraty/medora/actions/runs/38156492388
+          Source: f77ee0887e3ff76bf81e26dc69ea9868b2470bf2
+
+          Download Medora-v0.4.0-preview.apk for Android 8 or later.
+          This is the exact debug-signed APK tested in CI, intended for preview testing. Updating an existing installation requires a matching signing certificate.
+          NOTES
+          if gh release view v0.4.0-preview --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; leaving it unchanged."
+          else
+            gh release create v0.4.0-preview Medora-v0.4.0-preview.apk SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target f77ee0887e3ff76bf81e26dc69ea9868b2470bf2 --title "Medora 0.4.0 — Emerald Sanctuary Preview" --notes-file release-notes.md --prerelease --latest=false
+          fi
