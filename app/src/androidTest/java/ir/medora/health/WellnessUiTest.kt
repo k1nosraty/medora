@@ -192,8 +192,11 @@ class WellnessUiTest {
         capture("compact-$language-$dark-reports")
         compose.onNodeWithTag("nav-2").performClick()
         compose.onNodeWithText("ویزیت متخصص قلب").assertDoesNotExist()
+        compose.onNodeWithTag("nav-2").assertIsSelected()
+        capture("compact-$language-$dark-medications")
         compose.onNodeWithTag("nav-3").performClick()
         compose.onNodeWithText("ویزیت متخصص قلب").assertExists()
+        compose.onNodeWithTag("nav-3").assertIsSelected()
         compose.onNodeWithTag("settings").performClick()
         compose.onNodeWithText(localizedText("settings.title", language)).assertExists()
         capture("compact-$language-$dark-settings")
@@ -216,4 +219,3 @@ class WellnessUiTest {
         capture("00-welcome-fa")
     }
 }
-
