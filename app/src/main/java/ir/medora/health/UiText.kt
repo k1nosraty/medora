@@ -46,6 +46,7 @@ private val copy = mapOf(
     "nav.medications.short" to ("داروها" to "Meds"),
     "nav.appointments.short" to ("قرارها" to "Visits"),
     "nav.insights" to ("گزارش و تقویم" to "Insights"),
+    "nav.insights.short" to ("گزارش" to "Insights"),
     "water.history" to ("مشاهدهٔ سابقهٔ آب" to "View water history"),
     "welcome.tagline" to ("همراه سلامتی، هر روز" to "Your daily care companion"),
     "welcome.intro" to ("آب، دارو و قرارهای پزشکی؛ با خیال آسوده." to "Water, medications and appointments, with peace of mind."),
@@ -372,4 +373,3 @@ fun localizedOffsetLabel(minutes: Int, language: String): String = when(minutes)
     1440 -> localizedText("appointment.dayBefore", language)
     else -> localizedText("appointment.minutesBefore", language, minutes)
 }
-
