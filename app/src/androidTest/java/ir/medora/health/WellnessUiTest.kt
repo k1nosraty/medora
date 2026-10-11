@@ -187,8 +187,7 @@ class WellnessUiTest {
         val bounds = tags.map { compose.onNodeWithTag(it).fetchSemanticsNode().boundsInRoot }
         bounds.zipWithNext().forEach { (left, right) -> org.junit.Assert.assertTrue(left.right <= right.left + 1f) }
         compose.onNodeWithTag("nav-0").assertIsSelected()
-        compose.onNodeWithTag("today-medications").assertExists()
-        compose.onNodeWithTag("today-appointments").assertExists()
+        compose.onNodeWithTag("today-timeline").assertExists()
         capture("compact-$language-$dark-today")
         compose.onNodeWithTag("nav-insights").performClick()
         compose.onNodeWithTag("page-calendar").assertIsDisplayed()
@@ -270,3 +269,4 @@ class WellnessUiTest {
         capture("00-welcome-fa")
     }
 }
+

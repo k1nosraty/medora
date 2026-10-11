@@ -13,6 +13,8 @@ val LocalCalendar = staticCompositionLocalOf { "jalali" }
 
 private val copy = mapOf(
     "design.later" to ("فعلاً نه" to "Not now"),
+    "today.timeline" to ("برنامهٔ روز" to "Daily timeline"),
+    "today.timelineEmpty" to ("برای این روز دارو یا قراری ثبت نشده." to "No medications or appointments scheduled for this day."),
     "design.theme" to ("ظاهر برنامه" to "Appearance"),
     "design.theme.system" to ("سیستم" to "System"),
     "design.theme.light" to ("روشن" to "Light"),
@@ -381,3 +383,4 @@ fun localizedOffsetLabel(minutes: Int, language: String): String = when(minutes)
     1440 -> localizedText("appointment.dayBefore", language)
     else -> localizedText("appointment.minutesBefore", language, minutes)
 }
+

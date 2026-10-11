@@ -88,17 +88,17 @@ fun ProgressRing(progress: Float, accent: Color, modifier: Modifier = Modifier) 
 @Composable
 fun WaterProgressCard(data: HealthData, day: LocalDate, onAdd: () -> Unit) {
     val key = day.toString()
-    Panel(color = wellnessTint(MedoraColors.WaterContainer), feature=true) {
+    Panel(color = wellnessTint(MedoraColors.WaterContainer), compact=true, feature=true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(tr("today.waterCompact"),style=MaterialTheme.typography.titleSmall)
                 Text(tr("water.progress", n(data.total(key)), n(data.settings.goal)),
-                    style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+                    style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
                 LinearProgressIndicator(progress={data.progress(key)},modifier=Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(50)),
                     color=wellnessAccent(MedoraColors.Water),trackColor=MaterialTheme.colorScheme.onSurface.copy(alpha=.12f))
                 Text(if(data.remaining(key)==0) tr("water.goalReached") else tr("water.remaining",n(data.remaining(key))),style=MaterialTheme.typography.bodySmall)
             }
-            WaterGlass(data.progress(key),Modifier.width(80.dp).height(106.dp))
+            WaterGlass(data.progress(key),Modifier.width(52.dp).height(70.dp))
         }
         PrimaryAction(tr("today.waterAction"),onAdd)
     }

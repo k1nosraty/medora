@@ -81,11 +81,11 @@ fun DaySelector(day: LocalDate, choose: () -> Unit, change: (LocalDate) -> Unit,
                     val date=day.plusDays(offset)
                     val selected=offset==0L
                     val label=displayDate(date,true)
-                    Column(Modifier.width(48.dp).heightIn(min=64.dp).clip(RoundedCornerShape(20.dp))
+                    Column(Modifier.width(48.dp).heightIn(min=48.dp).clip(RoundedCornerShape(20.dp))
                         .background(if(selected) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .semantics { contentDescription=label;this.selected=selected }
-                        .clickable(enabled=allowFuture || !date.isAfter(LocalDate.now()),role=Role.Button) { change(date) }.padding(4.dp),
-                        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        .clickable(enabled=allowFuture || !date.isAfter(LocalDate.now()),role=Role.Button) { change(date) }.padding(2.dp),
+                        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(0.dp)) {
                         val key=CalendarSupport.shortWeekdays(language)[CalendarSupport.weekdayOrder(language).indexOf(date.dayOfWeek.value)]
                         val ink=if(selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                         Text(tr(key),style=MaterialTheme.typography.labelSmall,color=ink)

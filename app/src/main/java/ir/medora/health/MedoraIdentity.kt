@@ -71,7 +71,7 @@ fun BotanicalArtwork(modifier: Modifier = Modifier, landscape: Boolean = false) 
                 }; drawPath(path, color)
             }
         }
-        val x = if (rtl) w * .88f else w * .12f
+        val x = if (rtl) w * .12f else w * .88f
         val sign = if (rtl) -1 else 1
         leaf(x, h * .98f, w * .10f, h * .72f, sign * 17f, Color(0xFF66D8C2).copy(alpha = .25f))
         leaf(x, h * .80f, w * .08f, h * .48f, sign * -42f, Color(0xFF8AE0AC).copy(alpha = .28f))
@@ -82,10 +82,14 @@ fun BotanicalArtwork(modifier: Modifier = Modifier, landscape: Boolean = false) 
 
 @Composable
 fun MedoraHeader(title: String, subtitle: String = "", onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 12.dp))
+    val rtlHeader=LocalLayoutDirection.current==LayoutDirection.Rtl
+    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
         .background(Brush.linearGradient(listOf(MedoraColors.Forest, MedoraColors.Primary)))) {
-        BotanicalArtwork(Modifier.matchParentSize())
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 18.dp),
+        Canvas(Modifier.matchParentSize()) {
+            val x=if(rtlHeader) size.width*.06f else size.width*.94f
+            leaf(x,size.height*.95f,size.width*.055f,size.height*.85f,if(rtlHeader) 24f else -24f,Color(0xFF66D8C2).copy(alpha=.12f))
+        }
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (onBack != null) IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("common.close"), tint = Color.White)
@@ -104,7 +108,7 @@ fun MedoraHeader(title: String, subtitle: String = "", onBack: (() -> Unit)? = n
 @Composable
 fun MedoraEmptyArtwork(kind: String, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(132.dp), contentAlignment = Alignment.Center) {
-        BotanicalArtwork(Modifier.width(200.dp).fillMaxHeight())
+
         if (kind == "medication") MedicationBadge(MedicationIcon.CAPSULE, MedicationColor.ORANGE, Modifier.size(76.dp))
         else Icon(if (kind == "water") Icons.Default.WaterDrop else Icons.Default.Event,
             null, Modifier.size(64.dp), tint = wellnessAccent(if (kind == "water") MedoraColors.Water else MedoraColors.Appointment))
@@ -186,5 +190,18 @@ fun MedicationDetailsSheet(medication: Medication, data: HealthData, vm: HealthV
                 DoseCard(dose, vm, actionable = !java.time.LocalDate.parse(dose.wall.substring(0, 10)).isAfter(java.time.LocalDate.now()))
             }
         }
+    }
+}
+
+/** A continuous rail follows start: right in Persian, left in English. */
+@Composable
+fun MedoraTimelineItem(first: Boolean, last: Boolean, color: Color, content: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        Canvas(Modifier.width(16.dp).fillMaxHeight()) {
+            val y=20.dp.toPx()
+            drawLine(color.copy(alpha=.35f),Offset(size.width/2,if(first)y else 0f),Offset(size.width/2,if(last)y else size.height),2.dp.toPx())
+            drawCircle(color,5.dp.toPx(),Offset(size.width/2,y))
+        }
+        Column(Modifier.weight(1f).padding(bottom=8.dp)) { content() }
     }
 }

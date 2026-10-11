@@ -170,15 +170,15 @@ fun Panel(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(
-        shape = if(feature) MedoraFeatureShape else RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(if(feature) 20.dp else 16.dp),
         color = color,
         border = androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant.copy(alpha=.35f)),
         shadowElevation = 1.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            Modifier.padding(if (compact) 14.dp else MedoraSpacing.Card),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
+            Modifier.padding(if (compact) 10.dp else 12.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
             content = content
         )
     }
@@ -287,7 +287,7 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             Column(
                 Modifier.widthIn(max = 760.dp).fillMaxWidth().weight(1f)
                     .verticalScroll(rememberSaveable(tab, secondary, saver = androidx.compose.foundation.ScrollState.Saver) { androidx.compose.foundation.ScrollState(0) }).padding(horizontal = MedoraSpacing.Page, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 vm.error?.let { ErrorNotice(tr(it)) }
                 androidx.compose.runtime.key(tab, secondary) {
@@ -386,48 +386,26 @@ private fun TodayScreen(
     val doses = data.calendarDoses(day)
     DaySelector(day, chooseDate, changeDate, allowFuture = true)
     if (future) Text(tr("schedule.futureReadOnly"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    val taken = doses.count { it.status == DoseStatus.TAKEN }
-    val nextDose = doses.filter { it.status == DoseStatus.PENDING || it.status == DoseStatus.SNOOZED }.minByOrNull { it.wall }
-    val appointment = data.appointments.filter { !it.cancelled && it.instant().isAfter(Instant.now()) }.minByOrNull { it.instant() }
-    Column(Modifier.fillMaxWidth().testTag("today-medications"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    Panel(color=wellnessTint(MedoraColors.Warm),compact = true) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            WellnessIcon(Icons.Default.Medication, MedoraColors.Medication)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(tr(if (day == LocalDate.now()) "today.medicationCompact" else "schedule.medications"), fontWeight = FontWeight.Bold)
-                Text(if (doses.isEmpty()) tr("today.noMedication") else if (future) tr("schedule.planned", n(doses.size)) else tr("today.progress", n(taken), n(doses.size)),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            TextButton(onClick = viewMedications) { Text(tr("today.viewAll"), style = MaterialTheme.typography.labelMedium) }
-        }
-    }
-    if (future) {
-        if (doses.isEmpty()) Empty(tr("medication.historyEmpty"))
-        doses.forEach { DoseCard(it, vm, actionable = false) }
-    } else if (nextDose != null) DoseCard(nextDose, vm)
-    else if (doses.isNotEmpty()) Empty(if (taken == doses.size) tr("today.allDone") else tr("today.progress", n(taken), n(doses.size)))
-    else PrimaryAction(tr("today.addMedicine"), { openEditor(Editor("medication")) })
-    }
     if (!future) WaterProgressCard(data, today) { openEditor(Editor("water", date = today.toString())) }
-    if(!future) TextButton(onClick = viewWater, modifier = Modifier.testTag("open-water")) { Text(tr("water.history")) }
-    HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
-    Column(Modifier.fillMaxWidth().testTag("today-appointments"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            WellnessIcon(Icons.Default.Event, MedoraColors.Appointment)
-            Heading(tr(if (day == LocalDate.now()) "today.upcomingAppointment" else "schedule.appointments"))
+    if (!future) TextButton(onClick=viewWater,modifier=Modifier.testTag("open-water")) { Text(tr("water.history")) }
+    Heading(tr("today.timeline"))
+    val events= dailyTimeline(data,day)
+    Column(Modifier.fillMaxWidth().testTag("today-timeline")) {
+        events.forEachIndexed { index,event ->
+            MedoraTimelineItem(index==0,index==events.lastIndex,
+                if(event.dose!=null) wellnessAccent(MedoraColors.Medication) else wellnessAccent(MedoraColors.Appointment)) {
+                event.dose?.let { DoseCard(it,vm,actionable=!future) }
+                event.appointment?.let { item ->
+                    AppointmentCard(item,edit={openEditor(Editor("appointment",appointment=item))},
+                        toggle={vm.change({it.appointments.replace(item.copy(cancelled=!item.cancelled))})},delete={},showDelete=false,showActions=!future)
+                }
+            }
         }
-    val appointments = if (day == LocalDate.now()) listOfNotNull(appointment) else data.appointments
-        .filter { !it.cancelled && it.instant().atZone(ZoneId.systemDefault()).toLocalDate() == day }.sortedBy { it.instant() }
-    appointments.forEach { item ->
-        AppointmentCard(item,
-            edit = { openEditor(Editor("appointment", appointment = item)) },
-            toggle = { vm.change({ it.appointments.replace(item.copy(cancelled = !item.cancelled)) }) },
-            delete = {}, showDelete = false, showActions = !future)
     }
-    if (appointments.isEmpty()) {
-        if (future) Empty(tr("appointment.empty"))
-        else PrimaryAction(tr("today.appointmentAction"), { openEditor(Editor("appointment")) })
-    }
+    if(events.isEmpty()) Empty(tr("today.timelineEmpty"))
+    if(!future) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick={openEditor(Editor("medication"))},modifier=Modifier.weight(1f).heightIn(min=48.dp)) {Text(tr("today.addMedicine"))}
+        OutlinedButton(onClick={openEditor(Editor("appointment"))},modifier=Modifier.weight(1f).heightIn(min=48.dp)) {Text(tr("today.appointmentAction"))}
     }
     if (!data.settings.consent || !vm.enabled) {
         Panel(color = wellnessTint(MedoraColors.WarningContainer), compact = true) {
@@ -637,6 +615,7 @@ private fun AppointmentScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
     var menu by remember { mutableStateOf(false) }
@@ -685,8 +664,9 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
                 }
             }
         }
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
         Surface(color = stateColor.copy(alpha = .10f), shape = RoundedCornerShape(50)) {
-                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         when (dose.status) {
                             DoseStatus.TAKEN -> Icons.Default.CheckCircle
@@ -702,7 +682,8 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
                     Text(tr(statusKey), color = stateColor, style = MaterialTheme.typography.labelMedium)
                 }
             }
-        if (dose.instructions.isNotBlank()) Text(dose.instructions, style = MaterialTheme.typography.bodyMedium)
+        if (dose.instructions.isNotBlank()) Text(dose.instructions,Modifier.padding(vertical=3.dp), style = MaterialTheme.typography.bodySmall)
+        }
         if (actionable && needsAction) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
@@ -772,3 +753,4 @@ fun AppointmentCard(
         }
     }
 }
+
