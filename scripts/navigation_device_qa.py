@@ -15,6 +15,8 @@ tests = [
     "ir.medora.health.WellnessUiTest#compactEnglishDarkNavigation",
     "ir.medora.health.WellnessUiTest#medicationTabDoesNotDisplayAppointmentsAfterNavigation",
     "ir.medora.health.TimeDialogTest",
+    "ir.medora.health.WellnessUiTest#futureTodayScheduleIsVisibleWithoutDoseActions",
+    "ir.medora.health.WellnessUiTest#customMedicationSnoozePersistsFromSettings",
     "ir.medora.health.WellnessUiTest#medicationAppearanceCanBeSelectedAndPersisted",
     "ir.medora.health.NotificationPrivacyTest",
 ]

@@ -138,7 +138,7 @@ class Reminders(private val context:Context) {
                 action(r,notificationId,"done")
             ).build())
             builder.addAction(Notification.Action.Builder(
-                null, localizedText("notification.actionSnooze",language), action(r,notificationId,"snooze")
+                null, localizedText("notification.actionSnooze",language,localizedNumber((if(r.kind=="dose") data.settings.medicationSnoozeMinutes else 10).toString(),language)), action(r,notificationId,"snooze")
             ).build())
         }
         notifications.notify(notificationId,builder.build())
