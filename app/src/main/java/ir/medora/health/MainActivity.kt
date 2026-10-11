@@ -389,8 +389,6 @@ private fun TodayScreen(
     val taken = doses.count { it.status == DoseStatus.TAKEN }
     val nextDose = doses.filter { it.status == DoseStatus.PENDING || it.status == DoseStatus.SNOOZED }.minByOrNull { it.wall }
     val appointment = data.appointments.filter { !it.cancelled && it.instant().isAfter(Instant.now()) }.minByOrNull { it.instant() }
-    if (!future) WaterProgressCard(data, today) { openEditor(Editor("water", date = today.toString())) }
-    if(!future) TextButton(onClick = viewWater, modifier = Modifier.testTag("open-water")) { Text(tr("water.history")) }
     Column(Modifier.fillMaxWidth().testTag("today-medications"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Panel(color=wellnessTint(MedoraColors.Warm),compact = true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -410,6 +408,8 @@ private fun TodayScreen(
     else if (doses.isNotEmpty()) Empty(if (taken == doses.size) tr("today.allDone") else tr("today.progress", n(taken), n(doses.size)))
     else PrimaryAction(tr("today.addMedicine"), { openEditor(Editor("medication")) })
     }
+    if (!future) WaterProgressCard(data, today) { openEditor(Editor("water", date = today.toString())) }
+    if(!future) TextButton(onClick = viewWater, modifier = Modifier.testTag("open-water")) { Text(tr("water.history")) }
     HorizontalDivider(Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outlineVariant)
     Column(Modifier.fillMaxWidth().testTag("today-appointments"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
