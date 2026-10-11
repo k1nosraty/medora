@@ -24,6 +24,7 @@ tests = [
     "ir.medora.health.WellnessUiTest#largeTextKeepsCriticalMedicineInformationAndNavigationAccessible",
     "ir.medora.health.WellnessUiTest#medicationAndAppointmentTimePickersConfirmAndDismissWithoutCrash",
     "ir.medora.health.WellnessUiTest#medicationDetailsAndHistoryUseTheSavedMedicineIdentity",
+    "ir.medora.health.WellnessUiTest#appearanceThemeChangesAndPersistsFromSettings",
 ]
 failed = []
 for index, test in enumerate(tests):

@@ -80,6 +80,7 @@ class WellnessUiTest {
     }
 
     @Before fun seedOnlyTestData() {
+        application.getSharedPreferences("medora_ui",android.content.Context.MODE_PRIVATE).edit().clear().commit()
         val today = LocalDate.now()
         val medication = Medication(id = "ui-med", name = "قرص آهن", instructions = "۱۵۰ میلی‌گرم", startDay = today.toString(), times = listOf("08:00", "17:00"))
         val data = HealthData()
@@ -103,9 +104,10 @@ class WellnessUiTest {
         }
         compose.setContent {
             val density=LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density,fontScale),LocalLanguage provides language, LocalCalendar provides "jalali",
+            val appearance=androidx.compose.runtime.remember { AppearancePreferences(application).apply { chooseTheme(if(dark) "dark" else "light") } }
+            CompositionLocalProvider(LocalAppearance provides appearance,LocalDensity provides Density(density.density,fontScale),LocalLanguage provides language, LocalCalendar provides "jalali",
                 LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr) {
-                MaterialTheme(colorScheme = medoraColorScheme(dark), typography = medoraTypography(language), shapes = MedoraShapes) {
+                MaterialTheme(colorScheme = medoraColorScheme(appearance.theme=="dark"), typography = medoraTypography(language), shapes = MedoraShapes) {
                     androidx.compose.foundation.layout.Box(
                         androidx.compose.ui.Modifier.then(if (compact) androidx.compose.ui.Modifier.width(320.dp) else androidx.compose.ui.Modifier.fillMaxWidth())
                     ) { HealthScreen(model, {}, {}, {}) }
@@ -243,6 +245,17 @@ class WellnessUiTest {
         compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
         compose.onNodeWithText(localizedText("design.intakeHistory","fa")).performScrollTo().assertExists()
         compose.onNodeWithTag("details-edit").assertExists()
+    }
+
+    @Test fun appearanceThemeChangesAndPersistsFromSettings() {
+        launch(compact=true)
+        compose.onNodeWithTag("settings").performClick()
+        compose.onNodeWithText(localizedText("settings.display","fa")).performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("design.theme.dark","fa")).performScrollTo().performClick().assertIsSelected()
+        capture("theme-dark-settings")
+        assertEquals("dark",AppearancePreferences(application).theme)
+        compose.onNodeWithText(localizedText("design.theme.light","fa")).performScrollTo().performClick().assertIsSelected()
+        assertEquals("light",AppearancePreferences(application).theme)
     }
 
     @Test fun welcomeRendersWithoutFakeLogin() {
