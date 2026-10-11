@@ -52,6 +52,7 @@ fun SettingsDialog(
     var advanced by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scroll = rememberScrollState()
+    LaunchedEffect(tab) {scroll.scrollTo(0)}
     val context = LocalContext.current
 
     fun save() {
@@ -59,14 +60,16 @@ fun SettingsDialog(
             val parsedGoal = normalize(goal).toIntOrNull()
             if (parsedGoal == null || parsedGoal !in 1..20000) {
                 error = "validation.goal"
+                tab=0
                 return
             }
             if (LocalTime.parse(start) >= LocalTime.parse(end)) {
                 error = "validation.waterWindow"
+                tab=0
                 return
             }
             val parsedSnooze = normalize(medicationSnooze).toIntOrNull()
-            if (parsedSnooze == null || parsedSnooze !in 1..1440) { error = "validation.medicationSnooze"; return }
+            if (parsedSnooze == null || parsedSnooze !in 1..1440) { error = "validation.medicationSnooze";tab=1; return }
             error = null
             val updated = data.settings.copy(
                 goal = parsedGoal,
@@ -348,3 +351,4 @@ private fun MedicationSnoozeSettings(value:String,onValue:(String)->Unit,custom:
         if(custom) Input(value,{onValue(normalize(it))},tr("settings.snoozeMinutes"),helper=tr("validation.medicationSnooze"),keyboardType=androidx.compose.ui.text.input.KeyboardType.Number)
     }
 }
+

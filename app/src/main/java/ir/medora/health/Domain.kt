@@ -295,3 +295,25 @@ fun MutableList<Appointment>.replace(appointment: Appointment) {
     removeAll { it.id == appointment.id };add(appointment)
 }
 
+
+
+/** Notification actions must still belong to the current, due reminder. */
+fun HealthData.applyReminderAction(reminder: Reminder, action: String, now: ZonedDateTime): Boolean {
+    if(action !in setOf("done","snooze") || reminder.kind !in setOf("dose","water") ||
+        reminder.at>now.toInstant().toEpochMilli() || !Planner.allowed(this,reminder,now)) return false
+    if(reminder.kind=="water" && waterSnoozes[reminder.waterBase]?.let {it!=reminder.at}==true) return false
+    val token="${reminder.key}|${reminder.at}|$action"
+    if(token in handledActions) return false
+    when(reminder.kind) {
+        "dose" -> doses.find {it.id==reminder.reference}?.let {
+            mark(it,if(action=="done") DoseStatus.TAKEN else DoseStatus.SNOOZED,now.toInstant())
+        } ?: return false
+        "water" -> {
+            if(action=="done") {addWater(250,now);waterAcknowledged+=reminder.waterBase;waterSnoozes.remove(reminder.waterBase)}
+            else waterSnoozes[reminder.waterBase]=now.toInstant().plusSeconds(600).toEpochMilli()
+        }
+    }
+    handledActions+=token
+    if(handledActions.size>500) handledActions.removeAt(0)
+    return true
+}

@@ -217,6 +217,9 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
     var welcomed by rememberSaveable { mutableStateOf(intro.getBoolean("welcomed", false)) }
     var permissionIntroduced by rememberSaveable {mutableStateOf(intro.getBoolean("permission_introduced",false))}
     var history by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
+    var observedDay by rememberSaveable {mutableStateOf(LocalDate.now().toString())}
+    val currentDay=LocalDate.now().toString()
+    LaunchedEffect(currentDay) {if(history==observedDay) history=currentDay;observedDay=currentDay}
     var showHistoryPicker by remember { mutableStateOf(false) }
     var editor by remember { mutableStateOf<Editor?>(null) }
     var deletion by remember { mutableStateOf<PendingDeletion?>(null) }
@@ -259,7 +262,7 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             MedoraHeader(
                 title=tr(when { secondary=="water" -> "nav.water"; secondary!=null -> "nav.insights"; tab==2 -> "nav.medications"; tab==3 -> "nav.appointments"; else -> "nav.today" }),
                 subtitle=if(secondary==null && tab==0) displayDate(historyDate,true) else "",
-                onBack=if(secondary!=null) ({ secondary=null }) else null
+                onBack=if(secondary!=null) ({ secondary=null }) else null, statusInset=true
             )
         },
         bottomBar = {
@@ -429,7 +432,7 @@ private fun WaterScreen(
     vm: HealthViewModel
 ) {
     DaySelector(day, chooseDate, {}, showArrows = false)
-    WaterSummary(data, day) { ml ->
+    WaterSummary(data, day, busy=vm.busy) { ml ->
         vm.change({ it.addWater(ml, ZonedDateTime.of(day, LocalTime.now(), ZoneId.systemDefault())) })
     }
     PrimaryAction(tr("water.custom"), { openEditor(Editor("water")) })
@@ -460,12 +463,12 @@ private fun WaterScreen(
 }
 
 @Composable
-fun WaterSummary(data: HealthData, day: LocalDate, add: (Int) -> Unit) {
+fun WaterSummary(data: HealthData, day: LocalDate, busy: Boolean = false, add: (Int) -> Unit) {
     val key = day.toString()
     Panel(color=wellnessTint(MedoraColors.WaterContainer),feature=true) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        WaterGlass(data.progress(key))
+        WaterGlass(data.progress(key),Modifier.width(64.dp).height(86.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (day == LocalDate.now()) tr("date.today") else displayDate(day), fontWeight = FontWeight.SemiBold)
             Text(tr("water.progress", n(data.total(key)), n(data.settings.goal)),
@@ -480,7 +483,7 @@ fun WaterSummary(data: HealthData, day: LocalDate, add: (Int) -> Unit) {
         listOf(150, 250, 500).forEach { ml ->
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 val label = tr("water.quickAdd", n(ml))
-                FilledTonalButton(onClick = { add(ml) }, enabled = !day.isAfter(LocalDate.now()),
+                FilledTonalButton(onClick = { add(ml) }, enabled = !busy && !day.isAfter(LocalDate.now()),
                     shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = wellnessTint(MedoraColors.WaterContainer), contentColor = wellnessAccent(MedoraColors.Water)),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp).semantics { contentDescription = label },
@@ -642,7 +645,7 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (actionable) Box {
-                IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) {
+                IconButton(onClick = { menu = true }, enabled = !vm.busy, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.MoreVert, contentDescription = tr("a11y.changeDoseStatus"))
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -654,6 +657,7 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
                             DoseStatus.SKIPPED -> "dose.skip"
                         }
                         DropdownMenuItem(
+                            enabled = !vm.busy,
                             text = { Text(if (status == DoseStatus.SNOOZED) tr("dose.snooze", n(vm.data?.settings?.medicationSnoozeMinutes ?: 10)) else tr(key)) },
                             onClick = {
                                 vm.change({ it.mark(dose, status, Instant.now()) })
@@ -721,7 +725,7 @@ fun AppointmentCard(
     showActions: Boolean = true
 ) {
     val language = LocalLanguage.current
-    val local = java.time.LocalDateTime.parse(appointment.wall)
+    val local = appointment.displayTime()
     Panel(color = wellnessTint(MedoraColors.Lavender), compact = true,feature=true) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             WellnessIcon(Icons.Default.Event, MedoraColors.Appointment)
@@ -735,7 +739,7 @@ fun AppointmentCard(
             if (appointment.cancelled) Text(tr("appointment.cancelled"), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
         }
         if (appointment.zone != ZoneId.systemDefault().id) {
-            Text(tr("appointment.timeZoneLabel", appointment.zone), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("appointment.clinicTimeLabel",displayDate(java.time.LocalDateTime.parse(appointment.wall).toLocalDate()),displayTime(java.time.LocalDateTime.parse(appointment.wall).toLocalTime()),appointment.zone), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (appointment.location.isNotBlank()) Text(tr("appointment.locationLabel", appointment.location))
         if (appointment.contact.isNotBlank()) Text(tr("appointment.contactLabel", appointment.contact))

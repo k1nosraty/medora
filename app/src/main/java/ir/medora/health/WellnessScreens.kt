@@ -126,7 +126,7 @@ fun ActivityCalendarScreen(data: HealthData, vm: HealthViewModel, openEditor: (E
     val leading = Math.floorMod(monthStart.dayOfWeek.value - CalendarSupport.firstDayOfWeek(language), 7)
     val length = CalendarSupport.monthLength(monthStart, calendar)
     val waterDays = data.water.map { it.day }.toSet()
-    val appointmentDays = data.appointments.filter { !it.cancelled }.map { LocalDateTime.parse(it.wall).toLocalDate().toString() }.toSet()
+    val appointmentDays = data.appointments.filter { !it.cancelled }.map { it.displayTime().toLocalDate().toString() }.toSet()
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { month = CalendarSupport.plusMonths(monthStart, -1, calendar).toString() }) {
@@ -186,7 +186,7 @@ fun ActivityCalendarScreen(data: HealthData, vm: HealthViewModel, openEditor: (E
     }
     Heading(displayDate(selectedDay, true))
     val doses = data.calendarDoses(selectedDay)
-    val appointments = data.appointments.filter { LocalDateTime.parse(it.wall).toLocalDate() == selectedDay }.sortedBy { it.wall }
+    val appointments = data.appointments.filter { it.displayTime().toLocalDate() == selectedDay }.sortedBy { it.instant() }
     val total = data.total(selection)
     if (total > 0) Panel(color = wellnessTint(MedoraColors.WaterContainer), compact = true) {
         Text(tr("calendar.water"), fontWeight = FontWeight.SemiBold)

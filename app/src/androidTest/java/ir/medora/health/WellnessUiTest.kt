@@ -262,6 +262,35 @@ class WellnessUiTest {
         assertEquals("light",AppearancePreferences(application).theme)
     }
 
+    @Test fun editedStartDateSurvivesCollapsingAdvancedSchedule() {
+        launch(compact=true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
+        compose.onNodeWithTag("details-edit").performClick()
+        compose.onNodeWithText(localizedText("medication.advanced","fa")).performScrollTo().performClick()
+        compose.onNodeWithTag("medication-start-date").performScrollTo().performClick()
+        // Pick a different day in the currently displayed month, including month boundaries.
+        val today=LocalDate.now()
+        val selected=if(CalendarSupport.dayOfMonth(today,"jalali").toInt()==1) today.plusDays(1) else today.minusDays(1)
+        val description=localizedText("a11y.openDate","fa")+": "+CalendarSupport.formatDate(selected,"jalali","fa")
+        compose.onNodeWithContentDescription(description).performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("common.select","fa")).performScrollTo().performClick()
+        compose.onNodeWithTag("medication-collapse-schedule").performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().performClick()
+        compose.waitUntil(15000) { !model.busy && model.data?.medications?.first {it.id=="ui-med"}?.startDay==selected.toString() }
+        val saved=Repository.executor.submit<HealthData> {Repository.get(application).read()}.get()
+        assertEquals(selected.toString(),saved.medications.first {it.id=="ui-med"}.startDay)
+    }
+
+    @Test fun largeTextHydrationRemainsReadableAndActionable() {
+        launch(compact=true,fontScale=2f)
+        compose.onNodeWithText(localizedText("today.waterAction","fa")).performScrollTo().assertIsDisplayed()
+        capture("large-text-today-water")
+        compose.onNodeWithText(localizedText("today.waterAction","fa")).performClick()
+        compose.onNodeWithTag("editor-water").assertExists()
+        compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().assertIsDisplayed()
+    }
+
     @Test fun welcomeRendersWithoutFakeLogin() {
         compose.setContent {
             CompositionLocalProvider(LocalLanguage provides "fa", LocalLayoutDirection provides LayoutDirection.Rtl) {

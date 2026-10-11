@@ -161,7 +161,7 @@ fun EditDialog(
                         id = editor.medication?.id ?: id(),
                         name = name.trim(),
                         instructions = instructions.trim(),
-                        startDay = if (editor.medication == null || advancedSchedule) medicationStart else editor.medication.startDay,
+                        startDay = medicationStart,
                         times = parsedTimes,
                         weekdays = if (specific) emptySet() else weekdays,
                         dates = parsedDates,
@@ -263,7 +263,7 @@ fun EditDialog(
                         Input(instructions, { instructions = it }, tr("medication.instructions"), singleLine = false)
                         MedicationAppearancePicker(medicationIcon, medicationColor, { medicationIcon = it }, { medicationColor = it })
                         Text(tr("medication.time"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        times.take(if (advancedSchedule) times.size else 1).forEachIndexed { index, time ->
+                        times.forEachIndexed { index, time ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 OutlinedButton(
                                     onClick = { medicationTimePicker(index) },
@@ -282,7 +282,11 @@ fun EditDialog(
                             }
                         }
                         if (!advancedSchedule) {
-                            Text(tr("medication.everyDay"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            val summary = if(specific) tr("medication.specificSummary",n(normalize(dates).replace('،',',').split(',').count {it.isNotBlank()}))
+                                else if(weekdays.size==7) tr("medication.everyDay")
+                                else CalendarSupport.weekdayOrder(language).filter {it in weekdays}.joinToString(" · ") {localizedWeekday(it,language)}
+                            Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("medication.startDate")+": "+displayDate(LocalDate.parse(medicationStart)),style=MaterialTheme.typography.bodySmall)
                             TextButton(onClick = { advancedSchedule = true }) {
                                 Icon(Icons.Default.ExpandMore, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
@@ -296,7 +300,7 @@ fun EditDialog(
                             }
                             HorizontalDivider()
                             Text(tr("medication.schedule"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            OutlinedButton(onClick = { datePickerTarget = "start" }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) {
+                            OutlinedButton(onClick = { datePickerTarget = "start" }, modifier = Modifier.testTag("medication-start-date").fillMaxWidth().heightIn(min = 50.dp)) {
                                 Text(tr("medication.startDate") + ": " + CalendarSupport.formatDate(LocalDate.parse(medicationStart), calendar, language))
                             }
                             SwitchRow(tr("medication.specificDates"), specific) { specific = it }
@@ -315,7 +319,7 @@ fun EditDialog(
                                     }
                                 }
                             }
-                            TextButton(onClick = { advancedSchedule = false }) {
+                            TextButton(onClick = { advancedSchedule = false },modifier=Modifier.testTag("medication-collapse-schedule")) {
                                 Icon(Icons.Default.ExpandLess, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
                                 Text(tr("common.close"))
@@ -462,3 +466,5 @@ private fun weekdayName(day: Int): String = when (day) {
     6 -> tr("weekday.sat")
     else -> tr("weekday.sun")
 }
+
+

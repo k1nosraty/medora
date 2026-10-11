@@ -81,7 +81,7 @@ fun BotanicalArtwork(modifier: Modifier = Modifier, landscape: Boolean = false) 
 }
 
 @Composable
-fun MedoraHeader(title: String, subtitle: String = "", onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
+fun MedoraHeader(title: String, subtitle: String = "", onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null, statusInset: Boolean = false) {
     val rtlHeader=LocalLayoutDirection.current==LayoutDirection.Rtl
     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
         .background(Brush.linearGradient(listOf(MedoraColors.Forest, MedoraColors.Primary)))) {
@@ -89,7 +89,7 @@ fun MedoraHeader(title: String, subtitle: String = "", onBack: (() -> Unit)? = n
             val x=if(rtlHeader) size.width*.06f else size.width*.94f
             leaf(x,size.height*.95f,size.width*.055f,size.height*.85f,if(rtlHeader) 24f else -24f,Color(0xFF66D8C2).copy(alpha=.12f))
         }
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp),
+        Row(Modifier.fillMaxWidth().then(if(statusInset) Modifier.statusBarsPadding() else Modifier).padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (onBack != null) IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("common.close"), tint = Color.White)
