@@ -31,6 +31,51 @@ class WellnessUiTest {
     private val application get() = instrumentation.targetContext.applicationContext as Application
     private lateinit var model: HealthViewModel
 
+    @Test fun medicationAppearanceCanBeSelectedAndPersisted() {
+        launch(compact=true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText(localizedText("medication.new","fa")).performClick()
+        compose.onNodeWithTag("appearance-toggle").performScrollTo().performClick()
+        MedicationIcon.entries.forEach { option ->
+            compose.onNodeWithTag("appearance-icon-${option.name}").performScrollTo().performClick().assertIsSelected()
+        }
+        compose.onNodeWithTag("appearance-icon-DROPS").performScrollTo().performClick()
+        compose.onNodeWithTag("appearance-color-LAVENDER").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText(localizedText("medication.name","fa"),substring=true).performTextInput("Appearance test")
+        capture("appearance-editor")
+        compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().assertIsDisplayed().performClick()
+        compose.waitUntil(15000) { model.data?.medications?.any { it.name=="Appearance test" }==true && !model.busy }
+        val saved=Repository.executor.submit<HealthData> { Repository.get(application).read() }.get().medications.first { it.name=="Appearance test" }
+        assertEquals(MedicationIcon.DROPS,saved.icon)
+        assertEquals(MedicationColor.LAVENDER,saved.color)
+    }
+
+    @Test fun futureTodayScheduleIsVisibleWithoutDoseActions() {
+        launch(compact=true)
+        compose.onNodeWithTag("day-next").performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithText(localizedText("schedule.futureReadOnly","fa")).assertExists()
+        compose.onAllNodesWithText("قرص آهن").onFirst().performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription(localizedText("a11y.changeDoseStatus","fa")).assertDoesNotExist()
+        compose.onNodeWithText("ویزیت متخصص قلب").performScrollTo().assertIsDisplayed()
+        capture("future-today")
+    }
+
+    @Test fun customMedicationSnoozePersistsFromSettings() {
+        launch(compact=true)
+        compose.onNodeWithTag("settings").performClick()
+        compose.onNodeWithText(localizedText("settings.medicationsTab","fa")).performClick()
+        listOf(10,30,60).forEach { minutes ->
+            compose.onNodeWithText(localizedText("settings.minutes","fa",localizedNumber(minutes.toString(),"fa"))).performScrollTo().performClick().assertIsSelected()
+        }
+        compose.onNodeWithText(localizedText("settings.customSnooze","fa")).performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("settings.snoozeMinutes","fa")).performScrollTo().performTextReplacement("45")
+        capture("snooze-settings")
+        compose.onNodeWithText(localizedText("common.saveSettings","fa")).performClick()
+        compose.waitUntil(15000) { model.data?.settings?.medicationSnoozeMinutes==45 && !model.busy }
+        val saved=Repository.executor.submit<HealthData> { Repository.get(application).read() }.get()
+        assertEquals(45,saved.settings.medicationSnoozeMinutes)
+    }
+
     @Before fun seedOnlyTestData() {
         val today = LocalDate.now()
         val medication = Medication(id = "ui-med", name = "قرص آهن", instructions = "۱۵۰ میلی‌گرم", startDay = today.toString(), times = listOf("08:00", "17:00"))
@@ -73,7 +118,7 @@ class WellnessUiTest {
         val directory = File(application.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
         compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
-        val bitmap = (if (name.contains("settings")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
+        val bitmap = (if (name.contains("settings") || name.contains("appearance-editor")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
@@ -147,8 +192,11 @@ class WellnessUiTest {
         capture("compact-$language-$dark-reports")
         compose.onNodeWithTag("nav-2").performClick()
         compose.onNodeWithText("ویزیت متخصص قلب").assertDoesNotExist()
+        compose.onNodeWithTag("nav-2").assertIsSelected()
+        capture("compact-$language-$dark-medications")
         compose.onNodeWithTag("nav-3").performClick()
         compose.onNodeWithText("ویزیت متخصص قلب").assertExists()
+        compose.onNodeWithTag("nav-3").assertIsSelected()
         compose.onNodeWithTag("settings").performClick()
         compose.onNodeWithText(localizedText("settings.title", language)).assertExists()
         capture("compact-$language-$dark-settings")

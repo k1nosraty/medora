@@ -31,21 +31,28 @@ class NotificationPrivacyTest {
         val now=ZonedDateTime.now()
         val time=now.minusMinutes(1).toLocalTime().withSecond(0).withNano(0).toString()
         val med=Medication(id="privacy-test",name="Private medicine",instructions="Private instructions",
-            startDay=now.toLocalDate().toString(),times=listOf(time))
+            startDay=now.toLocalDate().toString(),times=listOf(time),icon=MedicationIcon.DROPS,color=MedicationColor.LAVENDER)
         val d=HealthData(settings=Settings(consent=true,privateNotifications=false),medications=mutableListOf(med))
         d.materialize(now)
         val r=Planner.plan(d,now.minusMinutes(2)).first{it.kind=="dose"}
         val id=1900000001
         try {
             service.show(r,d,id)
-            posted(id){it.extras.getString(Notification.EXTRA_TITLE).orEmpty().contains(med.name)}
+            posted(id){it.extras.getString(Notification.EXTRA_TITLE).orEmpty().contains(med.name)}.also {
+                assertNotNull(it.getLargeIcon());assertEquals(MedicationColor.LAVENDER.argb,it.color)
+                assertNull(it.publicVersion.getLargeIcon())
+            }
             d.settings=d.settings.copy(privateNotifications=true)
             service.refreshActive(d,now)
             val hidden=posted(id){it.extras.getString(Notification.EXTRA_TITLE)==localizedText("notification.brand","fa")}
+            assertNull(hidden.getLargeIcon())
+            assertEquals(0,hidden.color)
             assertFalse(hidden.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString().contains(med.instructions))
             d.settings=d.settings.copy(privateNotifications=false)
             service.refreshActive(d,now)
             val restored=posted(id){it.extras.getString(Notification.EXTRA_TITLE).orEmpty().contains(med.name)}
+            assertNotNull(restored.getLargeIcon())
+            assertEquals(MedicationColor.LAVENDER.argb,restored.color)
             assertTrue(restored.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString().contains(med.instructions))
         } finally { manager.cancel(id) }
     }
@@ -64,3 +71,4 @@ class NotificationPrivacyTest {
         } finally { manager.cancel(id) }
     }
 }
+

@@ -12,10 +12,41 @@ val LocalLanguage = staticCompositionLocalOf { "fa" }
 val LocalCalendar = staticCompositionLocalOf { "jalali" }
 
 private val copy = mapOf(
+    "settings.medicationsTab" to ("دارو" to "Meds"),
+    "settings.medicationSnooze" to ("مدت تعویق دارو" to "Medication snooze duration"),
+    "settings.customSnooze" to ("زمان دلخواه" to "Custom"),
+    "settings.snoozeMinutes" to ("مدت تعویق (دقیقه)" to "Snooze duration (minutes)"),
+    "settings.snoozeNote" to ("برای تعویق دارو در برنامه و اعلان استفاده می‌شود." to "Used for medication snooze in the app and notifications."),
+    "validation.medicationSnooze" to ("مدت تعویق باید بین ۱ تا ۱۴۴۰ دقیقه باشد." to "Enter a duration between 1 and 1440 minutes."),
+    "settings.minutes" to ("{0} دقیقه" to "{0} min"),
+    "schedule.futureReadOnly" to ("برنامهٔ آینده؛ ثبت مصرف فقط از روز موعد فعال می‌شود." to "Future schedule; dose actions become available on the scheduled day."),
+    "schedule.medications" to ("داروهای این روز" to "Medication for this day"),
+    "schedule.appointments" to ("قرارهای این روز" to "Appointments for this day"),
+    "schedule.planned" to ("{0} نوبت برنامه‌ریزی‌شده" to "{0} planned doses"),
+
+    "appearance.title" to ("ظاهر دارو (اختیاری)" to "Appearance (optional)"),
+    "appearance.icon" to ("آیکون" to "Icon"),
+    "appearance.color" to ("رنگ" to "Color"),
+    "appearance.preview" to ("پیش‌نمایش نشان دارو" to "Medication badge preview"),
+    "appearance.icon.tablet" to ("قرص" to "Tablet"),
+    "appearance.icon.capsule" to ("کپسول" to "Capsule"),
+    "appearance.icon.syrup" to ("شربت" to "Syrup"),
+    "appearance.icon.ampoule" to ("آمپول" to "Ampoule"),
+    "appearance.icon.ointment" to ("پماد" to "Ointment"),
+    "appearance.icon.drops" to ("قطره" to "Drops"),
+    "appearance.icon.spray" to ("اسپری" to "Spray"),
+    "appearance.color.orange" to ("نارنجی" to "Orange"),
+    "appearance.color.teal" to ("سبزآبی" to "Teal"),
+    "appearance.color.blue" to ("آبی" to "Blue"),
+    "appearance.color.lavender" to ("بنفش" to "Lavender"),
+    "appearance.color.rose" to ("رز" to "Rose"),
+    "appearance.color.slate" to ("خاکستری آبی" to "Slate"),
+
     "nav.settings.short" to ("تنظیمات" to "Settings"),
     "nav.medications.short" to ("داروها" to "Meds"),
     "nav.appointments.short" to ("قرارها" to "Visits"),
     "nav.insights" to ("گزارش و تقویم" to "Insights"),
+    "nav.insights.short" to ("گزارش" to "Insights"),
     "water.history" to ("مشاهدهٔ سابقهٔ آب" to "View water history"),
     "welcome.tagline" to ("همراه سلامتی، هر روز" to "Your daily care companion"),
     "welcome.intro" to ("آب، دارو و قرارهای پزشکی؛ با خیال آسوده." to "Water, medications and appointments, with peace of mind."),
@@ -170,7 +201,7 @@ private val copy = mapOf(
     "dose.snoozed" to ("به تعویق افتاده" to "Snoozed"),
     "dose.skipped" to ("مصرف نشد" to "Skipped"),
     "dose.take" to ("مصرف کردم" to "Mark as taken"),
-    "dose.snooze" to ("تعویق ۱۰ دقیقه" to "Snooze 10 min"),
+    "dose.snooze" to ("تعویق {0} دقیقه" to "Snooze {0} min"),
     "dose.until" to ("یادآوری مجدد ساعت {0}" to "Next reminder at {0}"),
     "dose.reset" to ("پاک‌کردن وضعیت مصرف" to "Clear dose status"),
     "dose.skip" to ("ثبت مصرف‌نشدن" to "Mark as not taken"),
@@ -289,7 +320,7 @@ private val copy = mapOf(
     "notification.contact" to ("تماس: {0}" to "Contact: {0}"),
     "notification.actionWater" to ("ثبت ۲۵۰ میلی‌لیتر" to "Log 250 ml"),
     "notification.actionTaken" to ("مصرف کردم" to "Taken"),
-    "notification.actionSnooze" to ("تعویق ۱۰ دقیقه" to "Snooze 10 min")
+    "notification.actionSnooze" to ("تعویق {0} دقیقه" to "Snooze {0} min")
 )
 
 fun localizedText(key: String, language: String, vararg args: Any?): String {

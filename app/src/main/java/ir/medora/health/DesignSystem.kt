@@ -14,24 +14,24 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 
 object MedoraColors {
-    val Primary = Color(0xFF319F91)
+    val Primary = Color(0xFF24786C)
     val OnPrimary = Color(0xFFFFFFFF)
-    val PrimaryContainer = Color(0xFFE5F4EE)
-    val OnPrimaryContainer = Color(0xFF187E78)
+    val PrimaryContainer = Color(0xFFE1F0E9)
+    val OnPrimaryContainer = Color(0xFF1C6157)
     val Secondary = Color(0xFF36A7E8)
-    val Background = Color(0xFFF7FAF9)
+    val Background = Color(0xFFF8FAF7)
     val Surface = Color(0xFFFFFFFF)
-    val Ink = Color(0xFF17334A)
-    val Muted = Color(0xFF738899)
-    val Outline = Color(0xFFE7EEF1)
+    val Ink = Color(0xFF183A3D)
+    val Muted = Color(0xFF546E72)
+    val Outline = Color(0xFFD8E3DD)
     val Water = Color(0xFF1688C4)
     val WaterContainer = Color(0xFFDDF1FC)
     val Success = Color(0xFF238876)
     val SuccessContainer = Color(0xFFEAF7F1)
     val Warning = Color(0xFFB65014)
-    val WarningContainer = Color(0xFFFFF1E5)
+    val WarningContainer = Color(0xFFFFF0E3)
     val Medication = Color(0xFFF18A42)
-    val Lavender = Color(0xFFEFE5F8)
+    val Lavender = Color(0xFFF0E7F8)
     val Appointment = Color(0xFF8E69B7)
     val Warm = Color(0xFFFFF9F4)
     val Error = Color(0xFFB23A32)
@@ -47,11 +47,11 @@ val PersianFont = FontFamily(Font(R.font.vazirmatn))
 fun medoraColorScheme(dark: Boolean = isSystemInDarkTheme()) = if (dark) darkColorScheme(
     primary = Color(0xFF77D2C1), onPrimary = Color(0xFF073C37),
     primaryContainer = Color(0xFF194E45), onPrimaryContainer = Color(0xFFBCEBDD),
-    secondary = Color(0xFF88CCF4), background = Color(0xFF10232C),
-    onBackground = Color(0xFFE3EDF1), surface = Color(0xFF192F39),
-    onSurface = Color(0xFFE3EDF1), surfaceVariant = Color(0xFF203A44),
-    onSurfaceVariant = Color(0xFFB2C3CC), outline = Color(0xFF708792),
-    outlineVariant = Color(0xFF2D4853), error = Color(0xFFFFB4AB),
+    secondary = Color(0xFF88CCF4), background = Color(0xFF102724),
+    onBackground = Color(0xFFE6F1EC), surface = Color(0xFF1A332F),
+    onSurface = Color(0xFFE6F1EC), surfaceVariant = Color(0xFF23403A),
+    onSurfaceVariant = Color(0xFFB8CDC5), outline = Color(0xFF78948A),
+    outlineVariant = Color(0xFF355047), error = Color(0xFFFFB4AB),
     errorContainer = Color(0xFF65352F), onErrorContainer = Color(0xFFFFDAD5)
 ) else lightColorScheme(
     primary = MedoraColors.Primary,
@@ -63,9 +63,9 @@ fun medoraColorScheme(dark: Boolean = isSystemInDarkTheme()) = if (dark) darkCol
     onBackground = MedoraColors.Ink,
     surface = MedoraColors.Surface,
     onSurface = MedoraColors.Ink,
-    surfaceVariant = Color(0xFFF0F4F1),
+    surfaceVariant = Color(0xFFEEF3ED),
     onSurfaceVariant = MedoraColors.Muted,
-    outline = Color(0xFF87958F),
+    outline = Color(0xFF71867C),
     outlineVariant = MedoraColors.Outline,
     error = MedoraColors.Error,
     errorContainer = MedoraColors.ErrorContainer,

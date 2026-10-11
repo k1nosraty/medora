@@ -80,6 +80,7 @@ class Reminders(private val context:Context) {
                 notifications.notify(active.id,Notification.Builder.recoverBuilder(context,active.notification)
                     .setContentTitle(title).setContentText(body)
                     .setStyle(Notification.BigTextStyle().bigText(body)).setOnlyAlertOnce(true)
+                    .setLargeIcon(null as android.graphics.Bitmap?).setColor(0)
                     .setPublicVersion(publicNotification(data.settings.language)).build())
             }
         }
@@ -121,6 +122,15 @@ class Reminders(private val context:Context) {
                 putString("medora.reference",r.reference);putLong("medora.at",r.at)
                 putString("medora.waterBase",r.waterBase)
             })
+        if(r.kind=="dose" && !data.settings.privateNotifications) {
+            val dose=data.doses.find { it.id==r.reference }
+            val medication=data.medications.find { it.id==dose?.medicationId }
+            if(dose!=null) {
+                val icon=medication?.icon ?: dose.icon
+                val color=medication?.color ?: dose.color
+                builder.setLargeIcon(medicationIconBitmap(icon,color)).setColor(color.argb)
+            }
+        }
         if(r.kind!="appointment") {
             builder.addAction(Notification.Action.Builder(
                 null,
@@ -128,7 +138,7 @@ class Reminders(private val context:Context) {
                 action(r,notificationId,"done")
             ).build())
             builder.addAction(Notification.Action.Builder(
-                null, localizedText("notification.actionSnooze",language), action(r,notificationId,"snooze")
+                null, localizedText("notification.actionSnooze",language,localizedNumber((if(r.kind=="dose") data.settings.medicationSnoozeMinutes else 10).toString(),language)), action(r,notificationId,"snooze")
             ).build())
         }
         notifications.notify(notificationId,builder.build())
@@ -185,3 +195,4 @@ fun BroadcastReceiver.background(context:Context,work:()->Unit) {
         } finally { if(lock.isHeld)lock.release();pending.finish() }
     }
 }
+
