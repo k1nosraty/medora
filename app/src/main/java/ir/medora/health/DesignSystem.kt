@@ -22,7 +22,7 @@ object MedoraColors {
     val Background = Color(0xFFF8FAF7)
     val Surface = Color(0xFFFFFFFF)
     val Ink = Color(0xFF183A3D)
-    val Muted = Color(0xFF556F73)
+    val Muted = Color(0xFF546E72)
     val Outline = Color(0xFFD8E3DD)
     val Water = Color(0xFF1688C4)
     val WaterContainer = Color(0xFFDDF1FC)
