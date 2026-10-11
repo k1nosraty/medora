@@ -24,6 +24,11 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import java.util.Locale
 
 enum class MedicationIcon {
@@ -32,10 +37,28 @@ enum class MedicationIcon {
     companion object { fun parse(value:String)=entries.find { it.name==value } ?: CAPSULE }
 }
 enum class MedicationColor(val argb:Int) {
-    ORANGE(0xFFF18A42.toInt()), TEAL(0xFF319F91.toInt()), BLUE(0xFF1688C4.toInt()),
-    LAVENDER(0xFF8E69B7.toInt()), ROSE(0xFFC87386.toInt()), SLATE(0xFF738899.toInt());
+    ORANGE(0xFFF3C56A.toInt()), TEAL(0xFF35B6A2.toInt()), BLUE(0xFFA8DDF2.toInt()),
+    LAVENDER(0xFFB8A4E8.toInt()), ROSE(0xFFF472B6.toInt()), SLATE(0xFF94A3B8.toInt());
     val labelKey get() = "appearance.color.${name.lowercase(Locale.ROOT)}"
     companion object { fun parse(value:String)=entries.find { it.name==value } ?: ORANGE }
+}
+
+/** Persisted enum identifiers are unchanged; only visual tokens are mapped into each theme. */
+@Composable
+fun medicationSurface(color: MedicationColor): Color = if (isMedoraDark()) when(color) {
+    MedicationColor.ORANGE -> Color(0xFF453919)
+    MedicationColor.TEAL -> Color(0xFF16443B)
+    MedicationColor.BLUE -> Color(0xFF103C50)
+    MedicationColor.LAVENDER -> Color(0xFF352D4E)
+    MedicationColor.ROSE -> Color(0xFF4D293F)
+    MedicationColor.SLATE -> Color(0xFF293A46)
+} else when(color) {
+    MedicationColor.ORANGE -> Color(0xFFFFF0D8)
+    MedicationColor.TEAL -> Color(0xFFDDF1E8)
+    MedicationColor.BLUE -> Color(0xFFE0F2FA)
+    MedicationColor.LAVENDER -> Color(0xFFE9E0F7)
+    MedicationColor.ROSE -> Color(0xFFFCE2EF)
+    MedicationColor.SLATE -> Color(0xFFE7ECF1)
 }
 
 /** Shared normalized artwork for in-app badges and native notification bitmaps. */
@@ -77,11 +100,7 @@ fun medicationIconBitmap(icon:MedicationIcon,color:MedicationColor):Bitmap = Bit
 @Composable
 fun MedicationBadge(icon:MedicationIcon,color:MedicationColor,modifier:Modifier=Modifier) {
     val description="${tr(icon.labelKey)}، ${tr(color.labelKey)}"
-    // Retain the original coral/orange capsule for existing medication records.
-    if(icon==MedicationIcon.CAPSULE && color==MedicationColor.ORANGE) {
-        CapsuleIcon(modifier.semantics { contentDescription=description });return
-    }
-    val background=Color(color.argb).copy(alpha=if(MaterialTheme.colorScheme.background==MedoraColors.Background) .12f else .22f)
+    val background=medicationSurface(color)
     Box(modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(background)
         .semantics { contentDescription=description },contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(34.dp)) { drawIntoCanvas { c ->
@@ -94,16 +113,16 @@ fun MedicationBadge(icon:MedicationIcon,color:MedicationColor,modifier:Modifier=
 @Composable
 fun MedicationAppearancePicker(icon:MedicationIcon,color:MedicationColor,onIcon:(MedicationIcon)->Unit,onColor:(MedicationColor)->Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    Panel(color=medicationSurface(color),compact=true) {
         TextButton(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth().testTag("appearance-toggle")) {
             MedicationBadge(icon,color)
             Spacer(Modifier.width(12.dp))
             Text(tr("appearance.title"),Modifier.weight(1f))
-            Text(if(expanded) "−" else "+")
+            Icon(Icons.Default.ExpandMore,null)
         }
         if(expanded) {
             Text(tr("appearance.icon"),style=MaterialTheme.typography.titleSmall)
-            MedicationIcon.entries.chunked(4).forEach { items ->
+            MedicationIcon.entries.chunked(3).forEach { items ->
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                     items.forEach { option ->
                         Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
@@ -111,22 +130,30 @@ fun MedicationAppearancePicker(icon:MedicationIcon,color:MedicationColor,onIcon:
                             .selectable(icon==option,role=Role.RadioButton,onClick={onIcon(option)})
                             .testTag("appearance-icon-${option.name}").padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                             MedicationBadge(option,color)
-                            Text(tr(option.labelKey),style=MaterialTheme.typography.labelSmall)
+                            Row(verticalAlignment=Alignment.CenterVertically) {
+                                if(icon==option) Icon(Icons.Default.Check,null,Modifier.size(16.dp))
+                                Text(tr(option.labelKey),style=MaterialTheme.typography.labelSmall,textAlign=TextAlign.Center)
+                            }
                         }
                     }
-                    repeat(4-items.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(3-items.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
             Text(tr("appearance.color"),style=MaterialTheme.typography.titleSmall)
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(2.dp)) {
-                MedicationColor.entries.forEach { option ->
-                    val label=tr(option.labelKey)
-                    Box(Modifier.weight(1f).heightIn(min=48.dp).selectable(color==option,role=Role.RadioButton,onClick={onColor(option)})
-                        .semantics { contentDescription=label }.testTag("appearance-color-${option.name}"),contentAlignment=Alignment.Center) {
-                        Box(Modifier.size(32.dp).clip(CircleShape).background(Color(option.argb)),contentAlignment=Alignment.Center) {
-                            if(color==option) Text("✓",color=Color.White)
+            MedicationColor.entries.chunked(3).forEach { choices ->
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                    choices.forEach { option ->
+                        val label=tr(option.labelKey)
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp))
+                            .selectable(color==option,role=Role.RadioButton,onClick={onColor(option)})
+                            .testTag("appearance-color-${option.name}").padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                            Box(Modifier.size(40.dp).border(if(color==option) 2.dp else 1.dp,
+                                if(color==option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,CircleShape)
+                                .padding(4.dp).clip(CircleShape).background(Color(option.argb)),contentAlignment=Alignment.Center) {
+                                if(color==option) Icon(Icons.Default.Check,null,Modifier.size(22.dp),tint=MedoraColors.Forest)
+                            }
+                            Text(label,style=MaterialTheme.typography.labelSmall,textAlign=TextAlign.Center)
                         }
-                        if(color==option) Box(Modifier.size(40.dp).border(2.dp,MaterialTheme.colorScheme.primary,CircleShape))
                     }
                 }
             }

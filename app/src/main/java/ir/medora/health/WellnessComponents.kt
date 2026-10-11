@@ -35,7 +35,13 @@ import java.time.LocalDate
 /** Reference colors are softened into dark surfaces without losing semantic accents. */
 @Composable
 fun wellnessTint(light: Color): Color = if (MaterialTheme.colorScheme.background == MedoraColors.Background) light
-    else lerp(MaterialTheme.colorScheme.surface, light, .12f)
+    else when (light) {
+        MedoraColors.WaterContainer -> Color(0xFF103C50)
+        MedoraColors.Lavender -> Color(0xFF352D4E)
+        MedoraColors.WarningContainer, MedoraColors.Warm -> Color(0xFF453919)
+        MedoraColors.SuccessContainer -> Color(0xFF16443B)
+        else -> lerp(MaterialTheme.colorScheme.surface, light, .12f)
+    }
 
 @Composable
 fun wellnessAccent(light: Color): Color = if (MaterialTheme.colorScheme.background == MedoraColors.Background) light
@@ -82,21 +88,19 @@ fun ProgressRing(progress: Float, accent: Color, modifier: Modifier = Modifier) 
 @Composable
 fun WaterProgressCard(data: HealthData, day: LocalDate, onAdd: () -> Unit) {
     val key = day.toString()
-    Panel(color = wellnessTint(MedoraColors.WaterContainer)) {
+    Panel(color = wellnessTint(MedoraColors.WaterContainer), feature=true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    WellnessIcon(Icons.Default.WaterDrop, MedoraColors.Water)
-                    Text(tr("today.waterCompact"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(tr("today.waterCompact"),style=MaterialTheme.typography.titleSmall)
                 Text(tr("water.progress", n(data.total(key)), n(data.settings.goal)),
-                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(if (data.remaining(key) == 0) tr("water.goalReached") else tr("water.remaining", n(data.remaining(key))),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+                LinearProgressIndicator(progress={data.progress(key)},modifier=Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(50)),
+                    color=wellnessAccent(MedoraColors.Water),trackColor=MaterialTheme.colorScheme.onSurface.copy(alpha=.12f))
+                Text(if(data.remaining(key)==0) tr("water.goalReached") else tr("water.remaining",n(data.remaining(key))),style=MaterialTheme.typography.bodySmall)
             }
-            ProgressRing(data.progress(key), MedoraColors.Water)
+            WaterGlass(data.progress(key),Modifier.width(80.dp).height(106.dp))
         }
-        PrimaryAction(tr("today.waterAction"), onAdd)
+        PrimaryAction(tr("today.waterAction"),onAdd)
     }
 }
 
@@ -157,37 +161,8 @@ fun CapsuleIcon(modifier: Modifier = Modifier) {
     }
 }
 
-/** Welcome illustration follows the reference's blue droplet and two teal leaves. */
+/** Same three-leaf mark as the generated launcher and notification vector. */
 @Composable
 fun WellnessBrand(modifier: Modifier = Modifier) {
-    Canvas(modifier.size(210.dp)) {
-        val w = size.width
-        val h = size.height
-        drawOval(Color(0xFF319F91).copy(alpha = .08f), Offset(w * .12f, h * .8f), Size(w * .76f, h * .1f))
-        val drop = Path().apply {
-            moveTo(w * .5f, h * .07f)
-            cubicTo(w * .44f, h * .26f, w * .25f, h * .4f, w * .32f, h * .59f)
-            cubicTo(w * .4f, h * .79f, w * .66f, h * .74f, w * .69f, h * .56f)
-            cubicTo(w * .73f, h * .39f, w * .58f, h * .22f, w * .5f, h * .07f)
-            close()
-        }
-        drawPath(drop, Brush.linearGradient(listOf(Color(0xFFA4E6FA), Color(0xFF36A7E8)), Offset(w * .3f, h * .15f), Offset(w * .7f, h * .65f)))
-        drawLine(Color.White.copy(alpha = .55f), Offset(w * .43f, h * .31f), Offset(w * .37f, h * .44f), 6.dp.toPx(), StrokeCap.Round)
-        val right = Path().apply {
-            moveTo(w * .55f, h * .86f)
-            cubicTo(w * .53f, h * .55f, w * .61f, h * .39f, w * .75f, h * .27f)
-            cubicTo(w * .91f, h * .53f, w * .78f, h * .77f, w * .55f, h * .86f)
-            close()
-        }
-        val left = Path().apply {
-            moveTo(w * .45f, h * .86f)
-            cubicTo(w * .2f, h * .85f, w * .13f, h * .64f, w * .12f, h * .53f)
-            cubicTo(w * .35f, h * .51f, w * .48f, h * .68f, w * .45f, h * .86f)
-            close()
-        }
-        drawPath(right, Brush.linearGradient(listOf(Color(0xFF69C3A5), Color(0xFF187E78))))
-        drawPath(left, Brush.linearGradient(listOf(Color(0xFF91D6B5), Color(0xFF319F91))))
-        drawLine(Color(0xFF187E78).copy(alpha = .6f), Offset(w * .55f, h * .86f), Offset(w * .73f, h * .37f), 2.dp.toPx(), StrokeCap.Round)
-        drawLine(Color(0xFF187E78).copy(alpha = .5f), Offset(w * .45f, h * .86f), Offset(w * .2f, h * .6f), 2.dp.toPx(), StrokeCap.Round)
-    }
+    MedoraMark(modifier.size(180.dp), Color(0xFFB8EAD5))
 }

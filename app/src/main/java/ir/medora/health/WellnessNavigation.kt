@@ -32,16 +32,17 @@ private data class DockDestination(val id: String, val label: String, val icon: 
 
 @Composable
 fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val destinations = listOf(
         DockDestination("settings", "app.settings", Icons.Default.Settings, "settings"),
         DockDestination("insights", "nav.insights", Icons.Default.BarChart, "nav-insights"),
         DockDestination("today", "nav.today", Icons.Default.Home, "nav-0"),
-        DockDestination("medications", "nav.medications", Icons.Default.Medication, "nav-2"),
-        DockDestination("appointments", "nav.appointments", Icons.Default.Event, "nav-3")
-    )
-    Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 12.dp, vertical = 8.dp),
+        DockDestination("appointments", "nav.appointments", Icons.Default.Event, "nav-3"),
+        DockDestination("medications", "nav.medications", Icons.Default.Medication, "nav-2")
+    ).let { if(rtl) it else it.reversed() }
+    Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 10.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center) {
-        Surface(shape = RoundedCornerShape(30.dp), color = MaterialTheme.colorScheme.surface,
+        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f)),
             shadowElevation = 2.dp, modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth().testTag("navigation-dock")) {
             // The home destination stays in the physical center in both language directions.
@@ -62,7 +63,7 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                         val selectionColor = animateColorAsState(
                             if (active && destination.id != "today") MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                             label = "dock-selection").value
-                        Column(Modifier.weight(1f).heightIn(min = 72.dp)
+                        Column(Modifier.weight(1f).heightIn(min = 76.dp)
                             // Clip before selectable so its ripple follows the rounded touch target.
                             .clip(RoundedCornerShape(20.dp)).background(selectionColor)
                             .selectable(selected = active, role = Role.Tab, onClick = { onSelect(destination.id) })
@@ -74,7 +75,7 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                                 Surface(shape = CircleShape, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
                                     contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
                                     shadowElevation = if (active) 2.dp else 0.dp, modifier = Modifier.size(50.dp)) {
-                                    Box(contentAlignment = Alignment.Center) { Icon(destination.icon, null, Modifier.size(26.dp)) }
+                                    Box(contentAlignment = Alignment.Center) { MedoraMark(Modifier.size(30.dp),LocalContentColor.current) }
                                 }
                             } else {
                                 Box(Modifier.height(50.dp), contentAlignment = Alignment.Center) {
@@ -82,7 +83,7 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                                         tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
-                            Text(label, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            Text(label, fontSize = 14.sp, lineHeight = 18.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                                 color = when {

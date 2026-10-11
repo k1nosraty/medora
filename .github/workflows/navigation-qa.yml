@@ -1,7 +1,7 @@
 name: Navigation device QA
 on:
   push:
-    branches: [ui/wellness-navigation]
+    branches: [ui/wellness-navigation, ui/emerald-sanctuary]
   pull_request:
     paths:
       - 'app/src/**'

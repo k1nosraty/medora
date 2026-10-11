@@ -3,6 +3,8 @@ package ir.medora.health
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
 import android.app.Application
 import androidx.compose.ui.graphics.asAndroidBitmap
 import android.graphics.Bitmap
@@ -63,7 +65,7 @@ class WellnessUiTest {
     @Test fun customMedicationSnoozePersistsFromSettings() {
         launch(compact=true)
         compose.onNodeWithTag("settings").performClick()
-        compose.onNodeWithText(localizedText("settings.medicationsTab","fa")).performClick()
+        compose.onNodeWithText(localizedText("settings.medicationsTab","fa")).performScrollTo().performClick()
         listOf(10,30,60).forEach { minutes ->
             compose.onNodeWithText(localizedText("settings.minutes","fa",localizedNumber(minutes.toString(),"fa"))).performScrollTo().performClick().assertIsSelected()
         }
@@ -93,13 +95,14 @@ class WellnessUiTest {
         instrumentation.runOnMainSync { model = HealthViewModel(application) }
     }
 
-    private fun launch(dark: Boolean = false, language: String = "fa", compact: Boolean = false) {
+    private fun launch(dark: Boolean = false, language: String = "fa", compact: Boolean = false, fontScale: Float = 1f) {
         compose.waitUntil(15000) { model.data != null && !model.busy }
         instrumentation.runOnMainSync {
             model.data?.let { it.settings = it.settings.copy(language = language) }
         }
         compose.setContent {
-            CompositionLocalProvider(LocalLanguage provides language, LocalCalendar provides "jalali",
+            val density=LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density,fontScale),LocalLanguage provides language, LocalCalendar provides "jalali",
                 LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr) {
                 MaterialTheme(colorScheme = medoraColorScheme(dark), typography = medoraTypography(language), shapes = MedoraShapes) {
                     androidx.compose.foundation.layout.Box(
@@ -178,7 +181,7 @@ class WellnessUiTest {
 
     private fun verifyCompactDock(language: String, dark: Boolean) {
         launch(dark = dark, language = language, compact = true)
-        val tags = listOf("settings", "nav-insights", "nav-0", "nav-2", "nav-3")
+        val tags = if(language=="fa") listOf("settings","nav-insights","nav-0","nav-3","nav-2") else listOf("nav-2","nav-3","nav-0","nav-insights","settings")
         tags.forEach { compose.onNodeWithTag(it).assertIsDisplayed() }
         val bounds = tags.map { compose.onNodeWithTag(it).fetchSemanticsNode().boundsInRoot }
         bounds.zipWithNext().forEach { (left, right) -> org.junit.Assert.assertTrue(left.right <= right.left + 1f) }
@@ -206,6 +209,42 @@ class WellnessUiTest {
     @Test fun compactEnglishDarkNavigation() = verifyCompactDock("en", true)
     @Test fun compactPersianDarkNavigation() = verifyCompactDock("fa", true)
     @Test fun compactEnglishLightNavigation() = verifyCompactDock("en", false)
+
+    @Test fun largeTextKeepsCriticalMedicineInformationAndNavigationAccessible() {
+        launch(compact=true,fontScale=2f)
+        compose.onNodeWithTag("nav-0").assertIsDisplayed().assertIsSelected()
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onAllNodesWithText("قرص آهن").onFirst().performScrollTo().assertIsDisplayed()
+        capture("large-text-medications")
+    }
+
+    @Test fun medicationAndAppointmentTimePickersConfirmAndDismissWithoutCrash() {
+        launch(compact=true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText(localizedText("medication.new","fa")).performClick()
+        val time=localizedText("medication.timeNumber","fa","۱","۰۸:۰۰")
+        compose.onNodeWithText(time).performScrollTo().performClick()
+        compose.onNodeWithTag("medora-time-picker").assertExists()
+        compose.onNodeWithText(localizedText("common.cancel","fa")).performClick()
+        compose.onNodeWithText(time).performScrollTo().assertExists().performClick()
+        compose.onNodeWithTag("time-confirm").performScrollTo().performClick()
+        compose.onNodeWithText(time).assertExists()
+        compose.onNodeWithContentDescription(localizedText("common.close","fa")).performClick()
+        compose.onNodeWithTag("nav-3").performClick()
+        compose.onNodeWithText(localizedText("appointment.new","fa")).performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("medication.time","fa")).performScrollTo().performClick()
+        compose.onNodeWithTag("medora-time-picker").assertExists()
+        compose.onNodeWithTag("time-confirm").performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().assertExists()
+    }
+
+    @Test fun medicationDetailsAndHistoryUseTheSavedMedicineIdentity() {
+        launch(compact=true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("design.intakeHistory","fa")).performScrollTo().assertExists()
+        compose.onNodeWithText(localizedText("common.edit","fa")).performScrollTo().assertExists()
+    }
 
     @Test fun welcomeRendersWithoutFakeLogin() {
         compose.setContent {

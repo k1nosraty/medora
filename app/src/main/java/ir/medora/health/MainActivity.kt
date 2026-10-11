@@ -73,15 +73,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(state)
         model = ViewModelProvider(this)[HealthViewModel::class.java]
         setContent {
+            val appearance = remember { AppearancePreferences(this@MainActivity) }
+            val dark = when(appearance.theme) { "light" -> false; "dark" -> true; else -> isSystemInDarkTheme() }
             val language = model.data?.settings?.language ?: "fa"
             val calendar = model.data?.settings?.calendar ?: "jalali"
             CompositionLocalProvider(
+                LocalAppearance provides appearance,
                 LocalLanguage provides language,
                 LocalCalendar provides calendar,
                 androidx.compose.ui.platform.LocalLayoutDirection provides
                     if (language == "fa") androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr
             ) {
-                MaterialTheme(colorScheme = medoraColorScheme(), typography = medoraTypography(language), shapes = MedoraShapes) {
+                SideEffect {
+                    window.statusBarColor = android.graphics.Color.rgb(16,61,56)
+                    window.navigationBarColor = if(dark) android.graphics.Color.rgb(11,36,35) else android.graphics.Color.rgb(234,245,238)
+                    androidx.core.view.WindowCompat.getInsetsController(window,window.decorView).apply {
+                        isAppearanceLightStatusBars=false;isAppearanceLightNavigationBars=!dark
+                    }
+                }
+                MaterialTheme(colorScheme = medoraColorScheme(dark), typography = medoraTypography(language), shapes = MedoraShapes) {
                     HealthScreen(model, ::requestNotifications, ::openNotificationSettings, ::openExactSettings)
                 }
             }
@@ -155,13 +165,16 @@ private data class PendingDeletion(val messageKey: String, val mutation: (Health
 fun Panel(
     color: Color = MaterialTheme.colorScheme.surface,
     compact: Boolean = false,
+    feature: Boolean = false,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = if(feature) MedoraFeatureShape else RoundedCornerShape(20.dp),
         color = color,
+        border = androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant.copy(alpha=.35f)),
         shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             Modifier.padding(if (compact) 14.dp else MedoraSpacing.Card),
@@ -173,12 +186,13 @@ fun Panel(
 
 @Composable
 fun Heading(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = modifier)
+    Text(text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = modifier)
 }
 
 @Composable
-fun Empty(text: String, action: (@Composable () -> Unit)? = null) {
-    Panel(color = MaterialTheme.colorScheme.surfaceVariant, compact = true) {
+fun Empty(text: String, kind: String? = null, action: (@Composable () -> Unit)? = null) {
+    Panel(color = if(kind=="appointment") wellnessTint(MedoraColors.Lavender) else if(kind=="medication") wellnessTint(MedoraColors.Warm) else MaterialTheme.colorScheme.surfaceVariant, compact = true) {
+        if(kind!=null) MedoraEmptyArtwork(kind)
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         action?.invoke()
     }
@@ -236,23 +250,10 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                title = {
-                    if (secondary != null) Text(tr(if (secondary == "water") "nav.water" else "nav.insights"),
-                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    else if (tab == 0) Column {
-                        Text(tr("today.greeting"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(displayDate(LocalDate.now(), true), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else Text(tr(if (tab == 2) "nav.medications" else "nav.appointments"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                },
-                navigationIcon = {
-                    if (secondary != null) IconButton(onClick = { secondary = null }) {
-                        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, tr("common.close"))
-                    }
-                },
-                actions = {}
+            MedoraHeader(
+                title=tr(when { secondary=="water" -> "nav.water"; secondary!=null -> "nav.insights"; tab==2 -> "nav.medications"; tab==3 -> "nav.appointments"; else -> "nav.today" }),
+                subtitle=if(secondary==null && tab==0) displayDate(historyDate,true) else "",
+                onBack=if(secondary!=null) ({ secondary=null }) else null
             )
         },
         bottomBar = {
@@ -323,7 +324,7 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             title = { Text(tr("common.delete")) },
             text = { Text(tr(pending.messageKey)) },
             confirmButton = {
-                Button(onClick = { vm.change(pending.mutation) { deletion = null } }, enabled = !vm.busy) {
+                Button(onClick = { vm.change(pending.mutation) { deletion = null } }, enabled = !vm.busy,colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.error,contentColor=MaterialTheme.colorScheme.onError)) {
                     Text(tr("common.delete"))
                 }
             },
@@ -382,17 +383,10 @@ private fun TodayScreen(
     val taken = doses.count { it.status == DoseStatus.TAKEN }
     val nextDose = doses.filter { it.status == DoseStatus.PENDING || it.status == DoseStatus.SNOOZED }.minByOrNull { it.wall }
     val appointment = data.appointments.filter { !it.cancelled && it.instant().isAfter(Instant.now()) }.minByOrNull { it.instant() }
-    Surface(color = wellnessTint(MedoraColors.WaterContainer), shape = RoundedCornerShape(14.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Default.Spa, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-            Text(tr("today.title"), style = MaterialTheme.typography.bodySmall)
-        }
-    }
     if (!future) WaterProgressCard(data, today) { openEditor(Editor("water", date = today.toString())) }
-    TextButton(onClick = viewWater, modifier = Modifier.testTag("open-water")) { Text(tr("water.history")) }
+    if(!future) TextButton(onClick = viewWater, modifier = Modifier.testTag("open-water")) { Text(tr("water.history")) }
     Column(Modifier.fillMaxWidth().testTag("today-medications"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    Panel(compact = true) {
+    Panel(color=wellnessTint(MedoraColors.Warm),compact = true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             WellnessIcon(Icons.Default.Medication, MedoraColors.Medication)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -484,6 +478,7 @@ private fun WaterScreen(
 @Composable
 fun WaterSummary(data: HealthData, day: LocalDate, add: (Int) -> Unit) {
     val key = day.toString()
+    Panel(color=wellnessTint(MedoraColors.WaterContainer),feature=true) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         WaterGlass(data.progress(key))
@@ -512,6 +507,7 @@ fun WaterSummary(data: HealthData, day: LocalDate, add: (Int) -> Unit) {
             }
         }
     }
+    }
 }
 
 @Composable
@@ -523,6 +519,7 @@ private fun MedicationScreen(
     requestDelete: (PendingDeletion) -> Unit,
     vm: HealthViewModel
 ) {
+    var details by remember { mutableStateOf<Medication?>(null) }
     val language = LocalLanguage.current
     val calendar = LocalCalendar.current
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -549,14 +546,16 @@ private fun MedicationScreen(
     if (doses.isEmpty()) Empty(tr("medication.historyEmpty"))
     doses.forEach { DoseCard(it, vm, actionable = !history.isAfter(LocalDate.now())) }
     Heading(tr("medication.plans"))
-    if (data.medications.isEmpty()) Empty(tr("medication.empty"))
+    if (data.medications.isEmpty()) Empty(tr("medication.empty"),kind="medication")
     data.medications.forEach { medication ->
-        Panel {
+        Panel(color=medicationSurface(medication.color),feature=true) {
             val switchDescription = "${tr("medication.active")}: ${medication.name}"
             val switchState = tr(if (medication.active) "common.enabled" else "common.disabled")
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MedicationBadge(medication.icon, medication.color)
-                Text(medication.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                TextButton(onClick={details=medication},modifier=Modifier.weight(1f).testTag("medication-detail-${medication.id}"),contentPadding=PaddingValues(0.dp)) {
+                    Text(medication.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.onSurface)
+                }
                 Switch(
                     checked = medication.active,
                     onCheckedChange = { active -> vm.change({ it.changeMedication(medication.copy(active = active), ZonedDateTime.now()) }) },
@@ -594,6 +593,11 @@ private fun MedicationScreen(
             }
         }
     }
+    details?.let { selected ->
+        val current=data.medications.find { it.id==selected.id }
+        if(current!=null) MedicationDetailsSheet(current,data,vm,{details=null},{details=null;openEditor(Editor("medication",medication=current))})
+    }
+
 }
 
 @Composable
@@ -609,7 +613,7 @@ private fun AppointmentScreen(
     val future = data.appointments.filter { !it.cancelled && !it.instant().isBefore(Instant.now()) }.sortedBy { it.instant() }
     val past = data.appointments.filter { it.cancelled || it.instant().isBefore(Instant.now()) }.sortedByDescending { it.instant() }
     val shown = when (filter) { 1 -> future; 2 -> past; else -> future + past }
-    if (shown.isEmpty()) Empty(tr("appointment.empty"))
+    if (shown.isEmpty()) Empty(tr("appointment.empty"),kind="appointment")
     shown.forEachIndexed { index, appointment ->
         if (index == 0 && appointment in future) Heading(tr("appointment.nearest"))
         if (filter != 2 && index == future.size && past.isNotEmpty()) Heading(tr("appointment.past"))
@@ -643,9 +647,9 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
         DoseStatus.PENDING -> wellnessAccent(MedoraColors.Medication)
     }
     val needsAction = dose.status == DoseStatus.PENDING || dose.status == DoseStatus.SNOOZED
-    Panel(color = if (needsAction) wellnessTint(MedoraColors.WarningContainer) else MaterialTheme.colorScheme.surface, compact = true) {
+    val medication = vm.data?.medications?.find { it.id == dose.medicationId }
+    Panel(color=medicationSurface(medication?.color ?: dose.color),compact=true,feature=true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val medication = vm.data?.medications?.find { it.id == dose.medicationId }
             MedicationBadge(medication?.icon ?: dose.icon, medication?.color ?: dose.color)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(dose.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -713,7 +717,7 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
             Text(
                 tr("dose.until", displayTime(Instant.ofEpochMilli(dose.snoozeUntil).atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0))),
                 style = MaterialTheme.typography.bodySmall,
-                color = MedoraColors.Warning
+                color = wellnessAccent(MedoraColors.Warning)
             )
         }
     }
@@ -731,7 +735,7 @@ fun AppointmentCard(
 ) {
     val language = LocalLanguage.current
     val local = java.time.LocalDateTime.parse(appointment.wall)
-    Panel(color = wellnessTint(MedoraColors.Lavender), compact = true) {
+    Panel(color = wellnessTint(MedoraColors.Lavender), compact = true,feature=true) {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             WellnessIcon(Icons.Default.Event, MedoraColors.Appointment)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -741,7 +745,7 @@ fun AppointmentCard(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            if (appointment.cancelled) Text(tr("appointment.cancelled"), color = MedoraColors.Error, style = MaterialTheme.typography.labelMedium)
+            if (appointment.cancelled) Text(tr("appointment.cancelled"), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
         }
         if (appointment.zone != ZoneId.systemDefault().id) {
             Text(tr("appointment.timeZoneLabel", appointment.zone), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

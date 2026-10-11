@@ -19,6 +19,11 @@ tests = [
     "ir.medora.health.WellnessUiTest#customMedicationSnoozePersistsFromSettings",
     "ir.medora.health.WellnessUiTest#medicationAppearanceCanBeSelectedAndPersisted",
     "ir.medora.health.NotificationPrivacyTest",
+    "ir.medora.health.WellnessUiTest#mainScreensFormsAndWaterPersistence",
+    "ir.medora.health.WellnessUiTest#welcomeRendersWithoutFakeLogin",
+    "ir.medora.health.WellnessUiTest#largeTextKeepsCriticalMedicineInformationAndNavigationAccessible",
+    "ir.medora.health.WellnessUiTest#medicationAndAppointmentTimePickersConfirmAndDismissWithoutCrash",
+    "ir.medora.health.WellnessUiTest#medicationDetailsAndHistoryUseTheSavedMedicineIdentity",
 ]
 failed = []
 for index, test in enumerate(tests):
@@ -38,4 +43,3 @@ if len(images) < 12:
 if failed or pull.returncode:
     raise SystemExit("Device QA failed: " + ", ".join(failed))
 print(f"All {len(tests)} targeted device checks passed; {len(images)} screenshots retained.")
-
