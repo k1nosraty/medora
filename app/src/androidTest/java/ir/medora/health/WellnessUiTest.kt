@@ -220,6 +220,7 @@ class WellnessUiTest {
         compose.onNodeWithTag("nav-0").assertIsDisplayed().assertIsSelected()
         compose.onNodeWithTag("nav-2").performClick()
         compose.onAllNodesWithText("قرص آهن").onFirst().performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("navigation-active-label").assertTextEquals(localizedText("nav.medications","fa")).assertIsDisplayed()
         capture("large-text-medications")
     }
 
