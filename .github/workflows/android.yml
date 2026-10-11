@@ -13,6 +13,9 @@ jobs:
         with:
           packages: platform-tools
       - run: sdkmanager 'platforms;android-35' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Prefer official repositories in CI
+        run: sed -i '/maven.aliyun.com/d' settings.gradle.kts
       - run: chmod +x gradlew
       - run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
       - uses: actions/upload-artifact@v4
