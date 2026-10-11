@@ -10,10 +10,10 @@ object Codec {
     private fun JSONObject.strings(key:String):List<String> = getJSONArray(key).let { a ->(0 until a.length()).map { a.getString(it) } }
     private fun JSONObject.ints(key:String):Set<Int> = getJSONArray(key).let { a ->(0 until a.length()).map { a.getInt(it) }.toSet() }
     fun encode(d:HealthData):String = obj(
-        "schema" to 6,"settings" to d.settings.let { s ->obj("goal" to s.goal,"waterEnabled" to s.waterEnabled,"start" to s.start,"end" to s.end,
+        "schema" to 7,"settings" to d.settings.let { s ->obj("goal" to s.goal,"waterEnabled" to s.waterEnabled,"start" to s.start,"end" to s.end,
             "interval" to s.interval,"repeat" to s.repeat,"pauseUntil" to s.pauseUntil,"consent" to s.consent,"private" to s.privateNotifications,
             "appointmentStart" to s.appointmentStart,"appointmentInterval" to s.appointmentInterval,
-            "language" to s.language,"calendar" to s.calendar) },
+            "language" to s.language,"calendar" to s.calendar,"medicationSnoozeMinutes" to s.medicationSnoozeMinutes) },
         "water" to array(d.water.map { obj("id" to it.id,"ml" to it.ml,"day" to it.day,"at" to it.at) }),
         "medications" to array(d.medications.map { obj("id" to it.id,"name" to it.name,"instructions" to it.instructions,"startDay" to it.startDay,
             "times" to array(it.times),"weekdays" to array(it.weekdays),"dates" to array(it.dates),"active" to it.active,"effectiveFrom" to it.effectiveFrom,"icon" to it.icon.name,"color" to it.color.name) }),
@@ -27,12 +27,12 @@ object Codec {
         "reminderCheckpoint" to d.reminderCheckpoint,"deliveredReminders" to JSONObject(d.deliveredReminders as Map<*,*>)
     ).toString()
     fun decode(text:String):HealthData {
-        val j=JSONObject(text);val schema=j.getInt("schema");require(schema in 2..6) { "نسخه اطلاعات پشتیبانی نمی‌شود" }
+        val j=JSONObject(text);val schema=j.getInt("schema");require(schema in 2..7) { "نسخه اطلاعات پشتیبانی نمی‌شود" }
         val s=j.getJSONObject("settings")
         val d=HealthData(settings=Settings(s.getInt("goal"),s.getBoolean("waterEnabled"),s.getString("start"),s.getString("end"),
             s.getInt("interval"),s.getInt("repeat"),s.getLong("pauseUntil"),s.getBoolean("consent"),
             s.optBoolean("private",false),s.optString("appointmentStart","08:00"),
-            s.optInt("appointmentInterval",120),s.optString("language","fa"),s.optString("calendar","jalali")),through=j.getString("through"))
+            s.optInt("appointmentInterval",120),s.optString("language","fa"),s.optString("calendar","jalali"),s.optInt("medicationSnoozeMinutes",10)),through=j.getString("through"))
         j.list("water").forEach { d.water += Water(it.getString("id"),it.getInt("ml"),it.getString("day"),it.getLong("at")) }
         j.list("medications").forEach { d.medications += Medication(it.getString("id"),it.getString("name"),it.getString("instructions"),
             it.getString("startDay"),it.strings("times"),it.ints("weekdays"),it.strings("dates").toSet(),it.getBoolean("active"),it.optLong("effectiveFrom",0),MedicationIcon.parse(it.optString("icon")),MedicationColor.parse(it.optString("color"))) }

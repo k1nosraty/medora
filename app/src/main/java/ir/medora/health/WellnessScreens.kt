@@ -1,5 +1,7 @@
 package ir.medora.health
 
+import androidx.compose.ui.platform.testTag
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -74,7 +76,7 @@ fun WelcomeScreen(onStart: () -> Unit) {
 }
 
 @Composable
-fun DaySelector(day: LocalDate, choose: () -> Unit, change: (LocalDate) -> Unit, showArrows: Boolean = true) {
+fun DaySelector(day: LocalDate, choose: () -> Unit, change: (LocalDate) -> Unit, showArrows: Boolean = true, allowFuture: Boolean = false) {
     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (showArrows) IconButton(onClick = { change(day.minusDays(1)) }) {
@@ -85,7 +87,7 @@ fun DaySelector(day: LocalDate, choose: () -> Unit, change: (LocalDate) -> Unit,
                 Spacer(Modifier.width(8.dp))
                 Icon(Icons.Default.ExpandMore, null, modifier = Modifier.size(18.dp))
             }
-            if (showArrows) IconButton(onClick = { change(day.plusDays(1)) }, enabled = day.isBefore(LocalDate.now())) {
+            if (showArrows) IconButton(onClick = { change(day.plusDays(1)) }, modifier = Modifier.testTag("day-next"), enabled = allowFuture || day.isBefore(LocalDate.now())) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, tr("a11y.openDate"))
             }
         }
@@ -284,3 +286,4 @@ private fun WaterTrendChart(days: List<Pair<LocalDate, Int>>, goal: Int) {
         }
     }
 }
+

@@ -92,7 +92,7 @@ object CoreChecks {
         d.validate()
         val restored=Codec.decode(Codec.encode(d));expect(restored==d,"all data codec round trip")
         val queue=Planner.plan(d,now);expect(Codec.decodeQueue(Codec.encodeQueue(queue))==queue,"queue round trip")
-        rejects("unknown schema rejected"){Codec.decode(Codec.encode(d).replace("\"schema\":6","\"schema\":99"))}
+        rejects("unknown schema rejected"){Codec.decode(org.json.JSONObject(Codec.encode(d)).put("schema",99).toString())}
         val key=KeyGenerator.getInstance("AES").apply{init(256)}.generateKey()
         val plain=Codec.encode(d).toByteArray(Charsets.UTF_8);val encrypted=Encryption.seal(plain,key)
         expect(!encrypted.contentEquals(plain),"data encrypted")

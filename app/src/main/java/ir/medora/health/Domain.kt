@@ -22,7 +22,7 @@ data class Settings(
     val end: String="22:00", val interval: Int=60, val repeat: Int=0,
     val pauseUntil: Long=0, val consent: Boolean=false, val privateNotifications: Boolean=false,
     val appointmentStart: String="08:00", val appointmentInterval: Int=120,
-    val language: String="fa", val calendar: String="jalali"
+    val language: String="fa", val calendar: String="jalali", val medicationSnoozeMinutes:Int=10
 )
 data class Water(val id:String=id(),val ml:Int,val day:String,val at:Long) {
     fun editTime(zone:ZoneId):LocalDateTime = LocalDate.parse(day).atTime(
@@ -130,12 +130,13 @@ data class HealthData(
     fun mark(dose:Dose,status:DoseStatus,now:Instant) {
         doses.removeAll { it.id==dose.id }
         doses += dose.copy(status=status,updatedAt=now.toEpochMilli(),
-            snoozeUntil=if(status==DoseStatus.SNOOZED) now.plusSeconds(600).toEpochMilli() else 0)
+            snoozeUntil=if(status==DoseStatus.SNOOZED) now.plusSeconds(settings.medicationSnoozeMinutes * 60L).toEpochMilli() else 0)
     }
     fun notificationId(key:String):Int = notificationIds.getOrPut(key) {
         require(nextNotificationId<Int.MAX_VALUE-1);nextNotificationId++
     }
     fun validate() {
+        require(settings.medicationSnoozeMinutes in 1..1440)
         require(settings.goal in 1..20000) { "هدف روزانه معتبر نیست" }
         require(settings.interval in 15..240 && settings.repeat in 0 until settings.interval)
         require(LocalTime.parse(settings.start)<LocalTime.parse(settings.end)) { "شروع باید قبل از پایان باشد" }

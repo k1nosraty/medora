@@ -35,6 +35,8 @@ fun SettingsDialog(
 ) {
     val data = vm.data ?: return
     var tab by remember { mutableIntStateOf(0) }
+    var medicationSnooze by remember(data.settings.medicationSnoozeMinutes) { mutableStateOf(data.settings.medicationSnoozeMinutes.toString()) }
+    var customSnooze by remember { mutableStateOf(data.settings.medicationSnoozeMinutes !in listOf(10,30,60)) }
     var goal by remember(data.settings.goal) { mutableStateOf(data.settings.goal.toString()) }
     var waterEnabled by remember(data.settings.waterEnabled) { mutableStateOf(data.settings.waterEnabled) }
     var start by remember(data.settings.start) { mutableStateOf(data.settings.start) }
@@ -63,6 +65,8 @@ fun SettingsDialog(
                 error = "validation.waterWindow"
                 return
             }
+            val parsedSnooze = normalize(medicationSnooze).toIntOrNull()
+            if (parsedSnooze == null || parsedSnooze !in 1..1440) { error = "validation.medicationSnooze"; return }
             error = null
             val updated = data.settings.copy(
                 goal = parsedGoal,
@@ -76,7 +80,8 @@ fun SettingsDialog(
                 appointmentStart = appointmentStart,
                 appointmentInterval = appointmentInterval,
                 language = language,
-                calendar = calendar
+                calendar = calendar,
+                medicationSnoozeMinutes = parsedSnooze
             )
             vm.change({ current -> current.settings = updated.copy(consent = current.settings.consent) }, onSaved)
         } catch (_: NumberFormatException) {
@@ -120,7 +125,7 @@ fun SettingsDialog(
                             onCalendar = { calendar = it }
                         )
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("settings.waterTab", "settings.appointmentsTab", "settings.notificationsTab").forEachIndexed { index, key ->
+                            listOf("settings.waterTab", "settings.medicationsTab", "settings.appointmentsTab", "settings.notificationsTab").forEachIndexed { index, key ->
                                 val selected = tab == index
                                 Surface(
                                     color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -130,7 +135,7 @@ fun SettingsDialog(
                                     modifier = Modifier.weight(1f).selectable(selected = selected, role = Role.Tab, onClick = { tab = index })
                                 ) {
                                     Box(Modifier.heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
-                                        Text(tr(key), maxLines = 1, style = MaterialTheme.typography.labelLarge)
+                                        Text(tr(key), maxLines = 2, style = MaterialTheme.typography.labelMedium)
                                     }
                                 }
                             }
@@ -145,7 +150,8 @@ fun SettingsDialog(
                                     end, { end = it }, interval, { next -> interval = next; if (repeatMinutes >= next) repeatMinutes = 0 },
                                     repeatMinutes, { repeatMinutes = it }, advanced, { advanced = it }, pauseUntil, { pauseUntil = it }
                                 )
-                                1 -> AppointmentSettings(appointmentStart, { appointmentStart = it }, appointmentInterval, { appointmentInterval = it })
+                                1 -> MedicationSnoozeSettings(medicationSnooze, { medicationSnooze = it }, customSnooze, { customSnooze = it })
+                                2 -> AppointmentSettings(appointmentStart, { appointmentStart = it }, appointmentInterval, { appointmentInterval = it })
                                 else -> NotificationSettings(data, vm, showDetails, { showDetails = it }, requestPermission, openNotifications, openExact)
                             }
                             error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
@@ -333,5 +339,22 @@ fun TimeSetting(label: String, value: String, change: (String) -> Unit, modifier
             Text(label, style = MaterialTheme.typography.labelSmall)
             Text(displayTime(value), style = MaterialTheme.typography.titleMedium)
         }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MedicationSnoozeSettings(value:String,onValue:(String)->Unit,custom:Boolean,onCustom:(Boolean)->Unit) {
+    Panel(compact=true) {
+        Text(tr("settings.medicationSnooze"),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+        Text(tr("settings.snoozeNote"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            listOf(10,30,60).forEach { minutes ->
+                FilterChip(selected=!custom && normalize(value)==minutes.toString(),onClick={onCustom(false);onValue(minutes.toString())},
+                    modifier=Modifier.heightIn(min=48.dp),label={Text(tr("settings.minutes",n(minutes)))})
+            }
+            FilterChip(selected=custom,onClick={onCustom(true)},modifier=Modifier.heightIn(min=48.dp),label={Text(tr("settings.customSnooze"))})
+        }
+        if(custom) Input(value,{onValue(normalize(it))},tr("settings.snoozeMinutes"),keyboardType=androidx.compose.ui.text.input.KeyboardType.Number)
     }
 }
