@@ -47,7 +47,7 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
             shadowElevation = 2.dp, modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth().testTag("navigation-dock")) {
             // The home destination stays in the physical center in both language directions.
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp),
+                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     destinations.forEach { destination ->
@@ -63,22 +63,22 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                         val selectionColor = animateColorAsState(
                             if (active && destination.id != "today") MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                             label = "dock-selection").value
-                        Column(Modifier.weight(1f).heightIn(min = 76.dp)
+                        Column(Modifier.weight(1f).heightIn(min = 64.dp)
                             // Clip before selectable so its ripple follows the rounded touch target.
                             .clip(RoundedCornerShape(20.dp)).background(selectionColor)
                             .selectable(selected = active, role = Role.Tab, onClick = { onSelect(destination.id) })
                             .semantics { contentDescription = description }
-                            .testTag(destination.tag).padding(horizontal = 2.dp, vertical = 4.dp),
+                            .testTag(destination.tag).padding(horizontal = 2.dp, vertical = 2.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             if (destination.id == "today") {
                                 Surface(shape = CircleShape, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
                                     contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
-                                    shadowElevation = if (active) 2.dp else 0.dp, modifier = Modifier.size(50.dp)) {
-                                    Box(contentAlignment = Alignment.Center) { MedoraMark(Modifier.size(30.dp),LocalContentColor.current) }
+                                    shadowElevation = if (active) 2.dp else 0.dp, modifier = Modifier.size(40.dp)) {
+                                    Box(contentAlignment = Alignment.Center) { MedoraMark(Modifier.size(26.dp),LocalContentColor.current) }
                                 }
                             } else {
-                                Box(Modifier.height(50.dp), contentAlignment = Alignment.Center) {
+                                Box(Modifier.height(40.dp), contentAlignment = Alignment.Center) {
                                     Icon(destination.icon, null, Modifier.size(23.dp),
                                         tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
@@ -98,3 +98,4 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
         }
     }
 }
+
