@@ -129,17 +129,17 @@ fun SettingsDialog(
                                 }
                                 4 -> DisplayPreferences(language,calendar,{language=it},{calendar=it})
                                 0 -> WaterSettings(
-                                    goal, { goal = it }, waterEnabled, { waterEnabled = it }, start, { start = it },
-                                    end, { end = it }, interval, { next -> interval = next; if (repeatMinutes >= next) repeatMinutes = 0 },
+                                    goal, { goal = it;error=null }, waterEnabled, { waterEnabled = it }, start, { start = it;error=null },
+                                    end, { end = it;error=null }, interval, { next -> interval = next; if (repeatMinutes >= next) repeatMinutes = 0 },
                                     repeatMinutes, { repeatMinutes = it }, advanced, { advanced = it }, pauseUntil, { pauseUntil = it }
                                 )
-                                1 -> MedicationSnoozeSettings(medicationSnooze, { medicationSnooze = it }, customSnooze, { customSnooze = it })
+                                1 -> MedicationSnoozeSettings(medicationSnooze, { medicationSnooze = it;error=null }, customSnooze, { customSnooze = it })
                                 2 -> AppointmentSettings(appointmentStart, { appointmentStart = it }, appointmentInterval, { appointmentInterval = it })
                                 else -> NotificationSettings(data, vm, showDetails, { showDetails = it }, requestPermission, openNotifications, openExact)
                             }
-                            error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                            vm.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                         }
+                        error?.let { Text(tr(it),modifier=Modifier.padding(horizontal=16.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                        vm.error?.let { Text(tr(it),modifier=Modifier.padding(horizontal=16.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                         Button(onClick = ::save, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().padding(horizontal=16.dp).heightIn(min = 50.dp)) {
                             if(vm.busy) {CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp))}
                             Text(if (vm.busy) tr("common.saving") else tr("common.saveSettings"))

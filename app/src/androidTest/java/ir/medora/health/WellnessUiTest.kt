@@ -267,7 +267,6 @@ class WellnessUiTest {
         compose.onNodeWithTag("nav-2").performClick()
         compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
         compose.onNodeWithTag("details-edit").performClick()
-        compose.onNodeWithText(localizedText("medication.advanced","fa")).performScrollTo().performClick()
         compose.onNodeWithTag("medication-start-date").performScrollTo().performClick()
         // Pick a different day in the currently displayed month, including month boundaries.
         val today=LocalDate.now()
