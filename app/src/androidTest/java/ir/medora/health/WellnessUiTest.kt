@@ -43,7 +43,7 @@ class WellnessUiTest {
         compose.onNodeWithTag("appearance-color-LAVENDER").performScrollTo().performClick().assertIsSelected()
         compose.onNodeWithText(localizedText("medication.name","fa"),substring=true).performTextInput("Appearance test")
         capture("appearance-editor")
-        compose.onNodeWithText(localizedText("common.save","fa")).performClick()
+        compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().assertIsDisplayed().performClick()
         compose.waitUntil(15000) { model.data?.medications?.any { it.name=="Appearance test" }==true && !model.busy }
         val saved=Repository.executor.submit<HealthData> { Repository.get(application).read() }.get().medications.first { it.name=="Appearance test" }
         assertEquals(MedicationIcon.DROPS,saved.icon)
