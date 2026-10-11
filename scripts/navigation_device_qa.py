@@ -15,6 +15,8 @@ tests = [
     "ir.medora.health.WellnessUiTest#compactEnglishDarkNavigation",
     "ir.medora.health.WellnessUiTest#medicationTabDoesNotDisplayAppointmentsAfterNavigation",
     "ir.medora.health.TimeDialogTest",
+    "ir.medora.health.WellnessUiTest#medicationAppearanceCanBeSelectedAndPersisted",
+    "ir.medora.health.NotificationPrivacyTest",
 ]
 failed = []
 for index, test in enumerate(tests):
@@ -34,3 +36,4 @@ if len(images) < 12:
 if failed or pull.returncode:
     raise SystemExit("Device QA failed: " + ", ".join(failed))
 print(f"All {len(tests)} targeted device checks passed; {len(images)} screenshots retained.")
+

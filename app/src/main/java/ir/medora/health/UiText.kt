@@ -12,6 +12,24 @@ val LocalLanguage = staticCompositionLocalOf { "fa" }
 val LocalCalendar = staticCompositionLocalOf { "jalali" }
 
 private val copy = mapOf(
+    "appearance.title" to ("ظاهر دارو (اختیاری)" to "Appearance (optional)"),
+    "appearance.icon" to ("آیکون" to "Icon"),
+    "appearance.color" to ("رنگ" to "Color"),
+    "appearance.preview" to ("پیش‌نمایش نشان دارو" to "Medication badge preview"),
+    "appearance.icon.tablet" to ("قرص" to "Tablet"),
+    "appearance.icon.capsule" to ("کپسول" to "Capsule"),
+    "appearance.icon.syrup" to ("شربت" to "Syrup"),
+    "appearance.icon.ampoule" to ("آمپول" to "Ampoule"),
+    "appearance.icon.ointment" to ("پماد" to "Ointment"),
+    "appearance.icon.drops" to ("قطره" to "Drops"),
+    "appearance.icon.spray" to ("اسپری" to "Spray"),
+    "appearance.color.orange" to ("نارنجی" to "Orange"),
+    "appearance.color.teal" to ("سبزآبی" to "Teal"),
+    "appearance.color.blue" to ("آبی" to "Blue"),
+    "appearance.color.lavender" to ("بنفش" to "Lavender"),
+    "appearance.color.rose" to ("رز" to "Rose"),
+    "appearance.color.slate" to ("خاکستری آبی" to "Slate"),
+
     "nav.settings.short" to ("تنظیمات" to "Settings"),
     "nav.medications.short" to ("داروها" to "Meds"),
     "nav.appointments.short" to ("قرارها" to "Visits"),
@@ -342,3 +360,4 @@ fun localizedOffsetLabel(minutes: Int, language: String): String = when(minutes)
     1440 -> localizedText("appointment.dayBefore", language)
     else -> localizedText("appointment.minutesBefore", language, minutes)
 }
+

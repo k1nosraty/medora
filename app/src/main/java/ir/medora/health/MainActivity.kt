@@ -539,7 +539,8 @@ private fun MedicationScreen(
         Panel {
             val switchDescription = "${tr("medication.active")}: ${medication.name}"
             val switchState = tr(if (medication.active) "common.enabled" else "common.disabled")
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MedicationBadge(medication.icon, medication.color)
                 Text(medication.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Switch(
                     checked = medication.active,
@@ -629,7 +630,8 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
     val needsAction = dose.status == DoseStatus.PENDING || dose.status == DoseStatus.SNOOZED
     Panel(color = if (needsAction) wellnessTint(MedoraColors.WarningContainer) else MaterialTheme.colorScheme.surface, compact = true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CapsuleIcon()
+            val medication = vm.data?.medications?.find { it.id == dose.medicationId }
+            MedicationBadge(medication?.icon ?: dose.icon, medication?.color ?: dose.color)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(dose.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(tr("dose.time", displayTime(dose.wall.substring(11))), style = MaterialTheme.typography.bodySmall,
@@ -744,3 +746,4 @@ fun AppointmentCard(
         }
     }
 }
+

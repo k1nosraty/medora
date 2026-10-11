@@ -31,6 +31,25 @@ class WellnessUiTest {
     private val application get() = instrumentation.targetContext.applicationContext as Application
     private lateinit var model: HealthViewModel
 
+    @Test fun medicationAppearanceCanBeSelectedAndPersisted() {
+        launch(compact=true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText(localizedText("medication.new","fa")).performClick()
+        compose.onNodeWithTag("appearance-toggle").performScrollTo().performClick()
+        MedicationIcon.entries.forEach { option ->
+            compose.onNodeWithTag("appearance-icon-${option.name}").performScrollTo().performClick().assertIsSelected()
+        }
+        compose.onNodeWithTag("appearance-icon-DROPS").performScrollTo().performClick()
+        compose.onNodeWithTag("appearance-color-LAVENDER").performScrollTo().performClick().assertIsSelected()
+        compose.onNodeWithText(localizedText("medication.name","fa"),substring=true).performTextInput("Appearance test")
+        capture("appearance-editor")
+        compose.onNodeWithText(localizedText("common.save","fa")).performClick()
+        compose.waitUntil(15000) { model.data?.medications?.any { it.name=="Appearance test" }==true && !model.busy }
+        val saved=Repository.executor.submit<HealthData> { Repository.get(application).read() }.get().medications.first { it.name=="Appearance test" }
+        assertEquals(MedicationIcon.DROPS,saved.icon)
+        assertEquals(MedicationColor.LAVENDER,saved.color)
+    }
+
     @Before fun seedOnlyTestData() {
         val today = LocalDate.now()
         val medication = Medication(id = "ui-med", name = "قرص آهن", instructions = "۱۵۰ میلی‌گرم", startDay = today.toString(), times = listOf("08:00", "17:00"))
@@ -73,7 +92,7 @@ class WellnessUiTest {
         val directory = File(application.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
         compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
-        val bitmap = (if (name.contains("settings")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
+        val bitmap = (if (name.contains("settings") || name.contains("appearance-editor")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
@@ -171,3 +190,4 @@ class WellnessUiTest {
         capture("00-welcome-fa")
     }
 }
+
