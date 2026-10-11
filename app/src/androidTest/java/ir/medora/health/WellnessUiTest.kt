@@ -37,14 +37,15 @@ class WellnessUiTest {
         launch(compact=true)
         compose.onNodeWithTag("nav-2").performClick()
         compose.onNodeWithText(localizedText("medication.new","fa")).performClick()
+        compose.onNodeWithText(localizedText("medication.name","fa"),substring=true).performTextInput("Appearance test")
         compose.onNodeWithTag("appearance-toggle").performScrollTo().performClick()
         MedicationIcon.entries.forEach { option ->
             compose.onNodeWithTag("appearance-icon-${option.name}").performScrollTo().performClick().assertIsSelected()
         }
         compose.onNodeWithTag("appearance-icon-DROPS").performScrollTo().performClick()
         compose.onNodeWithTag("appearance-color-LAVENDER").performScrollTo().performClick().assertIsSelected()
-        compose.onNodeWithText(localizedText("medication.name","fa"),substring=true).performTextInput("Appearance test")
         capture("appearance-editor")
+        compose.onNodeWithText(localizedText("common.select","fa")).performScrollTo().performClick()
         compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().assertIsDisplayed().performClick()
         compose.waitUntil(15000) { model.data?.medications?.any { it.name=="Appearance test" }==true && !model.busy }
         val saved=Repository.executor.submit<HealthData> { Repository.get(application).read() }.get().medications.first { it.name=="Appearance test" }
@@ -121,7 +122,7 @@ class WellnessUiTest {
         val directory = File(application.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
         compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
-        val bitmap = (if (name.contains("settings") || name.contains("appearance-editor")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
+        val bitmap = (if(name=="02-water-sheet") compose.onNodeWithTag("editor-water") else if(name=="05-medication-form") compose.onNodeWithTag("editor-medication") else if(name=="07-appointment-form") compose.onNodeWithTag("editor-appointment") else if(name.contains("appearance-editor")) compose.onNodeWithTag("appearance-sheet") else if (name.contains("settings")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
@@ -130,7 +131,7 @@ class WellnessUiTest {
         launch()
         capture("01-today-fa")
         compose.onNodeWithText("ثبت آب").performScrollTo().performClick()
-        compose.onNodeWithText("ثبت آب", substring = true).assertExists()
+        compose.onNodeWithTag("editor-water").assertExists()
         capture("02-water-sheet")
         compose.onNodeWithText("۵۰۰", useUnmergedTree = true).performClick()
         compose.onNodeWithText("ذخیره").performScrollTo().performClick()
@@ -225,7 +226,7 @@ class WellnessUiTest {
         val time=localizedText("medication.timeNumber","fa","۱","۰۸:۰۰")
         compose.onNodeWithText(time).performScrollTo().performClick()
         compose.onNodeWithTag("medora-time-picker").assertExists()
-        compose.onNodeWithText(localizedText("common.cancel","fa")).performClick()
+        compose.onNodeWithTag("time-cancel").performScrollTo().performClick()
         compose.onNodeWithText(time).performScrollTo().assertExists().performClick()
         compose.onNodeWithTag("time-confirm").performScrollTo().performClick()
         compose.onNodeWithText(time).assertExists()
@@ -243,7 +244,7 @@ class WellnessUiTest {
         compose.onNodeWithTag("nav-2").performClick()
         compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
         compose.onNodeWithText(localizedText("design.intakeHistory","fa")).performScrollTo().assertExists()
-        compose.onNodeWithText(localizedText("common.edit","fa")).performScrollTo().assertExists()
+        compose.onNodeWithTag("details-edit").assertExists()
     }
 
     @Test fun welcomeRendersWithoutFakeLogin() {

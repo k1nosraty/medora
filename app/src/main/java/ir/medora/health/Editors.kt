@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -216,6 +217,7 @@ fun EditDialog(
 
     ModalBottomSheet(onDismissRequest = { if (!vm.busy) close() },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        modifier=Modifier.testTag("editor-${editor.kind}"),
         containerColor = MaterialTheme.colorScheme.background,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)) {
         Surface(
@@ -258,8 +260,8 @@ fun EditDialog(
                     }
                     "medication" -> {
                         Input(name, { name = it;error=null }, tr("medication.name"), required = true,error=if(error=="validation.medicationName") tr(error!!) else null)
-                        MedicationAppearancePicker(medicationIcon, medicationColor, { medicationIcon = it }, { medicationColor = it })
                         Input(instructions, { instructions = it }, tr("medication.instructions"), singleLine = false)
+                        MedicationAppearancePicker(medicationIcon, medicationColor, { medicationIcon = it }, { medicationColor = it })
                         Text(tr("medication.time"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         times.take(if (advancedSchedule) times.size else 1).forEachIndexed { index, time ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +27,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -132,19 +135,24 @@ fun MedoraTimePicker(initial: LocalTime, onDismiss: () -> Unit, onPicked: (Int, 
     val state = rememberTimePickerState(initial.hour, initial.minute, is24Hour = true)
     var keyboard by rememberSaveable { mutableStateOf(false) }
     val largeText = LocalDensity.current.fontScale > 1.3f
+    val context=LocalContext.current
+    val language=LocalLanguage.current
+    val localizedContext=remember(context,language) {context.withAppLocale(language)}
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface, modifier = Modifier.testTag("medora-time-picker")) {
         Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr("medication.time"), style = MaterialTheme.typography.titleLarge)
             // The clock avoids fixed-width large numeric fields when accessibility text is enlarged.
-            if (keyboard && !largeText) TimeInput(state) else TimePicker(state)
+            CompositionLocalProvider(LocalContext provides localizedContext) {
+                if (keyboard && !largeText) TimeInput(state) else TimePicker(state)
+            }
             if (!largeText) TextButton(onClick = { keyboard = !keyboard }) {
                 Icon(if (keyboard) Icons.Default.Schedule else Icons.Default.Keyboard, null)
                 Spacer(Modifier.width(8.dp)); Text(tr(if (keyboard) "design.clockMode" else "design.keyboardMode"))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(tr("common.cancel")) }
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("time-cancel")) { Text(tr("common.cancel")) }
                 Button(onClick = { onPicked(state.hour, state.minute) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("time-confirm")) { Text(tr("common.select")) }
             }
         }
@@ -157,8 +165,9 @@ fun MedicationDetailsSheet(medication: Medication, data: HealthData, vm: HealthV
     val language=LocalLanguage.current
     ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Panel(color = medicationSurface(medication.color)) {
+        val doses=data.doses.filter {it.medicationId==medication.id}.sortedByDescending {it.wall}
+        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            item { Panel(color = medicationSurface(medication.color)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     MedicationBadge(medication.icon, medication.color)
                     Text(medication.name, Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall)
@@ -167,12 +176,12 @@ fun MedicationDetailsSheet(medication: Medication, data: HealthData, vm: HealthV
                 if (medication.instructions.isNotBlank()) Text(medication.instructions)
                 Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { localizedNumber(it,language) })
                 Text(tr("medication.startDate") + ": " + displayDate(java.time.LocalDate.parse(medication.startDay)))
-                PrimaryAction(tr("common.edit"), edit)
+                PrimaryAction(tr("common.edit"), edit,Modifier.testTag("details-edit"))
             }
-            Heading(tr("design.intakeHistory"))
-            val doses = data.doses.filter { it.medicationId == medication.id }.sortedByDescending { it.wall }
-            if (doses.isEmpty()) Empty(tr("medication.historyEmpty"))
-            doses.forEach { dose ->
+            }
+            item {Heading(tr("design.intakeHistory"))}
+            if (doses.isEmpty()) item {Empty(tr("medication.historyEmpty"))}
+            items(doses,key={it.id}) { dose ->
                 Text(displayDate(java.time.LocalDate.parse(dose.wall.substring(0, 10))), style = MaterialTheme.typography.bodySmall)
                 DoseCard(dose, vm, actionable = !java.time.LocalDate.parse(dose.wall.substring(0, 10)).isAfter(java.time.LocalDate.now()))
             }

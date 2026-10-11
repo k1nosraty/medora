@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -69,9 +71,9 @@ private fun drawMedication(canvas:AndroidCanvas,icon:MedicationIcon,color:Medica
         (AndroidColor.red(base)*(1-f)+AndroidColor.red(toward)*f).toInt(),
         (AndroidColor.green(base)*(1-f)+AndroidColor.green(toward)*f).toInt(),
         (AndroidColor.blue(base)*(1-f)+AndroidColor.blue(toward)*f).toInt())
-    val light=blend(AndroidColor.WHITE,.55f);val shade=blend(AndroidColor.BLACK,.16f)
-    fun rect(x:Float,y:Float,w:Float,h:Float,r:Float,c:Int) { paint.color=c;paint.style=Paint.Style.FILL;canvas.drawRoundRect(x,y,x+w,y+h,r,r,paint) }
-    fun oval(x:Float,y:Float,w:Float,h:Float,c:Int) { paint.color=c;paint.style=Paint.Style.FILL;canvas.drawOval(x,y,x+w,y+h,paint) }
+    val light=blend(AndroidColor.WHITE,.55f);val shade=blend(AndroidColor.BLACK,.50f)
+    fun rect(x:Float,y:Float,w:Float,h:Float,r:Float,c:Int) { paint.color=c;paint.style=Paint.Style.FILL;canvas.drawRoundRect(x,y,x+w,y+h,r,r,paint);paint.color=shade;paint.style=Paint.Style.STROKE;paint.strokeWidth=4.5f;canvas.drawRoundRect(x,y,x+w,y+h,r,r,paint) }
+    fun oval(x:Float,y:Float,w:Float,h:Float,c:Int) { paint.color=c;paint.style=Paint.Style.FILL;canvas.drawOval(x,y,x+w,y+h,paint);paint.color=shade;paint.style=Paint.Style.STROKE;paint.strokeWidth=4.5f;canvas.drawOval(x,y,x+w,y+h,paint) }
     fun line(x:Float,y:Float,xx:Float,yy:Float,c:Int,width:Float=3f) { paint.color=c;paint.strokeWidth=width;paint.strokeCap=Paint.Cap.ROUND;canvas.drawLine(x,y,xx,yy,paint) }
     when(icon) {
         MedicationIcon.TABLET -> { oval(16f,24f,68f,60f,shade);oval(16f,18f,68f,60f,base);oval(21f,21f,58f,50f,light);line(30f,62f,68f,30f,shade,4f);line(32f,65f,71f,32f,AndroidColor.WHITE,2f) }
@@ -110,28 +112,36 @@ fun MedicationBadge(icon:MedicationIcon,color:MedicationColor,modifier:Modifier=
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MedicationAppearancePicker(icon:MedicationIcon,color:MedicationColor,onIcon:(MedicationIcon)->Unit,onColor:(MedicationColor)->Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    var stagedIcon by remember(icon) {mutableStateOf(icon)}
+    var stagedColor by remember(color) {mutableStateOf(color)}
     Panel(color=medicationSurface(color),compact=true) {
-        TextButton(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth().testTag("appearance-toggle")) {
+        TextButton(onClick={stagedIcon=icon;stagedColor=color;expanded=true},modifier=Modifier.fillMaxWidth().testTag("appearance-toggle")) {
             MedicationBadge(icon,color)
             Spacer(Modifier.width(12.dp))
             Text(tr("appearance.title"),Modifier.weight(1f))
             Icon(Icons.Default.ExpandMore,null)
         }
-        if(expanded) {
+    }
+    if(expanded) {
+        ModalBottomSheet(onDismissRequest={expanded=false},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),
+            containerColor=MaterialTheme.colorScheme.background,modifier=Modifier.testTag("appearance-sheet")) {
+            Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text(tr("appearance.title"),style=MaterialTheme.typography.titleLarge)
             Text(tr("appearance.icon"),style=MaterialTheme.typography.titleSmall)
             MedicationIcon.entries.chunked(3).forEach { items ->
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                     items.forEach { option ->
                         Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
-                            .border(if(icon==option) 2.dp else 1.dp,if(icon==option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,RoundedCornerShape(12.dp))
-                            .selectable(icon==option,role=Role.RadioButton,onClick={onIcon(option)})
+                            .border(if(stagedIcon==option) 2.dp else 1.dp,if(stagedIcon==option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,RoundedCornerShape(12.dp))
+                            .selectable(stagedIcon==option,role=Role.RadioButton,onClick={stagedIcon=option})
                             .testTag("appearance-icon-${option.name}").padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                            MedicationBadge(option,color)
+                            MedicationBadge(option,stagedColor)
                             Row(verticalAlignment=Alignment.CenterVertically) {
-                                if(icon==option) Icon(Icons.Default.Check,null,Modifier.size(16.dp))
+                                if(stagedIcon==option) Icon(Icons.Default.Check,null,Modifier.size(16.dp))
                                 Text(tr(option.labelKey),style=MaterialTheme.typography.labelSmall,textAlign=TextAlign.Center)
                             }
                         }
@@ -145,17 +155,26 @@ fun MedicationAppearancePicker(icon:MedicationIcon,color:MedicationColor,onIcon:
                     choices.forEach { option ->
                         val label=tr(option.labelKey)
                         Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp))
-                            .selectable(color==option,role=Role.RadioButton,onClick={onColor(option)})
+                            .selectable(stagedColor==option,role=Role.RadioButton,onClick={stagedColor=option})
                             .testTag("appearance-color-${option.name}").padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                            Box(Modifier.size(40.dp).border(if(color==option) 2.dp else 1.dp,
-                                if(color==option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,CircleShape)
+                            Box(Modifier.size(40.dp).border(if(stagedColor==option) 2.dp else 1.dp,
+                                if(stagedColor==option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,CircleShape)
                                 .padding(4.dp).clip(CircleShape).background(Color(option.argb)),contentAlignment=Alignment.Center) {
-                                if(color==option) Icon(Icons.Default.Check,null,Modifier.size(22.dp),tint=MedoraColors.Forest)
+                                if(stagedColor==option) Icon(Icons.Default.Check,null,Modifier.size(22.dp),tint=MedoraColors.Forest)
                             }
                             Text(label,style=MaterialTheme.typography.labelSmall,textAlign=TextAlign.Center)
                         }
                     }
                 }
+            }
+            Panel(color=medicationSurface(stagedColor),compact=true) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    MedicationBadge(stagedIcon,stagedColor)
+                    Text(tr("appearance.preview"),style=MaterialTheme.typography.bodyMedium)
+                }
+            }
+            PrimaryAction(tr("common.select"),{onIcon(stagedIcon);onColor(stagedColor);expanded=false})
+            TextButton(onClick={expanded=false},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text(tr("common.cancel"))}
             }
         }
     }

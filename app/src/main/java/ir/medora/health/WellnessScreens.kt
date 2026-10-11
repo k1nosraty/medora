@@ -289,3 +289,21 @@ private fun WaterTrendChart(days: List<Pair<LocalDate, Int>>, goal: Int) {
         }
     }
 }
+
+
+
+@Composable
+fun ReminderPermissionScreen(enable: ()->Unit,skip: ()->Unit) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()
+        .verticalScroll(rememberScrollState()).padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,
+        verticalArrangement=Arrangement.spacedBy(20.dp)) {
+        Box(Modifier.fillMaxWidth().height(230.dp),contentAlignment=Alignment.Center) {
+            BotanicalArtwork(Modifier.matchParentSize(),landscape=true)
+            Icon(Icons.Default.Notifications,null,Modifier.size(88.dp),tint=MedoraColors.Gold)
+        }
+        Text(tr("permission.title"),style=MaterialTheme.typography.headlineSmall,textAlign=TextAlign.Center)
+        Text(tr("permission.body"),style=MaterialTheme.typography.bodyLarge,textAlign=TextAlign.Center)
+        PrimaryAction(tr("permission.enable"),enable)
+        OutlinedButton(onClick=skip,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text(tr("design.later"))}
+    }
+}

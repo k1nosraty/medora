@@ -215,6 +215,7 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
     val context = LocalContext.current
     val intro = remember { context.getSharedPreferences("medora_ui", Context.MODE_PRIVATE) }
     var welcomed by rememberSaveable { mutableStateOf(intro.getBoolean("welcomed", false)) }
+    var permissionIntroduced by rememberSaveable {mutableStateOf(intro.getBoolean("permission_introduced",false))}
     var history by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
     var showHistoryPicker by remember { mutableStateOf(false) }
     var editor by remember { mutableStateOf<Editor?>(null) }
@@ -241,6 +242,11 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
             intro.edit().putBoolean("welcomed", true).apply()
             welcomed = true
         }
+        return
+    }
+    if(!permissionIntroduced && !hasExistingData) {
+        fun finishIntroduction() {permissionIntroduced=true;intro.edit().putBoolean("permission_introduced",true).apply()}
+        ReminderPermissionScreen({finishIntroduction();requestPermission()},{finishIntroduction()})
         return
     }
     val historyDate = LocalDate.parse(history)
