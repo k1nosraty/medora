@@ -45,7 +45,14 @@ fun wellnessTint(light: Color): Color = if (MaterialTheme.colorScheme.background
 
 @Composable
 fun wellnessAccent(light: Color): Color = if (MaterialTheme.colorScheme.background == MedoraColors.Background) light
-    else lerp(light, Color.White, .4f)
+    else when(light) {
+        MedoraColors.Success -> Color(0xFF8DDDA6)
+        MedoraColors.Warning -> Color(0xFFF3C56A)
+        MedoraColors.Medication -> Color(0xFFE8BD7D)
+        MedoraColors.Water -> Color(0xFFA8DDF2)
+        MedoraColors.Appointment -> Color(0xFFD6C2F4)
+        else -> lerp(light, Color.White, .4f)
+    }
 
 @Composable
 fun WellnessIcon(icon: ImageVector, accent: Color, modifier: Modifier = Modifier) {

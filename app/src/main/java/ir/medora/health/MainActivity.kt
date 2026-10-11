@@ -634,6 +634,12 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
         DoseStatus.SNOOZED -> wellnessAccent(MedoraColors.Warning)
         DoseStatus.PENDING -> wellnessAccent(MedoraColors.Medication)
     }
+    val stateContainer = when(dose.status) {
+        DoseStatus.TAKEN -> wellnessTint(MedoraColors.SuccessContainer)
+        DoseStatus.SKIPPED -> MaterialTheme.colorScheme.errorContainer
+        DoseStatus.SNOOZED -> wellnessTint(MedoraColors.WarningContainer)
+        DoseStatus.PENDING -> wellnessTint(MedoraColors.Warm)
+    }
     val needsAction = dose.status == DoseStatus.PENDING || dose.status == DoseStatus.SNOOZED
     val medication = vm.data?.medications?.find { it.id == dose.medicationId }
     Panel(color=medicationSurface(medication?.color ?: dose.color),compact=true,feature=true) {
@@ -669,7 +675,7 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
             }
         }
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
-        Surface(color = stateColor.copy(alpha = .10f), shape = RoundedCornerShape(50)) {
+        Surface(color = stateContainer, shape = RoundedCornerShape(50)) {
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         when (dose.status) {
