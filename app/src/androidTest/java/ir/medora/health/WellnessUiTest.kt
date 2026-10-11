@@ -152,8 +152,6 @@ class WellnessUiTest {
         compose.onNodeWithTag("nav-insights").performClick()
         compose.onNodeWithTag("page-calendar").performClick()
         capture("08-calendar-fa")
-        compose.onNodeWithContentDescription("بستن").performClick()
-        compose.onNodeWithTag("nav-insights").performClick()
         compose.onNodeWithTag("page-reports").performClick()
         capture("09-reports-fa")
         compose.onNodeWithTag("settings").performClick()
@@ -176,7 +174,7 @@ class WellnessUiTest {
     @Test fun darkThemeAndEnglishNavigationRender() {
         launch(dark = true, language = "en")
         capture("11-today-dark-en")
-        compose.onNodeWithTag("nav-1").performClick()
+        compose.onNodeWithTag("open-water").performScrollTo().performClick()
         capture("12-water-dark-en")
     }
 
