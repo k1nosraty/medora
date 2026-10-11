@@ -85,7 +85,11 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                             Text(label, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                color = when {
+                                    active && destination.id != "today" -> MaterialTheme.colorScheme.onPrimaryContainer
+                                    active -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                })
                         }
                     }
                 }
