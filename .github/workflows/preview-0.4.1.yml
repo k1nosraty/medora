@@ -1,0 +1,77 @@
+name: Publish Medora 0.4.1 prerelease
+on:
+  push:
+    branches: [release/0.4.1-preview]
+    paths: [.github/workflows/preview-0.4.1.yml]
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: medora-preview-0.4.1
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify successful audited-source checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for run in 38160307156 38160307155; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.head_sha + " " + .conclusion' > check.txt
+            test "$(cat check.txt)" = "956db9203585f242116ae82236bb59cbd38c7781 success"
+          done
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - run: sdkmanager 'platforms;android-35' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and validate versioned package
+        run: |
+          sed -i '/maven.aliyun.com/d' settings.gradle.kts
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Medora-v0.4.1-preview.apk
+          sha256sum Medora-v0.4.1-preview.apk > SHA256SUMS.txt
+          cat > release-notes.md <<'NOTES'
+          ## مدورا ۰.۴.۱ — پیش‌انتشار اصلاحات و بهبود تجربه کاربری
+
+          - حفظ تاریخ شروع دارو پس از ویرایش و بستن گزینه‌های پیشرفته؛ نمایش همهٔ ساعت‌ها و روزهای برنامه.
+          - هماهنگی تاریخ و ساعت قرار در تقویم، تایم‌لاین و کارت‌ها؛ نمایش زمان محل قرار هنگام تفاوت منطقهٔ زمانی.
+          - جلوگیری از عملکرد اعلان‌های قدیمی، تکراری و مربوط به برنامهٔ تغییرکرده یا داروی غیرفعال.
+          - به‌روزرسانی روز «امروز» هنگام عبور از نیمه‌شب.
+          - اصلاح اسکرول تنظیمات و نمایش خطا نزدیک دکمهٔ ذخیره.
+          - حذف فاصلهٔ اضافهٔ سربرگ فرم‌ها، کارت آب فشرده‌تر و مهار لمس‌های تکراری هنگام ذخیره.
+          - ناوبری سازگار با فونت بزرگ، بدون شکست عنوان تب‌ها از وسط کلمه.
+          - کنتراست بیشتر وضعیت داروها در تم تاریک، مستقل از رنگ انتخابی کارت.
+          - جلوگیری از انتقال خودکار فایل‌های رمزگذاری‌شده‌ای که بدون کلید گوشی قبلی قابل خواندن نیستند.
+
+          Validation: 49 unit tests and 19 targeted Android emulator scenarios passed, with 33 screenshots reviewed on audited source. The versioned package is rebuilt with unit tests, APK/instrumentation builds and lint before publication.
+          Audited source: 956db9203585f242116ae82236bb59cbd38c7781
+          Device QA: https://github.com/k1nosraty/medora/actions/runs/38160307155
+
+          Android 8 or later. Internal version: 0.4.1-preview, versionCode 5.
+          This is a debug-signed preview, not a production-signed APK. Its signing certificate differs from earlier previews, so it cannot update those installations in place. Do not uninstall an existing installation if you need its health records: uninstalling removes local data. A data-preserving upgrade requires the original signing key.
+          NOTES
+          if gh release view v0.4.1-preview --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; leaving it unchanged."
+          else
+            gh release create v0.4.1-preview Medora-v0.4.1-preview.apk SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Medora 0.4.1 — UX & Reliability Preview" --notes-file release-notes.md --prerelease --latest=false
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: medora-0.4.1-preview-validation
+          path: |
+            app/build/reports/
+            Medora-v0.4.1-preview.apk
+            SHA256SUMS.txt
