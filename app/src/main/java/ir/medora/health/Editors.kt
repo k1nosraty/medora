@@ -58,6 +58,8 @@ fun EditDialog(
     var dateTime by remember(editor) { mutableStateOf(initialTime) }
     var medicationStart by remember(editor) { mutableStateOf(editor.medication?.startDay ?: LocalDate.now().toString()) }
     var name by remember(editor) { mutableStateOf(editor.medication?.name ?: editor.appointment?.title ?: "") }
+    var medicationIcon by remember(editor) { mutableStateOf(editor.medication?.icon ?: MedicationIcon.CAPSULE) }
+    var medicationColor by remember(editor) { mutableStateOf(editor.medication?.color ?: MedicationColor.ORANGE) }
     var instructions by remember(editor) { mutableStateOf(editor.medication?.instructions ?: "") }
     var times by remember(editor) { mutableStateOf(editor.medication?.times?.takeIf { it.isNotEmpty() } ?: listOf("08:00")) }
     var dates by remember(editor, calendar, language) {
@@ -166,7 +168,8 @@ fun EditDialog(
                         times = parsedTimes,
                         weekdays = if (specific) emptySet() else weekdays,
                         dates = parsedDates,
-                        active = editor.medication?.active ?: true
+                        active = editor.medication?.active ?: true,
+                        icon = medicationIcon, color = medicationColor
                     )
                     val action: (HealthData) -> Unit = { current -> current.changeMedication(med, ZonedDateTime.now()) }
                     action
@@ -262,6 +265,7 @@ fun EditDialog(
                     }
                     "medication" -> {
                         Input(name, { name = it }, tr("medication.name"), required = true)
+                        MedicationAppearancePicker(medicationIcon, medicationColor, { medicationIcon = it }, { medicationColor = it })
                         Input(instructions, { instructions = it }, tr("medication.instructions"), singleLine = false)
                         Text(tr("medication.time"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         times.take(if (advancedSchedule) times.size else 1).forEachIndexed { index, time ->
@@ -459,3 +463,4 @@ private fun weekdayName(day: Int): String = when (day) {
     6 -> tr("weekday.sat")
     else -> tr("weekday.sun")
 }
+

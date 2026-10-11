@@ -35,7 +35,8 @@ data class Water(val id:String=id(),val ml:Int,val day:String,val at:Long) {
 }
 data class Medication(
     val id:String=id(),val name:String,val instructions:String="",val startDay:String,
-    val times:List<String>,val weekdays:Set<Int> = (1..7).toSet(),val dates:Set<String> = emptySet(),val active:Boolean=true,val effectiveFrom:Long=0
+    val times:List<String>,val weekdays:Set<Int> = (1..7).toSet(),val dates:Set<String> = emptySet(),val active:Boolean=true,val effectiveFrom:Long=0,
+    val icon:MedicationIcon=MedicationIcon.CAPSULE,val color:MedicationColor=MedicationColor.ORANGE
 ) {
     fun occurs(day:LocalDate):Boolean = active && day.toString()>=startDay &&
         if(dates.isNotEmpty()) day.toString() in dates else day.dayOfWeek.value in weekdays
@@ -43,10 +44,11 @@ data class Medication(
 enum class DoseStatus { PENDING, TAKEN, SNOOZED, SKIPPED }
 data class Dose(
     val id:String,val medicationId:String,val name:String,val instructions:String,val wall:String,
-    val status:DoseStatus=DoseStatus.PENDING,val snoozeUntil:Long=0,val updatedAt:Long=0
+    val status:DoseStatus=DoseStatus.PENDING,val snoozeUntil:Long=0,val updatedAt:Long=0,
+    val icon:MedicationIcon=MedicationIcon.CAPSULE,val color:MedicationColor=MedicationColor.ORANGE
 ) {
     companion object {
-        fun of(m:Medication,day:LocalDate,time:String)=Dose("${m.id}|$day|$time",m.id,m.name,m.instructions,"${day}T$time")
+        fun of(m:Medication,day:LocalDate,time:String)=Dose("${m.id}|$day|$time",m.id,m.name,m.instructions,"${day}T$time",icon=m.icon,color=m.color)
     }
 }
 // An appointment belongs to the timezone of the clinic, not the phone's timezone
@@ -291,3 +293,4 @@ object Planner {
 fun MutableList<Appointment>.replace(appointment: Appointment) {
     removeAll { it.id == appointment.id };add(appointment)
 }
+
