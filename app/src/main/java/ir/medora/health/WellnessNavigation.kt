@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -32,21 +33,24 @@ private data class DockDestination(val id: String, val label: String, val icon: 
 
 @Composable
 fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val largeLabels = LocalDensity.current.fontScale > 1.4f
     val destinations = listOf(
         DockDestination("settings", "app.settings", Icons.Default.Settings, "settings"),
         DockDestination("insights", "nav.insights", Icons.Default.BarChart, "nav-insights"),
         DockDestination("today", "nav.today", Icons.Default.Home, "nav-0"),
-        DockDestination("medications", "nav.medications", Icons.Default.Medication, "nav-2"),
-        DockDestination("appointments", "nav.appointments", Icons.Default.Event, "nav-3")
-    )
-    Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 12.dp, vertical = 8.dp),
+        DockDestination("appointments", "nav.appointments", Icons.Default.Event, "nav-3"),
+        DockDestination("medications", "nav.medications", Icons.Default.Medication, "nav-2")
+    ).let { if(rtl) it else it.reversed() }
+    Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 10.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center) {
-        Surface(shape = RoundedCornerShape(30.dp), color = MaterialTheme.colorScheme.surface,
+        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f)),
             shadowElevation = 2.dp, modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth().testTag("navigation-dock")) {
             // The home destination stays in the physical center in both language directions.
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp),
+                Column(horizontalAlignment=Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     destinations.forEach { destination ->
@@ -62,27 +66,27 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                         val selectionColor = animateColorAsState(
                             if (active && destination.id != "today") MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                             label = "dock-selection").value
-                        Column(Modifier.weight(1f).heightIn(min = 72.dp)
+                        Column(Modifier.weight(1f).heightIn(min = if(largeLabels) 48.dp else 64.dp)
                             // Clip before selectable so its ripple follows the rounded touch target.
                             .clip(RoundedCornerShape(20.dp)).background(selectionColor)
                             .selectable(selected = active, role = Role.Tab, onClick = { onSelect(destination.id) })
                             .semantics { contentDescription = description }
-                            .testTag(destination.tag).padding(horizontal = 2.dp, vertical = 4.dp),
+                            .testTag(destination.tag).padding(horizontal = 2.dp, vertical = 2.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             if (destination.id == "today") {
                                 Surface(shape = CircleShape, color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
                                     contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
-                                    shadowElevation = if (active) 2.dp else 0.dp, modifier = Modifier.size(50.dp)) {
-                                    Box(contentAlignment = Alignment.Center) { Icon(destination.icon, null, Modifier.size(26.dp)) }
+                                    shadowElevation = if (active) 2.dp else 0.dp, modifier = Modifier.size(40.dp)) {
+                                    Box(contentAlignment = Alignment.Center) { MedoraMark(Modifier.size(26.dp),LocalContentColor.current) }
                                 }
                             } else {
-                                Box(Modifier.height(50.dp), contentAlignment = Alignment.Center) {
+                                Box(Modifier.height(40.dp), contentAlignment = Alignment.Center) {
                                     Icon(destination.icon, null, Modifier.size(23.dp),
                                         tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
-                            Text(label, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            if(!largeLabels) Text(label, fontSize = 14.sp, lineHeight = 18.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                                 color = when {
@@ -93,7 +97,14 @@ fun WellnessNavigationDock(selected: String, onSelect: (String) -> Unit) {
                         }
                     }
                 }
+                if(largeLabels) destinations.firstOrNull {it.id==selected}?.let {active ->
+                    Text(tr(active.label),modifier=Modifier.testTag("navigation-active-label").padding(horizontal=12.dp,vertical=4.dp),
+                        style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary,
+                        textAlign=androidx.compose.ui.text.style.TextAlign.Center,fontWeight=FontWeight.SemiBold)
+                }
+                }
             }
         }
     }
 }
+

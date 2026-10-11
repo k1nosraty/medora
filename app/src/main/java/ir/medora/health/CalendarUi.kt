@@ -25,6 +25,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.time.LocalDate
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarDatePickerDialog(
     selectedDate: LocalDate,
@@ -42,9 +43,10 @@ fun CalendarDatePickerDialog(
     val monthLength = CalendarSupport.monthLength(shownMonth, calendar)
     val leadingDays = Math.floorMod(shownMonth.dayOfWeek.value - firstWeekday, 7)
     val context = LocalContext.current
-    val maxHeight = (context.resources.displayMetrics.heightPixels / context.resources.displayMetrics.density * .88f).dp
+    val maxHeight = (context.resources.displayMetrics.heightPixels / context.resources.displayMetrics.density * .80f).dp
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    ModalBottomSheet(onDismissRequest=onDismiss,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),
+        containerColor=MaterialTheme.colorScheme.surface) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,

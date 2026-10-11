@@ -149,38 +149,24 @@ class ReminderReceiver:BroadcastReceiver() {
     override fun onReceive(context:Context,intent:Intent) = background(context) {
         val repo=Repository.get(context);val service=Reminders(context);val now=ZonedDateTime.now()
         if(intent.action=="ir.medora.health.ACTION") {
-            val token="${intent.getStringExtra("key")}|${intent.getLongExtra("at",0)}|${intent.getStringExtra("action")}" 
-            repo.update { d ->
-                if(token !in d.handledActions) {
-                    val ref=intent.getStringExtra("reference").orEmpty()
-                    val done=intent.getStringExtra("action")=="done"
-                    when(intent.getStringExtra("kind")) {
-                        "dose" -> d.doses.find { it.id==ref }?.let { dose ->
-                            if(dose.status!=DoseStatus.TAKEN && dose.status!=DoseStatus.SKIPPED)
-                                d.mark(dose,if(done)DoseStatus.TAKEN else DoseStatus.SNOOZED,now.toInstant())
-                        }
-                        "water" -> {
-                            val base=intent.getStringExtra("waterBase").orEmpty()
-                            if(base.isNotEmpty() && base !in d.waterAcknowledged) {
-                                if(done) { d.addWater(250,now);d.waterAcknowledged+=base;d.waterSnoozes.remove(base) }
-                                else d.waterSnoozes[base]=now.toInstant().plusSeconds(600).toEpochMilli()
-                            }
-                        }
-                    }
-                    d.handledActions+=token
-                    if(d.handledActions.size>500)d.handledActions.removeAt(0)
-                }
-            }
-            service.cancel(intent.getIntExtra("notificationId",0));service.rebuild(repo.read())
+            val reminder=Reminder(intent.getStringExtra("key").orEmpty(),intent.getStringExtra("kind").orEmpty(),
+                intent.getStringExtra("reference").orEmpty(),intent.getLongExtra("at",0),waterBase=intent.getStringExtra("waterBase").orEmpty())
+            var accepted=false
+            repo.update { d -> accepted=d.applyReminderAction(reminder,intent.getStringExtra("action").orEmpty(),now) }
+            if(accepted) service.cancel(intent.getIntExtra("notificationId",0))
+            service.rebuild(repo.read())
         } else {
             service.rebuild(repo.update { })
         }
     }
 }
 class RefreshReceiver:BroadcastReceiver() {
-    override fun onReceive(context:Context,intent:Intent)=background(context) {
+    override fun onReceive(context:Context,intent:Intent) {
+        if(intent.action !in setOf(Intent.ACTION_BOOT_COMPLETED,Intent.ACTION_MY_PACKAGE_REPLACED,Intent.ACTION_TIMEZONE_CHANGED,Intent.ACTION_TIME_CHANGED,"android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED")) return
+        background(context) {
         val data=Repository.get(context).update { }
         Reminders(context).rebuild(data)
+        }
     }
 }
 // A short wake lock protects the asynchronous disk operation after onReceive.
@@ -195,4 +181,5 @@ fun BroadcastReceiver.background(context:Context,work:()->Unit) {
         } finally { if(lock.isHeld)lock.release();pending.finish() }
     }
 }
+
 

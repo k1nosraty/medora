@@ -3,6 +3,8 @@ package ir.medora.health
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
 import android.app.Application
 import androidx.compose.ui.graphics.asAndroidBitmap
 import android.graphics.Bitmap
@@ -35,14 +37,15 @@ class WellnessUiTest {
         launch(compact=true)
         compose.onNodeWithTag("nav-2").performClick()
         compose.onNodeWithText(localizedText("medication.new","fa")).performClick()
+        compose.onNodeWithText(localizedText("medication.name","fa"),substring=true).performTextInput("Appearance test")
         compose.onNodeWithTag("appearance-toggle").performScrollTo().performClick()
         MedicationIcon.entries.forEach { option ->
             compose.onNodeWithTag("appearance-icon-${option.name}").performScrollTo().performClick().assertIsSelected()
         }
         compose.onNodeWithTag("appearance-icon-DROPS").performScrollTo().performClick()
         compose.onNodeWithTag("appearance-color-LAVENDER").performScrollTo().performClick().assertIsSelected()
-        compose.onNodeWithText(localizedText("medication.name","fa"),substring=true).performTextInput("Appearance test")
         capture("appearance-editor")
+        compose.onNodeWithText(localizedText("common.select","fa")).performScrollTo().performClick()
         compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().assertIsDisplayed().performClick()
         compose.waitUntil(15000) { model.data?.medications?.any { it.name=="Appearance test" }==true && !model.busy }
         val saved=Repository.executor.submit<HealthData> { Repository.get(application).read() }.get().medications.first { it.name=="Appearance test" }
@@ -58,12 +61,17 @@ class WellnessUiTest {
         compose.onNodeWithContentDescription(localizedText("a11y.changeDoseStatus","fa")).assertDoesNotExist()
         compose.onNodeWithText("ویزیت متخصص قلب").performScrollTo().assertIsDisplayed()
         capture("future-today")
+        // Use unclipped coordinates: scrolling an appointment into view clips off-screen dose bounds.
+        val medicineBounds=compose.onAllNodesWithText("قرص آهن").fetchSemanticsNodes().map {it.positionInRoot.y}.sorted()
+        val appointmentTop=compose.onNodeWithText("ویزیت متخصص قلب").fetchSemanticsNode().positionInRoot.y
+        assertEquals(2,medicineBounds.size)
+        org.junit.Assert.assertTrue("Dose tops: $medicineBounds; appointment top: $appointmentTop",medicineBounds[0]<appointmentTop && appointmentTop<medicineBounds[1])
     }
 
     @Test fun customMedicationSnoozePersistsFromSettings() {
         launch(compact=true)
         compose.onNodeWithTag("settings").performClick()
-        compose.onNodeWithText(localizedText("settings.medicationsTab","fa")).performClick()
+        compose.onNodeWithText(localizedText("settings.medicationsTab","fa")).performScrollTo().performClick()
         listOf(10,30,60).forEach { minutes ->
             compose.onNodeWithText(localizedText("settings.minutes","fa",localizedNumber(minutes.toString(),"fa"))).performScrollTo().performClick().assertIsSelected()
         }
@@ -77,6 +85,7 @@ class WellnessUiTest {
     }
 
     @Before fun seedOnlyTestData() {
+        application.getSharedPreferences("medora_ui",android.content.Context.MODE_PRIVATE).edit().clear().commit()
         val today = LocalDate.now()
         val medication = Medication(id = "ui-med", name = "قرص آهن", instructions = "۱۵۰ میلی‌گرم", startDay = today.toString(), times = listOf("08:00", "17:00"))
         val data = HealthData()
@@ -93,15 +102,17 @@ class WellnessUiTest {
         instrumentation.runOnMainSync { model = HealthViewModel(application) }
     }
 
-    private fun launch(dark: Boolean = false, language: String = "fa", compact: Boolean = false) {
+    private fun launch(dark: Boolean = false, language: String = "fa", compact: Boolean = false, fontScale: Float = 1f) {
         compose.waitUntil(15000) { model.data != null && !model.busy }
         instrumentation.runOnMainSync {
             model.data?.let { it.settings = it.settings.copy(language = language) }
         }
         compose.setContent {
-            CompositionLocalProvider(LocalLanguage provides language, LocalCalendar provides "jalali",
+            val density=LocalDensity.current
+            val appearance=androidx.compose.runtime.remember { AppearancePreferences(application).apply { chooseTheme(if(dark) "dark" else "light") } }
+            CompositionLocalProvider(LocalAppearance provides appearance,LocalDensity provides Density(density.density,fontScale),LocalLanguage provides language, LocalCalendar provides "jalali",
                 LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr) {
-                MaterialTheme(colorScheme = medoraColorScheme(dark), typography = medoraTypography(language), shapes = MedoraShapes) {
+                MaterialTheme(colorScheme = medoraColorScheme(appearance.theme=="dark"), typography = medoraTypography(language), shapes = MedoraShapes) {
                     androidx.compose.foundation.layout.Box(
                         androidx.compose.ui.Modifier.then(if (compact) androidx.compose.ui.Modifier.width(320.dp) else androidx.compose.ui.Modifier.fillMaxWidth())
                     ) { HealthScreen(model, {}, {}, {}) }
@@ -118,7 +129,7 @@ class WellnessUiTest {
         val directory = File(application.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
         compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
-        val bitmap = (if (name.contains("settings") || name.contains("appearance-editor")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
+        val bitmap = (if(name=="02-water-sheet") compose.onNodeWithTag("editor-water") else if(name=="05-medication-form") compose.onNodeWithTag("editor-medication") else if(name=="07-appointment-form") compose.onNodeWithTag("editor-appointment") else if(name.contains("appearance-editor")) compose.onNodeWithTag("appearance-sheet") else if (name.contains("settings")) compose.onNode(isDialog()) else compose.onRoot()).captureToImage().asAndroidBitmap()
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
@@ -127,7 +138,7 @@ class WellnessUiTest {
         launch()
         capture("01-today-fa")
         compose.onNodeWithText("ثبت آب").performScrollTo().performClick()
-        compose.onNodeWithText("ثبت آب", substring = true).assertExists()
+        compose.onNodeWithTag("editor-water").assertExists()
         capture("02-water-sheet")
         compose.onNodeWithText("۵۰۰", useUnmergedTree = true).performClick()
         compose.onNodeWithText("ذخیره").performScrollTo().performClick()
@@ -148,8 +159,6 @@ class WellnessUiTest {
         compose.onNodeWithTag("nav-insights").performClick()
         compose.onNodeWithTag("page-calendar").performClick()
         capture("08-calendar-fa")
-        compose.onNodeWithContentDescription("بستن").performClick()
-        compose.onNodeWithTag("nav-insights").performClick()
         compose.onNodeWithTag("page-reports").performClick()
         capture("09-reports-fa")
         compose.onNodeWithTag("settings").performClick()
@@ -172,19 +181,18 @@ class WellnessUiTest {
     @Test fun darkThemeAndEnglishNavigationRender() {
         launch(dark = true, language = "en")
         capture("11-today-dark-en")
-        compose.onNodeWithTag("nav-1").performClick()
+        compose.onNodeWithTag("open-water").performScrollTo().performClick()
         capture("12-water-dark-en")
     }
 
     private fun verifyCompactDock(language: String, dark: Boolean) {
         launch(dark = dark, language = language, compact = true)
-        val tags = listOf("settings", "nav-insights", "nav-0", "nav-2", "nav-3")
+        val tags = if(language=="fa") listOf("settings","nav-insights","nav-0","nav-3","nav-2") else listOf("nav-2","nav-3","nav-0","nav-insights","settings")
         tags.forEach { compose.onNodeWithTag(it).assertIsDisplayed() }
         val bounds = tags.map { compose.onNodeWithTag(it).fetchSemanticsNode().boundsInRoot }
         bounds.zipWithNext().forEach { (left, right) -> org.junit.Assert.assertTrue(left.right <= right.left + 1f) }
         compose.onNodeWithTag("nav-0").assertIsSelected()
-        compose.onNodeWithTag("today-medications").assertExists()
-        compose.onNodeWithTag("today-appointments").assertExists()
+        compose.onNodeWithTag("today-timeline").assertExists()
         capture("compact-$language-$dark-today")
         compose.onNodeWithTag("nav-insights").performClick()
         compose.onNodeWithTag("page-calendar").assertIsDisplayed()
@@ -207,6 +215,82 @@ class WellnessUiTest {
     @Test fun compactPersianDarkNavigation() = verifyCompactDock("fa", true)
     @Test fun compactEnglishLightNavigation() = verifyCompactDock("en", false)
 
+    @Test fun largeTextKeepsCriticalMedicineInformationAndNavigationAccessible() {
+        launch(compact=true,fontScale=2f)
+        compose.onNodeWithTag("nav-0").assertIsDisplayed().assertIsSelected()
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onAllNodesWithText("قرص آهن").onFirst().performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("navigation-active-label").assertTextEquals(localizedText("nav.medications","fa")).assertIsDisplayed()
+        capture("large-text-medications")
+    }
+
+    @Test fun medicationAndAppointmentTimePickersConfirmAndDismissWithoutCrash() {
+        launch(compact=true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithText(localizedText("medication.new","fa")).performClick()
+        val time=localizedText("medication.timeNumber","fa","۱","۰۸:۰۰")
+        compose.onNodeWithText(time).performScrollTo().performClick()
+        compose.onNodeWithTag("medora-time-picker").assertExists()
+        compose.onNodeWithTag("time-cancel").performScrollTo().performClick()
+        compose.onNodeWithText(time).performScrollTo().assertExists().performClick()
+        compose.onNodeWithTag("time-confirm").performScrollTo().performClick()
+        compose.onNodeWithText(time).assertExists()
+        compose.onNodeWithContentDescription(localizedText("common.close","fa")).performClick()
+        compose.onNodeWithTag("nav-3").performClick()
+        compose.onNodeWithText(localizedText("appointment.new","fa")).performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("medication.time","fa")).performScrollTo().performClick()
+        compose.onNodeWithTag("medora-time-picker").assertExists()
+        compose.onNodeWithTag("time-confirm").performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().assertExists()
+    }
+
+    @Test fun medicationDetailsAndHistoryUseTheSavedMedicineIdentity() {
+        launch(compact=true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("design.intakeHistory","fa")).performScrollTo().assertExists()
+        compose.onNodeWithTag("details-edit").assertExists()
+    }
+
+    @Test fun appearanceThemeChangesAndPersistsFromSettings() {
+        launch(compact=true)
+        compose.onNodeWithTag("settings").performClick()
+        compose.onNodeWithText(localizedText("settings.display","fa")).performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("design.theme.dark","fa")).performScrollTo().performClick().assertIsSelected()
+        capture("theme-dark-settings")
+        assertEquals("dark",AppearancePreferences(application).theme)
+        compose.onNodeWithText(localizedText("design.theme.light","fa")).performScrollTo().performClick().assertIsSelected()
+        assertEquals("light",AppearancePreferences(application).theme)
+    }
+
+    @Test fun editedStartDateSurvivesCollapsingAdvancedSchedule() {
+        launch(compact=true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
+        compose.onNodeWithTag("details-edit").performClick()
+        compose.onNodeWithTag("medication-start-date").performScrollTo().performClick()
+        // Pick a different day in the currently displayed month, including month boundaries.
+        val today=LocalDate.now()
+        val selected=if(CalendarSupport.dayOfMonth(today,"jalali").toInt()==1) today.plusDays(1) else today.minusDays(1)
+        val description=localizedText("a11y.openDate","fa")+": "+CalendarSupport.formatDate(selected,"jalali","fa")
+        compose.onNodeWithContentDescription(description).performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("common.select","fa")).performScrollTo().performClick()
+        compose.onNodeWithTag("medication-collapse-schedule").performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().performClick()
+        compose.waitUntil(15000) { !model.busy && model.data?.medications?.first {it.id=="ui-med"}?.startDay==selected.toString() }
+        val saved=Repository.executor.submit<HealthData> {Repository.get(application).read()}.get()
+        assertEquals(selected.toString(),saved.medications.first {it.id=="ui-med"}.startDay)
+    }
+
+    @Test fun largeTextHydrationRemainsReadableAndActionable() {
+        launch(compact=true,fontScale=2f)
+        compose.onNodeWithText(localizedText("today.waterAction","fa")).performScrollTo().assertIsDisplayed()
+        capture("large-text-today-water")
+        compose.onNodeWithText(localizedText("today.waterAction","fa")).performClick()
+        compose.onNodeWithTag("editor-water").assertExists()
+        compose.onNodeWithText(localizedText("common.save","fa")).performScrollTo().assertIsDisplayed()
+    }
+
     @Test fun welcomeRendersWithoutFakeLogin() {
         compose.setContent {
             CompositionLocalProvider(LocalLanguage provides "fa", LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -219,3 +303,4 @@ class WellnessUiTest {
         capture("00-welcome-fa")
     }
 }
+

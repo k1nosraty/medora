@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -85,6 +86,8 @@ fun EditDialog(
     var appointmentDetails by remember(editor) { mutableStateOf(editor.appointment != null) }
     var error by remember(editor) { mutableStateOf<String?>(null) }
     var datePickerTarget by remember { mutableStateOf<String?>(null) }
+    var requestedTime by remember { mutableStateOf<LocalTime?>(null) }
+    var requestedAction by remember { mutableStateOf<((Int,Int)->Unit)?>(null) }
 
     val title = when (editor.kind) {
         "water" -> if (editor.water == null) tr("form.waterNew") else tr("form.waterEdit")
@@ -93,14 +96,8 @@ fun EditDialog(
         else -> tr("app.settings")
     }
 
-    fun timePicker(onPicked: (Int, Int) -> Unit, initial: LocalTime) {
-        TimePickerDialog(
-            context.withAppLocale(language),
-            { _, hour, minute -> onPicked(hour, minute) },
-            initial.hour,
-            initial.minute,
-            true
-        ).show()
+    fun timePicker(onPicked: (Int,Int)->Unit,initial: LocalTime) {
+        requestedTime=initial;requestedAction=onPicked
     }
 
     fun medicationTimePicker(index: Int? = null) {
@@ -164,7 +161,7 @@ fun EditDialog(
                         id = editor.medication?.id ?: id(),
                         name = name.trim(),
                         instructions = instructions.trim(),
-                        startDay = if (editor.medication == null || advancedSchedule) medicationStart else editor.medication.startDay,
+                        startDay = medicationStart,
                         times = parsedTimes,
                         weekdays = if (specific) emptySet() else weekdays,
                         dates = parsedDates,
@@ -220,11 +217,12 @@ fun EditDialog(
 
     ModalBottomSheet(onDismissRequest = { if (!vm.busy) close() },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surface,
+        modifier=Modifier.testTag("editor-${editor.kind}"),
+        containerColor = MaterialTheme.colorScheme.background,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.background,
             modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().align(Alignment.CenterHorizontally)
         ) {
             Column(
@@ -234,15 +232,12 @@ fun EditDialog(
                 ).imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = close, enabled = !vm.busy) { Icon(Icons.Default.Close, tr("common.close")) }
-                }
+                MedoraHeader(title,onClose={if(!vm.busy) close()})
                 when (editor.kind) {
                     "water" -> {
                         FlowRow(maxItemsInEachRow = 3, horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(100, 250, 500, 750, 1000).forEach { ml ->
+                            listOf(150,250,500).forEach { ml ->
                                 FilterChip(selected = normalize(amount) == ml.toString() && !customWater,
                                     onClick = { amount = ml.toString(); customWater = false },
                                     modifier = Modifier.heightIn(min = 48.dp),
@@ -251,7 +246,7 @@ fun EditDialog(
                             FilterChip(selected = customWater, onClick = { customWater = true },
                                 modifier = Modifier.heightIn(min = 48.dp), label = { Text(tr("water.customAmount")) })
                         }
-                        if (customWater) Input(amount, { amount = normalize(it) }, tr("water.amountField"), keyboardType = KeyboardType.Number)
+                        if (customWater) Input(amount, { amount = normalize(it);error=null }, tr("water.amountField"), keyboardType = KeyboardType.Number,error=if(error=="validation.waterAmount") tr(error!!) else null)
                         else Text(tr("water.ml", n(normalize(amount))), style = MaterialTheme.typography.bodySmall)
                         TextButton(onClick = { waterDetails = !waterDetails }) { Text(tr("water.more")) }
                         if (waterDetails) {
@@ -264,11 +259,11 @@ fun EditDialog(
                         }
                     }
                     "medication" -> {
-                        Input(name, { name = it }, tr("medication.name"), required = true)
-                        MedicationAppearancePicker(medicationIcon, medicationColor, { medicationIcon = it }, { medicationColor = it })
+                        Input(name, { name = it;error=null }, tr("medication.name"), required = true,error=if(error=="validation.medicationName") tr(error!!) else null)
                         Input(instructions, { instructions = it }, tr("medication.instructions"), singleLine = false)
+                        MedicationAppearancePicker(medicationIcon, medicationColor, { medicationIcon = it }, { medicationColor = it })
                         Text(tr("medication.time"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        times.take(if (advancedSchedule) times.size else 1).forEachIndexed { index, time ->
+                        times.forEachIndexed { index, time ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 OutlinedButton(
                                     onClick = { medicationTimePicker(index) },
@@ -287,7 +282,11 @@ fun EditDialog(
                             }
                         }
                         if (!advancedSchedule) {
-                            Text(tr("medication.everyDay"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            val summary = if(specific) tr("medication.specificSummary",n(normalize(dates).replace('،',',').split(',').count {it.isNotBlank()}))
+                                else if(weekdays.size==7) tr("medication.everyDay")
+                                else CalendarSupport.weekdayOrder(language).filter {it in weekdays}.joinToString(" · ") {localizedWeekday(it,language)}
+                            Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("medication.startDate")+": "+displayDate(LocalDate.parse(medicationStart)),style=MaterialTheme.typography.bodySmall)
                             TextButton(onClick = { advancedSchedule = true }) {
                                 Icon(Icons.Default.ExpandMore, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
@@ -301,7 +300,7 @@ fun EditDialog(
                             }
                             HorizontalDivider()
                             Text(tr("medication.schedule"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            OutlinedButton(onClick = { datePickerTarget = "start" }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) {
+                            OutlinedButton(onClick = { datePickerTarget = "start" }, modifier = Modifier.testTag("medication-start-date").fillMaxWidth().heightIn(min = 50.dp)) {
                                 Text(tr("medication.startDate") + ": " + CalendarSupport.formatDate(LocalDate.parse(medicationStart), calendar, language))
                             }
                             SwitchRow(tr("medication.specificDates"), specific) { specific = it }
@@ -320,7 +319,7 @@ fun EditDialog(
                                     }
                                 }
                             }
-                            TextButton(onClick = { advancedSchedule = false }) {
+                            TextButton(onClick = { advancedSchedule = false },modifier=Modifier.testTag("medication-collapse-schedule")) {
                                 Icon(Icons.Default.ExpandLess, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
                                 Text(tr("common.close"))
@@ -329,7 +328,7 @@ fun EditDialog(
                         Text(tr("medication.disclaimer"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     "appointment" -> {
-                        Input(name, { name = it }, tr("appointment.doctor"), required = true)
+                        Input(name, { name = it;error=null }, tr("appointment.doctor"), required = true,error=if(error=="validation.appointmentTitle") tr(error!!) else null)
                         OutlinedButton(onClick = { datePickerTarget = "date" }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) {
                             Text(CalendarSupport.formatDate(dateTime.toLocalDate(), calendar, language, includeWeekday = true))
                         }
@@ -367,6 +366,7 @@ fun EditDialog(
                 }
                 (error ?: vm.error)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 Button(onClick = ::save, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) {
+                    if(vm.busy) {CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp))}
                     Text(if (vm.busy) tr("common.saving") else tr("common.save"))
                 }
                 TextButton(onClick = close, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
@@ -374,6 +374,10 @@ fun EditDialog(
                 }
             }
         }
+    }
+
+    requestedTime?.let { initial ->
+        MedoraTimePicker(initial,{requestedTime=null},{hour,minute -> requestedAction?.invoke(hour,minute);requestedTime=null})
     }
 
     datePickerTarget?.let { target ->
@@ -395,19 +399,14 @@ fun EditDialog(
 
 @Composable
 private fun TimeField(label: String, value: LocalTime, onPicked: (Int, Int) -> Unit) {
-    val context = LocalContext.current
-    val language = LocalLanguage.current
-    OutlinedButton(
-        onClick = {
-            TimePickerDialog(context.withAppLocale(language), { _, hour, minute -> onPicked(hour, minute) }, value.hour, value.minute, true).show()
-        },
-        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)
-    ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
-            Text(displayTime(value), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    var picker by remember {mutableStateOf(false)}
+    OutlinedButton(onClick={picker=true},modifier=Modifier.fillMaxWidth().heightIn(min=50.dp)) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+            Text(label,Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)
+            Text(displayTime(value),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
         }
     }
+    if(picker) MedoraTimePicker(value,{picker=false},{hour,minute -> onPicked(hour,minute);picker=false})
 }
 
 @Composable
@@ -418,17 +417,21 @@ fun Input(
     helper: String = "",
     singleLine: Boolean = true,
     required: Boolean = false,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    error: String? = null
 ) {
     val displayedLabel = if (required) "$label · ${tr("common.required")}" else label
     OutlinedTextField(
         value = if (keyboardType == KeyboardType.Number) localizedNumber(value, LocalLanguage.current) else value,
         onValueChange = change,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
+        isError=error!=null,
+        colors=OutlinedTextFieldDefaults.colors(
+            focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceVariant),
         singleLine = singleLine,
         minLines = if (singleLine) 1 else 2,
         label = { Text(displayedLabel) },
-        supportingText = if (helper.isBlank()) null else ({ Text(helper) }),
+        supportingText = if (error!=null) ({Text(error)}) else if (helper.isBlank()) null else ({ Text(helper) }),
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
             imeAction = if (singleLine) ImeAction.Next else ImeAction.Default
@@ -463,4 +466,5 @@ private fun weekdayName(day: Int): String = when (day) {
     6 -> tr("weekday.sat")
     else -> tr("weekday.sun")
 }
+
 

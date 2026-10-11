@@ -34,7 +34,7 @@ fun SettingsDialog(
     openExact: () -> Unit
 ) {
     val data = vm.data ?: return
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember { mutableIntStateOf(-1) }
     var medicationSnooze by remember(data.settings.medicationSnoozeMinutes) { mutableStateOf(data.settings.medicationSnoozeMinutes.toString()) }
     var customSnooze by remember { mutableStateOf(data.settings.medicationSnoozeMinutes !in listOf(10,30,60)) }
     var goal by remember(data.settings.goal) { mutableStateOf(data.settings.goal.toString()) }
@@ -52,6 +52,7 @@ fun SettingsDialog(
     var advanced by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scroll = rememberScrollState()
+    LaunchedEffect(tab) {scroll.scrollTo(0)}
     val context = LocalContext.current
 
     fun save() {
@@ -59,14 +60,16 @@ fun SettingsDialog(
             val parsedGoal = normalize(goal).toIntOrNull()
             if (parsedGoal == null || parsedGoal !in 1..20000) {
                 error = "validation.goal"
+                tab=0
                 return
             }
             if (LocalTime.parse(start) >= LocalTime.parse(end)) {
                 error = "validation.waterWindow"
+                tab=0
                 return
             }
             val parsedSnooze = normalize(medicationSnooze).toIntOrNull()
-            if (parsedSnooze == null || parsedSnooze !in 1..1440) { error = "validation.medicationSnooze"; return }
+            if (parsedSnooze == null || parsedSnooze !in 1..1440) { error = "validation.medicationSnooze";tab=1; return }
             error = null
             val updated = data.settings.copy(
                 goal = parsedGoal,
@@ -106,58 +109,39 @@ fun SettingsDialog(
                     modifier = Modifier.padding(12.dp).widthIn(max = 560.dp).fillMaxWidth()
                 ) {
                     Column(
-                        Modifier.heightIn(max = maxHeight).imePadding().padding(16.dp),
+                        Modifier.heightIn(max = maxHeight).imePadding().padding(bottom=16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(tr("settings.title"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                Text(tr("settings.subtitle"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            IconButton(onClick = close, enabled = !vm.busy, modifier = Modifier.size(48.dp)) {
-                                Icon(Icons.Default.Close, contentDescription = tr("common.close"))
-                            }
-                        }
-                        DisplayPreferences(
-                            language = language,
-                            calendar = calendar,
-                            onLanguage = { language = it },
-                            onCalendar = { calendar = it }
-                        )
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("settings.waterTab", "settings.medicationsTab", "settings.appointmentsTab", "settings.notificationsTab").forEachIndexed { index, key ->
-                                val selected = tab == index
-                                Surface(
-                                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-                                    border = if (selected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                    modifier = Modifier.weight(1f).selectable(selected = selected, role = Role.Tab, onClick = { tab = index })
-                                ) {
-                                    Box(Modifier.heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
-                                        Text(tr(key), maxLines = 2, style = MaterialTheme.typography.labelMedium)
-                                    }
-                                }
-                            }
-                        }
+                        MedoraHeader(tr("settings.title"),tr(if(tab<0) "settings.subtitle" else when(tab) {
+                            0 -> "settings.waterTab";1 -> "settings.medicationsTab";2 -> "settings.appointmentsTab";3 -> "settings.notificationsTab";else -> "settings.display"
+                        }),onBack=if(tab>=0) ({tab=-1}) else null,onClose={if(!vm.busy) close()})
                         Column(
-                            Modifier.weight(1f, fill = false).verticalScroll(scroll),
+                            Modifier.weight(1f, fill = false).verticalScroll(scroll).padding(horizontal=16.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             when (tab) {
+                                -1 -> {
+                                    SettingsCategoryTile(tr("settings.display"),tr("settings.language"),4) {tab=4}
+                                    SettingsCategoryTile(tr("settings.notificationsTab"),tr("settings.phonePermissions"),3) {tab=3}
+                                    SettingsCategoryTile(tr("settings.waterTab"),tr("settings.waterGoal"),0) {tab=0}
+                                    SettingsCategoryTile(tr("settings.medicationsTab"),tr("settings.medicationSnooze"),1) {tab=1}
+                                    SettingsCategoryTile(tr("settings.appointmentsTab"),tr("appointment.earlyReminders"),2) {tab=2}
+                                }
+                                4 -> DisplayPreferences(language,calendar,{language=it},{calendar=it})
                                 0 -> WaterSettings(
-                                    goal, { goal = it }, waterEnabled, { waterEnabled = it }, start, { start = it },
-                                    end, { end = it }, interval, { next -> interval = next; if (repeatMinutes >= next) repeatMinutes = 0 },
+                                    goal, { goal = it;error=null }, waterEnabled, { waterEnabled = it }, start, { start = it;error=null },
+                                    end, { end = it;error=null }, interval, { next -> interval = next; if (repeatMinutes >= next) repeatMinutes = 0 },
                                     repeatMinutes, { repeatMinutes = it }, advanced, { advanced = it }, pauseUntil, { pauseUntil = it }
                                 )
-                                1 -> MedicationSnoozeSettings(medicationSnooze, { medicationSnooze = it }, customSnooze, { customSnooze = it })
+                                1 -> MedicationSnoozeSettings(medicationSnooze, { medicationSnooze = it;error=null }, customSnooze, { customSnooze = it })
                                 2 -> AppointmentSettings(appointmentStart, { appointmentStart = it }, appointmentInterval, { appointmentInterval = it })
                                 else -> NotificationSettings(data, vm, showDetails, { showDetails = it }, requestPermission, openNotifications, openExact)
                             }
-                            error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                            vm.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                         }
-                        Button(onClick = ::save, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) {
+                        error?.let { Text(tr(it),modifier=Modifier.padding(horizontal=16.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                        vm.error?.let { Text(tr(it),modifier=Modifier.padding(horizontal=16.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                        Button(onClick = ::save, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().padding(horizontal=16.dp).heightIn(min = 50.dp)) {
+                            if(vm.busy) {CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp))}
                             Text(if (vm.busy) tr("common.saving") else tr("common.saveSettings"))
                         }
                     }
@@ -167,6 +151,7 @@ fun SettingsDialog(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DisplayPreferences(
     language: String,
@@ -187,6 +172,15 @@ private fun DisplayPreferences(
             FilterChip(selected = calendar == "gregorian", onClick = { onCalendar("gregorian") }, label = { Text(tr("settings.gregorian")) }, modifier = Modifier.weight(1f))
         }
         Text(tr("settings.calendarNote"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LocalAppearance.current?.let { appearance ->
+            Text(tr("design.theme"),style=MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                listOf("system","light","dark").forEach { option ->
+                    FilterChip(selected=appearance.theme==option,onClick={appearance.chooseTheme(option)},label={Text(tr("design.theme.$option"))})
+                }
+            }
+        }
+
     }
 }
 
@@ -210,7 +204,7 @@ private fun WaterSettings(
     pauseUntil: Long,
     onPause: (Long) -> Unit
 ) {
-    Panel(compact = true) {
+    Panel(color=wellnessTint(MedoraColors.WaterContainer),compact = true) {
         Text(tr("settings.waterGoal"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         OutlinedTextField(
             value = localizedNumber(normalize(goal), LocalLanguage.current),
@@ -273,7 +267,7 @@ private fun AppointmentSettings(
     interval: Int,
     onInterval: (Int) -> Unit
 ) {
-    Panel(compact = true) {
+    Panel(color=wellnessTint(MedoraColors.Lavender),compact = true) {
         Text(tr("appointment.clinicStart"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Text(tr("appointment.settingsExplanation"), style = MaterialTheme.typography.bodyMedium)
         TimeSetting(tr("appointment.startTime"), start, onStart)
@@ -318,7 +312,7 @@ private fun NotificationSettings(
     }
     Panel(compact = true) {
         Text(tr("settings.phonePermissions"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        if (vm.exact) Text(tr("settings.exactEnabled"), color = MedoraColors.Success)
+        if (vm.exact) Text(tr("settings.exactEnabled"), color = wellnessAccent(MedoraColors.Success))
         else OutlinedButton(onClick = openExact, modifier = Modifier.fillMaxWidth()) { Text(tr("settings.enableExact")) }
         TextButton(onClick = openNotifications) { Text(tr("settings.openNotificationSettings")) }
     }
@@ -326,13 +320,10 @@ private fun NotificationSettings(
 
 @Composable
 fun TimeSetting(label: String, value: String, change: (String) -> Unit, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val language = LocalLanguage.current
+    var picker by remember {mutableStateOf(false)}
+    val time = remember(value) {runCatching {LocalTime.parse(value)}.getOrDefault(LocalTime.of(8,0))}
     OutlinedButton(
-        onClick = {
-            val time = LocalTime.parse(value)
-            TimePickerDialog(context.withAppLocale(language), { _, hour, minute -> change(LocalTime.of(hour, minute).toString()) }, time.hour, time.minute, true).show()
-        },
+        onClick = {picker=true},
         modifier = modifier.fillMaxWidth().heightIn(min = 50.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -340,12 +331,14 @@ fun TimeSetting(label: String, value: String, change: (String) -> Unit, modifier
             Text(displayTime(value), style = MaterialTheme.typography.titleMedium)
         }
     }
+    if(picker) MedoraTimePicker(time,{picker=false},{hour,minute -> change(LocalTime.of(hour,minute).toString());picker=false})
+
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MedicationSnoozeSettings(value:String,onValue:(String)->Unit,custom:Boolean,onCustom:(Boolean)->Unit) {
-    Panel(compact=true) {
+    Panel(color=wellnessTint(MedoraColors.Warm),compact=true) {
         Text(tr("settings.medicationSnooze"),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
         Text(tr("settings.snoozeNote"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -355,6 +348,7 @@ private fun MedicationSnoozeSettings(value:String,onValue:(String)->Unit,custom:
             }
             FilterChip(selected=custom,onClick={onCustom(true)},modifier=Modifier.heightIn(min=48.dp),label={Text(tr("settings.customSnooze"))})
         }
-        if(custom) Input(value,{onValue(normalize(it))},tr("settings.snoozeMinutes"),keyboardType=androidx.compose.ui.text.input.KeyboardType.Number)
+        if(custom) Input(value,{onValue(normalize(it))},tr("settings.snoozeMinutes"),helper=tr("validation.medicationSnooze"),keyboardType=androidx.compose.ui.text.input.KeyboardType.Number)
     }
 }
+

@@ -12,6 +12,18 @@ val LocalLanguage = staticCompositionLocalOf { "fa" }
 val LocalCalendar = staticCompositionLocalOf { "jalali" }
 
 private val copy = mapOf(
+    "design.later" to ("فعلاً نه" to "Not now"),
+    "medication.specificSummary" to ("برنامه برای {0} تاریخ مشخص" to "Scheduled on {0} specific dates"),
+    "appointment.clinicTimeLabel" to ("زمان محل قرار: {0} · {1} ({2})" to "Clinic time: {0} · {1} ({2})"),
+    "today.timeline" to ("برنامهٔ روز" to "Daily timeline"),
+    "today.timelineEmpty" to ("برای این روز دارو یا قراری ثبت نشده." to "No medications or appointments scheduled for this day."),
+    "design.theme" to ("ظاهر برنامه" to "Appearance"),
+    "design.theme.system" to ("سیستم" to "System"),
+    "design.theme.light" to ("روشن" to "Light"),
+    "design.theme.dark" to ("تیره" to "Dark"),
+    "design.intakeHistory" to ("سابقهٔ مصرف" to "Intake history"),
+    "design.clockMode" to ("انتخاب با ساعت" to "Use clock"),
+    "design.keyboardMode" to ("ورود عددی ساعت" to "Enter time"),
     "settings.medicationsTab" to ("دارو" to "Meds"),
     "settings.medicationSnooze" to ("مدت تعویق دارو" to "Medication snooze duration"),
     "settings.customSnooze" to ("زمان دلخواه" to "Custom"),
@@ -307,7 +319,7 @@ private val copy = mapOf(
 
     "notification.channel" to ("یادآوری‌های سلامت" to "Health reminders"),
     "notification.channelDescription" to ("یادآوری آب، دارو و قرارهای پزشکی" to "Water, medication, and appointment reminders"),
-    "notification.brand" to ("یادآوری Medora" to "Medora reminder"),
+    "notification.brand" to ("زمان یادآوری مدورا" to "Medora reminder"),
     "notification.privateBody" to ("برای دیدن جزئیات، برنامه را باز کنید." to "Open the app to view details."),
     "notification.waterTitle" to ("وقت نوشیدن آب" to "Time to drink water"),
     "notification.waterBody" to ("مقدار نوشیده‌شده را ثبت کنید." to "Log the water you have had."),
@@ -373,3 +385,4 @@ fun localizedOffsetLabel(minutes: Int, language: String): String = when(minutes)
     1440 -> localizedText("appointment.dayBefore", language)
     else -> localizedText("appointment.minutesBefore", language, minutes)
 }
+

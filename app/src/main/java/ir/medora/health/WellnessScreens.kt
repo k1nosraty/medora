@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -38,57 +39,59 @@ import java.time.LocalDateTime
 
 @Composable
 fun WelcomeScreen(onStart: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-        wellnessTint(MedoraColors.PrimaryContainer), wellnessTint(MedoraColors.Warm), wellnessTint(MedoraColors.WaterContainer))))
-        .safeDrawingPadding().verticalScroll(rememberScrollState()).padding(28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Spacer(Modifier.height(38.dp))
-        WellnessBrand(Modifier.size(220.dp))
-        Text("Medora", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary)
-        Text(tr("welcome.tagline"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center)
-        Text(tr("welcome.intro"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Box(Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.fillMaxSize()) {
-                val w = size.width; val h = size.height
-                val landscape = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(0f, h * .35f)
-                    cubicTo(w * .22f, 0f, w * .38f, h * .95f, w * .66f, h * .4f)
-                    cubicTo(w * .8f, h * .14f, w * .9f, h * .15f, w, h * .3f)
-                    lineTo(w, h); lineTo(0f, h); close()
-                }
-                drawPath(landscape, MedoraColors.Primary.copy(alpha = .1f))
-                drawOval(MedoraColors.Primary.copy(alpha = .07f), Offset(w * -.15f, h * .6f), Size(w * 1.3f, h))
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MedoraColors.Forest,MedoraColors.Primary)))) {
+        BotanicalArtwork(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(320.dp),landscape=true)
+        Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp),
+            horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(16.dp)) {
+            Spacer(Modifier.height(24.dp))
+            WellnessBrand(Modifier.size(148.dp))
+            Text(if(LocalLanguage.current=="fa") "مدورا" else "Medora",style=MaterialTheme.typography.displayMedium,color=Color.White)
+            Text(tr("welcome.tagline"),style=MaterialTheme.typography.titleLarge,color=Color.White,textAlign=TextAlign.Center)
+            Text(tr("welcome.intro"),style=MaterialTheme.typography.bodyMedium,color=Color(0xFFDDF1E8),textAlign=TextAlign.Center)
+            Spacer(Modifier.height(60.dp))
+            Button(onClick=onStart,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(50),
+                colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFB8EAD5),contentColor=MedoraColors.Forest)) {
+                Text(tr("welcome.start"))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                WellnessIcon(Icons.Default.WaterDrop, MedoraColors.Water)
-                WellnessIcon(Icons.Default.Medication, MedoraColors.Medication)
-                WellnessIcon(Icons.Default.Event, MedoraColors.Appointment)
-            }
+            Text(tr("welcome.local"),style=MaterialTheme.typography.bodySmall,color=Color(0xFFDDF1E8),textAlign=TextAlign.Center)
+            Spacer(Modifier.height(24.dp))
         }
-        PrimaryAction(tr("welcome.start"), onStart)
-        Text(tr("welcome.local"), style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(12.dp))
     }
 }
 
 @Composable
 fun DaySelector(day: LocalDate, choose: () -> Unit, change: (LocalDate) -> Unit, showArrows: Boolean = true, allowFuture: Boolean = false) {
-    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (showArrows) IconButton(onClick = { change(day.minusDays(1)) }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("a11y.openDate"))
+    Panel(compact=true) {
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+            if(showArrows) IconButton(onClick={change(day.minusDays(1))}) { Icon(Icons.AutoMirrored.Filled.ArrowBack,tr("a11y.openDate")) }
+            TextButton(onClick=choose,modifier=Modifier.weight(1f).heightIn(min=48.dp)) {
+                Text(if(day==LocalDate.now()) tr("date.today") else displayDate(day),textAlign=TextAlign.Center)
+                Spacer(Modifier.width(6.dp));Icon(Icons.Default.ExpandMore,null,Modifier.size(18.dp))
             }
-            TextButton(onClick = choose, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                Text(if (day == LocalDate.now()) tr("date.today") else displayDate(day), textAlign = TextAlign.Center)
-                Spacer(Modifier.width(8.dp))
-                Icon(Icons.Default.ExpandMore, null, modifier = Modifier.size(18.dp))
+            if(showArrows) IconButton(onClick={change(day.plusDays(1))},modifier=Modifier.testTag("day-next"),enabled=allowFuture || day.isBefore(LocalDate.now())) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward,tr("a11y.openDate"))
             }
-            if (showArrows) IconButton(onClick = { change(day.plusDays(1)) }, modifier = Modifier.testTag("day-next"), enabled = allowFuture || day.isBefore(LocalDate.now())) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, tr("a11y.openDate"))
+        }
+        if(showArrows) {
+            val language=LocalLanguage.current
+            val scroll=rememberScrollState()
+            LaunchedEffect(day,scroll.maxValue) { scroll.scrollTo(scroll.maxValue/2) }
+            Row(Modifier.fillMaxWidth().horizontalScroll(scroll),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                (-3L..3L).forEach { offset ->
+                    val date=day.plusDays(offset)
+                    val selected=offset==0L
+                    val label=displayDate(date,true)
+                    Column(Modifier.width(48.dp).heightIn(min=48.dp).clip(RoundedCornerShape(20.dp))
+                        .background(if(selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .semantics { contentDescription=label;this.selected=selected }
+                        .clickable(enabled=allowFuture || !date.isAfter(LocalDate.now()),role=Role.Button) { change(date) }.padding(2.dp),
+                        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(0.dp)) {
+                        val key=CalendarSupport.shortWeekdays(language)[CalendarSupport.weekdayOrder(language).indexOf(date.dayOfWeek.value)]
+                        val ink=if(selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                        Text(tr(key),style=MaterialTheme.typography.labelSmall,color=ink)
+                        Text(n(CalendarSupport.dayOfMonth(date,LocalCalendar.current)),style=MaterialTheme.typography.titleSmall,color=ink)
+                    }
+                }
             }
         }
     }
@@ -123,7 +126,7 @@ fun ActivityCalendarScreen(data: HealthData, vm: HealthViewModel, openEditor: (E
     val leading = Math.floorMod(monthStart.dayOfWeek.value - CalendarSupport.firstDayOfWeek(language), 7)
     val length = CalendarSupport.monthLength(monthStart, calendar)
     val waterDays = data.water.map { it.day }.toSet()
-    val appointmentDays = data.appointments.filter { !it.cancelled }.map { LocalDateTime.parse(it.wall).toLocalDate().toString() }.toSet()
+    val appointmentDays = data.appointments.filter { !it.cancelled }.map { it.displayTime().toLocalDate().toString() }.toSet()
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { month = CalendarSupport.plusMonths(monthStart, -1, calendar).toString() }) {
@@ -183,7 +186,7 @@ fun ActivityCalendarScreen(data: HealthData, vm: HealthViewModel, openEditor: (E
     }
     Heading(displayDate(selectedDay, true))
     val doses = data.calendarDoses(selectedDay)
-    val appointments = data.appointments.filter { LocalDateTime.parse(it.wall).toLocalDate() == selectedDay }.sortedBy { it.wall }
+    val appointments = data.appointments.filter { it.displayTime().toLocalDate() == selectedDay }.sortedBy { it.instant() }
     val total = data.total(selection)
     if (total > 0) Panel(color = wellnessTint(MedoraColors.WaterContainer), compact = true) {
         Text(tr("calendar.water"), fontWeight = FontWeight.SemiBold)
@@ -214,7 +217,7 @@ fun ReportsScreen(data: HealthData) {
     ChoiceStrip(listOf(tr("reports.week"), tr("reports.month"), tr("reports.year")), period) { period = it }
     Text(tr("reports.range", displayDate(start), displayDate(today)), style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Panel {
+    Panel(color=wellnessTint(MedoraColors.WaterContainer),feature=true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             WellnessIcon(Icons.Default.WaterDrop, MedoraColors.Water)
             Column(Modifier.weight(1f)) {
@@ -228,9 +231,9 @@ fun ReportsScreen(data: HealthData) {
         Text(tr("reports.total") + ": " + tr("water.ml", n(report.totalWater)), style = MaterialTheme.typography.bodyMedium)
         if (report.totalWater == 0L) Text(tr("reports.empty"), style = MaterialTheme.typography.bodySmall)
     }
-    Panel {
+    Panel(color=wellnessTint(MedoraColors.Warm),feature=true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CapsuleIcon()
+            MedicationBadge(MedicationIcon.CAPSULE,MedicationColor.ORANGE)
             Column(Modifier.weight(1f)) {
                 Text(tr("reports.doses"), fontWeight = FontWeight.Bold)
                 Text(tr("reports.summary", n(report.taken), n(report.totalDoses)), style = MaterialTheme.typography.bodySmall)
@@ -287,3 +290,20 @@ private fun WaterTrendChart(days: List<Pair<LocalDate, Int>>, goal: Int) {
     }
 }
 
+
+
+@Composable
+fun ReminderPermissionScreen(enable: ()->Unit,skip: ()->Unit) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()
+        .verticalScroll(rememberScrollState()).padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,
+        verticalArrangement=Arrangement.spacedBy(20.dp)) {
+        Box(Modifier.fillMaxWidth().height(230.dp),contentAlignment=Alignment.Center) {
+            BotanicalArtwork(Modifier.matchParentSize(),landscape=true)
+            Icon(Icons.Default.Notifications,null,Modifier.size(88.dp),tint=MedoraColors.Gold)
+        }
+        Text(tr("permission.title"),style=MaterialTheme.typography.headlineSmall,textAlign=TextAlign.Center)
+        Text(tr("permission.body"),style=MaterialTheme.typography.bodyLarge,textAlign=TextAlign.Center)
+        PrimaryAction(tr("permission.enable"),enable)
+        OutlinedButton(onClick=skip,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {Text(tr("design.later"))}
+    }
+}
