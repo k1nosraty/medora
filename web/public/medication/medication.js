@@ -3,7 +3,7 @@ import { accessCare } from "./storage.js";
 import { changeReminderRevision, initializeReminders, syncReminders } from "./reminders.js";
 import { wellness } from "./wellness.js";
 import { installPickers } from "./pickers.js";
-import { localZone, minuteMs } from "./care-plan.js";
+import { clockMinute, localZone, minuteMs } from "./care-plan.js";
 import { maxBackupBytes, readAndroidBackup } from "./android-backup.js";
 import { installAppearance, medicationBadge, medicationBanner } from "./medication-art.js";
 import { installAccount } from "./account.js";
@@ -33,6 +33,8 @@ let care;
 let editing;
 let editingRevision;
 let editorStep = 0;
+let editorDates = [];
+let restoreExactMode = false;
 let busy = false;
 let deletion;
 const doseStates = { taken: t("مصرف شد"), skipped: t("مصرف نشد"), snoozed: t("به تعویق افتاد") };
@@ -53,14 +55,22 @@ function doseUnit(unit, amount) {
   if (language === "fa") return "قرص";
   return amount === 0 || amount > 1000 ? "tablets" : "tablet";
 }
-const today = () => {
-  const now = new Date();
-  return dayNumber([now.getFullYear(), now.getMonth() + 1, now.getDate()].map(n => String(n).padStart(2, "0")).join("-"));
-};
+const localDayNumber = date => dayNumber([
+  String(date.getFullYear()).padStart(4, "0"),
+  String(date.getMonth() + 1).padStart(2, "0"),
+  String(date.getDate()).padStart(2, "0")
+].join("-"));
+const today = () => localDayNumber(new Date());
 
 function quantity(input, optional = false) {
-  if (optional && !input.value.trim()) return null;
-  const amount = engine.quantityFromText(input.value);
+  const text = input.value.trim();
+  if (optional && !text) return null;
+  const normalized = text.replace(/[۰-۹٠-٩]/g, digit => String(digit.charCodeAt(0) & 15));
+  const common = { "¼": "1/4", "½": "1/2", "¾": "3/4" };
+  const fraction = (Object.hasOwn(common, normalized) ? common[normalized] : normalized).match(/^(\d{1,7})\s*[/⁄]\s*(\d{1,7})$/);
+  const fractionAmount = fraction ? Number(fraction[1]) * 1000 / Number(fraction[2]) : null;
+  const amount = fraction ? (Number.isInteger(fractionAmount) ? engine.quantityFromText(String(fractionAmount / 1000)) : null) :
+    engine.quantityFromText(text);
   if (amount === null) throw new Error(t("مقدار را به‌صورت عدد با حداکثر سه رقم اعشار وارد کنید."));
   return amount;
 }
@@ -76,23 +86,44 @@ function slotsFor(medicine, day) {
   return engine.medicationSlots(rules(medicine.phases), day);
 }
 
-function addSlot(container, slot = { minute: 480, amount: null }) {
-  if (container.children.length >= 12) return;
+function updateSlotLabels(container) {
+  Array.from(container.children).forEach((row, index, rows) => {
+    row.querySelector(".slot-heading strong").textContent = t("نوبت {0}", localDigits(index + 1));
+    row.querySelector(".remove-slot").hidden = rows.length === 1;
+  });
+  container.nextElementSibling.querySelector(".add-slot").disabled = container.children.length >= 12;
+}
+
+function addSlot(container, slot) {
   const row = $("slot-template").content.firstElementChild.cloneNode(true);
   row.querySelector(".time").value = timeText(slot.minute);
   row.querySelector(".amount").value = slot.amount === null ? "" : amountText(slot.amount);
   row.querySelector(".remove-slot").addEventListener("click", () => {
-    if (container.children.length > 1) row.remove();
+    row.remove();
+    updateSlotLabels(container);
+    container.nextElementSibling.querySelector(".add-slot").focus();
   });
   container.append(row);
+  updateSlotLabels(container);
+  return row;
+}
+
+function updatePhaseLabels() {
+  const phases = Array.from($("phases").children);
+  phases.forEach((field, index) => {
+    field.querySelector("legend").textContent = t("مرحلهٔ {0}", localDigits(index + 1));
+    field.querySelector(".remove-phase").hidden = phases.length === 1;
+  });
+  $("add-phase").disabled = phases.length >= 50;
 }
 
 function addPhase(phase = { start: today(), end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: null }] }) {
-  if ($("phases").children.length >= 50) return;
   const fieldset = $("phase-template").content.firstElementChild.cloneNode(true);
   fieldset.querySelector(".start").value = isoDay(phase.start);
-  fieldset.querySelector(".end").value = phase.end === null ? "" : isoDay(phase.end - 1);
+  fieldset.querySelector(".end").value = phase.end === null || phase.autoEnd ? "" : isoDay(phase.end - 1);
   fieldset.querySelector(".interval").value = phase.interval;
+  const repeat = fieldset.querySelector(".repeat");
+  repeat.value = phase.mask === 127 && phase.interval === 1 ? "daily" : "weekly";
   weekdays.forEach((label, index) => {
     const field = document.createElement("label");
     const checkbox = document.createElement("input");
@@ -105,13 +136,42 @@ function addPhase(phase = { start: today(), end: null, interval: 1, mask: 127, s
   const slots = fieldset.querySelector(".slots");
   phase.slots.forEach(slot => addSlot(slots, slot));
   fieldset.querySelector(".add-slot").addEventListener("click", () => {
-    addSlot(slots);
+    const times = Array.from(slots.querySelectorAll(".time"), field => field.value);
+    let minute = (clockMinute(times.at(-1)) + 240) % 1440;
+    while (times.includes(timeText(minute))) minute = (minute + 1) % 1440;
+    const row = addSlot(slots, { minute, amount: null });
     pickers.refresh($("editor"));
+    row.querySelector(".picker-field").focus();
   });
   fieldset.querySelector(".remove-phase").addEventListener("click", () => {
-    if ($("phases").children.length > 1) fieldset.remove();
+    fieldset.remove();
+    updateEditorMode();
+    $("add-phase").focus();
+  });
+  fieldset.querySelector(".add-exact-day").addEventListener("click", () => {
+    pickers.chooseDate(editorDates.at(-1) ?? today(), day => {
+      if (!editorDates.includes(day)) editorDates = [...editorDates, day].sort((a, b) => a - b);
+      renderExactDates(fieldset);
+      clearEditorFieldError();
+      $("editor-status").textContent = "";
+    });
+  });
+  fieldset.querySelector(".dose-unit-link").addEventListener("click", () => {
+    $("inventory-options").open = true;
+    $("unit").focus();
+  });
+  fieldset.dataset.weekly = String(repeat.value === "weekly");
+  repeat.addEventListener("change", () => {
+    if (repeat.value === "weekly" && fieldset.dataset.weekly === "false") {
+      const start = dayNumber(fieldset.querySelector(".start").value);
+      const weekday = ((start + 3) % 7 + 7) % 7;
+      for (const day of fieldset.querySelectorAll(".weekdays input")) day.checked = Number(day.value) === (1 << weekday);
+      fieldset.dataset.weekly = "true";
+    }
+    updateEditorMode();
   });
   $("phases").append(fieldset);
+  return fieldset;
 }
 
 function openEditor(medicine) {
@@ -130,13 +190,19 @@ function openEditor(medicine) {
   $("stock").readOnly = medicine?.stock != null;
   $("threshold").value = amountText(medicine?.threshold ?? 2000);
   $("editor-status").textContent = "";
+  clearEditorFieldError();
   $("phases").replaceChildren();
   if (medicine) medicine.phases.forEach(addPhase);
   else addPhase();
-  $("specific-dose-dates").value = (medicine?.dates ?? []).map(isoDay).join(", ");
-  $("phased-mode").checked = Boolean(medicine?.phased || needsPhases());
-  $("advanced-plan").open = $("phased-mode").checked;
+  const first = $("phases").firstElementChild;
+  editorDates = (medicine?.dates ?? []).filter(day => day >= medicine.phases[0].start);
+  restoreExactMode = false;
+  $("phased-mode").checked = !editorDates.length && Boolean(medicine?.phased || medicine?.phases.length > 1);
+  $("regular-mode").checked = !$("phased-mode").checked;
+  if (editorDates.length) first.querySelector(".repeat").value = "dates";
+  $("dose-instructions").open = Boolean(medicine?.instructions);
   $("inventory-options").open = false;
+  updateStockOptions();
   updateEditorMode();
   showEditorStep(0, false);
   $("medication-dialog").showModal();
@@ -144,6 +210,7 @@ function openEditor(medicine) {
 
 function showEditorStep(step, focus = true) {
   editorStep = step;
+  $("editor").dataset.step = String(step);
   $("editor-chapter").textContent = editorChapters[step];
   for (const panel of document.querySelectorAll("[data-editor-step]")) panel.hidden = Number(panel.dataset.editorStep) !== step;
   Array.from($("editor-steps").children).forEach((label, index) => {
@@ -165,16 +232,18 @@ function reviewMedicine({ name, phases, dates, stock, unit, threshold, phased, i
   const title = element("h4", name);
   title.dir = "auto";
   const list = element("ol");
-  for (const phase of phases) {
+  for (const [index, phase] of phases.entries()) {
     const range = phase.end === null ? t("از {0}", dashboard.formatDay(phase.start)) :
       t("{0} تا {1}", dashboard.formatDay(phase.start), dashboard.formatDay(phase.end - 1));
     const days = weekdays.filter((_, index) => phase.mask & (1 << weekdayBits[index]));
-    const repeat = dates.length ? dates.map(day => dashboard.formatDay(day)).join(listSeparator) : [
-      range, phase.interval > 1 ? t("هر {0} روز", localDigits(phase.interval)) : days.length === 7 ? t("هر روز") : "",
-      days.length === 7 ? "" : days.join(listSeparator)
-    ].filter(Boolean).join(" · ");
+    const repeat = dates.length ? dates.map(day => dashboard.formatDay(day)).join(listSeparator) :
+      phase.interval > 1 ? t("هر {0} هفته", localDigits(phase.interval)) :
+        days.length === 7 ? t("هر روز") : t("هر هفته");
     const row = element("li");
+    if (phased) row.append(element("h5", t("مرحلهٔ {0}", localDigits(index + 1))));
+    if (!dates.length) row.append(element("p", range));
     row.append(element("strong", repeat));
+    if (!dates.length && days.length < 7) row.append(element("p", days.join(listSeparator)));
     for (const slot of phase.slots) {
       const line = element("p");
       const time = element("bdi", localDigits(timeText(slot.minute)));
@@ -185,64 +254,136 @@ function reviewMedicine({ name, phases, dates, stock, unit, threshold, phased, i
     list.append(row);
   }
   const review = $("editor-review");
-  review.replaceChildren(title, element("p", phased ? t("برنامهٔ چندمرحله‌ای") : t("برنامهٔ مصرف")), list);
+  const notBefore = care.medicines[editing]?.effectiveFrom ?? 0;
+  const next = nextPlannedDose(phases, dates, notBefore);
+  const upcoming = element("p", next ? t("نوبت آینده: {0}، ساعت {1}", dashboard.formatDay(next.day), localDigits(timeText(next.slot.minuteOfDay))) :
+    t("نوبت آینده‌ای در این برنامه نیست."));
+  upcoming.className = "review-upcoming";
+  review.replaceChildren(title, upcoming, list);
   if (instructions) review.append(element("p", instructions));
   const thresholdUnit = doseUnit(unit, threshold);
   if ($("stock").readOnly) review.append(element("p", t("هشدار موجودی در {0} {1}", amountText(threshold), thresholdUnit)));
   else if (stock !== null) review.append(element("p", t("موجودی اولیه {0} {1} · هشدار در {2} {3}", amountText(stock), doseUnit(unit, stock), amountText(threshold), thresholdUnit)));
 }
 
-function needsPhases() {
-  const phases = $("phases");
-  const first = phases.firstElementChild;
-  return phases.children.length > 1 || Boolean(first.querySelector(".end").value) || first.querySelector(".interval").value !== "1";
+function renderExactDates(fieldset) {
+  fieldset.querySelector(".exact-days").replaceChildren(...editorDates.map(day => {
+    const remove = action(dashboard.formatDay(day) + " ×", () => {
+      editorDates = editorDates.filter(value => value !== day);
+      renderExactDates(fieldset);
+      fieldset.querySelector(".add-exact-day").focus();
+    });
+    remove.className = "secondary";
+    remove.setAttribute("aria-label", t("حذف تاریخ {0}", dashboard.formatDay(day)));
+    return remove;
+  }));
 }
 
 function updateEditorMode() {
-  if (!$("phases").children.length) return;
   const phased = $("phased-mode").checked;
+  const phases = Array.from($("phases").children);
   $("editor").dataset.phased = String(phased);
-  const simple = !phased && !$("advanced-plan").open;
-  $("basic-schedule").hidden = !simple;
-  $("basic-time").disabled = !simple;
-  $("basic-dose").disabled = !simple;
-  $("phase-mode-warning").hidden = phased || !needsPhases();
-  if (simple) {
-    const first = $("phases").firstElementChild;
-    const times = Array.from(first.querySelectorAll(".time"), field => field.value);
-    $("basic-time").value = times[0];
-    $("basic-dose").value = first.querySelector(".amount").value;
-    $("basic-extra-times").hidden = times.length === 1;
-    $("basic-extra-times").textContent = times.slice(1).map(localDigits).join(" · ");
-    const days = [...first.querySelectorAll(".weekdays label")].filter(field => field.querySelector("input").checked);
-    const exact = $("specific-dose-dates").value.split(/[,،\s]+/).filter(Boolean);
-    $("basic-repeat").textContent = exact.length ? t("{0} تاریخ مشخص", localDigits(exact.length)) :
-      days.length === 7 ? t("هر روز") : days.map(day => day.textContent).join(" · ");
-    const start = first.querySelector(".start").value;
-    $("basic-start").textContent = start ? t("شروع از {0}", dashboard.formatDay(dayNumber(start))) : "";
+  for (const phase of phases) {
+    const repeat = phase.querySelector(".repeat");
+    repeat.querySelector('[value="dates"]').hidden = phased;
+    repeat.querySelector('[value="dates"]').disabled = phased;
+    phase.querySelector(".weekly-plan").hidden = repeat.value !== "weekly";
+    phase.querySelector(".plan-dates").hidden = repeat.value === "dates";
+    phase.querySelector(".exact-plan").hidden = repeat.value !== "dates";
+    if (repeat.value === "dates") renderExactDates(phase);
   }
+  const warning = $("phase-mode-warning");
+  warning.textContent = phased && restoreExactMode ? t("تاریخ‌های انتخابی فقط در برنامهٔ ثابت استفاده می‌شوند.") :
+    !phased && phases.length > 1 ? t("با ذخیرهٔ برنامهٔ ثابت، فقط مرحلهٔ اول نگه داشته می‌شود.") : "";
+  warning.hidden = !warning.textContent;
+  updatePhaseLabels();
+  updateDoseUnits();
   pickers.refresh($("editor"));
+}
+
+function updateDoseUnits() {
+  const unit = $("unit").value.trim();
+  for (const link of $("phases").querySelectorAll(".dose-unit-link")) {
+    link.textContent = unit ? t("واحد: {0}", doseUnit(unit, 1000)) : t("تعیین واحد");
+  }
+}
+
+function updateStockOptions() {
+  $("threshold-field").hidden = !$("stock").readOnly && !$("stock").value.trim();
+}
+
+function clearEditorFieldError() {
+  $("editor-inline-error")?.remove();
+  const field = $("editor").querySelector('[aria-describedby="editor-inline-error"]');
+  field?.removeAttribute("aria-invalid");
+  field?.removeAttribute("aria-describedby");
+}
+
+function invalidEditorField(field, message) {
+  const details = field.closest("details");
+  if (details) details.open = true;
+  const picker = field.closest(".picker-control");
+  const control = picker?.querySelector(".picker-field") ?? field;
+  const row = picker ?? field.closest("label") ?? field;
+  const hint = element("p", message);
+  hint.id = "editor-inline-error";
+  hint.className = "field-error";
+  row.after(hint);
+  control.setAttribute("aria-invalid", "true");
+  control.setAttribute("aria-describedby", hint.id);
+  control.focus();
+  throw new Error(message);
 }
 
 function editorPhases() {
   const phased = $("phased-mode").checked;
   const active = phased ? Array.from($("phases").children) : [$("phases").firstElementChild];
-  return active.map(fieldset => {
+  const exact = !phased && active[0].querySelector(".repeat").value === "dates";
+  if (exact && !editorDates.length) {
+    invalidEditorField(active[0].querySelector(".add-exact-day"), t("حداقل یک تاریخ مصرف انتخاب کنید."));
+  }
+  const starts = active.map(fieldset => {
+    if (exact) return editorDates[0];
+    const field = fieldset.querySelector(".start");
+    if (!field.value) invalidEditorField(field, t("روز شروع برنامه را انتخاب کنید."));
+    return dayNumber(field.value);
+  });
+  const phases = active.map((fieldset, index) => {
     const field = name => fieldset.querySelector(name);
+    const weekly = field(".repeat").value === "weekly";
+    const checkedDays = [...fieldset.querySelectorAll(".weekdays input:checked")];
+    if (weekly && !checkedDays.length) invalidEditorField(field(".weekdays input"), t("حداقل یک روز هفته را انتخاب کنید."));
+    if (weekly && !field(".interval").validity.valid) invalidEditorField(field(".interval"), t("فاصلهٔ تکرار باید بین ۱ تا ۵۲ هفته باشد."));
+    const next = starts[index + 1] ?? null;
+    const start = starts[index];
+    const endValue = !exact ? field(".end").value : "";
+    const end = endValue ? dayNumber(endValue) + 1 : next;
+    if (next !== null && next <= start) invalidEditorField(active[index + 1].querySelector(".start"), t("شروع این مرحله باید بعد از مرحلهٔ قبلی باشد."));
+    if (end !== null && end <= start) invalidEditorField(field(".end"), t("پایان نمی‌تواند قبل از شروع باشد."));
+    if (next !== null && end > next) invalidEditorField(field(".end"), t("پایان این مرحله با شروع مرحلهٔ بعد هم‌پوشانی دارد."));
+    const seen = new Set();
     const slots = Array.from(field(".slots").children, row => {
-      const [hour, minute] = row.querySelector(".time").value.split(":").map(Number);
-      const amount = quantity(row.querySelector(".amount"), true);
-      if (amount === 0) throw new Error(t("مقدار نوبت باید بیشتر از صفر باشد."));
-      return { minute: hour * 60 + minute, amount };
+      const time = row.querySelector(".time");
+      const dose = row.querySelector(".amount");
+      if (!time.value) invalidEditorField(time, t("ساعت این نوبت را انتخاب کنید."));
+      const minute = clockMinute(time.value);
+      if (seen.has(minute)) invalidEditorField(time, t("برای این ساعت یک نوبت دیگر ثبت شده است."));
+      seen.add(minute);
+      let amount;
+      try { amount = quantity(dose, true); }
+      catch (error) { invalidEditorField(dose, error.message); }
+      if (amount === 0) invalidEditorField(dose, t("مقدار نوبت باید بیشتر از صفر باشد."));
+      return { minute, amount };
     }).sort((a, b) => a.minute - b.minute);
     return {
-      start: dayNumber(field(".start").value),
-      end: phased && field(".end").value ? dayNumber(field(".end").value) + 1 : null,
-      interval: phased ? Number(field(".interval").value) : 1,
-      mask: Array.from(field(".weekdays").querySelectorAll(":checked")).reduce((mask, input) => mask | Number(input.value), 0),
+      start, end,
+      ...(next !== null && !endValue ? { autoEnd: true } : {}),
+      interval: weekly ? Number(field(".interval").value) : 1,
+      mask: weekly ? checkedDays.reduce((mask, input) => mask | Number(input.value), 0) : 127,
       slots
     };
   });
+  return { phases, dates: exact ? editorDates : [] };
 }
 
 async function mutate(change, success, scheduleChanged = false) {
@@ -274,6 +415,7 @@ $("editor").addEventListener("submit", async event => {
   const id = editing ?? crypto.randomUUID();
   try {
     $("editor-status").textContent = "";
+    clearEditorFieldError();
     const name = $("name").value.trim();
     if (editorStep === 0) {
       if (!name) {
@@ -284,26 +426,24 @@ $("editor").addEventListener("submit", async event => {
       return;
     }
     const phased = $("phased-mode").checked;
-    const active = phased ? $("phases") : $("phases").firstElementChild;
-    const selector = phased ? "input" : "input:not(.end, .interval)";
-    if (!Array.from(active.querySelectorAll(selector)).every(field => field.validity.valid)) {
-      $("advanced-plan").open = true;
-      throw new Error(t("تاریخ شروع، فاصلهٔ تکرار و ساعت هر مرحله را بررسی کنید."));
-    }
-    const phases = editorPhases();
-    const dates = phased ? [] : [...new Set($("specific-dose-dates").value.split(/[,،\s]+/).filter(Boolean).map(dayNumber))].sort((a, b) => a - b);
-    if (dates.length) phases[0].mask = 127;
+    const { phases, dates } = editorPhases();
     if (!engine.validMedicationPhases(rules(phases))) {
       throw new Error(t("ترتیب تاریخ‌ها، هم‌پوشانی مرحله‌ها، روزهای هفته و ساعت‌های تکراری را بررسی کنید."));
     }
     const unit = $("unit").value.trim();
     if (!name || (!unit && phases.some(phase => phase.slots.some(slot => slot.amount !== null)))) {
-      throw new Error(t("نام دارو را وارد کنید و برای دوز عددی واحد مصرف را مشخص کنید."));
+      invalidEditorField($("unit"), t("برای دوز عددی، واحد مصرف را مشخص کنید."));
     }
-    const stock = $("stock").readOnly ? null : quantity($("stock"), true);
-    const threshold = quantity($("threshold"));
-    if ((stock !== null || $("stock").readOnly) && phases.some(phase => phase.slots.some(slot => slot.amount === null))) {
-      throw new Error(t("برای پیگیری موجودی، مقدار همهٔ نوبت‌ها را مشخص کنید."));
+    let stock = null;
+    let threshold = 2000;
+    try { if (!$("stock").readOnly) stock = quantity($("stock"), true); }
+    catch (error) { invalidEditorField($("stock"), error.message); }
+    if (stock !== null || $("stock").readOnly) {
+      try { threshold = quantity($("threshold"), true) ?? threshold; }
+      catch (error) { invalidEditorField($("threshold"), error.message); }
+      const active = phased ? $("phases") : $("phases").firstElementChild;
+      const missing = [...active.querySelectorAll(".amount")].find(field => !field.value.trim());
+      if (missing) invalidEditorField(missing, t("برای پیگیری موجودی، مقدار همهٔ نوبت‌ها را مشخص کنید."));
     }
     const instructions = $("instructions").value.trim();
     if (editorStep === 1) {
@@ -319,6 +459,7 @@ $("editor").addEventListener("submit", async event => {
       state.medicines[id] = {
         ...saved,
         id, name, unit: saved?.stock != null ? saved.unit : unit, phases, dates, stock: saved?.stock ?? stock, threshold,
+        ...(saved && saved.stock == null && stock !== null ? { stockTrackedFrom: Date.now() } : {}),
         instructions, icon: $("medicine-icon").value, color: $("medicine-color").value, phased,
         revision: (saved?.revision ?? 0) + 1
       };
@@ -413,25 +554,40 @@ function deleteMedicine(id, parent) {
 
 $("delete-edited-medication").addEventListener("click", () => deleteMedicine(editing, "medication-dialog"));
 
-function nextAmount(medicine) {
-  const now = new Date();
-  const todayDay = today();
-  const currentMinute = now.getHours() * 60 + now.getMinutes();
-  for (const phase of medicine.phases) {
-    const compiled = rules([phase]);
-    const first = Math.max(phase.start, todayDay);
-    // One complete 52-week cycle plus a week covers the longest allowed repeat.
-    const end = Math.min(phase.end ?? Infinity, first + 371);
-    for (let day = first; day < end; day++) {
-      if (medicine.dates?.length && !medicine.dates.includes(day)) continue;
-      const upcoming = engine.medicationSlots(compiled, day).find(slot =>
-        (day !== todayDay || slot.minuteOfDay >= currentMinute) &&
-        !care.doses[doseId(medicine, day, slot.minuteOfDay)]?.status
-      );
-      if (upcoming) return upcoming.milliUnits ?? 0;
+function nextPlannedDose(phases, dates = [], notBefore = 0, excluded = () => false) {
+  const now = Date.now();
+  const earliest = new Date(Math.max(now, notBefore));
+  if (earliest.getFullYear() > 9999) return null;
+  const compiled = rules(phases);
+  const find = (day, slots) => slots.find(slot => {
+    const at = doseTime(day, slot.minuteOfDay);
+    return at > now && at >= notBefore && !excluded(day, slot.minuteOfDay);
+  });
+  const first = localDayNumber(earliest);
+  const last = dayNumber("9999-12-31");
+  if (dates.length) {
+    for (const day of dates) {
+      if (day < first) continue;
+      const slot = find(day, engine.medicationSlots(compiled, day));
+      if (slot) return { day, slot };
+    }
+  } else {
+    for (const phase of compiled) {
+      let day = engine.nextMedicationPhaseDay(phase, first);
+      while (day !== null && day <= last) {
+        const slot = find(day, phase.slots);
+        if (slot) return { day, slot };
+        day = engine.nextMedicationPhaseDay(phase, day + 1);
+      }
     }
   }
   return null;
+}
+
+function nextAmount(medicine) {
+  const next = nextPlannedDose(medicine.phases, medicine.dates, medicine.effectiveFrom,
+    (day, minute) => Boolean(care.doses[doseId(medicine, day, minute)]?.status));
+  return next ? next.slot.milliUnits ?? 0 : null;
 }
 
 function renderMedicine(medicine) {
@@ -754,29 +910,42 @@ $("app-language").addEventListener("change", event => selectLanguage(event.targe
 for (const control of document.querySelectorAll("[data-open-medication]")) control.addEventListener("click", () => openEditor());
 for (const control of document.querySelectorAll("[data-close]")) control.addEventListener("click", () => $(control.dataset.close).close());
 $("add-phase").addEventListener("click", () => {
-  addPhase();
-  pickers.refresh($("editor"));
+  const last = $("phases").lastElementChild;
+  const end = last.querySelector(".end").value;
+  const weekly = last.querySelector(".repeat").value === "weekly";
+  const repeat = last.querySelector(".interval");
+  const interval = weekly && repeat.validity.valid ? Number(repeat.value) : 1;
+  const mask = weekly ? [...last.querySelectorAll(".weekdays input:checked")].reduce((days, input) => days | Number(input.value), 0) : 127;
+  const slots = Array.from(last.querySelectorAll(".time"), field => ({ minute: clockMinute(field.value), amount: null }));
+  const start = end ? dayNumber(end) + 1 : dayNumber(last.querySelector(".start").value) + interval * 7;
+  const fieldset = addPhase({ start, end: null, interval, mask, slots });
+  updateEditorMode();
+  fieldset.querySelector(".picker-field").focus();
 });
-$("advanced-plan").addEventListener("toggle", updateEditorMode);
-$("phased-mode").addEventListener("change", () => {
-  $("advanced-plan").open = $("phased-mode").checked;
+for (const mode of [$("regular-mode"), $("phased-mode")]) mode.addEventListener("change", () => {
+  const firstRepeat = $("phases").querySelector(".repeat");
+  if ($("phased-mode").checked) {
+    restoreExactMode = firstRepeat.value === "dates";
+    if (restoreExactMode) firstRepeat.value = "daily";
+  } else if (restoreExactMode) {
+    firstRepeat.value = "dates";
+    restoreExactMode = false;
+  }
   updateEditorMode();
 });
-$("basic-time").addEventListener("input", () => { $("phases").querySelector(".time").value = $("basic-time").value; });
-$("basic-dose").addEventListener("input", () => { $("phases").querySelector(".amount").value = $("basic-dose").value; });
-for (const control of document.querySelectorAll("[data-dose-change]")) control.addEventListener("click", () => {
-  const field = $("basic-dose");
-  try {
-    const next = Math.max(0, (quantity(field, true) ?? 0) + Number(control.dataset.doseChange));
-    const value = amountText(next);
-    if (engine.quantityFromText(value) === null) throw new Error(t("مقدار از حد مجاز بیشتر است."));
-    field.value = next === 0 ? "" : value;
-    field.dispatchEvent(new Event("input", { bubbles: true }));
-    $("editor-status").textContent = "";
-  } catch (error) {
-    $("editor-status").textContent = error.message;
-    field.focus();
-  }
+$("phases").addEventListener("click", event => {
+  const preset = event.target.closest("[data-dose-value]");
+  if (!preset) return;
+  const field = preset.closest(".slot").querySelector(".amount");
+  field.value = amountText(Number(preset.dataset.doseValue));
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+});
+$("unit").addEventListener("input", updateDoseUnits);
+$("stock").addEventListener("input", updateStockOptions);
+$("editor").addEventListener("input", event => {
+  if (!event.target.matches("input, select, textarea")) return;
+  clearEditorFieldError();
+  $("editor-status").textContent = "";
 });
 window.addEventListener("focus", () => {
   if (!engine || !care) return;

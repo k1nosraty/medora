@@ -14,6 +14,7 @@ export function visitInstant(visit, fallbackZone) {
 }
 
 export function appointmentReminders(visit, settings, zone, at = visitInstant(visit, zone)) {
+  if (visit.remindersOff) return [];
   const clock = timezone(visit.zone ?? zone);
   const offsets = new Map();
   let start = instantForWall(visit.day * dayMs + clockMinute(settings.start) * minuteMs, clock, offsets);

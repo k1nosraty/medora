@@ -83,7 +83,7 @@ test("water stops for the goal day, restarts tomorrow, and honours repeat and pa
   assert.deepEqual(next().kinds, ["water"]);
 });
 
-test("appointment uses clinic timezone, combines offsets, and removes cancelled visits", () => {
+test("appointment uses clinic timezone, combines offsets, and omits disabled or cancelled visits", () => {
   const today = day("2026-11-09");
   const now = instant("2026-11-09T03:00:00Z");
   const visit = { day: today, time: "07:30", zone: "Asia/Tehran", offsets: [60, 120], name: "private" };
@@ -94,6 +94,10 @@ test("appointment uses clinic timezone, combines offsets, and removes cancelled 
   assert.deepEqual(plan().appointments, [[instant("2026-11-09T03:30:00Z"), today, instant("2026-11-09T04:30:00Z")]]);
   assert.deepEqual(nextCareReminder(validSchedule(plan()), now).kinds, ["appointment"]);
   assert.doesNotMatch(JSON.stringify(plan()), /private/);
+  visit.remindersOff = true;
+  assert.deepEqual(plan().appointments, []);
+  delete visit.remindersOff;
+  assert.equal(plan().appointments.length, 1);
   visit.cancelled = true;
   assert.deepEqual(plan().appointments, []);
 });

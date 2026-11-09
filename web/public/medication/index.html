@@ -558,40 +558,25 @@
         </section>
         <section data-editor-step="1" aria-labelledby="editor-schedule" hidden>
           <h3 id="editor-schedule" tabindex="-1">چه وقت و چه مقدار؟</h3>
-          <label class="editor-field">دستور مصرف (اختیاری)<textarea id="instructions" rows="2" maxlength="600"></textarea></label>
-          <label class="feature-head editor-switch">برنامهٔ چندمرحله‌ای<input type="checkbox" id="phased-mode" role="switch"></label>
-          <div id="basic-schedule">
-            <div class="basic-fields">
-              <label class="editor-field">ساعت یادآوری<input id="basic-time" type="time" value="08:00" required></label>
-              <div class="editor-field">
-                <label for="basic-dose">دوز (اختیاری)</label>
-                <div class="dose-stepper">
-                  <button type="button" class="secondary" data-dose-change="-500" aria-label="کاهش دوز به اندازهٔ نیم واحد">−</button>
-                  <input id="basic-dose" dir="ltr" inputmode="decimal" maxlength="11" placeholder="مثلاً ۰٫۵">
-                  <button type="button" class="secondary" data-dose-change="500" aria-label="افزایش دوز به اندازهٔ نیم واحد">+</button>
-                </div>
-              </div>
-            </div>
-            <p class="quiet" id="basic-extra-times" hidden></p>
-            <p class="quiet" id="basic-repeat">هر روز</p><p class="quiet" id="basic-start"></p>
-          </div>
-          <details id="advanced-plan" class="editor-options">
-            <summary>تنظیم روزها و ساعت‌های بیشتر</summary>
-            <p class="quiet phase-only">مرحله تا پایان روز انتخاب‌شده ادامه دارد.</p>
-            <div id="phases"></div>
-            <label class="single-plan-only">تاریخ‌های مشخص (اختیاری)
-              <textarea id="specific-dose-dates" dir="ltr" rows="2" placeholder="2026-11-09, 2026-11-16"></textarea>
-              <small>تاریخ‌ها را به میلادی وارد کنید و با ویرگول جدا کنید.</small>
-            </label>
-            <button id="add-phase" type="button" class="secondary phase-only">افزودن مرحله</button>
+          <fieldset class="plan-mode glass-toolbar">
+            <legend class="visually-hidden">نوع برنامهٔ دارو</legend>
+            <label><input type="radio" name="plan-mode" id="regular-mode" checked><span>برنامهٔ ثابت</span></label>
+            <label><input type="radio" name="plan-mode" id="phased-mode"><span>چندمرحله‌ای</span></label>
+          </fieldset>
+          <p class="quiet phase-only">اگر پایان یک مرحله را خالی بگذاری، آن مرحله با شروع مرحلهٔ بعد تمام می‌شود.</p>
+          <p class="field-error" id="phase-mode-warning" hidden></p>
+          <div id="phases"></div>
+          <button id="add-phase" type="button" class="secondary phase-only block-action">افزودن مرحله</button>
+          <details id="dose-instructions" class="editor-options">
+            <summary>دستور مصرف (اختیاری)</summary>
+            <label class="editor-field">یادداشت مصرف<textarea id="instructions" rows="2" maxlength="600"></textarea></label>
           </details>
-          <p class="field-error" id="phase-mode-warning" hidden>با ذخیره در حالت عادی، تاریخ پایان، مرحله‌های بعدی و فاصلهٔ تکرار حذف می‌شوند.</p>
           <details id="inventory-options" class="editor-options">
             <summary>موجودی و واحد مصرف</summary>
             <div class="fields">
               <label>واحد مصرف<input id="unit" value="قرص" maxlength="30" required></label>
               <label>موجودی اولیه (اختیاری)<input id="stock" dir="ltr" inputmode="decimal" maxlength="11"></label>
-              <label>آستانهٔ هشدار موجودی<input id="threshold" dir="ltr" inputmode="decimal" maxlength="11" value="۲"></label>
+              <label id="threshold-field" hidden>آستانهٔ هشدار موجودی<input id="threshold" dir="ltr" inputmode="decimal" maxlength="11" value="۲"></label>
             </div>
           </details>
         </section>
@@ -599,10 +584,12 @@
           <h3 id="editor-confirm" tabindex="-1">برنامه را یک بار مرور کنید</h3>
           <div id="editor-review"></div>
         </section>
-        <p id="editor-status" class="field-error" role="status"></p>
-        <div class="wizard-actions">
-          <button type="submit" id="editor-next">ادامه</button>
-          <button type="button" id="editor-back" class="secondary" hidden>مرحلهٔ قبل</button>
+        <div class="editor-footer">
+          <p id="editor-status" class="field-error" role="status"></p>
+          <div class="wizard-actions">
+            <button type="submit" id="editor-next">ادامه</button>
+            <button type="button" id="editor-back" class="secondary" hidden>مرحلهٔ قبل</button>
+          </div>
         </div>
         <button type="button" id="delete-edited-medication" class="text-button danger-link block-action" hidden>حذف دارو</button>
       </div>
@@ -625,18 +612,22 @@
     <div id="medicine-details-body" class="sheet-body"></div>
   </dialog>
   <dialog id="visit-dialog" class="sheet" aria-labelledby="visit-form-title">
-    <form id="visit-editor" class="sheet-form">
+    <form id="visit-editor" class="sheet-form" novalidate>
       <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="visit-form-title">قرار جدید</h2><button class="icon-button" type="button" data-close="visit-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
       <div class="sheet-body">
         <label class="editor-field">نام پزشک یا عنوان قرار<input id="visit-name" maxlength="120" required></label>
-        <label class="editor-field">تاریخ قرار<input id="visit-day" type="date" required></label>
-        <label class="editor-field">ساعت قرار<input id="visit-time" type="time" required></label>
+        <div class="visit-when">
+          <label class="editor-field">تاریخ قرار<input id="visit-day" type="date" required></label>
+          <label class="editor-field">ساعت قرار<input id="visit-time" type="time" step="1" required></label>
+        </div>
         <label class="editor-field">مکان<input id="visit-place" maxlength="160"></label>
         <details id="visit-appearance" class="editor-options">
           <summary><span class="visit-appearance-dot" aria-hidden="true"></span>ظاهر قرار (اختیاری)</summary>
           <div id="visit-appearance-preview" class="visit-banner"></div>
-          <label>نوع قرار
-            <select id="visit-category">
+          <div class="visit-type-field">
+            <span id="visit-type-label">نوع قرار</span>
+            <button id="visit-category-open" type="button" class="secondary" aria-haspopup="dialog" aria-labelledby="visit-type-label visit-category-selected"><span id="visit-category-selected"></span><svg aria-hidden="true"><use href="#i-search"/></svg></button>
+            <select id="visit-category" hidden>
               <option value="general">عمومی</option>
               <optgroup label="پزشکان و تخصص‌ها">
                 <option value="family">پزشکی خانواده</option>
@@ -698,27 +689,40 @@
               </optgroup>
               <option value="custom">سفارشی</option>
             </select>
-          </label>
+          </div>
           <label class="editor-field" id="visit-category-name-field" hidden>نام دستهٔ سفارشی (اختیاری)<input id="visit-category-name" dir="auto" maxlength="60"></label>
           <fieldset id="visit-colors"><legend>رنگ قرار</legend><div class="visit-color-grid"></div></fieldset>
         </details>
         <details id="visit-extra" class="editor-options"><summary>گزینه‌های بیشتر</summary>
           <label class="editor-field">منطقهٔ زمانی مطب<input id="visit-zone" dir="ltr" maxlength="64" spellcheck="false"></label>
+          <p class="quiet">تاریخ و ساعت قرار را به وقت مطب وارد کن.</p>
           <label class="editor-field">راه تماس<input id="visit-contact" maxlength="160"></label>
           <label class="editor-field">یادداشت<textarea id="visit-note" maxlength="600" rows="2"></textarea></label>
         </details>
-        <p id="visit-reminder-summary" class="quiet"></p>
-        <fieldset class="reminder-options"><legend>یادآوری زودتر (اختیاری)</legend>
-          <label><input type="checkbox" name="visit-offset" value="60">یک ساعت قبل</label>
-          <label><input type="checkbox" name="visit-offset" value="120">دو ساعت قبل</label>
-          <label><input type="checkbox" name="visit-offset" value="1440">یک روز قبل</label>
-        </fieldset>
+        <details id="visit-reminder-options" class="editor-options">
+          <summary>یادآوری قرار</summary>
+          <label class="feature-head editor-switch">یادآوری این قرار<input id="visit-reminders-enabled" type="checkbox" role="switch" checked></label>
+          <fieldset class="reminder-options" id="visit-reminder-offsets"><legend>یادآوری زودتر (اختیاری)</legend>
+            <label><input type="checkbox" name="visit-offset" value="60">یک ساعت قبل</label>
+            <label><input type="checkbox" name="visit-offset" value="120">دو ساعت قبل</label>
+            <label><input type="checkbox" name="visit-offset" value="1440">یک روز قبل</label>
+          </fieldset>
+        </details>
+        <p id="visit-reminder-summary" class="quiet" aria-live="polite"></p>
         <p id="visit-error" role="alert" class="field-error"></p>
         <button type="submit" class="block-action">ذخیرهٔ قرار</button>
         <button type="button" id="delete-edited-visit" class="text-button danger-link block-action" hidden>حذف قرار</button>
         <button type="button" class="text-button block-action" data-close="visit-dialog">انصراف</button>
       </div>
     </form>
+  </dialog>
+  <dialog id="visit-category-dialog" class="sheet" aria-labelledby="visit-category-title">
+    <div class="sheet-header"><svg aria-hidden="true"><use href="#i-search"/></svg><h2 id="visit-category-title">انتخاب نوع قرار</h2><button type="button" class="icon-button" data-close="visit-category-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="sheet-body">
+      <label class="cabinet-search"><svg aria-hidden="true"><use href="#i-search"/></svg><input id="visit-category-search" type="search" placeholder="جست‌وجوی تخصص یا خدمت" aria-label="جست‌وجوی تخصص یا خدمت" autocomplete="off"></label>
+      <p id="visit-category-empty" class="empty" role="status" hidden>تخصص یا خدمتی با این نام پیدا نشد.</p>
+      <div id="visit-category-results"></div>
+    </div>
   </dialog>
   <dialog id="delete-dialog" class="confirm-dialog" role="alertdialog" aria-labelledby="delete-title" aria-describedby="delete-message">
     <form id="delete-form">
@@ -887,24 +891,48 @@
   <template id="phase-template">
     <fieldset class="phase">
       <legend>مرحلهٔ مصرف</legend>
-      <div class="fields">
+      <label class="plan-repeat">تکرار برنامه
+        <select class="repeat">
+          <option value="daily">هر روز</option>
+          <option value="weekly">روزهای هفته</option>
+          <option value="dates">تاریخ‌های انتخابی</option>
+        </select>
+      </label>
+      <div class="fields plan-dates">
         <label>روز شروع<input class="start" type="date" required></label>
-        <label class="phase-only">روز پایان (اختیاری)<input class="end" type="date"></label>
-        <label class="phase-only">فاصلهٔ تکرار (هفته)<input class="interval" type="number" inputmode="numeric" dir="ltr" min="1" max="52" value="1" required></label>
+        <label>روز پایان (اختیاری)<input class="end" type="date"></label>
       </div>
-      <div class="weekdays" aria-label="روزهای مصرف"></div>
+      <div class="weekly-plan" hidden>
+        <label>فاصلهٔ تکرار (هفته)<input class="interval" type="number" inputmode="numeric" dir="ltr" min="1" max="52" value="1" required></label>
+        <div class="weekdays" role="group" aria-label="روزهای مصرف"></div>
+      </div>
+      <div class="exact-plan" hidden>
+        <p class="quiet">ساعت‌ها و دوزهای پایین در همهٔ تاریخ‌های انتخابی یکسان‌اند.</p>
+        <div class="exact-days"></div>
+        <button type="button" class="secondary add-exact-day">＋ افزودن تاریخ</button>
+      </div>
+      <div class="doses-heading"><h4>نوبت‌های مصرف</h4><button type="button" class="text-button dose-unit-link"></button></div>
       <div class="slots"></div>
       <div class="buttons">
-        <button type="button" class="add-slot secondary">افزودن ساعت</button>
+        <button type="button" class="add-slot secondary">افزودن نوبت</button>
         <button type="button" class="remove-phase secondary phase-only">حذف مرحله</button>
       </div>
     </fieldset>
   </template>
   <template id="slot-template">
-    <div class="fields slot">
-      <label>ساعت مصرف<input class="time" type="time" dir="ltr" value="08:00" required></label>
-      <label>مقدار هر نوبت<input class="amount" inputmode="decimal" dir="ltr" maxlength="11" placeholder="مثلاً ۰٫۵"></label>
-      <button type="button" class="remove-slot secondary">حذف ساعت</button>
+    <div class="slot">
+      <div class="slot-heading"><strong></strong><button type="button" class="remove-slot text-button danger-link">حذف نوبت</button></div>
+      <div class="slot-fields">
+        <label>ساعت مصرف<input class="time" type="time" dir="ltr" value="08:00" required></label>
+        <div class="dose-field">
+          <label>دوز (اختیاری)<input class="amount" inputmode="decimal" dir="ltr" maxlength="15" placeholder="مثلاً ۰٫۵"></label>
+          <div class="dose-quick-values" role="group" aria-label="انتخاب سریع دوز">
+            <button type="button" class="secondary" data-dose-value="250" aria-label="یک‌چهارم واحد">¼</button>
+            <button type="button" class="secondary" data-dose-value="500" aria-label="نیم واحد">½</button>
+            <button type="button" class="secondary" data-dose-value="1000" aria-label="یک واحد">۱</button>
+          </div>
+        </div>
+      </div>
     </div>
   </template>
 </body>

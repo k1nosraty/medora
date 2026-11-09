@@ -1,4 +1,4 @@
-const cacheName = "medora-medication-shell-v22";
+const cacheName = "medora-medication-shell-v23";
 const shell = [
   "/medication/",
   "/medication/bootstrap.js",

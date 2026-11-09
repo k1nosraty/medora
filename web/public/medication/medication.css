@@ -310,11 +310,9 @@
 .medora #permission-screen h1, .medora #permission-screen p { margin-block: 1rem; }
 .medora .editor-switch { display: flex; gap: .6rem; align-items: center; padding-block: .2rem; }
 .medora .editor-switch input { flex: none; }
-.medora [data-phased="true"] #advanced-plan > summary,
 .medora [data-phased="false"] .phase-only,
 .medora [data-phased="false"] .phase:not(:first-child),
 .medora [data-phased="false"] .phase legend { display: none; }
-.medora [data-phased="false"] .phase:first-child { border: 0; padding: 0; }
 
 .medora .sheet button.block-action, .medora .picker-actions button { border-radius: 3rem; }
 .medora #water-dialog .sheet-body { padding-block: 1rem 1.35rem; }
@@ -366,7 +364,6 @@
 .medora .reminder-options input { inline-size: 1.1rem; min-block-size: auto; accent-color: var(--action); }
 .medora .dose-quick { margin-block-start: .45rem; }
 .medora .badge[data-status="snoozed"] { color: var(--warn); }
-.medora [data-phased="true"] .single-plan-only { display: none; }
 .medora #android-restore .backup-file-picker {
   position: relative;
   display: grid;
@@ -585,8 +582,6 @@
 .wizard-steps li[aria-current="step"] { background: var(--dock-active); color: var(--action); font-weight: 800; border-color: var(--dock-active); }
 .wizard-steps li[data-complete="true"] { background: var(--ok-bg); color: var(--ok); }
 .medora [data-editor-step] h3 { font-size: 1.15rem; font-weight: 800; margin-block-end: .55rem; }
-.basic-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
-.medora .basic-fields .editor-field { min-inline-size: 0; }
 .wizard-actions { display: flex; gap: .5rem; }
 .medora .wizard-actions button { border-radius: 3rem; }
 .medora #editor-next { flex: 1; background: var(--lime); border-color: var(--lime); color: var(--lime-ink); }

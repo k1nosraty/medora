@@ -146,12 +146,12 @@ export function installPickers({ today, selectedDay, dashboard }) {
         fields.set(field, control);
       }
       const formatted = field.value && (field.type === "date" ? dashboard.formatDay(dayNumber(field.value)) :
-        localDigits(field.value));
+        localDigits(field.value.slice(0, 5)));
       const caption = label.textContent.trim();
-      control.textContent = field.id === "basic-time" && formatted ? t("نوبت ۱: ساعت {0}", formatted) : formatted || caption;
+      control.textContent = formatted || t(field.type === "date" ? "انتخاب تاریخ" : "انتخاب ساعت");
       control.setAttribute("aria-label", formatted ? caption + listSeparator + formatted : caption);
     }
   }
 
-  return { refresh };
+  return { refresh, chooseDate: (day, select) => openDate(day, Infinity, select) };
 }
