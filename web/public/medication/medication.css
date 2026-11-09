@@ -338,7 +338,34 @@
 .medora .dose-quick { margin-block-start: .45rem; }
 .medora .badge[data-status="snoozed"] { color: var(--warn); }
 .medora [data-phased="true"] .single-plan-only { display: none; }
-.medora #android-backup-file { inline-size: 100%; }
+.medora #android-restore .backup-file-picker {
+  position: relative;
+  display: grid;
+  gap: .15rem;
+  margin-block: .65rem;
+  padding: .55rem .7rem;
+  border: 1px solid var(--outline);
+  border-radius: .9rem;
+  background: var(--field);
+  cursor: pointer;
+}
+.backup-file-picker > span { font-weight: 650; color: var(--action); }
+.backup-file-picker bdi { overflow-wrap: anywhere; }
+.medora #android-backup-file { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.backup-file-picker:focus-within { outline: 2px solid var(--action); outline-offset: 2px; }
+.medora #android-backup-password { inline-size: 100%; }
+.medora #android-restore .editor-switch { min-block-size: 2.75rem; cursor: pointer; }
+.medora #android-backup-confirm {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  min-block-size: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--action);
+}
+#android-restore-status:empty { margin: 0; }
+.medora #android-restore-status[data-state="error"] { color: var(--error); }
+.medora #android-restore-status[data-state="success"] { color: var(--ok); }
 .medora [data-ink="gold"] { --pill-base: #f3c56a; }
 .medora [data-ink="green"] { --pill-base: #35b6a2; }
 .medora [data-ink="blue"] { --pill-base: #a8ddf2; }

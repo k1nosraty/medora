@@ -615,38 +615,65 @@ const dashboard = wellness({
 const pickers = installPickers({ selectedDay, today, dashboard });
 const updateAppearance = installAppearance();
 
-$("android-restore").addEventListener("submit", async event => {
+const backupForm = $("android-restore");
+const backupInput = $("android-backup-file");
+const emptyBackupFilename = $("android-backup-filename").textContent;
+
+function backupFeedback(message, state) {
+  const status = $("android-restore-status");
+  status.dataset.state = state;
+  status.textContent = message;
+  if (message) status.scrollIntoView({ block: "nearest" });
+}
+
+backupForm.addEventListener("reset", () => {
+  $("android-backup-filename").textContent = emptyBackupFilename;
+  backupFeedback("", "");
+});
+backupInput.addEventListener("change", () => {
+  const file = backupInput.files[0];
+  $("android-backup-filename").textContent = file?.name ?? emptyBackupFilename;
+  backupFeedback("", "");
+});
+
+backupForm.addEventListener("submit", async event => {
   event.preventDefault();
-  const file = $("android-backup-file").files[0];
+  const file = backupInput.files[0];
   const field = $("android-backup-password");
   const submit = $("android-restore-submit");
-  const status = $("android-restore-status");
-  const password = field.value;
-  field.value = "";
+  if (submit.disabled) return;
   if (!file || file.size > maxBackupBytes) {
-    status.textContent = "یک فایل پشتیبان با حجم حداکثر ۱۶ مگابایت انتخاب کنید.";
+    backupFeedback("یک فایل پشتیبان با حجم حداکثر ۱۶ مگابایت انتخاب کنید.", "error");
     return;
   }
+  const password = field.value;
+  field.value = "";
+  const isCurrent = () => $("settings-dialog").open && $("settings-dialog").dataset.panel === "backup-settings" &&
+    backupInput.files[0] === file;
   submit.disabled = true;
-  status.textContent = "در حال بررسی فایل…";
+  backupFeedback("در حال بررسی فایل…", "busy");
   try {
     const backup = await readAndroidBackup(new Uint8Array(await file.arrayBuffer()), password,
       phases => engine.validMedicationPhases(rules(phases)), localZone());
-    if (!$("settings-dialog").open || $("settings-dialog").dataset.panel !== "backup-settings" ||
-        $("android-backup-file").files[0] !== file || !$("android-backup-confirm").checked) return;
+    if (!isCurrent()) return;
+    if (!$("android-backup-confirm").checked) {
+      backupFeedback("", "");
+      return;
+    }
     const success = await mutate(state => {
       changeReminderRevision(state);
       if (state.reminders) state.reminders.enabled = false;
       Object.assign(state, backup);
     }, "سوابق اندروید بازیابی شد.", true);
+    if (!isCurrent()) return;
     if (success) {
-      event.target.reset();
-      status.textContent = "سوابق بازیابی شدند. اعلان‌ها را در تنظیمات دوباره فعال کنید.";
+      backupForm.reset();
+      backupFeedback("سوابق بازیابی شدند. اعلان‌ها را در تنظیمات دوباره فعال کنید.", "success");
     } else {
-      status.textContent = "ذخیرهٔ سوابق انجام نشد. دوباره تلاش کنید.";
+      backupFeedback("ذخیرهٔ سوابق انجام نشد. دوباره تلاش کنید.", "error");
     }
   } catch {
-    status.textContent = "فایل یا رمز معتبر نیست، یا این نسخه از فایل پشتیبانی نمی‌شود.";
+    if (isCurrent()) backupFeedback("فایل یا رمز معتبر نیست، یا این نسخه از فایل پشتیبانی نمی‌شود.", "error");
   } finally {
     submit.disabled = false;
   }

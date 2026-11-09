@@ -109,7 +109,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   }
   function selectSettings(panel) {
     settings.dataset.panel = panel || "";
-    $("settings-mark").hidden = Boolean(panel);
+    $("settings-mark").toggleAttribute("hidden", Boolean(panel));
     $("settings-back").hidden = !panel;
     $("settings-subtitle").textContent = settingsPanels[panel] ?? "یادآوری‌ها مطابق برنامهٔ روزانهٔ شما";
     $("settings-status").textContent = "";
@@ -119,10 +119,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       $("calendar-setting").value = data.calendar ?? "persian";
       $("theme-setting").value = data.theme ?? "system";
     }
-    if (panel === "backup-settings") {
-      $("android-restore").reset();
-      $("android-restore-status").textContent = "";
-    }
+    if (panel === "backup-settings") $("android-restore").reset();
     if (panel === "water-settings") {
       const water = data.waterReminders ?? waterDefaults;
       $("water-goal").value = data.waterGoal ?? 2000;

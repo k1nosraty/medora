@@ -384,12 +384,16 @@
         <summary><svg aria-hidden="true"><use href="#i-lock"/></svg><span>پشتیبان‌گیری<small>بازیابی فایل رمزدار اندروید</small></span></summary>
         <form id="android-restore">
           <p>فایل پشتیبان مدورا با پسوند <bdi>.medora</bdi> روی همین دستگاه باز می‌شود.</p>
-          <label>فایل پشتیبان<input id="android-backup-file" type="file" required></label>
+          <label class="backup-file-picker">
+            <span>انتخاب فایل پشتیبان</span>
+            <bdi id="android-backup-filename" class="quiet">فایلی انتخاب نشده است.</bdi>
+            <input id="android-backup-file" type="file" aria-label="انتخاب فایل پشتیبان" aria-describedby="android-backup-filename" required>
+          </label>
           <label>رمز فایل<input id="android-backup-password" type="password" maxlength="128" autocomplete="off" spellcheck="false" required></label>
           <p class="quiet">با بازیابی، داده‌های فعلی وب جایگزین می‌شوند. بعد از بازیابی، یادآوری‌ها را دوباره فعال کنید.</p>
-          <label class="editor-switch">جایگزینی سوابق فعلی را تأیید می‌کنم<input type="checkbox" id="android-backup-confirm" required></label>
-          <button id="android-restore-submit" type="submit">بازیابی از فایل پشتیبان</button>
+          <label class="editor-switch"><input type="checkbox" id="android-backup-confirm" required><span>جایگزینی سوابق فعلی را تأیید می‌کنم.</span></label>
           <p id="android-restore-status" role="status"></p>
+          <button id="android-restore-submit" type="submit" class="block-action">بازیابی از فایل پشتیبان</button>
         </form>
       </details>
       <p id="settings-status" role="status" class="quiet"></p>
