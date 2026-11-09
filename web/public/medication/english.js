@@ -45,6 +45,7 @@ export default {
   "وضعیت اعلان این گوشی را در تنظیمات مدورا ببینید.": "See notification status for this device in Medora settings.",
   "تنظیم اعلان‌ها": "Notification settings",
   "قفسهٔ داروهای من": "Your medicine cabinet",
+  "قرارهای من": "My visits",
   "＋ داروی جدید": "＋ New medicine",
   "نوبت‌های روز": "Daily doses",
   "مصرف ثبت‌شده": "Doses logged",

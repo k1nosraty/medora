@@ -327,12 +327,12 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("settings-status").textContent = $("status").textContent;
   });
 
-  function openVisit(visit, date = selectedDay()) {
+  function openVisit(visit) {
     editingVisit = visit?.id ?? null;
     $("delete-edited-visit").hidden = !visit;
     $("visit-form-title").textContent = visit ? t("ویرایش قرار") : t("قرار جدید");
     $("visit-name").value = visit?.name ?? "";
-    $("visit-day").value = iso(visit?.day ?? date);
+    $("visit-day").value = iso(visit?.day ?? selectedDay());
     $("visit-time").value = visit?.time ?? localClock();
     $("visit-place").value = visit?.place ?? "";
     $("visit-note").value = visit?.note ?? "";
@@ -404,8 +404,18 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     return svg;
   }
 
-  function visitCard(visit, actionable = false, featured = false) {
-    const card = element("article", "", featured ? "visit visit-card visit-featured" : "visit visit-card");
+  function visitCard(visit, actionable, variant = "compact") {
+    const card = element("article", "", "visit visit-card");
+    if (variant !== "compact") {
+      card.classList.add("visit-shelf-card");
+      const banner = element("div", "", "visit-banner");
+      banner.append(visitIllustration());
+      if (variant === "next") {
+        card.classList.add("visit-featured");
+        banner.append(element("span", t("نزدیک‌ترین قرار"), "visit-eyebrow"));
+      }
+      card.append(banner);
+    }
     const title = element("h3", visit.name, "visit-title");
     title.dir = "auto";
     const local = displayVisit(visit);
@@ -418,19 +428,18 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     hour.dateTime = new Date(local.instant).toISOString();
     hour.dir = "ltr";
     const body = element("div", "", "visit-card-body");
-    if (featured) body.append(element("p", t("نزدیک‌ترین قرار"), "visit-eyebrow"));
     body.append(title, hour);
     const header = element("div", "", "visit-card-header");
     header.append(day, body);
-    if (featured) header.append(visitIllustration());
-    card.append(header);
+    const details = variant === "compact" ? card : element("div", "", "visit-shelf-details");
+    details.append(header);
     if (visit.zone && visit.zone !== localZone()) {
-      card.append(element("p", t("ساعت مطب {0}، {1} ({2})", formatDay(visit.day), clockText(visit.time), visit.zone), "quiet"));
+      details.append(element("p", t("ساعت مطب {0}، {1} ({2})", formatDay(visit.day), clockText(visit.time), visit.zone), "quiet"));
     }
-    if (visit.place) card.append(element("p", t("مکان: {0}", visit.place), "quiet"));
-    if (visit.cancelled) card.append(element("p", t("قرار لغو شده"), "badge"));
-    if (visit.note) card.append(element("p", visit.note));
-    if (visit.contact) card.append(element("p", t("تماس: {0}", visit.contact), "quiet"));
+    if (visit.place) details.append(element("p", t("مکان: {0}", visit.place), "quiet"));
+    if (visit.cancelled) details.append(element("p", t("قرار لغو شده"), "badge"));
+    if (visit.note) details.append(element("p", visit.note));
+    if (visit.contact) details.append(element("p", t("تماس: {0}", visit.contact), "quiet"));
     if (actionable) {
       const controls = element("div", "", "buttons");
       controls.append(button(t("ویرایش"), () => openVisit(visit)), button(visit.cancelled ? t("فعال‌کردن قرار") : t("لغو قرار"), () => {
@@ -442,8 +451,9 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       const remove = button(t("حذف قرار"), () => deleteVisit(visit.id));
       remove.className = "text-button danger-link";
       controls.append(remove);
-      card.append(controls);
+      details.append(controls);
     }
+    if (details !== card) card.append(details);
     return card;
   }
 
@@ -462,12 +472,12 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const content = [];
     if (upcoming.length && visitFilter !== "past") {
       const [next, ...later] = upcoming;
-      content.push(visitCard(next, true, true));
-      if (later.length) content.push(element("h2", t("قرارهای بعدی")), ...later.map(visit => visitCard(visit, true)));
+      content.push(visitCard(next, true, "next"));
+      if (later.length) content.push(element("h2", t("قرارهای بعدی")), ...later.map(visit => visitCard(visit, true, "shelf")));
     }
     if (past.length && visitFilter !== "upcoming") {
       if (visitFilter === "all") content.push(element("h2", t("گذشته و لغوشده")));
-      content.push(...past.map(visit => visitCard(visit, true)));
+      content.push(...past.map(visit => visitCard(visit, true, "shelf")));
     }
     if (!content.length) {
       const card = element("div", "", "visit-card visit-empty");
@@ -521,10 +531,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       ...scheduledDoses(state, day).map(dose => renderDose(state.medicines[dose.medicineId], dose)),
       ...Object.values(state.visits ?? {}).filter(visit => displayVisit(visit).day === day).map(visit => visitCard(visit, true))
     ];
-    const add = button(t("قرار جدید"), () => openVisit(null, day));
-    add.className = "block-action";
     $("calendar-activity").replaceChildren(element("h2", formatDay(day, true)),
-      ...(entries.length ? entries : [empty(t("فعالیتی ثبت نشده است."))]), add);
+      ...(entries.length ? entries : [empty(t("فعالیتی ثبت نشده است."))]));
   }
 
   function renderReports(day, goal, totals, doses) {

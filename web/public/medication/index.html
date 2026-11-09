@@ -188,12 +188,15 @@
       </div>
       <div data-screen="appointments" hidden>
         <div class="visit-toolbar glass-toolbar">
+          <div class="section-heading" id="visits-heading">
+            <h2>قرارهای من</h2>
+            <button id="visit-add" type="button" data-open-visit><svg aria-hidden="true"><use href="#i-plus"/></svg>قرار جدید</button>
+          </div>
           <div class="segmented" id="visit-filters" role="group" aria-label="بازهٔ قرارها">
             <button type="button" data-visit-filter="all" aria-pressed="true">همه</button>
             <button type="button" data-visit-filter="upcoming" aria-pressed="false">پیش‌رو</button>
             <button type="button" data-visit-filter="past" aria-pressed="false">گذشته و لغوشده</button>
           </div>
-          <button id="visit-add" type="button" data-open-visit><svg aria-hidden="true"><use href="#i-plus"/></svg>قرار جدید</button>
         </div>
         <div id="visits"></div>
       </div>

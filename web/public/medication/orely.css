@@ -209,10 +209,9 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 }
 #plans > :first-child { grid-column: auto; }
 #plans > .empty { min-inline-size: 0; }
-.medora #plans .treatment {
+.medora :is(#plans .treatment, #visits .visit-shelf-card) {
   position: relative;
   isolation: isolate;
-  scroll-snap-align: start;
   min-inline-size: 0;
   min-block-size: 16rem;
   padding: .72rem;
@@ -222,16 +221,21 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
   border: 1px solid var(--outline);
   border-radius: 1.48rem;
   background: var(--panel);
+  color: var(--ink);
 }
+.medora #plans .treatment { scroll-snap-align: start; }
 .medora #plans .treatment-profile { padding: 0; }
 .medora #plans .treatment-profile .medication-banner {
   float: none;
   inline-size: 100%;
+  --banner-tint: var(--pill-base);
+}
+.medora :is(#plans .treatment-profile .medication-banner, #visits .visit-banner) {
   block-size: clamp(7.8rem, 33vw, 10rem);
   margin: 0 0 .36rem;
   border-radius: 1rem;
   background: radial-gradient(ellipse at 30% 22%, #fff4, transparent 58%),
-    linear-gradient(135deg, color-mix(in srgb, var(--pill-base) 42%, var(--stage)), var(--stage));
+    linear-gradient(135deg, color-mix(in srgb, var(--banner-tint) 42%, var(--stage)), var(--stage));
 }
 .medora #plans .treatment-profile .medication-banner .medication-badge {
   inline-size: 8rem;
@@ -245,13 +249,13 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 .medora .segmented { padding: .24rem; border-radius: 1.18rem; }
 .medora .segmented:not(.glass-toolbar) { background: var(--stage); }
 .medora .glass-toolbar { padding: .3rem; border-radius: 1.18rem; }
-.visit-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: stretch;
-  gap: .3rem;
-  margin-block: 1rem;
+.medora .visit-toolbar { margin-block: 1rem .75rem; padding: .6rem .7rem .3rem; }
+.medora #visits-heading {
+  flex-wrap: nowrap;
+  margin-block-end: .38rem;
+  padding-inline: .25rem;
 }
+.medora #visits-heading h2 { min-inline-size: 0; margin: 0; overflow-wrap: anywhere; }
 .medora #visit-filters { background: transparent; padding: 0; }
 .medora #visit-filters button { min-inline-size: 0; border-radius: .9rem; text-wrap: balance; }
 .medora #visit-filters button[aria-pressed="true"],
@@ -260,7 +264,7 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
   color: var(--action);
   box-shadow: 0 .14rem .35rem var(--glass-shadow);
 }
-.medora #visit-add { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; border-radius: .9rem; padding-inline: .58rem; }
+.medora #visit-add { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: .3rem; border-radius: 5rem; padding-inline: .75rem; }
 .medora #visit-add svg { inline-size: 1.1rem; block-size: 1.1rem; }
 #visits { display: grid; gap: .7rem; }
 .medora #visits > h2 { margin: .35rem .1rem 0; font-size: 1.04rem; }
@@ -293,28 +297,42 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.medora :is(#visits, #calendar-activity) article.visit-card:not(.visit-featured) { background: var(--panel); color: var(--ink); }
-.medora :is(#visits, #calendar-activity) article.visit-card:not(.visit-featured) :is(.visit-date, .visit-hour) { background: var(--visit); }
-.medora #visits .visit-featured, .medora .visit-empty {
-  background: radial-gradient(ellipse at 15% 0, var(--cover-light), transparent 72%), var(--cover-shade);
-  color: var(--cover-text);
-  border: 1px solid #ffffff38;
-  border-radius: 1.6rem;
-  padding: clamp(.8rem, 3.5vw, 1.35rem);
-  box-shadow: 0 .35rem .9rem var(--glass-shadow);
+.medora #calendar-activity article.visit-card { background: var(--panel); color: var(--ink); }
+.medora :is(#visits, #calendar-activity) .visit-card :is(.visit-date, .visit-hour) { background: var(--visit); }
+.visit-banner {
+  --banner-tint: color-mix(in srgb, var(--visit) 45%, #c58ec1);
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
 }
-.medora .visit-featured .quiet { color: var(--cover-text); }
-.medora .visit-featured .visit-card-header { align-items: center; min-block-size: 6rem; }
-.medora .visit-featured .visit-date,
-.medora .visit-featured .visit-hour { background: #ffffff24; color: var(--cover-text); }
-.medora .visit-featured .visit-title { font-size: clamp(1.08rem, 4.6vw, 1.5rem); line-height: 1.3; }
-.medora .visit-eyebrow { margin: 0 0 .25rem; font-size: .76rem; }
-.medora svg.visit-illustration { inline-size: clamp(3.65rem, 22vw, 7.5rem); block-size: auto; aspect-ratio: 160 / 132; }
-.medora .visit-featured .buttons { border-block-start: 1px solid #fff4; padding-block-start: .35rem; margin-block-start: .6rem; }
-.medora .visit-featured .buttons button { color: var(--cover-text); }
-.medora .visit-featured .buttons .danger-link { color: #ffd3db; }
-.medora .visit-featured :focus-visible { outline-color: var(--cover-text); }
-.medora .visit-empty { display: flex; align-items: center; justify-content: space-between; gap: .8rem; min-block-size: 7rem; }
+.medora .visit-eyebrow {
+  position: absolute;
+  inset-inline-end: .55rem;
+  inset-block-end: .45rem;
+  padding: .15rem .48rem;
+  border-radius: 5rem;
+  background: var(--panel);
+  color: var(--visit-ink);
+  font-size: .72rem;
+}
+.medora .visit-shelf-card .visit-card-header { margin-block: .4rem .15rem; align-items: center; }
+.medora .visit-shelf-card .visit-title { font-size: 1.12rem; line-height: 1.3; }
+.visit-shelf-details { display: flex; flex: 1; flex-direction: column; min-inline-size: 0; overflow-wrap: anywhere; }
+.visit-shelf-details .badge { align-self: start; }
+.medora .visit-shelf-card .buttons { margin-block-start: auto; padding-block-start: .3rem; }
+.medora svg.visit-illustration { inline-size: 8rem; max-inline-size: 48%; block-size: auto; aspect-ratio: 160 / 132; }
+.medora .visit-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  min-block-size: 7rem;
+  padding: .8rem 1rem;
+  border: 1px solid var(--outline);
+  border-radius: 1.48rem;
+  background: var(--stage);
+}
 
 .medora .insights-tabs {
   gap: .25rem;
@@ -426,6 +444,15 @@ html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem au
   .medora .daily-sheet #today-water { grid-column: 2; grid-row: 2 / span 2; }
   .medora .daily-sheet #today-reminders { grid-column: 2; }
   #plans { grid-auto-columns: min(37%, 18rem); }
+  #visits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #visits > :is(h2, .visit-empty, .visit-featured) { grid-column: 1 / -1; }
+  .medora #visits .visit-featured {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: .95rem;
+    min-block-size: 0;
+  }
+  .medora #visits .visit-featured .visit-banner { block-size: auto; min-block-size: 10rem; margin: 0; }
   .report-cards { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: start; }
   #calendar-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
   .medora #calendar-panel > section { margin-block: 0; }
@@ -436,7 +463,7 @@ html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem au
   .medora .story-copy h2 { font-size: 1.64rem; }
   .medora .dock button { font-size: .68rem; }
   .medora .header-tools { gap: .28rem; }
-  .visit-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .medora #visit-add { font-size: .875rem; }
 }
 .medora #today-dates .day-week { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .medora #today-dates .day-week .calendar-dots { gap: .13rem; }
