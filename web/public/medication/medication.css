@@ -297,9 +297,6 @@
 .medora #water-options { padding: .25rem 0; background: transparent; }
 .medora #water-options summary { color: var(--action); }
 .medora #water-dialog .block-action { margin-block-start: .75rem; }
-.medora #medicine-appearance summary { display: flex; align-items: center; gap: .5rem; min-block-size: 3.25rem; }
-.medora #medicine-appearance summary::after { content: "⌄"; margin-inline-start: auto; }
-.medora #medicine-appearance[open] summary::after { content: "⌃"; }
 .medora #time-picker { background: var(--panel); }
 .medora #time-picker .sheet-body { padding-block: 1.1rem 1.25rem; }
 .medora #time-picker h2 { font-size: 1.25rem; margin-block-end: 1rem; }
@@ -319,3 +316,34 @@
 .medora #picker-days button { inline-size: min(100%, 2.85rem); margin-inline: auto; }
 .medora #date-picker .picker-actions { flex-wrap: wrap; }
 .medora #date-picker .picker-actions div { display: flex; gap: .25rem; }
+.medora .reminder-options { display: flex; flex-wrap: wrap; gap: .25rem .6rem; }
+.medora .reminder-options label { display: inline-flex; align-items: center; gap: .3rem; min-block-size: 2.75rem; }
+.medora .reminder-options input { inline-size: 1.1rem; min-block-size: auto; accent-color: var(--action); }
+.medora .dose-quick { margin-block-start: .45rem; }
+.medora .badge[data-status="snoozed"] { color: var(--warn); }
+.medora [data-phased="true"] .single-plan-only { display: none; }
+.medora #android-backup-file { inline-size: 100%; }
+.medora [data-ink="gold"] { --pill-base: #f3c56a; }
+.medora [data-ink="green"] { --pill-base: #35b6a2; }
+.medora [data-ink="blue"] { --pill-base: #a8ddf2; }
+.medora [data-ink="purple"] { --pill-base: #b8a4e8; }
+.medora [data-ink="rose"] { --pill-base: #f472b6; }
+.medora [data-ink="slate"] { --pill-base: #94a3b8; }
+.medora svg.medication-badge { inline-size: 2.75rem; block-size: 2.75rem; stroke-width: 3; --pill-edge: color-mix(in srgb, var(--pill-base), black); }
+.pill-body { fill: var(--pill-base); stroke: var(--pill-edge); }
+.pill-light { fill: color-mix(in srgb, var(--pill-base) 45%, white); stroke: var(--pill-edge); }
+.pill-edge { fill: var(--pill-edge); stroke: var(--pill-edge); }
+.pill-line { stroke: var(--pill-edge); }
+.medora [data-color="slate"] { background: #e7ecf1; color: #283e4d; }
+@media (prefers-color-scheme: dark) {
+  .medora:not([data-theme="light"]) [data-color="slate"] { background: #293a46; color: #e7ecf1; }
+}
+.medora[data-theme="dark"] [data-color="slate"] { background: #293a46; color: #e7ecf1; }
+.medora .appearance-tile { display: flex; gap: .5rem; align-items: center; inline-size: 100%; margin-block: .45rem; border-color: var(--outline); }
+.medora .appearance-tile > svg { margin-inline-start: auto; inline-size: 1.15rem; }
+.medora .appearance-tile > span:first-child, #appearance-preview-icon { display: inline-flex; }
+.appearance-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .4rem; margin-block: .4rem .85rem; }
+.medora .appearance-grid button { display: grid; justify-items: center; align-content: start; gap: .2rem; padding: .35rem .12rem; font-size: .85rem; }
+.medora .appearance-grid button[aria-pressed="true"] { outline: 2px solid var(--action); outline-offset: -2px; }
+.appearance-swatch { inline-size: 2rem; block-size: 2rem; border-radius: 50%; background: var(--pill-base); }
+.medora #appearance-preview { display: flex; gap: .65rem; align-items: center; }

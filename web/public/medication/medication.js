@@ -2,6 +2,9 @@ import { accessCare } from "./storage.js";
 import { changeReminderRevision, initializeReminders, syncReminders } from "./reminders.js";
 import { wellness } from "./wellness.js";
 import { installPickers } from "./pickers.js";
+import { localZone, minuteMs } from "./care-plan.js";
+import { maxBackupBytes, readAndroidBackup } from "./android-backup.js";
+import { installAppearance, medicationBadge } from "./medication-art.js";
 
 const $ = id => document.getElementById(id);
 const dayLength = 86_400_000;
@@ -12,11 +15,13 @@ let care;
 let editing;
 let editingRevision;
 let busy = false;
-const medicineIcons = { pill: "pill", capsule: "capsule", drops: "water", syrup: "syrup", injection: "injection" };
+const doseStates = { taken: "مصرف شد", skipped: "مصرف نشد", snoozed: "به تعویق افتاد" };
 
 function dayNumber(iso) {
   const ms = Date.parse(`${iso}T00:00:00Z`);
-  if (!Number.isFinite(ms) || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error("تاریخ را کامل وارد کنید.");
+  if (!Number.isFinite(ms) || !/^\d{4}-\d{2}-\d{2}$/.test(iso) || new Date(ms).toISOString().slice(0, 10) !== iso) {
+    throw new Error("تاریخ را کامل وارد کنید.");
+  }
   return ms / dayLength;
 }
 const isoDay = number => new Date(number * dayLength).toISOString().slice(0, 10);
@@ -40,6 +45,10 @@ function rules(phases) {
     phase.start, phase.end, phase.interval, phase.mask,
     phase.slots.map(slot => new engine.WebSlot(slot.minute, slot.amount))
   ));
+}
+function slotsFor(medicine, day) {
+  if (medicine.dates?.length && !medicine.dates.includes(day)) return [];
+  return engine.medicationSlots(rules(medicine.phases), day);
 }
 
 function addSlot(container, slot = { minute: 480, amount: null }) {
@@ -86,11 +95,11 @@ function openEditor(medicine) {
   $("editor-title").textContent = medicine ? "ویرایش دارو" : "داروی جدید";
   $("name").value = medicine?.name ?? "";
   $("instructions").value = medicine?.instructions ?? "";
-  $("medicine-icon").value = medicine?.icon ?? "pill";
+  $("medicine-icon").value = medicine?.icon ?? "capsule";
   $("medicine-color").value = medicine?.color ?? "gold";
-  $("medicine-appearance").open = false;
+  updateAppearance();
   $("unit").value = medicine?.unit ?? "قرص";
-  $("unit").readOnly = Boolean(medicine);
+  $("unit").readOnly = medicine?.stock != null;
   $("stock").value = medicine?.stock == null ? "" : amountText(medicine.stock);
   $("stock").readOnly = medicine?.stock != null;
   $("threshold").value = amountText(medicine?.threshold ?? 2000);
@@ -98,6 +107,7 @@ function openEditor(medicine) {
   $("phases").replaceChildren();
   if (medicine) medicine.phases.forEach(addPhase);
   else addPhase();
+  $("specific-dose-dates").value = (medicine?.dates ?? []).map(isoDay).join(", ");
   $("phased-mode").checked = Boolean(medicine?.phased || needsPhases());
   $("advanced-plan").open = $("phased-mode").checked;
   $("inventory-options").open = false;
@@ -126,7 +136,9 @@ function updateEditorMode() {
     $("basic-extra-times").hidden = times.length === 1;
     $("basic-extra-times").textContent = times.slice(1).map(persianDigits).join(" · ");
     const days = [...first.querySelectorAll(".weekdays label")].filter(field => field.querySelector("input").checked);
-    $("basic-repeat").textContent = days.length === 7 ? "هر روز" : days.map(day => day.textContent).join(" · ");
+    const exact = $("specific-dose-dates").value.split(/[,،\s]+/).filter(Boolean);
+    $("basic-repeat").textContent = exact.length ? `${persianDigits(exact.length)} تاریخ مشخص` :
+      days.length === 7 ? "هر روز" : days.map(day => day.textContent).join(" · ");
     const start = first.querySelector(".start").value;
     $("basic-start").textContent = start ? `شروع از ${dashboard.formatDay(dayNumber(start))}` : "";
   }
@@ -190,12 +202,16 @@ $("editor").addEventListener("submit", async event => {
       throw new Error("تاریخ شروع، فاصلهٔ تکرار و ساعت هر مرحله را بررسی کنید.");
     }
     const phases = editorPhases();
+    const dates = phased ? [] : [...new Set($("specific-dose-dates").value.split(/[,،\s]+/).filter(Boolean).map(dayNumber))].sort((a, b) => a - b);
+    if (dates.length) phases[0].mask = 127;
     if (!engine.validMedicationPhases(rules(phases))) {
       throw new Error("ترتیب تاریخ‌ها، هم‌پوشانی مرحله‌ها، روزهای هفته و ساعت‌های تکراری را بررسی کنید.");
     }
     const name = $("name").value.trim();
     const unit = $("unit").value.trim();
-    if (!name || !unit) throw new Error("نام دارو و واحد مصرف را وارد کنید.");
+    if (!name || (!unit && phases.some(phase => phase.slots.some(slot => slot.amount !== null)))) {
+      throw new Error("نام دارو را وارد کنید و برای دوز عددی واحد مصرف را مشخص کنید.");
+    }
     const stock = $("stock").readOnly ? null : quantity($("stock"), true);
     const threshold = quantity($("threshold"));
     if ((stock !== null || $("stock").readOnly) && phases.some(phase => phase.slots.some(slot => slot.amount === null))) {
@@ -208,7 +224,7 @@ $("editor").addEventListener("submit", async event => {
       }
       state.medicines[id] = {
         ...saved,
-        id, name, unit: saved?.unit ?? unit, phases, stock: saved?.stock ?? stock, threshold,
+        id, name, unit: saved?.stock != null ? saved.unit : unit, phases, dates, stock: saved?.stock ?? stock, threshold,
         instructions: $("instructions").value.trim(), icon: $("medicine-icon").value, color: $("medicine-color").value, phased,
         revision: (saved?.revision ?? 0) + 1
       };
@@ -234,15 +250,6 @@ function action(label, click, secondary = false) {
   return button;
 }
 
-function icon(name) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  const use = document.createElementNS(svg.namespaceURI, "use");
-  use.setAttribute("href", `#i-${name}`);
-  svg.setAttribute("aria-hidden", "true");
-  svg.append(use);
-  return svg;
-}
-
 const doseId = (med, day, minute) => `${med.id}|${day}|${minute}`;
 function nextAmount(medicine) {
   const now = new Date();
@@ -254,6 +261,7 @@ function nextAmount(medicine) {
     // One complete 52-week cycle plus a week covers the longest allowed repeat.
     const end = Math.min(phase.end ?? Infinity, first + 371);
     for (let day = first; day < end; day++) {
+      if (medicine.dates?.length && !medicine.dates.includes(day)) continue;
       const upcoming = engine.medicationSlots(compiled, day).find(slot =>
         (day !== todayDay || slot.minuteOfDay >= currentMinute) &&
         !care.doses[doseId(medicine, day, slot.minuteOfDay)]?.status
@@ -286,7 +294,7 @@ function renderMedicine(medicine) {
   });
   const top = element("div");
   top.className = "feature-head";
-  top.append(icon(medicineIcons[medicine.icon] ?? "pill"), heading, toggle);
+  top.append(medicationBadge(medicine.icon, medicine.color), heading, toggle);
   const status = element("p", medicine.paused ? "برنامه متوقف است" : "برنامه فعال است");
   status.className = "quiet";
   card.append(top, status);
@@ -334,6 +342,7 @@ function renderMedicine(medicine) {
 
 function openMedicine(medicine) {
   $("medicine-details-title").textContent = medicine.name;
+  $("medicine-details-icon").replaceChildren(medicationBadge(medicine.icon, medicine.color));
   const entries = Object.values(care.doses).filter(dose => dose.medicineId === medicine.id && dose.status)
     .sort((a, b) => b.day - a.day || b.minute - a.minute);
   const summary = element("p", medicine.instructions || "دستور مصرف ثبت نشده است.");
@@ -342,7 +351,7 @@ function openMedicine(medicine) {
   const history = element("ul");
   history.className = "dose-history";
   for (const dose of entries) {
-    const status = dose.status === "taken" ? "مصرف شد" : "مصرف نشد";
+    const status = doseStates[dose.status];
     history.append(element("li", `${dashboard.formatDay(dose.day)}، ${persianDigits(timeText(dose.minute))} · ${status}`));
   }
   $("medicine-details-body").replaceChildren(summary, edit, heading, entries.length ? history : element("p", "هنوز مصرفی ثبت نشده است."));
@@ -352,13 +361,14 @@ function openMedicine(medicine) {
 function renderDose(medicine, dose) {
   const card = element("article");
   card.className = "medicine dose-card";
-  card.dataset.color = medicine.color ?? "gold";
-  const heading = element("h3", medicine.name);
+  const unit = dose.unit ?? medicine?.unit ?? "";
+  card.dataset.color = medicine?.color ?? dose.color ?? "gold";
+  const heading = element("h3", dose.name || medicine?.name || "دارو");
   heading.dir = "auto";
-  const planned = dose.planned === null ? medicine.instructions : `${amountText(dose.planned)} ${medicine.unit}`;
-  const states = { taken: "مصرف شد", skipped: "مصرف نشد" };
-  let recorded = states[dose.status] ?? "در انتظار ثبت";
-  if (dose.status === "taken" && dose.actual !== null) recorded += `، ${amountText(dose.actual)} ${medicine.unit}`;
+  const instructions = dose.instructions ?? medicine?.instructions;
+  const planned = dose.planned === null ? "" : `${amountText(dose.planned)} ${unit}`;
+  let recorded = doseStates[dose.status] ?? "در انتظار ثبت";
+  if (dose.status === "taken" && dose.actual !== null) recorded += `، ${amountText(dose.actual)} ${unit}`;
   const badge = element("p", recorded);
   badge.className = "badge";
   badge.dataset.status = dose.status ?? "pending";
@@ -366,14 +376,16 @@ function renderDose(medicine, dose) {
   info.append(heading, element("p", `ساعت ${persianDigits(timeText(dose.minute))}`));
   const header = element("div");
   header.className = "dose-header";
-  header.append(icon(medicineIcons[medicine.icon] ?? "pill"), info);
+  header.append(medicationBadge(medicine?.icon ?? dose.icon, medicine?.color ?? dose.color), info);
   card.append(header);
   const result = element("div");
   result.className = "dose-result";
   result.append(badge);
   if (planned) result.append(element("p", planned));
+  if (instructions) result.append(element("p", instructions));
   card.append(result);
-  if (dose.day > today() || medicine.paused) return card;
+  if (dose.day > today() || !medicine || medicine.paused) return card;
+  const canSnooze = slotsFor(medicine, dose.day).some(slot => slot.minuteOfDay === dose.minute);
   const label = element("label", "مقدار مصرف واقعی");
   const amount = element("input");
   amount.dir = "ltr";
@@ -395,20 +407,24 @@ function renderDose(medicine, dose) {
       if (entered === 0) throw new Error("مقدار مصرف باید بیشتر از صفر باشد.");
       await mutate(state => {
         const saved = state.medicines[medicine.id];
-        if (saved.paused) throw new Error("برنامهٔ این دارو متوقف شده است.");
+        if (!saved || saved.paused) throw new Error("برنامهٔ این دارو متوقف شده است.");
         const id = doseId(saved, dose.day, dose.minute);
         const existing = state.doses[id];
-        const active = engine.medicationSlots(rules(saved.phases), dose.day).find(slot => slot.minuteOfDay === dose.minute);
-        if (!existing && !active) throw new Error("برنامهٔ این نوبت تغییر کرده است. صفحه را تازه کنید.");
+        const active = slotsFor(saved, dose.day).find(slot => slot.minuteOfDay === dose.minute);
+        if ((!existing || status === "snoozed") && !active) throw new Error("برنامهٔ این نوبت تغییر کرده است. صفحه را تازه کنید.");
         const planned = existing ? existing.planned : active.milliUnits;
-        const actual = status === "taken" ? entered ?? planned : null;
-        if (saved.stock !== null && status === "taken" && actual === null) {
+        const actual = status === "taken" ? entered ?? existing?.actual ?? planned : null;
+        const scheduled = new Date(`${isoDay(dose.day)}T${timeText(dose.minute)}:00`).getTime();
+        const tracked = saved.stock !== null && (existing?.unit ?? saved.unit) === saved.unit && scheduled >= (saved.stockTrackedFrom ?? 0);
+        if (tracked && status === "taken" && actual === null) {
           throw new Error("برای کم‌کردن از موجودی، مقدار مصرف را وارد کنید.");
         }
-        const debit = saved.stock === null ? 0 : actual ?? 0;
+        const debit = tracked ? actual ?? 0 : 0;
         if (saved.stock !== null) saved.stock = engine.updateStock(saved.stock, existing?.debit ?? 0, debit, 0);
-        state.doses[id] = { medicineId: saved.id, day: dose.day, minute: dose.minute, planned, status, actual, debit };
-      }, "وضعیت نوبت ثبت شد.", true);
+        const snoozeUntil = status === "snoozed" ? Math.max(Date.now(), scheduled, existing?.snoozeUntil ?? 0) +
+          (state.medicationSnoozeMinutes ?? 10) * minuteMs : 0;
+        state.doses[id] = { ...existing, medicineId: saved.id, day: dose.day, minute: dose.minute, planned, status, actual, debit, snoozeUntil };
+      }, status === "snoozed" ? "نوبت به تعویق افتاد." : "وضعیت نوبت ثبت شد.", true);
     } catch (error) {
       $("status").textContent = error.message;
     }
@@ -416,12 +432,24 @@ function renderDose(medicine, dose) {
 
   const controls = element("div");
   controls.className = "buttons";
-  const taken = action(dose.status === "taken" ? "اصلاح ثبت مصرف" : "مصرف کردم", () => record("taken"), Boolean(dose.status));
+  const pending = !dose.status || dose.status === "snoozed";
+  const taken = action(dose.status === "taken" ? "اصلاح ثبت مصرف" : "مصرف کردم", () => record("taken"), !pending);
+  const snooze = () => action(`${persianDigits(care.medicationSnoozeMinutes ?? 10)} دقیقه بعد`, () => record("snoozed"), true);
   const skipped = action("مصرف نکردم", () => record("skipped"), true);
-  controls.append(...(dose.status ? [taken, skipped] : [skipped]));
+  controls.append(...(pending ? [skipped] : [taken, skipped]));
+  if (!pending && canSnooze) controls.append(snooze());
   if (dose.status) controls.append(action("برگشت ثبت", () => record(null), true));
   actual.append(controls);
-  if (!dose.status) card.append(taken);
+  if (pending) {
+    const quick = element("div");
+    quick.className = "action-pair dose-quick";
+    quick.append(taken);
+    if (canSnooze) quick.append(snooze());
+    card.append(quick);
+  }
+  if (dose.status === "snoozed") card.append(element("p", `یادآوری بعدی ${new Intl.DateTimeFormat("fa-IR", {
+    dateStyle: "medium", timeStyle: "short"
+  }).format(dose.snoozeUntil)}`));
   return card;
 }
 
@@ -429,12 +457,14 @@ function scheduledDoses(state, day) {
   const doses = new Map();
   for (const medicine of Object.values(state.medicines)) {
     if (medicine.paused) continue;
-    for (const slot of engine.medicationSlots(rules(medicine.phases), day)) {
+    for (const slot of slotsFor(medicine, day)) {
+      const scheduled = new Date(`${isoDay(day)}T${timeText(slot.minuteOfDay)}:00`).getTime();
+      if (scheduled < (medicine.effectiveFrom ?? 0)) continue;
       doses.set(doseId(medicine, day, slot.minuteOfDay), { medicineId: medicine.id, day, minute: slot.minuteOfDay, planned: slot.milliUnits });
     }
   }
   for (const [id, dose] of Object.entries(state.doses)) {
-    if (dose.day === day && (dose.status || doses.has(id))) doses.set(id, dose);
+    if (dose.day === day && (dose.imported || dose.status || doses.has(id))) doses.set(id, dose);
   }
   return [...doses.values()].sort((a, b) => a.minute - b.minute);
 }
@@ -506,6 +536,44 @@ const dashboard = wellness({
   refreshFields: container => pickers.refresh(container)
 });
 const pickers = installPickers({ selectedDay, today, dashboard });
+const updateAppearance = installAppearance();
+
+$("android-restore").addEventListener("submit", async event => {
+  event.preventDefault();
+  const file = $("android-backup-file").files[0];
+  const field = $("android-backup-password");
+  const submit = $("android-restore-submit");
+  const status = $("android-restore-status");
+  const password = field.value;
+  field.value = "";
+  if (!file || file.size > maxBackupBytes) {
+    status.textContent = "یک فایل پشتیبان با حجم حداکثر ۱۶ مگابایت انتخاب کنید.";
+    return;
+  }
+  submit.disabled = true;
+  status.textContent = "در حال بررسی فایل…";
+  try {
+    const backup = await readAndroidBackup(new Uint8Array(await file.arrayBuffer()), password,
+      phases => engine.validMedicationPhases(rules(phases)), localZone());
+    if (!$("settings-dialog").open || $("settings-dialog").dataset.panel !== "backup-settings" ||
+        $("android-backup-file").files[0] !== file || !$("android-backup-confirm").checked) return;
+    const success = await mutate(state => {
+      changeReminderRevision(state);
+      if (state.reminders) state.reminders.enabled = false;
+      Object.assign(state, backup);
+    }, "سوابق اندروید بازیابی شد.", true);
+    if (success) {
+      event.target.reset();
+      status.textContent = "سوابق بازیابی شدند. اعلان‌ها را در تنظیمات دوباره فعال کنید.";
+    } else {
+      status.textContent = "ذخیرهٔ سوابق انجام نشد. دوباره تلاش کنید.";
+    }
+  } catch {
+    status.textContent = "فایل یا رمز معتبر نیست، یا این نسخه از فایل پشتیبانی نمی‌شود.";
+  } finally {
+    submit.disabled = false;
+  }
+});
 
 function showIntro() {
   const hasRecords = Object.keys(care.medicines).length || Object.keys(care.doses).length ||
@@ -535,7 +603,8 @@ function showIntro() {
 
 try {
   engine = await import("/care-engine/care-core.mjs");
-  const day = new URLSearchParams(location.search).get("day");
+  const params = new URLSearchParams(location.search);
+  const day = params.get("day");
   $("day").value = /^\d{4}-\d{2}-\d{2}$/.test(day ?? "") ? day : isoDay(today());
   if (!$("day").value) $("day").value = isoDay(today());
   care = await accessCare();
@@ -543,6 +612,8 @@ try {
   $("app").hidden = false;
   $("boot-status").hidden = true;
   showIntro();
+  const view = params.get("view");
+  if (!$("app").hidden && ["water", "appointments"].includes(view)) dashboard.show(view);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/medication/sw.js").catch(() => {});
   void initializeReminders();
 } catch {

@@ -1,38 +1,11 @@
 import { WebPhase, WebSlot, nextMedicationPhaseDay, validMedicationPhases } from "../public/care-engine/care-core.mjs";
 
+import { dayMs, timezone, localWall, instantForWall } from "../public/medication/wall-clock.js";
+
 const minuteMs = 60_000;
-const dayMs = 86_400_000;
-const validDay = day => Number.isInteger(day) && day >= 0 && day <= 120_000;
+const validDay = day => Number.isInteger(day) && day >= -719162 && day <= 2932896;
 const validMinute = minute => Number.isInteger(minute) && minute >= 0 && minute < 1440;
-
-function timezone(zone) {
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: zone, calendar: "gregory", numberingSystem: "latn", hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"
-  });
-}
-
-function localWall(at, clock) {
-  const part = Object.fromEntries(clock.formatToParts(at).map(({ type, value }) => [type, Number(value)]));
-  return Date.UTC(part.year, part.month - 1, part.day, part.hour, part.minute);
-}
-
-function instantForWall(wall, clock, offsetsByDay) {
-  const day = Math.floor(wall / dayMs);
-  let offsets = offsetsByDay.get(day);
-  if (!offsets) {
-    offsets = new Set([-dayMs, 0, 2 * dayMs].map(delta => {
-      const probe = day * dayMs + delta;
-      return localWall(probe, clock) - probe;
-    }));
-    offsetsByDay.set(day, offsets);
-  }
-  const options = [...offsets].map(offset => wall - offset).sort((a, b) => a - b);
-  // During a repeated hour use its earlier instant. Move a missing local time forward by the gap.
-  const mapped = options.map(at => ({ at, difference: localWall(at, clock) - wall }));
-  return mapped.find(option => option.difference === 0)?.at ??
-    mapped.filter(option => option.difference > 0).sort((a, b) => a.difference - b.difference)[0]?.at;
-}
+const validInstant = at => Number.isSafeInteger(at) && at > 0 && at < 2932897 * dayMs;
 
 function phaseOf(rule) {
   return new WebPhase(rule.start, rule.end, rule.interval, rule.mask, rule.minutes.map(minute => new WebSlot(minute, null)));
@@ -43,6 +16,7 @@ export function validSchedule(body) {
       !Array.isArray(body.rules) || body.rules.length > 100) return null;
   try { timezone(body.zone); } catch { return null; }
   let skips = 0;
+  let specificDays = 0;
   const rules = [];
   for (const rule of body.rules) {
     if (!validDay(rule?.start) || (rule.end !== null && !validDay(rule.end)) ||
@@ -52,10 +26,45 @@ export function validSchedule(body) {
     skips += rule.skip.length;
     if (skips > 256 || !rule.skip.every(pair => Array.isArray(pair) && pair.length === 2 && validDay(pair[0]) && validMinute(pair[1]))) return null;
     const clean = { start: rule.start, end: rule.end, interval: rule.interval, mask: rule.mask, minutes: rule.minutes, skip: rule.skip };
-    if (!validMedicationPhases([phaseOf(clean)])) return null;
+    const phase = phaseOf(clean);
+    if (!validMedicationPhases([phase])) return null;
+    if (rule.days !== undefined) {
+      if (!Array.isArray(rule.days) || !rule.days.every(day => validDay(day) && day >= phase.startDay)) return null;
+      specificDays += rule.days.length;
+      if (specificDays > 4096) return null;
+      clean.days = [...new Set(rule.days)].sort((a, b) => a - b);
+    }
+    if (rule.notBefore !== undefined) {
+      if (rule.notBefore !== 0 && !validInstant(rule.notBefore)) return null;
+      clean.notBefore = rule.notBefore;
+    }
+    if (rule.snoozes !== undefined) {
+      if (!Array.isArray(rule.snoozes) || rule.snoozes.length > rule.skip.length || !rule.snoozes.every(entry => {
+        if (!Array.isArray(entry) || entry.length !== 3) return false;
+        const [day, minute, until] = entry;
+        return validDay(day) && rule.minutes.includes(minute) && validInstant(until) &&
+          rule.skip.some(pair => pair[0] === day && pair[1] === minute);
+      })) return null;
+      clean.snoozes = rule.snoozes.filter(([day]) => nextMedicationPhaseDay(phase, day) === day &&
+        (clean.days === undefined || clean.days.includes(day)));
+    }
     rules.push(clean);
   }
-  return { zone: body.zone, rules };
+  const appointments = body.appointments === undefined ? [] : body.appointments;
+  if (!Array.isArray(appointments) || appointments.length > 1200 ||
+      !appointments.every(item => Array.isArray(item) && item.length === 3 &&
+        validInstant(item[0]) && validDay(item[1]) && validInstant(item[2]) && item[2] > item[0])) return null;
+  const water = body.water ?? null;
+  if (water !== null && (!validMinute(water.start) || !validMinute(water.end) || water.end <= water.start ||
+      !Number.isInteger(water.interval) || water.interval < 15 || water.interval > 240 ||
+      !Number.isInteger(water.repeat) || water.repeat < 0 || water.repeat >= water.interval ||
+      (water.pauseUntil !== 0 && !validInstant(water.pauseUntil)) ||
+      (water.goalDay !== null && !validDay(water.goalDay)))) return null;
+  return {
+    zone: body.zone, rules, appointments: appointments.sort((a, b) => a[0] - b[0]),
+    water: water && { start: water.start, end: water.end, interval: water.interval, repeat: water.repeat,
+      pauseUntil: water.pauseUntil, goalDay: water.goalDay }
+  };
 }
 
 export function nextMedicationReminder(schedule, after) {
@@ -66,20 +75,65 @@ export function nextMedicationReminder(schedule, after) {
   for (const rule of schedule.rules) {
     const phase = phaseOf(rule);
     const skip = new Set(rule.skip.map(pair => pair.join(":")));
-    let candidate = nextMedicationPhaseDay(phase, day);
+    for (const [day, minute, until] of rule.snoozes ?? []) {
+      const at = Math.max(until, instantForWall(day * dayMs + minute * minuteMs, clock, offsets));
+      if (at > after && (!earliest || at < earliest.at)) earliest = { at, day };
+    }
+    const cutoff = Math.max(after, (rule.notBefore ?? 0) - 1);
+    const fromDay = cutoff === after ? day : Math.floor(localWall(cutoff, clock) / dayMs);
+    let dateIndex = rule.days?.findIndex(date => date >= fromDay);
+    let candidate = rule.days ? rule.days[dateIndex] ?? null : nextMedicationPhaseDay(phase, fromDay);
     while (candidate !== null && validDay(candidate)) {
       let at = null;
       for (const minute of rule.minutes) {
         if (skip.has(`${candidate}:${minute}`)) continue;
         const due = instantForWall(candidate * dayMs + minute * minuteMs, clock, offsets);
-        if (due > after && (at === null || due < at)) at = due;
+        if (due > cutoff && (at === null || due < at)) at = due;
       }
       if (at !== null) {
         if (!earliest || at < earliest.at) earliest = { at, day: candidate };
         break;
       }
-      candidate = nextMedicationPhaseDay(phase, candidate + 1);
+      candidate = rule.days ? rule.days[++dateIndex] ?? null : nextMedicationPhaseDay(phase, candidate + 1);
     }
   }
   return earliest;
+}
+
+function nextWater(schedule, after) {
+  const { water } = schedule;
+  if (!water) return null;
+  const clock = timezone(schedule.zone);
+  const startAt = Math.max(after, water.pauseUntil - 1);
+  const startDay = Math.floor(localWall(startAt, clock) / dayMs);
+  const offsets = new Map();
+  for (let day = startDay; day <= startDay + 3; day++) {
+    if (day === water.goalDay) continue;
+    let earliest = Infinity;
+    for (let minute = water.start; minute < water.end; minute += water.interval) {
+      for (const delay of water.repeat ? [0, water.repeat] : [0]) {
+        if (minute + delay >= water.end) continue;
+        const at = instantForWall(day * dayMs + (minute + delay) * minuteMs, clock, offsets);
+        if (!(at > startAt) || at >= earliest) continue;
+        const localMinute = (localWall(at, clock) - day * dayMs) / minuteMs;
+        if (localMinute >= water.start && localMinute < water.end) earliest = at;
+      }
+    }
+    if (Number.isFinite(earliest)) return { at: earliest, day };
+  }
+  return null;
+}
+
+export function nextCareReminder(schedule, after) {
+  const appointment = schedule.appointments?.find(([at]) => at > after);
+  const candidates = [
+    ["dose", nextMedicationReminder(schedule, after)],
+    ["appointment", appointment && { at: appointment[0], day: appointment[1], expires: appointment[2] }],
+    ["water", nextWater(schedule, after)]
+  ].filter(([, next]) => next);
+  if (!candidates.length) return null;
+  const at = Math.min(...candidates.map(([, next]) => next.at));
+  const matching = candidates.filter(([, next]) => next.at === at);
+  return { at, day: matching[0][1].day, kinds: matching.map(([kind]) => kind),
+    appointmentExpires: matching.find(([kind]) => kind === "appointment")?.[1].expires };
 }

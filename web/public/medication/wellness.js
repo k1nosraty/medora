@@ -1,3 +1,6 @@
+import { appointmentDefaults, appointmentOffsets, localZone, visitInstant, waterDefaults } from "./care-plan.js";
+import { localWall, timezone } from "./wall-clock.js";
+
 const $ = id => document.getElementById(id);
 const dayMs = 86_400_000;
 const numbers = new Intl.NumberFormat("fa-IR");
@@ -76,8 +79,24 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
   const settingsPanels = {
     "display-settings": "زبان و تقویم",
     "notification-settings": "اعلان‌ها",
-    "water-settings": "آب"
+    "water-settings": "آب",
+    "snooze-settings": "دارو",
+    "appointment-settings": "قرارها",
+    "backup-settings": "پشتیبان‌گیری"
   };
+  let waterPauseUntil = 0;
+  const snoozePresets = [...document.querySelectorAll('[name="snooze-preset"]')];
+  const visitOffsetFields = [...document.querySelectorAll('[name="visit-offset"]')];
+  function setOption(id, value) {
+    const select = $(id);
+    for (const option of select.querySelectorAll("[data-restored]")) option.remove();
+    if (![...select.options].some(option => Number(option.value) === value)) {
+      const option = new Option(`${numbers.format(value)} دقیقه`, value);
+      option.dataset.restored = "";
+      select.add(option);
+    }
+    select.value = value;
+  }
   function selectSettings(panel) {
     const settings = $("settings-dialog");
     settings.dataset.panel = panel || "";
@@ -86,6 +105,37 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     $("settings-subtitle").textContent = settingsPanels[panel] ?? "یادآوری‌ها مطابق برنامهٔ روزانهٔ شما";
     $("settings-status").textContent = "";
     for (const id of Object.keys(settingsPanels)) $(id).open = panel === id;
+    const data = getState();
+    if (panel === "backup-settings") {
+      $("android-restore").reset();
+      $("android-restore-status").textContent = "";
+    }
+    if (panel === "water-settings") {
+      const water = data.waterReminders ?? waterDefaults;
+      $("water-goal").value = data.waterGoal ?? 2000;
+      $("water-reminders-enabled").checked = water.enabled;
+      $("water-reminder-fields").hidden = !water.enabled;
+      $("water-reminders-start").value = water.start;
+      $("water-reminders-end").value = water.end;
+      setOption("water-reminders-interval", water.interval);
+      setOption("water-reminders-repeat", water.repeat);
+      waterPauseUntil = water.pauseUntil;
+      updateWaterPause();
+      refreshFields($("water-goal-form"));
+    }
+    if (panel === "snooze-settings") {
+      const minutes = data.medicationSnoozeMinutes ?? 10;
+      const preset = [10, 30, 60].includes(minutes) ? String(minutes) : "custom";
+      snoozePresets.find(control => control.value === preset).checked = true;
+      $("snooze-minutes").value = minutes;
+      $("snooze-custom-row").hidden = preset !== "custom";
+    }
+    if (panel === "appointment-settings") {
+      const appointment = data.appointmentReminders ?? appointmentDefaults;
+      $("appointment-reminders-start").value = appointment.start;
+      $("appointment-reminders-interval").value = appointment.interval;
+      refreshFields($("appointment-settings-form"));
+    }
     settings.scrollTop = 0;
   }
   for (const id of Object.keys(settingsPanels)) {
@@ -100,6 +150,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     selectSettings();
     $(selected)?.querySelector("summary").focus();
   });
+  $("settings-dialog").addEventListener("close", () => $("android-restore").reset());
   function show(destination, notifications = false) {
     if (destination === "settings") {
       selectSettings(notifications ? "notification-settings" : null);
@@ -153,7 +204,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
       if (index >= 0) list[index] = entry;
       else if (id) throw new Error("این ثبت آب حذف شده است.");
       else list.push(entry);
-    }, "آب ثبت شد.");
+    }, "آب ثبت شد.", true);
   }
   for (const button of document.querySelectorAll("[data-water-add]")) {
     button.addEventListener("click", () => addWater(Number(button.dataset.waterAdd)));
@@ -199,6 +250,16 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     if (await addWater(value, day, $("water-log-time").value, editingWater)) $("water-dialog").close();
     else if (!$("water-error").textContent) $("water-error").textContent = $("status").textContent;
   });
+  function updateWaterPause() {
+    $("water-reminders-pause").textContent = waterPauseUntil > Date.now() ? "ازسرگیری یادآوری" : "توقف برای یک ساعت";
+  }
+  $("water-reminders-enabled").addEventListener("change", () => {
+    $("water-reminder-fields").hidden = !$("water-reminders-enabled").checked;
+  });
+  $("water-reminders-pause").addEventListener("click", () => {
+    waterPauseUntil = waterPauseUntil > Date.now() ? 0 : Date.now() + 3_600_000;
+    updateWaterPause();
+  });
   $("water-goal-form").addEventListener("submit", async event => {
     event.preventDefault();
     const goal = integer($("water-goal").value);
@@ -206,7 +267,39 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
       $("settings-status").textContent = "هدف آب باید از ۱ تا ۲۰٬۰۰۰ میلی‌لیتر باشد.";
       return;
     }
-    await mutate(state => { state.waterGoal = goal; }, "هدف آب ذخیره شد.");
+    const start = $("water-reminders-start").value;
+    const end = $("water-reminders-end").value;
+    const interval = Number($("water-reminders-interval").value);
+    const repeat = Number($("water-reminders-repeat").value);
+    if (!start || !end || start >= end || repeat >= interval) {
+      $("settings-status").textContent = "شروع باید قبل از پایان باشد و تکرار از فاصلهٔ یادآوری کمتر باشد.";
+      return;
+    }
+    await mutate(state => {
+      state.waterGoal = goal;
+      state.waterReminders = { start, end, interval, repeat, pauseUntil: waterPauseUntil, enabled: $("water-reminders-enabled").checked };
+    }, "تنظیمات آب ذخیره شد.", true);
+    $("settings-status").textContent = $("status").textContent;
+  });
+  for (const control of snoozePresets) control.addEventListener("change", () => {
+    $("snooze-custom-row").hidden = control.value !== "custom";
+  });
+  $("snooze-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const choice = snoozePresets.find(control => control.checked).value;
+    const minutes = integer(choice === "custom" ? $("snooze-minutes").value : choice);
+    if (!(minutes >= 1 && minutes <= 1440)) {
+      $("settings-status").textContent = "مدت تعویق باید از ۱ تا ۱٬۴۴۰ دقیقه باشد.";
+      return;
+    }
+    await mutate(state => { state.medicationSnoozeMinutes = minutes; }, "مدت تعویق ذخیره شد.");
+    $("settings-status").textContent = $("status").textContent;
+  });
+  $("appointment-settings-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const start = $("appointment-reminders-start").value;
+    const interval = Number($("appointment-reminders-interval").value);
+    await mutate(state => { state.appointmentReminders = { start, interval }; }, "تنظیمات قرار ذخیره شد.", true);
     $("settings-status").textContent = $("status").textContent;
   });
   $("display-form").addEventListener("submit", async event => {
@@ -225,7 +318,12 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     $("visit-time").value = visit?.time ?? localClock();
     $("visit-place").value = visit?.place ?? "";
     $("visit-note").value = visit?.note ?? "";
-    $("visit-editor").querySelector("details").open = Boolean(visit?.note);
+    $("visit-contact").value = visit?.contact ?? "";
+    $("visit-zone").value = visit?.zone ?? localZone();
+    $("visit-editor").querySelector("details").open = Boolean(visit?.note || visit?.contact || visit?.zone && visit.zone !== localZone());
+    for (const field of visitOffsetFields) field.checked = (visit?.offsets ?? [60]).includes(Number(field.value));
+    const preferences = getState().appointmentReminders ?? appointmentDefaults;
+    $("visit-reminder-summary").textContent = `از ساعت ${clockText(preferences.start)} روز قرار، هر ${numbers.format(preferences.interval / 60)} ساعت تا زمان قرار یادآوری می‌کنیم.`;
     $("visit-error").textContent = "";
     refreshFields($("visit-dialog"));
     $("visit-dialog").showModal();
@@ -243,32 +341,52 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     const id = editingVisit ?? crypto.randomUUID();
     const place = $("visit-place").value.trim();
     const note = $("visit-note").value.trim();
+    const contact = $("visit-contact").value.trim();
+    const zone = $("visit-zone").value.trim() || localZone();
+    try { timezone(zone); } catch {
+      $("visit-editor").querySelector("details").open = true;
+      $("visit-error").textContent = "منطقهٔ زمانی مطب را به‌شکل Asia/Tehran وارد کنید.";
+      return;
+    }
     if (await mutate(state => {
       const visits = state.visits ??= {};
       if (editingVisit && !visits[id]) throw new Error("این قرار حذف شده است.");
-      visits[id] = { id, name, day, time, place, note, cancelled: visits[id]?.cancelled ?? false };
-    }, "قرار ذخیره شد.")) $("visit-dialog").close();
+      const offsets = [...(visits[id]?.offsets ?? []).filter(offset => !appointmentOffsets.includes(offset)),
+        ...visitOffsetFields.filter(field => field.checked).map(field => Number(field.value))];
+      visits[id] = { id, name, day, time, place, note, contact, zone, offsets, cancelled: visits[id]?.cancelled ?? false };
+    }, "قرار ذخیره شد.", true)) $("visit-dialog").close();
     else $("visit-error").textContent = $("status").textContent;
   });
 
+  function displayVisit(visit) {
+    const zone = localZone();
+    const instant = visitInstant(visit, zone);
+    const wall = localWall(instant, timezone(zone));
+    return { day: Math.floor(wall / dayMs), time: new Date(wall).toISOString().slice(11, 16), instant };
+  }
   function visitCard(visit, controlsMode = "read") {
     const card = element("article", "", "visit");
     const title = element("h3", visit.name, "visit-title");
     title.dir = "auto";
-    card.append(title, element("p", `${shortDate.format(visit.day * dayMs)} · ${clockText(visit.time)}`));
+    const local = displayVisit(visit);
+    card.append(title, element("p", `${shortDate.format(local.day * dayMs)} · ${clockText(local.time)}`));
+    if (visit.zone && visit.zone !== localZone()) {
+      card.append(element("p", `ساعت مطب ${formatDay(visit.day)}، ${clockText(visit.time)} (${visit.zone})`, "quiet"));
+    }
     if (visit.place) card.append(element("p", `مکان: ${visit.place}`, "quiet"));
     if (visit.cancelled) card.append(element("p", "قرار لغو شده", "badge"));
     if (visit.note) card.append(element("p", visit.note));
+    if (visit.contact) card.append(element("p", `تماس: ${visit.contact}`, "quiet"));
     if (controlsMode !== "read") {
       const controls = element("div", "", "buttons");
       controls.append(button("ویرایش", () => openVisit(visit)), button(visit.cancelled ? "فعال‌کردن قرار" : "لغو قرار", () => {
         void mutate(state => {
           const saved = state.visits[visit.id];
           if (saved) saved.cancelled = !saved.cancelled;
-        }, "وضعیت قرار ذخیره شد.");
+        }, "وضعیت قرار ذخیره شد.", true);
       }));
       if (controlsMode === "list") controls.append(button("حذف", () => {
-        if (confirm("این قرار حذف شود؟")) void mutate(state => { delete state.visits[visit.id]; }, "قرار حذف شد.");
+        if (confirm("این قرار حذف شود؟")) void mutate(state => { delete state.visits[visit.id]; }, "قرار حذف شد.", true);
       }));
       card.append(controls);
     }
@@ -276,15 +394,17 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
   }
 
   function dayVisits(state, day) {
-    return Object.values(state.visits ?? {}).filter(visit => visit.day === day && !visit.cancelled)
-      .map(visit => ({ minute: minutes(visit.time), card: visitCard(visit, day > today() ? "read" : "edit") }));
+    return Object.values(state.visits ?? {}).filter(visit => !visit.cancelled)
+      .map(visit => ({ visit, local: displayVisit(visit) }))
+      .filter(({ local }) => local.day === day)
+      .map(({ visit, local }) => ({ minute: minutes(local.time), card: visitCard(visit, day > today() ? "read" : "edit") }));
   }
 
   function renderVisits(state) {
-    const now = localClock();
-    const visits = Object.values(state.visits ?? {}).sort((a, b) => a.day - b.day || minutes(a.time) - minutes(b.time));
-    const upcoming = visits.filter(visit => !visit.cancelled && (visit.day > today() || (visit.day === today() && visit.time >= now)));
-    const past = visits.filter(visit => !upcoming.includes(visit)).reverse();
+    const now = Date.now();
+    const visits = Object.values(state.visits ?? {}).map(visit => ({ visit, at: displayVisit(visit).instant })).sort((a, b) => a.at - b.at);
+    const upcoming = visits.filter(({ visit, at }) => !visit.cancelled && at >= now).map(({ visit }) => visit);
+    const past = visits.filter(({ visit, at }) => visit.cancelled || at < now).reverse().map(({ visit }) => visit);
     const content = [];
     if (upcoming.length && visitFilter !== "past") {
       content.push(element("h2", "نزدیک‌ترین قرار"), ...upcoming.map(visit => visitCard(visit, "list")));
@@ -314,7 +434,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     const slots = week.map(label => element("span", label, "quiet"));
     for (let offset = 0; offset < weekIndex(start); offset++) slots.push(element("span"));
     const visits = Object.values(state.visits ?? {}).filter(visit => !visit.cancelled);
-    const visitDays = new Set(visits.map(visit => visit.day));
+    const visitDays = new Set(visits.map(visit => displayVisit(visit).day));
     for (let date = start; monthText.format(date * dayMs) === month; date++) {
       const control = dateButton(date, day, selected => {
         calendarSelection = selected;
@@ -337,7 +457,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     const entries = [
       ...(totals.has(day) ? [element("article", `${numbers.format(totals.get(day))} میلی‌لیتر آب`, "water")] : []),
       ...scheduledDoses(state, day).map(dose => renderDose(state.medicines[dose.medicineId], dose)),
-      ...Object.values(state.visits ?? {}).filter(visit => visit.day === day).map(visit => visitCard(visit, "edit"))
+      ...Object.values(state.visits ?? {}).filter(visit => displayVisit(visit).day === day).map(visit => visitCard(visit, "edit"))
     ];
     const add = button("قرار جدید", () => openVisit(null, day));
     add.className = "block-action";
@@ -418,7 +538,6 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     for (const glass of document.querySelectorAll(".glass-water")) {
       glass.setAttribute("d", progress ? `M0 ${level}C30 ${level - 7} 65 ${level + 8} 100 ${level}V100H0Z` : "");
     }
-    if (document.activeElement !== $("water-goal")) $("water-goal").value = String(goal);
 
     if (screen === "water") {
       const entries = (state.water ?? []).filter(entry => entry.day === day).reverse();
@@ -426,7 +545,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
         const row = element("article", "", "entry-row");
         row.append(element("span", `${numbers.format(entry.amount)} میلی‌لیتر · ${clockText(entry.time)}`), button("ویرایش", () => openWater(entry)),
           button("حذف ثبت", () => {
-            if (confirm("این ثبت آب حذف شود؟")) void mutate(data => { data.water = data.water.filter(item => item.id !== entry.id); }, "ثبت آب حذف شد.");
+            if (confirm("این ثبت آب حذف شود؟")) void mutate(data => { data.water = data.water.filter(item => item.id !== entry.id); },
+              "ثبت آب حذف شد.", true);
           }));
         return row;
       }) : [empty("برای این روز آبی ثبت نشده است.")]));
@@ -435,7 +555,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     if (screen === "appointments") renderVisits(state);
 
     if (screen === "insights") {
-      const doses = Object.values(state.doses).filter(dose => dose.status);
+      const doses = Object.values(state.doses).filter(dose => dose.status === "taken" || dose.status === "skipped");
       if (insight === "calendar") renderCalendar(state, totals);
       else renderReports(today(), goal, totals, doses);
     }

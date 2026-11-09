@@ -1,11 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
-import { nextMedicationReminder, validSchedule } from "./medication-schedule.mjs";
+import { nextCareReminder, validSchedule } from "./medication-schedule.mjs";
 import { smallJson, validSubscription } from "./validation.mjs";
 import { sendPush } from "./push.mjs";
 
 const deviceId = /^[a-f0-9]{32}$/;
 const encoder = new TextEncoder();
 const sendWindow = 5 * 60_000;
+const kinds = { dose: "دارو", water: "آب", appointment: "قرار" };
 const reply = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 
 async function subscriptionId(endpoint) {
@@ -45,7 +46,7 @@ export async function handleMedicationReminders(request, env, url) {
   if (testing) return reply(await device.test());
   if (request.method === "GET") return reply(await device.status());
 
-  const body = await smallJson(request, 48 * 1024);
+  const body = await smallJson(request, 96 * 1024);
   if (!Number.isSafeInteger(body?.revision) || body.revision < 1 || typeof body.enabled !== "boolean") {
     return reply({ error: "bad_request" }, 400);
   }
@@ -64,6 +65,7 @@ export async function handleMedicationReminders(request, env, url) {
 function publicState(state) {
   return {
     revision: state?.revision ?? 0, enabled: Boolean(state?.plan), next: state?.next?.at ?? null,
+    nextKinds: state?.next ? state.next.kinds ?? ["dose"] : [],
     last: state?.last ?? null
   };
 }
@@ -100,7 +102,7 @@ export class MedicationReminders extends DurableObject {
     return this.ctx.storage.transaction(async storage => {
       const previous = await storage.get("state");
       if (revision <= (previous?.revision ?? 0)) return publicState(previous);
-      const next = plan ? nextMedicationReminder(plan, Date.now()) : null;
+      const next = plan ? nextCareReminder(plan, Date.now()) : null;
       const state = { revision, plan, next, last: previous?.last?.status === "gone" ? null : previous?.last ?? null, attempts: 0 };
       await saveState(storage, state);
       return publicState(state);
@@ -116,10 +118,13 @@ export class MedicationReminders extends DurableObject {
       await this.ctx.storage.setAlarm(due);
       return;
     }
-    const tag = `dose-${due.toString(36)}`;
+    const dueKinds = (state.next.kinds ?? ["dose"]).filter(kind => kind !== "appointment" || now < state.next.appointmentExpires);
+    const tag = `${dueKinds.length === 1 ? dueKinds[0] : "care"}-${due.toString(36)}`;
     const currentIs = current => current?.revision === state.revision && current?.next?.at === due;
-    const result = now - due < sendWindow ? await sendPush(this.env, state.plan.subscription, {
-      title: "یادآوری مدورا", body: "زمان یک نوبت دارو رسیده است.", tag,
+    const result = dueKinds.length && now - due < sendWindow ? await sendPush(this.env, state.plan.subscription, {
+      title: "یادآوری مدورا",
+      body: `یادآوری ${dueKinds.map(kind => kinds[kind]).join(" و ")}. برای دیدن جزئیات مدورا را باز کنید.`,
+      kind: dueKinds[0], tag,
       day: new Date(state.next.day * 86_400_000).toISOString().slice(0, 10)
     }, 300, async () => currentIs(await this.ctx.storage.get("state"))) : { status: "expired" };
 
@@ -133,9 +138,9 @@ export class MedicationReminders extends DurableObject {
         return;
       }
       const plan = result.status === "gone" ? null : current.plan;
-      const next = plan ? nextMedicationReminder(plan, finished) : null;
+      const next = plan ? nextCareReminder(plan, finished) : null;
       const { status, providerStatus, reason } = result;
-      await saveState(storage, { ...current, plan, next, attempts: 0, last: { at: due, status, providerStatus, reason } });
+      await saveState(storage, { ...current, plan, next, attempts: 0, last: { at: due, status, providerStatus, reason, kinds: dueKinds } });
     });
   }
 }

@@ -54,7 +54,11 @@ try {
   assert.equal((await replace(schedule(1))).next, due);
   assert.equal((await replace(schedule(2, [[day, minute]]))).next, due+86_400_000);
   assert.equal((await replace(schedule(1))).next, due+86_400_000);
-  assert.equal((await replace(schedule(3))).next, due);
+  const waterStart = Math.min(minute, 1438);
+  const waterPlan = minute === 1439 ? { start: waterStart - 59, end: 1439, interval: 60, repeat: 0,
+    pauseUntil: 0, goalDay: day } : { start: waterStart, end: waterStart + 1, interval: 60, repeat: 0,
+    pauseUntil: 0, goalDay: null };
+  assert.equal((await replace({ ...schedule(3), water: waterPlan })).next, due);
   console.log("Scheduling, suppression, older revision rejection and authentication passed.");
   await sleep(due-Date.now()+2000);
   let result;
@@ -64,14 +68,26 @@ try {
     await sleep(500);
   }
   assert.equal(result.last?.status, "accepted", JSON.stringify(result));
-  assert.equal(result.next, due+86_400_000);
+  assert.deepEqual(result.last.kinds, minute === 1439 ? ["dose"] : ["dose", "water"]);
+  assert.ok(result.next > due);
   assert.equal(outbound.length, 1);
   assert.equal(outbound[0].encoding, "aes128gcm");
   assert.match(outbound[0].topic, /^[a-f0-9]{32}$/);
   assert.equal(outbound[0].size, 4096);
   assert.ok(outbound[0].at>=due);
-  assert.equal((await replace({ revision: 4, enabled: false })).next, null);
-  console.log("Real scheduled alarm fired without an open client, encrypted payload accepted, next dose and disabling verified.");
+  const later = Date.now() + 2_000;
+  const visitNotice = later + 2_000;
+  const snoozed = { ...schedule(4, [[day, minute]]), appointments: [[visitNotice, day, visitNotice + 60_000]] };
+  snoozed.rules[0].snoozes = [[day, minute, later]];
+  assert.equal((await replace(snoozed)).next, later);
+  await sleep(visitNotice - Date.now() + 1_000);
+  for (let i = 0; i < 12 && outbound.length < 3; i++) await sleep(500);
+  result = await (await http(api, "GET", token)).json();
+  assert.equal(outbound.length, 3);
+  assert.deepEqual(result.last.kinds, ["appointment"]);
+  assert.equal(result.next, due + 86_400_000);
+  assert.equal((await replace({ revision: 5, enabled: false })).next, null);
+  console.log("Closed-client alarms for medication, water, snooze and appointments sent through encrypted Web Push.");
 } finally {
   await mf.dispose();
 }

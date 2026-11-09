@@ -55,11 +55,13 @@ test("supports real email and HTTPS VAPID contacts and caps request bodies", asy
 test("the service worker displays a notification without an open client", async () => {
   const listeners = new Map();
   const notifications = [];
+  const paths = [];
   const source = await readFile(new URL("../public/sw.js", import.meta.url), "utf8");
   vm.runInNewContext(source, {
     self: {
       addEventListener: (name, listener) => listeners.set(name, listener),
-      registration: { showNotification: async (title, options) => notifications.push({ title, ...options }) }
+      registration: { showNotification: async (title, options) => notifications.push({ title, ...options }) },
+      clients: { matchAll: async () => [], openWindow: async path => paths.push(path) }
     }
   });
   let completion;
@@ -82,4 +84,12 @@ test("the service worker displays a notification without an open client", async 
   });
   await completion;
   assert.equal(notifications[2].data.day, "2026-11-09");
+  for (const [kind, view] of [["water", "water"], ["appointment", "appointments"]]) {
+    listeners.get("notificationclick")({
+      notification: { data: { day: "2026-11-09", kind }, close() {} },
+      waitUntil: promise => { completion = promise; }
+    });
+    await completion;
+    assert.equal(paths.at(-1), `/medication/?day=2026-11-09&view=${view}`);
+  }
 });

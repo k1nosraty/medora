@@ -1,4 +1,7 @@
 import { accessCare } from "./storage.js";
+import { scheduleForPush, localZone } from "./care-plan.js";
+
+export { scheduleForPush };
 
 const $ = id => document.getElementById(id);
 const api = "/api/reminders";
@@ -14,6 +17,7 @@ export function changeReminderRevision(state) {
 }
 
 function status(text) { $("push-status").textContent = text; }
+const kindText = kinds => (kinds ?? []).map(kind => ({ dose: "دارو", water: "آب", appointment: "قرار" })[kind]).filter(Boolean).join(" و ");
 
 function controls(settings) {
   $("push-enable").disabled = !registration || !publicKey || settings?.enabled;
@@ -46,25 +50,6 @@ async function endpointId(endpoint) {
   return Array.from(new Uint8Array(hash, 0, 16), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export function scheduleForPush(state, zone, today) {
-  const excluded = new Map();
-  for (const dose of Object.values(state.doses)) {
-    if (dose.day < today || !["taken", "skipped"].includes(dose.status)) continue;
-    const items = excluded.get(dose.medicineId) ?? [];
-    items.push([dose.day, dose.minute]);
-    excluded.set(dose.medicineId, items);
-  }
-  return {
-    zone,
-    rules: Object.values(state.medicines).filter(medicine => !medicine.paused).flatMap(medicine => medicine.phases.map(phase => ({
-      start: phase.start, end: phase.end, interval: phase.interval, mask: phase.mask,
-      minutes: phase.slots.map(slot => slot.minute),
-      skip: (excluded.get(medicine.id) ?? []).filter(([day, minute]) =>
-        day >= phase.start && (phase.end === null || day < phase.end) && phase.slots.some(slot => slot.minute === minute))
-    })))
-  };
-}
-
 function localDay() {
   const now = new Date();
   return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / dayMs;
@@ -89,17 +74,18 @@ async function sync(check = false) {
   let settings = state.reminders;
   controls(settings);
   if (!settings?.token) return;
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zone = localZone();
 
   if (settings.enabled && registration) {
     subscription = await registration.pushManager.getSubscription();
     const validSubscription = subscription && Notification.permission !== "denied" &&
       settings.token.startsWith(`${await endpointId(subscription.endpoint)}.`);
-    if (settings.zone !== zone || !validSubscription) {
+    if (settings.zone !== zone || settings.planVersion !== 2 || !validSubscription) {
       state = await accessCare(current => {
         const reminder = current.reminders;
         if (reminder.token !== settings.token || !reminder.enabled) return;
         reminder.zone = zone;
+        reminder.planVersion = 2;
         reminder.revision += 1;
         if (!validSubscription) reminder.enabled = false;
       });
@@ -125,8 +111,9 @@ async function sync(check = false) {
 
     const latest = (await accessCare()).reminders;
     if (latest.token !== settings.token || latest.revision !== settings.revision) return;
+    const lastKind = kindText(remote.last?.kinds);
     $("push-delivery").textContent = remote.last
-      ? `آخرین نوبت ${formatDate.format(remote.last.at)} · ${deliveryText(remote.last)}`
+      ? `آخرین نوبت ${lastKind ? lastKind + " " : ""}${formatDate.format(remote.last.at)} · ${deliveryText(remote.last)}`
       : "هنوز برای این اشتراک نتیجهٔ ارسال نوبت ثبت نشده است.";
     if (remote.revision > settings.revision) {
       status("برنامهٔ جدیدتری روی سرور وجود دارد. اعلان را دوباره فعال کنید.");
@@ -141,14 +128,15 @@ async function sync(check = false) {
       controls(updated.reminders);
       status("اشتراک اعلان منقضی شده است. دوباره اعلان را فعال کنید.");
     } else if (remote.enabled) {
-      const next = remote.next ? `یادآوری بعدی ${formatDate.format(remote.next)}` : "اعلان فعال است. نوبت آینده‌ای در برنامه نیست.";
+      const nextKind = kindText(remote.nextKinds);
+      const next = remote.next ? `یادآوری بعدی ${nextKind ? nextKind + " · " : ""}${formatDate.format(remote.next)}` : "اعلان فعال است. نوبت آینده‌ای در برنامه نیست.";
       status(next);
     } else {
       status("اعلان نوبت‌ها خاموش است.");
     }
   } catch (error) {
     status(error.message === "bad_schedule"
-      ? "زمان‌بندی روی سرور ثبت نشد. برنامهٔ اعلان حداکثر ۱۰۰ مرحله می‌پذیرد."
+      ? "زمان‌بندی روی سرور ثبت نشد. تعداد مرحله‌ها و نوبت‌های آینده را بررسی کنید."
       : "همگام‌سازی اعلان انجام نشد. پس از اتصال، «بررسی وضعیت» را بزنید.");
   }
   controls((await accessCare()).reminders);
@@ -214,7 +202,7 @@ $("push-enable").addEventListener("click", () => {
       const updated = await accessCare(state => {
         const previous = state.reminders;
         const revision = Math.max(previous?.token === token ? previous.revision : 0, remote.revision) + 1;
-        state.reminders = { token, revision, synced: 0, enabled: true, zone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+        state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion: 2 };
       });
       $("push-code").value = "";
       controls(updated.reminders);
