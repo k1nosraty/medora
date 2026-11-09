@@ -1,8 +1,9 @@
+import { language, t } from "./locale.js";
 const $ = id => document.getElementById(id);
 const shapes = {
-  tablet: "قرص", capsule: "کپسول", syrup: "شربت", injection: "آمپول", ointment: "پماد", drops: "قطره", spray: "اسپری"
+  tablet: language === "en" ? "Tablet" : "قرص", capsule: t("کپسول"), syrup: t("شربت"), injection: t("آمپول"), ointment: t("پماد"), drops: t("قطره"), spray: t("اسپری")
 };
-const colors = { gold: "طلایی", green: "سبزآبی", blue: "آبی", purple: "یاسی", rose: "صورتی", slate: "خاکستری" };
+const colors = { gold: t("طلایی"), green: t("سبزآبی"), blue: t("آبی"), purple: t("یاسی"), rose: t("صورتی"), slate: t("خاکستری") };
 const knownShape = shape => Object.hasOwn(shapes, shape) ? shape : "capsule";
 const knownColor = color => Object.hasOwn(colors, color) ? color : "gold";
 
@@ -46,7 +47,7 @@ export function installAppearance() {
     tile.dataset.color = knownColor(selectedColor);
     $("medicine-appearance-icon").replaceChildren(medicationBadge(type, selectedColor));
     $("editor-banner").replaceChildren(medicationBanner(type, selectedColor));
-    tile.setAttribute("aria-label", `ظاهر دارو (اختیاری)، ${shapes[knownShape(type)]}، ${colors[knownColor(selectedColor)]}`);
+    tile.setAttribute("aria-label", t("ظاهر دارو (اختیاری)، {0}، {1}", shapes[knownShape(type)], colors[knownColor(selectedColor)]));
   }
   function choice(id, title, pressed, click) {
     const option = document.createElement("button");

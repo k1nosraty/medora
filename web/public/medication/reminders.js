@@ -1,3 +1,4 @@
+import { defaultCalendar, language, listSeparator, locale, t } from "./locale.js";
 import { accessCare } from "./storage.js";
 import { scheduleForPush, localZone } from "./care-plan.js";
 import { matchesSubscriptionId } from "./subscription-id.js";
@@ -7,7 +8,6 @@ export { scheduleForPush };
 const $ = id => document.getElementById(id);
 const api = "/api/reminders";
 const dayMs = 86_400_000;
-const formatDate = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "medium", timeStyle: "short" });
 let registration;
 let subscription;
 let publicKey;
@@ -18,7 +18,7 @@ export function changeReminderRevision(state) {
 }
 
 function status(text) { $("push-status").textContent = text; }
-const kindText = kinds => (kinds ?? []).map(kind => ({ dose: "دارو", water: "آب", appointment: "قرار" })[kind]).filter(Boolean).join(" و ");
+const kindText = kinds => (kinds ?? []).map(kind => ({ dose: t("دارو"), water: t("آب"), appointment: t("قرار") })[kind]).filter(Boolean).join(t(" و "));
 
 function controls(settings) {
   $("push-enable").disabled = !registration || !publicKey || settings?.enabled;
@@ -51,16 +51,16 @@ function localDay() {
 }
 
 function deliveryText(result) {
-  const details = result.providerStatus ? ` (${new Intl.NumberFormat("fa-IR").format(result.providerStatus)}${result.reason ? `، ${result.reason}` : ""})` : "";
+  const details = result.providerStatus ? ` (${new Intl.NumberFormat(locale).format(result.providerStatus)}${result.reason ? listSeparator + result.reason : ""})` : "";
   switch (result.status) {
-    case "accepted": return "سرویس Push پیام را پذیرفت. نمایش را روی گوشی بررسی کنید.";
-    case "rejected": return `سرویس Push پیام را رد کرد${details}.`;
-    case "failed": return "ارسال به سرویس Push انجام نشد.";
-    case "expired": return "مهلت ارسال این نوبت گذشته بود.";
-    case "gone": return "اشتراک اعلان منقضی شده است.";
-    case "rate_limit": return "برای آزمایش بعدی یک دقیقه صبر کنید.";
-    case "superseded": return "برنامه حین آزمایش تغییر کرد. دوباره بررسی کنید.";
-    default: return "ابتدا اعلان نوبت‌ها را فعال کنید.";
+    case "accepted": return t("سرویس Push پیام را پذیرفت. نمایش را روی گوشی بررسی کنید.");
+    case "rejected": return t("سرویس Push پیام را رد کرد{0}.", details);
+    case "failed": return t("ارسال به سرویس Push انجام نشد.");
+    case "expired": return t("مهلت ارسال این نوبت گذشته بود.");
+    case "gone": return t("اشتراک اعلان منقضی شده است.");
+    case "rate_limit": return t("برای آزمایش بعدی یک دقیقه صبر کنید.");
+    case "superseded": return t("برنامه حین آزمایش تغییر کرد. دوباره بررسی کنید.");
+    default: return t("ابتدا اعلان نوبت‌ها را فعال کنید.");
   }
 }
 
@@ -75,12 +75,13 @@ async function sync(check = false) {
     subscription = await registration.pushManager.getSubscription();
     const validSubscription = subscription && Notification.permission !== "denied" &&
       await matchesSubscriptionId(settings.token.split(".")[0], subscription.toJSON());
-    if (settings.zone !== zone || settings.planVersion !== 2 || !validSubscription) {
+    if (settings.zone !== zone || settings.planVersion !== 2 || (settings.language ?? "fa") !== language || !validSubscription) {
       state = await accessCare(current => {
         const reminder = current.reminders;
         if (reminder.token !== settings.token || !reminder.enabled) return;
         reminder.zone = zone;
         reminder.planVersion = 2;
+        reminder.language = language;
         reminder.revision += 1;
         if (!validSubscription) reminder.enabled = false;
       });
@@ -91,9 +92,9 @@ async function sync(check = false) {
   try {
     let remote;
     if (settings.revision > (settings.synced ?? 0)) {
-      status("در حال همگام‌سازی اعلان…");
-      if (settings.enabled && !subscription) return status("در حال آماده‌سازی اشتراک اعلان…");
-      const plan = settings.enabled ? { ...scheduleForPush(state, zone, localDay()), subscription: subscription.toJSON() } : {};
+      status(t("در حال همگام‌سازی اعلان…"));
+      if (settings.enabled && !subscription) return status(t("در حال آماده‌سازی اشتراک اعلان…"));
+      const plan = settings.enabled ? { ...scheduleForPush(state, zone, localDay()), language, subscription: subscription.toJSON() } : {};
       remote = await request(api, "PUT", settings.token, { revision: settings.revision, enabled: settings.enabled, ...plan });
       await accessCare(current => {
         const reminder = current.reminders;
@@ -106,12 +107,13 @@ async function sync(check = false) {
 
     const latest = (await accessCare()).reminders;
     if (latest.token !== settings.token || latest.revision !== settings.revision) return;
+    const formatDate = new Intl.DateTimeFormat(`${locale}-u-ca-${state.calendar ?? defaultCalendar}`, { dateStyle: "medium", timeStyle: "short" });
     const lastKind = kindText(remote.last?.kinds);
     $("push-delivery").textContent = remote.last
-      ? `آخرین نوبت ${lastKind ? lastKind + " " : ""}${formatDate.format(remote.last.at)} · ${deliveryText(remote.last)}`
-      : "هنوز برای این اشتراک نتیجهٔ ارسال نوبت ثبت نشده است.";
+      ? t("آخرین نوبت {0}{1} · {2}", lastKind ? lastKind + " " : "", formatDate.format(remote.last.at), deliveryText(remote.last))
+      : t("هنوز برای این اشتراک نتیجهٔ ارسال نوبت ثبت نشده است.");
     if (remote.revision > settings.revision) {
-      status("برنامهٔ جدیدتری روی سرور وجود دارد. اعلان را دوباره فعال کنید.");
+      status(t("برنامهٔ جدیدتری روی سرور وجود دارد. اعلان را دوباره فعال کنید."));
       $("push-enable").disabled = !registration || !publicKey;
       return;
     } else if (settings.enabled && !remote.enabled && remote.last?.status === "gone") {
@@ -121,33 +123,33 @@ async function sync(check = false) {
         if (current.reminders.token === settings.token && current.reminders.revision === settings.revision) current.reminders.enabled = false;
       });
       controls(updated.reminders);
-      status("اشتراک اعلان منقضی شده است. دوباره اعلان را فعال کنید.");
+      status(t("اشتراک اعلان منقضی شده است. دوباره اعلان را فعال کنید."));
     } else if (remote.enabled) {
       const nextKind = kindText(remote.nextKinds);
-      const next = remote.next ? `یادآوری بعدی ${nextKind ? nextKind + " · " : ""}${formatDate.format(remote.next)}` : "اعلان فعال است. نوبت آینده‌ای در برنامه نیست.";
+      const next = remote.next ? t("یادآوری بعدی {0}{1}", nextKind ? nextKind + " · " : "", formatDate.format(remote.next)) : t("اعلان فعال است. نوبت آینده‌ای در برنامه نیست.");
       status(next);
     } else {
-      status("اعلان نوبت‌ها خاموش است.");
+      status(t("اعلان نوبت‌ها خاموش است."));
     }
   } catch (error) {
-    status(error.message === "rate_limit" ? "تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره بررسی کنید." : error.message === "bad_schedule"
-      ? "زمان‌بندی روی سرور ثبت نشد. تعداد مرحله‌ها و نوبت‌های آینده را بررسی کنید."
-      : "همگام‌سازی اعلان انجام نشد. پس از اتصال، «بررسی وضعیت» را بزنید.");
+    status(error.message === "rate_limit" ? t("تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره بررسی کنید.") : error.message === "bad_schedule"
+      ? t("زمان‌بندی روی سرور ثبت نشد. تعداد مرحله‌ها و نوبت‌های آینده را بررسی کنید.")
+      : t("همگام‌سازی اعلان انجام نشد. پس از اتصال، «بررسی وضعیت» را بزنید."));
   }
   controls((await accessCare()).reminders);
 }
 
 export function syncReminders(check = false) {
-  return serialize(() => sync(check)).catch(() => status("خواندن وضعیت اعلان انجام نشد."));
+  return serialize(() => sync(check)).catch(() => status(t("خواندن وضعیت اعلان انجام نشد.")));
 }
 
 export async function initializeReminders() {
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (isIOS && !matchMedia("(display-mode: standalone)").matches && navigator.standalone !== true) {
-    return status("برای اعلان آیفون، مدورا را به صفحهٔ اصلی اضافه کنید و از آیکون آن وارد شوید.");
+    return status(t("برای اعلان آیفون، مدورا را به صفحهٔ اصلی اضافه کنید و از آیکون آن وارد شوید."));
   }
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-    return status("اعلان وب در این مرورگر در دسترس نیست.");
+    return status(t("اعلان وب در این مرورگر در دسترس نیست."));
   }
   try {
     const [root, config] = await Promise.all([navigator.serviceWorker.register("/sw.js", { scope: "/" }), fetch("/api/config")]);
@@ -171,16 +173,16 @@ export async function initializeReminders() {
     const settings = (await accessCare()).reminders;
     controls(settings);
     if (settings?.token) await syncReminders(true);
-    else status("برای دریافت یادآوری، «فعال‌کردن اعلان» را بزنید و مجوز گوشی را تأیید کنید.");
+    else status(t("برای دریافت یادآوری، «فعال‌کردن اعلان» را بزنید و مجوز گوشی را تأیید کنید."));
   } catch {
-    status("راه‌اندازی اعلان انجام نشد. پس از اتصال، برنامه را دوباره باز کنید.");
+    status(t("راه‌اندازی اعلان انجام نشد. پس از اتصال، برنامه را دوباره باز کنید."));
   }
 }
 
 $("push-enable").addEventListener("click", () => {
   // Safari requires subscribe to start during the button's user gesture.
   if (!registration || !publicKey) return;
-  if (Notification.permission === "denied") return status("مجوز اعلان مدورا را در تنظیمات گوشی فعال کنید.");
+  if (Notification.permission === "denied") return status(t("مجوز اعلان مدورا را در تنظیمات گوشی فعال کنید."));
   const ready = subscription ? Promise.resolve(subscription) : registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: publicKey });
   ready.catch(() => {});
   $("push-enable").disabled = true;
@@ -195,16 +197,16 @@ $("push-enable").addEventListener("click", () => {
       const updated = await accessCare(state => {
         const previous = state.reminders;
         const revision = Math.max(previous?.token === token ? previous.revision : 0, remote.revision) + 1;
-        state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion: 2 };
+        state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion: 2, language };
       });
       controls(updated.reminders);
       await sync();
     } catch (error) {
-      status(error.message === "rate_limit" ? "تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره تلاش کنید." :
-        "فعال‌کردن اعلان انجام نشد. اتصال و مجوز اعلان را بررسی کنید.");
+      status(error.message === "rate_limit" ? t("تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره تلاش کنید.") :
+        t("فعال‌کردن اعلان انجام نشد. اتصال و مجوز اعلان را بررسی کنید."));
       controls((await accessCare()).reminders);
     }
-  }).catch(() => status("فعال‌کردن اعلان انجام نشد."));
+  }).catch(() => status(t("فعال‌کردن اعلان انجام نشد.")));
 });
 
 $("push-disable").addEventListener("click", () => {
@@ -215,20 +217,20 @@ $("push-disable").addEventListener("click", () => {
     });
     controls(state.reminders);
     await sync();
-  }).catch(() => status("خاموش‌کردن اعلان انجام نشد."));
+  }).catch(() => status(t("خاموش‌کردن اعلان انجام نشد.")));
 });
 
 $("push-check").addEventListener("click", () => void syncReminders(true));
 $("push-test").addEventListener("click", () => {
   $("push-test").disabled = true;
-  $("push-test-result").textContent = "در حال ارسال اعلان آزمایشی…";
+  $("push-test-result").textContent = t("در حال ارسال اعلان آزمایشی…");
   void serialize(async () => {
     try {
       const settings = (await accessCare()).reminders;
       const result = await request(`${api}/test`, "POST", settings.token, {});
       $("push-test-result").textContent = deliveryText(result);
     } catch {
-      $("push-test-result").textContent = "آزمون ارسال انجام نشد. اتصال را بررسی کنید.";
+      $("push-test-result").textContent = t("آزمون ارسال انجام نشد. اتصال را بررسی کنید.");
     } finally {
       controls((await accessCare()).reminders);
     }

@@ -53,7 +53,7 @@ export async function handleMedicationReminders(request, env, url) {
     if (!schedule || !subscription || !await matchesSubscriptionId(match[1], subscription)) {
       return reply({ error: "bad_schedule" }, 400);
     }
-    plan = { ...schedule, subscription };
+    plan = { ...schedule, subscription, language: body.language === "en" ? "en" : "fa" };
   }
   return reply(await device.replace(body.revision, plan));
 }
@@ -85,11 +85,12 @@ export class MedicationReminders extends DurableObject {
       const lastTest = await storage.get("lastTest");
       if (lastTest && now - lastTest < 60_000) return { status: "rate_limit" };
       await storage.put("lastTest", now);
-      return { subscription: state.plan.subscription, revision: state.revision };
+      return { subscription: state.plan.subscription, revision: state.revision, language: state.plan.language };
     });
     if (!target.subscription) return target;
     return sendPush(this.env, target.subscription, {
-      title: "آزمایش اعلان مدورا", body: "این پیام از اشتراک اعلان نوبت‌های همین دستگاه فرستاده شد.",
+      title: target.language === "en" ? "Medora notification test" : "آزمایش اعلان مدورا",
+      body: target.language === "en" ? "Your notifications are working on this device." : "این پیام از اشتراک اعلان نوبت‌های همین دستگاه فرستاده شد.",
       tag: `test-${now.toString(36)}`, day: new Date(now).toISOString().slice(0, 10)
     }, 120, async () => (await this.ctx.storage.get("state"))?.revision === target.revision);
   }
@@ -117,9 +118,12 @@ export class MedicationReminders extends DurableObject {
     const dueKinds = (state.next.kinds ?? ["dose"]).filter(kind => kind !== "appointment" || now < state.next.appointmentExpires);
     const tag = `${dueKinds.length === 1 ? dueKinds[0] : "care"}-${due.toString(36)}`;
     const currentIs = current => current?.revision === state.revision && current?.next?.at === due;
+    const english = state.plan.language === "en";
+    const kindsEn = { dose: "medicine", water: "water", appointment: "appointment" };
     const result = dueKinds.length && now - due < sendWindow ? await sendPush(this.env, state.plan.subscription, {
-      title: "یادآوری مدورا",
-      body: `یادآوری ${dueKinds.map(kind => kinds[kind]).join(" و ")}. برای دیدن جزئیات مدورا را باز کنید.`,
+      title: english ? "Medora reminder" : "یادآوری مدورا",
+      body: english ? `Reminder: ${dueKinds.map(kind => kindsEn[kind]).join(", ")}. Open Medora for details.`
+        : `یادآوری ${dueKinds.map(kind => kinds[kind]).join(" و ")}. برای دیدن جزئیات مدورا را باز کنید.`,
       kind: dueKinds[0], tag,
       day: new Date(state.next.day * 86_400_000).toISOString().slice(0, 10)
     }, 300, async () => currentIs(await this.ctx.storage.get("state"))) : { status: "expired" };

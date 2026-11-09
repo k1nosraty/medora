@@ -1,9 +1,9 @@
+import { listSeparator, localDigits, locale, shortWeek, t, weekIndex } from "./locale.js";
 const $ = id => document.getElementById(id);
 const dayMs = 86_400_000;
 const dayNumber = iso => Date.parse(`${iso}T00:00:00Z`) / dayMs;
 const isoDay = day => new Date(day * dayMs).toISOString().slice(0, 10);
-const weekdays = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
-const digits = new Intl.NumberFormat("fa-IR", { minimumIntegerDigits: 2, useGrouping: false });
+const digits = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false });
 const twoDigits = value => String(value).padStart(2, "0");
 
 export function installPickers({ today, selectedDay, dashboard }) {
@@ -22,9 +22,9 @@ export function installPickers({ today, selectedDay, dashboard }) {
 
   function drawDate() {
     $("picker-month").textContent = dashboard.formatMonth(shownMonth);
-    const leading = (new Date(shownMonth * dayMs).getUTCDay() + 1) % 7;
+    const leading = weekIndex(shownMonth);
     const end = dashboard.monthStart(shownMonth + 32);
-    const heading = weekdays.map(label => {
+    const heading = shortWeek.map(label => {
       const cell = document.createElement("span");
       cell.className = "quiet";
       cell.textContent = label;
@@ -105,7 +105,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
       const radius = isHour && value >= 12 ? 27 : 41;
       const control = document.createElement("button");
       control.type = "button";
-      control.textContent = isHour ? value.toLocaleString("fa-IR") : digits.format(value);
+      control.textContent = isHour ? value.toLocaleString(locale) : digits.format(value);
       control.setAttribute("aria-pressed", String(value === selected));
       control.style.left = `${50 + Math.sin(at) * radius}%`;
       control.style.top = `${50 - Math.cos(at) * radius}%`;
@@ -133,7 +133,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
   function readKeyboard() {
     const [h, m] = keyboardValues();
     if (!(h >= 0 && h < 24 && m >= 0 && m < 60)) {
-      $("clock-error").textContent = "ساعت و دقیقه را بررسی کنید.";
+      $("clock-error").textContent = t("ساعت و دقیقه را بررسی کنید.");
       return false;
     }
     hour = h;
@@ -147,7 +147,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
     $("clock-keyboard").hidden = !keyboard;
     $("clock-dial").hidden = keyboard;
     $("clock-display").hidden = keyboard;
-    $("clock-mode").textContent = keyboard ? "نمای ساعت" : "ورود عددی ساعت";
+    $("clock-mode").textContent = keyboard ? t("نمای ساعت") : t("ورود عددی ساعت");
     if (keyboard) {
       $("keyboard-hour").value = twoDigits(hour);
       $("keyboard-minute").value = twoDigits(minute);
@@ -218,10 +218,10 @@ export function installPickers({ today, selectedDay, dashboard }) {
         fields.set(field, control);
       }
       const formatted = field.value && (field.type === "date" ? dashboard.formatDay(dayNumber(field.value)) :
-        field.value.replace(/\d/g, digit => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]));
+        localDigits(field.value));
       const caption = label.textContent.trim();
-      control.textContent = field.id === "basic-time" && formatted ? `نوبت ۱: ساعت ${formatted}` : formatted || caption;
-      control.setAttribute("aria-label", formatted ? `${caption}، ${formatted}` : caption);
+      control.textContent = field.id === "basic-time" && formatted ? t("نوبت ۱: ساعت {0}", formatted) : formatted || caption;
+      control.setAttribute("aria-label", formatted ? caption + listSeparator + formatted : caption);
     }
   }
 

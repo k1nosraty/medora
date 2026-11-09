@@ -71,7 +71,11 @@ test("optional email login enforces rate limits, attempts, single use and sessio
       assert.equal((await auth("verify", { ...second, email: other, code: invalid })).status, 400);
     }
     assert.equal((await auth("verify", { ...second, email: other, code: correct }, null, "192.0.2.3")).status, 400);
-    assert.equal(deliveries.length, 2);
+    const third = await auth("start", { email: "english@example.com", language: "en" });
+    assert.equal(third.status, 202);
+    assert.equal(deliveries[2].subject, "Your Medora sign-in code");
+    assert.match(deliveries[2].text, /\b\d{6}\b/);
+    assert.equal(deliveries.length, 3);
   } finally {
     await mf.dispose();
   }

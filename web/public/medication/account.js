@@ -1,10 +1,11 @@
+import { language, t } from "./locale.js";
 const $ = id => document.getElementById(id);
 const errors = {
-  email: "نشانی ایمیل را بررسی کنید.",
-  rate_limit: "درخواست‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید.",
-  invalid_code: "کد معتبر نیست یا منقضی شده است. کد را بررسی کنید یا دوباره کد بگیرید.",
-  delivery: "ایمیل ارسال نشد. کمی بعد دوباره تلاش کنید.",
-  unavailable: "ورود ایمیلی هنوز در دسترس نیست."
+  email: t("نشانی ایمیل را بررسی کنید."),
+  rate_limit: t("درخواست‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید."),
+  invalid_code: t("کد معتبر نیست یا منقضی شده است. کد را بررسی کنید یا دوباره کد بگیرید."),
+  delivery: t("ایمیل ارسال نشد. کمی بعد دوباره تلاش کنید."),
+  unavailable: t("ورود ایمیلی هنوز در دسترس نیست.")
 };
 
 export function installAccount() {
@@ -18,7 +19,7 @@ export function installAccount() {
     $("email-verify").hidden = state !== "code";
     $("account-session").hidden = state !== "signed-in";
     $("account-address").textContent = address;
-    $("account-dismiss").textContent = state === "signed-in" ? "بازگشت به مدورا" : "ادامه بدون ورود";
+    $("account-dismiss").textContent = state === "signed-in" ? t("بازگشت به مدورا") : t("ادامه بدون ورود");
   }
   function status(text = "", error = false) {
     $("account-status").textContent = text;
@@ -28,7 +29,7 @@ export function installAccount() {
     if (busy) return null;
     busy = true;
     controls.forEach(control => { control.disabled = true; });
-    status("در حال ارتباط…");
+    status(t("در حال ارتباط…"));
     try {
       const response = await fetch(`/api/auth/${route}`, body ? {
         method: "POST",
@@ -37,13 +38,13 @@ export function installAccount() {
       } : {});
       const data = await response.json();
       if (!response.ok) {
-        status(errors[data.error] ?? "ارتباط برقرار نشد. دوباره تلاش کنید.", true);
+        status(errors[data.error] ?? t("ارتباط برقرار نشد. دوباره تلاش کنید."), true);
         return null;
       }
       status();
       return data;
     } catch {
-      status("ارتباط برقرار نشد. اتصال اینترنت را بررسی کنید.", true);
+      status(t("ارتباط برقرار نشد. اتصال اینترنت را بررسی کنید."), true);
       return null;
     } finally {
       busy = false;
@@ -64,7 +65,7 @@ export function installAccount() {
   $("email-start").addEventListener("submit", async event => {
     event.preventDefault();
     const address = $("account-email").value.trim();
-    const data = await request("start", { email: address });
+    const data = await request("start", { email: address, ...(language === "en" ? { language } : {}) });
     if (!data) return;
     email = address;
     challenge = data.challenge;
@@ -94,7 +95,7 @@ export function installAccount() {
   $("email-logout").addEventListener("click", async () => {
     if (!await request("logout", {})) return;
     view("email");
-    status("از حساب خارج شدید.");
+    status(t("از حساب خارج شدید."));
     if ($("account-dialog").open) $("account-email").focus();
   });
 }

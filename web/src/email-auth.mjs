@@ -72,7 +72,7 @@ export async function handleEmailAuth(request, env, url) {
   const secret = env.EMAIL_AUTH_SECRET;
   const id = await hmac(secret, "account-v1", email);
   if (route === "start") {
-    const result = await env.EMAIL_ACCOUNTS.getByName(id).start(email);
+    const result = await env.EMAIL_ACCOUNTS.getByName(id).start(email, body.language === "en" ? "en" : "fa");
     if (result.error) return reply(result, result.error === "rate_limit" ? 429 : 503);
     const signature = await hmac(secret, "challenge-v1", `${id}.${result.challenge}`);
     return reply({ challenge: `${result.challenge}.${signature}` }, 202);
@@ -101,7 +101,7 @@ export class EmailAccount extends DurableObject {
     `);
   }
 
-  async start(email) {
+  async start(email, language) {
     const id = crypto.randomUUID();
     const code = randomCode();
     const proof = await hmac(this.env.EMAIL_AUTH_SECRET, "code-v1", `${id}:${code}`);
@@ -122,8 +122,11 @@ export class EmailAccount extends DurableObject {
         signal: AbortSignal.timeout(10_000),
         headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": id },
         body: JSON.stringify({
-          from: this.env.EMAIL_FROM, to: [email], subject: "کد ورود به مدورا",
-          text: `کد ورود شما به مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر شما درخواست ورود نداده‌اید، این پیام را نادیده بگیرید.`
+          from: this.env.EMAIL_FROM, to: [email],
+          subject: language === "en" ? "Your Medora sign-in code" : "کد ورود به مدورا",
+          text: language === "en"
+            ? `Your Medora sign-in code is ${code}.\nIt expires in 10 minutes. If you didn't request a code, you can ignore this email.`
+            : `کد ورود شما به مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر شما درخواست ورود نداده‌اید، این پیام را نادیده بگیرید.`
         })
       });
       if (response.ok) return { challenge: id };
