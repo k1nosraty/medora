@@ -35,12 +35,14 @@ export async function handleMedicationReminders(request, env, url) {
     return reply({ token: `${body.id}.${signature}` });
   }
 
-  if (url.pathname !== "/api/reminders" || !["PUT", "GET"].includes(request.method)) return reply({ error: "not_found" }, 404);
+  const testing = url.pathname === "/api/reminders/test" && request.method === "POST";
+  if (!testing && (url.pathname !== "/api/reminders" || !["PUT", "GET"].includes(request.method))) return reply({ error: "not_found" }, 404);
   const match = /^Bearer ([a-f0-9]{32})\.([a-f0-9]{64})$/.exec(authorization);
   if (!match || !crypto.subtle.timingSafeEqual(encoder.encode(match[2]), encoder.encode(await deviceSignature(env.REMINDER_SIGNING_KEY, match[1])))) {
     return reply({ error: "unauthorized" }, 401);
   }
   const device = env.REMINDERS.getByName(match[1]);
+  if (testing) return reply(await device.test());
   if (request.method === "GET") return reply(await device.status());
 
   const body = await smallJson(request, 48 * 1024);
@@ -75,6 +77,23 @@ async function saveState(storage, state, alarm = state.next?.at) {
 export class MedicationReminders extends DurableObject {
   async status() {
     return publicState(await this.ctx.storage.get("state"));
+  }
+
+  async test() {
+    const now = Date.now();
+    const target = await this.ctx.storage.transaction(async storage => {
+      const state = await storage.get("state");
+      if (!state?.plan?.subscription) return { status: "inactive" };
+      const lastTest = await storage.get("lastTest");
+      if (lastTest && now - lastTest < 60_000) return { status: "rate_limit" };
+      await storage.put("lastTest", now);
+      return { subscription: state.plan.subscription, revision: state.revision };
+    });
+    if (!target.subscription) return target;
+    return sendPush(this.env, target.subscription, {
+      title: "آزمایش اعلان مدورا", body: "این پیام از اشتراک اعلان نوبت‌های همین دستگاه فرستاده شد.",
+      tag: `test-${now.toString(36)}`, day: new Date(now).toISOString().slice(0, 10)
+    }, 120, async () => (await this.ctx.storage.get("state"))?.revision === target.revision);
   }
 
   async replace(revision, plan) {
@@ -115,7 +134,8 @@ export class MedicationReminders extends DurableObject {
       }
       const plan = result.status === "gone" ? null : current.plan;
       const next = plan ? nextMedicationReminder(plan, finished) : null;
-      await saveState(storage, { ...current, plan, next, attempts: 0, last: { at: due, status: result.status } });
+      const { status, providerStatus, reason } = result;
+      await saveState(storage, { ...current, plan, next, attempts: 0, last: { at: due, status, providerStatus, reason } });
     });
   }
 }

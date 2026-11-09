@@ -24,7 +24,7 @@ export default {
     if (url.pathname === "/api/config" && request.method === "GET") {
       return reply({ publicKey: vapid.publicKey });
     }
-    if (url.pathname === "/api/reminders" || url.pathname === "/api/reminders/enroll") {
+    if (["/api/reminders", "/api/reminders/enroll", "/api/reminders/test"].includes(url.pathname)) {
       return handleMedicationReminders(request, env, url);
     }
 

@@ -19,6 +19,7 @@ function controls(settings) {
   $("push-enable").disabled = !registration || !publicKey || settings?.enabled;
   $("push-disable").disabled = !settings?.enabled;
   $("push-check").disabled = !settings?.token;
+  $("push-test").disabled = !settings?.enabled;
   $("push-code-row").hidden = Boolean(settings?.enabled);
 }
 
@@ -67,6 +68,20 @@ function localDay() {
   return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / dayMs;
 }
 
+function deliveryText(result) {
+  const details = result.providerStatus ? ` (${new Intl.NumberFormat("fa-IR").format(result.providerStatus)}${result.reason ? `، ${result.reason}` : ""})` : "";
+  switch (result.status) {
+    case "accepted": return "سرویس Push پیام را پذیرفت. نمایش را روی گوشی بررسی کنید.";
+    case "rejected": return `سرویس Push پیام را رد کرد${details}.`;
+    case "failed": return "ارسال به سرویس Push انجام نشد.";
+    case "expired": return "مهلت ارسال این نوبت گذشته بود.";
+    case "gone": return "اشتراک اعلان منقضی شده است.";
+    case "rate_limit": return "برای آزمایش بعدی یک دقیقه صبر کنید.";
+    case "superseded": return "برنامه حین آزمایش تغییر کرد. دوباره بررسی کنید.";
+    default: return "ابتدا اعلان نوبت‌ها را فعال کنید.";
+  }
+}
+
 async function sync(check = false) {
   let state = await accessCare();
   let settings = state.reminders;
@@ -108,6 +123,9 @@ async function sync(check = false) {
 
     const latest = (await accessCare()).reminders;
     if (latest.token !== settings.token || latest.revision !== settings.revision) return;
+    $("push-delivery").textContent = remote.last
+      ? `آخرین نوبت ${formatDate.format(remote.last.at)} · ${deliveryText(remote.last)}`
+      : "هنوز برای این اشتراک نتیجهٔ ارسال نوبت ثبت نشده است.";
     if (remote.revision > settings.revision) {
       status("برنامهٔ جدیدتری روی سرور وجود دارد. اعلان را دوباره فعال کنید.");
       $("push-enable").disabled = !registration || !publicKey;
@@ -122,7 +140,7 @@ async function sync(check = false) {
       status("اشتراک اعلان منقضی شده است. دوباره اعلان را فعال کنید.");
     } else if (remote.enabled) {
       const next = remote.next ? `یادآوری بعدی ${formatDate.format(remote.next)}` : "اعلان فعال است. نوبت آینده‌ای در برنامه نیست.";
-      status(remote.last?.status === "accepted" ? `${next} · سرویس Push پیام قبلی را پذیرفت.` : next);
+      status(next);
     } else {
       status("اعلان نوبت‌ها خاموش است.");
     }
@@ -219,4 +237,19 @@ $("push-disable").addEventListener("click", () => {
 });
 
 $("push-check").addEventListener("click", () => void syncReminders(true));
+$("push-test").addEventListener("click", () => {
+  $("push-test").disabled = true;
+  $("push-test-result").textContent = "در حال ارسال اعلان آزمایشی…";
+  void serialize(async () => {
+    try {
+      const settings = (await accessCare()).reminders;
+      const result = await request(`${api}/test`, "POST", settings.token, {});
+      $("push-test-result").textContent = deliveryText(result);
+    } catch {
+      $("push-test-result").textContent = "آزمون ارسال انجام نشد. اتصال را بررسی کنید.";
+    } finally {
+      controls((await accessCare()).reminders);
+    }
+  }).catch(() => {});
+});
 window.addEventListener("online", () => void (registration ? syncReminders(true) : initializeReminders()));

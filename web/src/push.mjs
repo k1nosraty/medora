@@ -19,10 +19,14 @@ export async function sendPush(env, subscription, data, ttl, stillCurrent = asyn
       }
     });
     const providerStatus = response.status;
-    await response.body?.cancel();
-    if (response.ok) return { status: "accepted", providerStatus };
+    if (response.ok) {
+      await response.body?.cancel().catch(() => {});
+      return { status: "accepted", providerStatus };
+    }
+    const { reason } = await response.json().catch(() => ({}));
+    const safeReason = typeof reason === "string" && /^[A-Za-z][A-Za-z0-9_]{1,47}$/.test(reason) ? reason : undefined;
     if (providerStatus === 404 || providerStatus === 410) return { status: "gone", providerStatus };
-    return { status: "rejected", providerStatus };
+    return { status: "rejected", providerStatus, reason: safeReason };
   } catch {
     return { status: "failed" };
   }
