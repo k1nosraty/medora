@@ -16,14 +16,24 @@
     <symbol id="i-mark" viewBox="0 0 100 100"><path fill="currentColor" d="M50 5C29 26 30 47 50 62C70 47 71 26 50 5ZM5 40C4 71 22 91 47 94C47 65 28 46 5 40ZM95 40C96 71 78 91 53 94C53 65 72 46 95 40Z"/></symbol>
     <symbol id="i-water" viewBox="0 0 24 24"><path d="M12 2C9 6 5 10 5 14a7 7 0 0 0 14 0c0-4-4-8-7-12Z"/><path d="M8 15a4 4 0 0 0 3 3"/></symbol>
     <symbol id="i-pill" viewBox="0 0 24 24"><path d="M5 19a5 5 0 0 1 0-7l7-7a5 5 0 0 1 7 7l-7 7a5 5 0 0 1-7 0ZM9 9l6 6"/></symbol>
+    <symbol id="i-bottle" viewBox="0 0 24 24"><path d="M7 3h10v4H7zm1 4v2l-2 2v9h12v-9l-2-2V7m-4 5v6m-3-3h6"/></symbol>
     <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18m-13 5h2m4 0h2"/></symbol>
     <symbol id="i-reports" viewBox="0 0 24 24"><path d="M4 4v16h16M9 16v-5m5 5V7m5 9v-3"/></symbol>
     <symbol id="i-settings" viewBox="0 0 24 24"><path d="m10 3-1 3-3 1-2 3 2 2v3l2 3 3-1 3 1 2-2v-3l2-2-1-3-3-1-1-3Z" transform="translate(1 1)"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5ZM10 21h4"/></symbol>
+    <symbol id="i-capsule" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="6" transform="rotate(40 12 12)"/><path d="m8 8 8 8"/></symbol>
+    <symbol id="i-syrup" viewBox="0 0 24 24"><path d="M9 3h6v4H9zm-3 7 3-3h6l3 3v10a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1ZM6 13h12m-12 5h12"/></symbol>
+    <symbol id="i-injection" viewBox="0 0 24 24"><path d="m7 15 8-8 3 3-8 8-3-3Zm9-10 5 5M7 17l-4 4m8-10 2 2m-5 1 2 2m4-8 2 2"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-glass" viewBox="0 0 100 100"><path fill="#e4f4ff" fill-opacity=".48" stroke="#b7daf0" stroke-width="2" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/><path stroke="white" stroke-opacity=".72" stroke-width="5" d="M22 18l8 61"/></symbol>
+    <clipPath id="glass-clip"><path d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></clipPath>
   </svg>
   <header class="app-bar">
     <div class="app-bar-inner">
       <div class="brand-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></div>
-      <div><span class="brand-name">مدورا</span><h1 id="screen-title">امروز</h1><p id="header-date"></p></div>
+      <button id="screen-back" type="button" class="icon-button" aria-label="بازگشت" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+      <div><h1 id="screen-title">امروز</h1><p id="header-date"></p></div>
       <svg class="header-leaf" aria-hidden="true"><use href="#i-mark"/></svg>
     </div>
   </header>
@@ -31,110 +41,200 @@
     <p id="boot-status" role="status">در حال بارگذاری مدورا…</p>
     <div id="app" hidden>
       <div id="day-controls" class="day-controls">
-        <button type="button" class="secondary day-arrow" id="previous-day" aria-label="روز قبل">›</button>
+        <button type="button" class="secondary day-arrow icon-button" id="next-day" aria-label="روز بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
         <label class="date-field"><svg aria-hidden="true"><use href="#i-calendar"/></svg><span id="day-label"></span><input id="day" type="date" aria-label="انتخاب تاریخ روز" required></label>
-        <button type="button" class="secondary day-arrow" id="next-day" aria-label="روز بعد">‹</button>
+        <button type="button" class="secondary day-arrow icon-button reverse" id="previous-day" aria-label="روز قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+        <div id="day-week" class="day-week" aria-label="روزهای هفته"></div>
       </div>
       <div data-screen="today">
         <section id="today-water" class="feature water">
           <div class="feature-head">
-            <div>
-              <div class="feature-label"><svg aria-hidden="true"><use href="#i-water"/></svg><span id="today-water-label">آب امروز</span></div>
+            <div class="water-info">
+              <strong id="today-water-label">مصرف آب</strong>
               <p class="amount-line"><strong id="today-water-total">۰</strong> از <span id="today-water-goal">۲٬۰۰۰</span> میلی‌لیتر</p>
+              <progress class="water-progress" id="today-water-progress" aria-label="پیشرفت هدف آب" max="1" value="0"></progress>
               <p class="quiet" id="today-water-remaining"></p>
             </div>
-            <div class="progress-ring" id="water-ring" role="progressbar" aria-label="درصد هدف آب" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="water-percent">۰٪</span></div>
+            <svg class="water-glass" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/></svg>
           </div>
-          <div class="buttons">
-            <button type="button" data-water-add="250">ثبت ۲۵۰ میلی‌لیتر</button>
-            <button type="button" class="secondary" data-destination="water">سابقهٔ آب</button>
-          </div>
+          <button type="button" class="block-action" data-open-water>ثبت آب</button>
         </section>
+        <button id="open-water-history" type="button" class="text-button" data-destination="water">آب و سوابق</button>
         <section class="timeline" aria-labelledby="day-title">
-          <div class="section-heading"><h2 id="day-title">برنامهٔ روز</h2><button type="button" class="secondary" data-destination="medications">داروها</button></div>
+          <h2 id="day-title">برنامهٔ روز</h2>
           <div id="doses"></div>
         </section>
+        <div id="today-actions" class="action-pair">
+          <button type="button" class="secondary" data-open-medication>افزودن دارو</button>
+          <button type="button" class="secondary" data-open-visit>قرار جدید</button>
+        </div>
         <section id="today-reminders" class="feature mist" hidden>
           <h2>یادآوری دارو</h2>
           <p class="quiet">وضعیت اعلان این گوشی را در تنظیمات مدورا ببینید.</p>
-          <button type="button" class="secondary" data-destination="settings">تنظیم اعلان‌ها</button>
+          <button type="button" class="secondary" data-destination="settings" data-open-notifications>تنظیم اعلان‌ها</button>
         </section>
       </div>
       <div data-screen="medications" hidden>
-        <section aria-labelledby="plans-title">
-          <div class="section-heading"><h2 id="plans-title">برنامه‌های دارو</h2><button id="add" type="button">افزودن دارو</button></div>
-        <form id="editor" hidden>
-          <h3 id="editor-title">برنامهٔ دارو</h3>
-          <div class="fields">
-            <label>نام دارو<input id="name" maxlength="120" required></label>
-            <label>واحد مصرف<input id="unit" value="قرص" maxlength="30" required></label>
-          </div>
-          <p>تاریخ‌ها را در تقویم میلادی وارد کنید. هر مرحله از روز شروع تا روز پایان، با احتساب هر دو روز، اجرا می‌شود.</p>
-          <div id="phases"></div>
-          <div class="buttons"><button id="add-phase" type="button" class="secondary">افزودن مرحله</button></div>
-          <div class="fields">
-            <label>موجودی اولیه (اختیاری)<input id="stock" dir="ltr" inputmode="decimal" maxlength="11"></label>
-            <label>آستانهٔ هشدار موجودی<input id="threshold" dir="ltr" inputmode="decimal" maxlength="11" value="۲"></label>
-          </div>
-          <div class="buttons">
-            <button type="submit">ذخیرهٔ برنامه</button>
-            <button id="cancel" type="button" class="secondary">انصراف</button>
-          </div>
-          <p id="editor-status" role="status"></p>
-        </form>
-          <div id="plans"></div>
-        </section>
+        <div class="section-heading" id="plans-heading"><h2 id="plans-title">برنامهٔ داروها</h2><button id="add" type="button" data-open-medication>＋ داروی جدید</button></div>
+        <div id="med-day-summary" class="feature feature-head">
+          <div><strong id="med-day-count"></strong><p class="quiet">مصرف ثبت‌شده</p></div>
+          <div id="med-day-ring" class="progress-ring"><span></span></div>
+        </div>
+        <div id="med-day-doses"></div>
+        <section aria-labelledby="treatments-title"><h2 id="treatments-title">برنامه‌های مصرف</h2><div id="plans"></div></section>
       </div>
       <div data-screen="appointments" hidden>
-        <section aria-labelledby="appointments-title">
-          <div class="section-heading"><h2 id="appointments-title">قرارهای پزشکی</h2><button id="visit-add" type="button">قرار جدید</button></div>
-          <form id="visit-editor" hidden>
-            <h3 id="visit-form-title">قرار جدید</h3>
-            <label>عنوان قرار<input id="visit-name" maxlength="120" required></label>
-            <div class="fields"><label>تاریخ میلادی<input id="visit-day" type="date" required></label><label>ساعت<input id="visit-time" type="time" required></label></div>
-            <label>مکان<input id="visit-place" maxlength="160"></label>
-            <label>یادداشت<textarea id="visit-note" maxlength="600" rows="2"></textarea></label>
-            <div class="buttons"><button type="submit">ذخیرهٔ قرار</button><button id="visit-close" type="button" class="secondary">انصراف</button></div>
-          </form>
-          <div id="visits"></div>
-        </section>
+        <div class="segmented" id="visit-filters" role="group" aria-label="بازهٔ قرارها">
+          <button type="button" data-visit-filter="all" aria-pressed="true">همه</button>
+          <button type="button" data-visit-filter="upcoming" aria-pressed="false">نزدیک</button>
+          <button type="button" data-visit-filter="past" aria-pressed="false">گذشته و لغوشده</button>
+        </div>
+        <button id="visit-add" type="button" class="block-action" data-open-visit>قرار جدید</button>
+        <div id="visits"></div>
       </div>
       <div data-screen="water" hidden>
         <section class="feature water">
-          <h2>ثبت آب</h2>
-          <p class="amount-line"><strong id="water-total">۰</strong> میلی‌لیتر در روز انتخاب‌شده</p>
+          <div class="feature-head water-summary">
+            <svg class="water-glass" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/></svg>
+            <div class="water-info"><strong id="water-date"></strong><p class="amount-line"><strong id="water-total">۰</strong> میلی‌لیتر</p><progress class="water-progress" id="water-progress" max="1" value="0" aria-label="پیشرفت هدف آب"></progress><p class="quiet" id="water-remaining"></p></div>
+          </div>
           <div id="water-entry">
-            <div class="buttons">
-              <button type="button" data-water-add="150">۱۵۰ میلی‌لیتر</button>
-              <button type="button" data-water-add="250">۲۵۰ میلی‌لیتر</button>
-              <button type="button" data-water-add="500">۵۰۰ میلی‌لیتر</button>
+            <div class="water-quick">
+              <button type="button" data-water-add="150"><b>+۱۵۰</b><small>میلی‌لیتر</small></button>
+              <button type="button" data-water-add="250"><b>+۲۵۰</b><small>میلی‌لیتر</small></button>
+              <button type="button" data-water-add="500"><b>+۵۰۰</b><small>میلی‌لیتر</small></button>
             </div>
-            <form id="water-custom">
-              <label>مقدار دلخواه (میلی‌لیتر)<input id="water-amount" inputmode="numeric" maxlength="5" required></label>
-              <button type="submit" class="secondary">ثبت مقدار</button>
-            </form>
           </div>
         </section>
-        <section><h2>ثبت‌های روز</h2><div id="water-entries"></div></section>
+        <button id="water-custom-action" type="button" class="block-action" data-open-water>مقدار دلخواه</button>
+        <section><h2>مصرف آب</h2><div id="water-entries"></div></section>
       </div>
       <div data-screen="insights" hidden>
-        <section class="feature mist">
-          <h2>تقویم و گزارش</h2>
-          <label>بازهٔ گزارش<select id="report-range"><option value="7">هفته</option><option value="30">ماه</option><option value="365">سال</option></select></label>
-          <div id="report-summary" class="report-summary"></div>
-          <div id="report-chart" class="report-chart" aria-label="مصرف آب هفت روز آخر بازه"></div>
-        </section>
+        <div class="insights-tabs" role="group" aria-label="نمای گزارش و تقویم">
+          <button type="button" data-insight="calendar" aria-pressed="true">تقویم</button>
+          <button type="button" data-insight="reports" aria-pressed="false">گزارش‌ها</button>
+        </div>
+        <div id="calendar-panel">
+          <section class="feature" aria-labelledby="calendar-month">
+            <div class="feature-head calendar-head">
+              <button type="button" id="previous-month" class="icon-button" aria-label="ماه قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+              <h2 id="calendar-month"></h2>
+              <button type="button" id="next-month" class="icon-button reverse" aria-label="ماه بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+            </div>
+            <div id="calendar-days" class="calendar-grid"></div>
+          </section>
+          <section id="calendar-activity"></section>
+        </div>
+        <div id="reports-panel" hidden>
+          <div id="report-range" class="segmented" role="group" aria-label="بازهٔ گزارش">
+            <button type="button" data-report-range="7" aria-pressed="false">هفته</button>
+            <button type="button" data-report-range="30" aria-pressed="true">ماه</button>
+            <button type="button" data-report-range="365" aria-pressed="false">سال</button>
+          </div>
+          <p id="report-dates" class="quiet"></p>
+          <section class="feature water">
+            <h2>مصرف آب</h2>
+            <p id="report-average"></p>
+            <div id="report-chart" class="report-chart" role="img"></div>
+            <div id="report-chart-dates" class="feature-head quiet"></div>
+          </section>
+          <section class="feature medicine"><h2>مصرف دارو</h2><p id="report-doses"></p></section>
+        </div>
       </div>
-      <div data-screen="settings" hidden>
-        <section class="feature water">
-          <h2>هدف آب</h2>
-          <form id="water-goal-form">
-            <label>هدف روزانه (میلی‌لیتر)<input id="water-goal" inputmode="numeric" maxlength="5" required></label>
-            <button type="submit">ذخیرهٔ هدف</button>
-          </form>
-        </section>
-      <section aria-labelledby="push-title">
-        <h2 id="push-title">اعلان نوبت دارو</h2>
+      <p id="status" class="app-status" role="status"></p>
+      <nav class="dock" aria-label="ناوبری مدورا">
+        <button type="button" data-destination="medications"><svg aria-hidden="true"><use href="#i-bottle"/></svg>داروها</button>
+        <button type="button" data-destination="appointments"><svg aria-hidden="true"><use href="#i-calendar"/></svg>قرارها</button>
+        <button type="button" data-destination="today" aria-current="page"><span class="dock-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></span>امروز</button>
+        <button type="button" data-destination="insights"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش‌ها</button>
+        <button type="button" data-destination="settings"><svg aria-hidden="true"><use href="#i-settings"/></svg>تنظیمات</button>
+      </nav>
+    </div>
+  </main>
+  <dialog id="water-dialog" class="sheet" aria-labelledby="water-dialog-title">
+    <form id="water-custom" class="sheet-form">
+      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="water-dialog-title">ثبت آب</h2><button class="icon-button" type="button" data-close="water-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body">
+        <div id="water-presets" class="water-quick">
+          <button type="button" data-water-preset="150" aria-pressed="false">۱۵۰</button><button type="button" data-water-preset="250" aria-pressed="true">۲۵۰</button><button type="button" data-water-preset="500" aria-pressed="false">۵۰۰</button>
+        </div>
+        <p id="water-selection" aria-live="polite"></p>
+        <details id="water-options" class="editor-options">
+          <summary>مقدار دلخواه و زمان ثبت</summary>
+          <label>مقدار دلخواه (میلی‌لیتر)<input id="water-amount" inputmode="numeric" maxlength="5" required></label>
+          <div class="fields"><label>تاریخ<input id="water-log-day" type="date" required></label><label>ساعت<input id="water-log-time" type="time" required></label></div>
+        </details>
+        <p id="water-error" role="alert" class="field-error"></p>
+        <button type="submit" class="block-action">ذخیره</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="medication-dialog" class="sheet" aria-labelledby="editor-title">
+    <form id="editor" class="sheet-form" novalidate>
+      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="editor-title">داروی جدید</h2><button class="icon-button" type="button" data-close="medication-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body">
+        <label class="editor-field">نام دارو یا مکمل<input id="name" maxlength="120" required></label>
+        <label class="editor-field">مقدار یا دستور مصرف (اختیاری)<textarea id="instructions" rows="2" maxlength="600"></textarea></label>
+        <details id="medicine-appearance" class="editor-options medicine">
+          <summary>ظاهر دارو (اختیاری)</summary>
+          <label>نماد<select id="medicine-icon"><option value="pill">قرص</option><option value="capsule">کپسول</option><option value="drops">قطره</option><option value="syrup">شربت</option><option value="injection">آمپول</option></select></label>
+          <label>رنگ<select id="medicine-color"><option value="gold">طلایی</option><option value="green">سبز</option><option value="blue">آبی</option><option value="purple">بنفش</option><option value="rose">صورتی</option></select></label>
+        </details>
+        <div id="basic-schedule">
+          <label class="editor-field">ساعت یادآوری<input id="basic-time" type="time" value="08:00" required></label>
+          <p class="quiet">هر روز</p><p class="quiet" id="basic-start"></p>
+        </div>
+        <details id="advanced-plan" class="editor-options">
+          <summary>تنظیم روزها و ساعت‌های بیشتر</summary>
+          <p class="quiet">تاریخ‌ها در ورودی به میلادی‌اند. مرحله تا پایان روز انتخاب‌شده ادامه دارد.</p>
+          <div id="phases"></div>
+          <button id="add-phase" type="button" class="secondary">افزودن مرحله</button>
+        </details>
+        <details id="inventory-options" class="editor-options">
+          <summary>دوز و موجودی دارو</summary>
+          <div class="fields">
+            <label>واحد مصرف<input id="unit" value="قرص" maxlength="30" required></label>
+            <label>موجودی اولیه (اختیاری)<input id="stock" dir="ltr" inputmode="decimal" maxlength="11"></label>
+            <label>آستانهٔ هشدار موجودی<input id="threshold" dir="ltr" inputmode="decimal" maxlength="11" value="۲"></label>
+          </div>
+        </details>
+        <p id="editor-status" class="field-error" role="status"></p>
+        <button type="submit" class="block-action">ذخیرهٔ دارو</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="medicine-details" class="sheet" aria-labelledby="medicine-details-title">
+    <div class="sheet-header"><svg aria-hidden="true"><use href="#i-pill"/></svg><h2 id="medicine-details-title"></h2><button class="icon-button" type="button" data-close="medicine-details" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div id="medicine-details-body" class="sheet-body"></div>
+  </dialog>
+  <dialog id="visit-dialog" class="sheet" aria-labelledby="visit-form-title">
+    <form id="visit-editor" class="sheet-form">
+      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="visit-form-title">قرار جدید</h2><button class="icon-button" type="button" data-close="visit-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body">
+        <label class="editor-field">نام پزشک یا عنوان قرار<input id="visit-name" maxlength="120" required></label>
+        <label class="editor-field">تاریخ قرار<input id="visit-day" type="date" required></label>
+        <label class="editor-field">ساعت قرار<input id="visit-time" type="time" required></label>
+        <label class="editor-field">مکان<input id="visit-place" maxlength="160"></label>
+        <details class="editor-options"><summary>گزینه‌های بیشتر</summary><label class="editor-field">یادداشت<textarea id="visit-note" maxlength="600" rows="2"></textarea></label></details>
+        <p id="visit-error" role="alert" class="field-error"></p>
+        <button type="submit" class="block-action">ذخیرهٔ قرار</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+    <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><div><h2 id="settings-title">تنظیمات مدورا</h2><p>یادآوری‌ها مطابق برنامهٔ روزانهٔ شما</p></div><button class="icon-button" type="button" data-close="settings-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="sheet-body">
+      <details id="display-settings" class="settings-tile">
+        <summary><svg aria-hidden="true"><use href="#i-calendar"/></svg><span>زمان و تقویم<small>تقویم و ظاهر برنامه</small></span></summary>
+        <form id="display-form">
+          <label>تقویم<select id="calendar-setting"><option value="persian">شمسی</option><option value="gregory">میلادی</option></select></label>
+          <label>ظاهر<select id="theme-setting"><option value="system">مطابق گوشی</option><option value="light">روشن</option><option value="dark">تیره</option></select></label>
+          <button type="submit">ذخیرهٔ نمایش</button>
+        </form>
+      </details>
+      <details id="notification-settings" class="settings-tile">
+        <summary id="push-title"><svg aria-hidden="true"><use href="#i-bell"/></svg><span>اعلان‌ها<small>اعلان نوبت دارو و مجوزهای گوشی</small></span></summary>
+      <div class="settings-fields">
         <p>برای ارسال اعلان، فقط ساعت‌ها و الگوی تکرار به سرور می‌رسند. تغییر آفلاین پس از اتصال همگام می‌شود.</p>
         <label id="push-code-row">کد فعال‌سازی برای اشتراک تازه<input id="push-code" type="password" dir="ltr" maxlength="36" autocomplete="off" spellcheck="false"></label>
         <div class="buttons">
@@ -146,18 +246,19 @@
         <p id="push-status" role="status">در حال آماده‌سازی اعلان…</p>
         <p id="push-delivery" role="status"></p>
         <p id="push-test-result" role="status"></p>
-      </section>
       </div>
-      <p id="status" class="app-status" role="status"></p>
-      <nav class="dock" aria-label="ناوبری مدورا">
-        <button type="button" data-destination="medications"><svg aria-hidden="true"><use href="#i-pill"/></svg>داروها</button>
-        <button type="button" data-destination="appointments"><svg aria-hidden="true"><use href="#i-calendar"/></svg>قرارها</button>
-        <button type="button" data-destination="today" aria-current="page"><svg aria-hidden="true"><use href="#i-mark"/></svg>امروز</button>
-        <button type="button" data-destination="insights"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش‌ها</button>
-        <button type="button" data-destination="settings"><svg aria-hidden="true"><use href="#i-settings"/></svg>تنظیمات</button>
-      </nav>
+      </details>
+      <details class="settings-tile water">
+        <summary><svg aria-hidden="true"><use href="#i-water"/></svg><span>آب<small>هدف روزانهٔ آب</small></span></summary>
+        <form id="water-goal-form">
+          <label>هدف روزانه (میلی‌لیتر)<input id="water-goal" inputmode="numeric" maxlength="5" required></label>
+          <button type="submit">ذخیرهٔ هدف</button>
+        </form>
+      </details>
+      <p id="settings-status" role="status" class="quiet"></p>
+      <button type="button" class="block-action" data-close="settings-dialog">انجام شد</button>
     </div>
-  </main>
+  </dialog>
   <template id="phase-template">
     <fieldset class="phase">
       <legend>مرحلهٔ مصرف</legend>

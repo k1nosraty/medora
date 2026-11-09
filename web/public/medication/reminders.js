@@ -56,7 +56,7 @@ export function scheduleForPush(state, zone, today) {
   }
   return {
     zone,
-    rules: Object.values(state.medicines).flatMap(medicine => medicine.phases.map(phase => ({
+    rules: Object.values(state.medicines).filter(medicine => !medicine.paused).flatMap(medicine => medicine.phases.map(phase => ({
       start: phase.start, end: phase.end, interval: phase.interval, mask: phase.mask,
       minutes: phase.slots.map(slot => slot.minute),
       skip: (excluded.get(medicine.id) ?? []).filter(([day, minute]) =>
