@@ -905,8 +905,6 @@ for (const control of document.querySelectorAll("[data-language-switch]")) {
   else control.textContent = language === "fa" ? "English" : "فارسی";
   control.addEventListener("click", () => selectLanguage(nextLanguage));
 }
-$("app-language").value = language;
-$("app-language").addEventListener("change", event => selectLanguage(event.target.value));
 for (const control of document.querySelectorAll("[data-open-medication]")) control.addEventListener("click", () => openEditor());
 for (const control of document.querySelectorAll("[data-close]")) control.addEventListener("click", () => $(control.dataset.close).close());
 $("add-phase").addEventListener("click", () => {

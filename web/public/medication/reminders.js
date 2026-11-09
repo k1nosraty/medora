@@ -18,13 +18,23 @@ export function changeReminderRevision(state) {
 }
 
 function status(text) { $("push-status").textContent = text; }
+function settingsBadge(text, enabled = false) {
+  const badge = $("settings-notification-state");
+  badge.textContent = text;
+  badge.dataset.enabled = String(enabled);
+}
 const kindText = kinds => (kinds ?? []).map(kind => ({ dose: t("دارو"), water: t("آب"), appointment: t("قرار") })[kind]).filter(Boolean).join(t(" و "));
 
 function controls(settings) {
-  $("push-enable").disabled = !registration || !publicKey || settings?.enabled;
-  $("push-disable").disabled = !settings?.enabled;
-  $("push-check").disabled = !settings?.token;
-  $("push-test").disabled = !settings?.enabled;
+  const enabled = Boolean(settings?.enabled);
+  const canCheck = Boolean(settings?.token);
+  $("push-enable").hidden = enabled;
+  $("push-enable").disabled = !registration || !publicKey || enabled;
+  $("push-disable").hidden = $("push-disable").disabled = !enabled;
+  $("push-check").hidden = $("push-check").disabled = !canCheck;
+  $("push-check").textContent = t("بررسی وضعیت");
+  $("push-test").hidden = $("push-test").disabled = !enabled;
+  settingsBadge(enabled ? t("فعال") : t("خاموش"), enabled);
   const todayReminders = $("today-reminders");
   if (todayReminders) todayReminders.hidden = Boolean(settings?.enabled);
 }
@@ -114,6 +124,7 @@ async function sync(check = false) {
       : t("هنوز برای این اشتراک نتیجهٔ ارسال نوبت ثبت نشده است.");
     if (remote.revision > settings.revision) {
       status(t("برنامهٔ جدیدتری روی سرور وجود دارد. اعلان را دوباره فعال کنید."));
+      $("push-enable").hidden = false;
       $("push-enable").disabled = !registration || !publicKey;
       return;
     } else if (settings.enabled && !remote.enabled && remote.last?.status === "gone") {
@@ -146,9 +157,11 @@ export function syncReminders(check = false) {
 export async function initializeReminders() {
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (isIOS && !matchMedia("(display-mode: standalone)").matches && navigator.standalone !== true) {
+    settingsBadge(t("نیاز به نصب"));
     return status(t("برای اعلان آیفون، مدورا را به صفحهٔ اصلی اضافه کنید و از آیکون آن وارد شوید."));
   }
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    settingsBadge(t("در دسترس نیست"));
     return status(t("اعلان وب در این مرورگر در دسترس نیست."));
   }
   try {
@@ -175,7 +188,10 @@ export async function initializeReminders() {
     if (settings?.token) await syncReminders(true);
     else status(t("برای دریافت یادآوری، «فعال‌کردن اعلان» را بزنید و مجوز گوشی را تأیید کنید."));
   } catch {
-    status(t("راه‌اندازی اعلان انجام نشد. پس از اتصال، برنامه را دوباره باز کنید."));
+    settingsBadge(t("راه‌اندازی ناموفق"));
+    status(t("راه‌اندازی اعلان انجام نشد. اتصال را بررسی کنید و دوباره تلاش کنید."));
+    $("push-check").textContent = t("تلاش دوباره");
+    $("push-check").hidden = $("push-check").disabled = false;
   }
 }
 
@@ -220,7 +236,13 @@ $("push-disable").addEventListener("click", () => {
   }).catch(() => status(t("خاموش‌کردن اعلان انجام نشد.")));
 });
 
-$("push-check").addEventListener("click", () => void syncReminders(true));
+$("push-check").addEventListener("click", () => {
+  if (registration) void syncReminders(true);
+  else {
+    $("push-check").disabled = true;
+    void initializeReminders();
+  }
+});
 $("push-test").addEventListener("click", () => {
   $("push-test").disabled = true;
   $("push-test-result").textContent = t("در حال ارسال اعلان آزمایشی…");

@@ -755,86 +755,123 @@
   </dialog>
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
     <div class="sheet-header">
-      <svg id="settings-mark" aria-hidden="true"><use href="#i-mark"/></svg>
+      <svg id="settings-mark" aria-hidden="true"><use href="#i-settings"/></svg>
       <button type="button" id="settings-back" class="icon-button" aria-label="بازگشت به تنظیمات" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
-      <div><h2 id="settings-title">تنظیمات مدورا</h2><p id="settings-subtitle">یادآوری‌ها مطابق برنامهٔ روزانهٔ شما</p></div>
+      <div><h2 id="settings-title" tabindex="-1">تنظیمات مدورا</h2><p id="settings-subtitle">ظاهر، یادآوری‌ها و داده‌ها</p></div>
       <button class="icon-button" type="button" data-close="settings-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
     </div>
     <div id="settings-content" class="sheet-body">
-      <div id="language-settings" class="settings-tile language-settings">
-        <label for="app-language"><svg aria-hidden="true"><use href="#i-globe"/></svg>زبان برنامه</label>
-        <select id="app-language"><option value="fa" lang="fa">فارسی</option><option value="en" lang="en">English</option></select>
-      </div>
-      <button type="button" class="settings-tile account-shortcut secondary" data-open-account>
-        <svg aria-hidden="true"><use href="#i-user"/></svg><span>حساب مدورا<small>ورود اختیاری با کد ایمیل</small></span>
-        <svg aria-hidden="true"><use href="#i-back"/></svg>
-      </button>
-      <details id="display-settings" class="settings-tile">
-        <summary><svg aria-hidden="true"><use href="#i-calendar"/></svg><span>زمان و تقویم<small>تقویم و ظاهر برنامه</small></span></summary>
-        <form id="display-form">
-          <label>تقویم<select id="calendar-setting"><option value="persian">شمسی</option><option value="gregory">میلادی</option></select></label>
-          <label>ظاهر<select id="theme-setting"><option value="system">مطابق گوشی</option><option value="light">روشن</option><option value="dark">تیره</option></select></label>
-          <button type="submit">ذخیرهٔ نمایش</button>
-        </form>
-      </details>
-      <details id="notification-settings" class="settings-tile">
-        <summary id="push-title"><svg aria-hidden="true"><use href="#i-bell"/></svg><span>اعلان‌ها<small>یادآوری دارو، آب و قرار</small></span></summary>
-      <div class="settings-fields">
-        <p>برای ارسال اعلان، زمان‌بندی و وضعیت رسیدن به هدف آب به سرور می‌رسد. تغییر آفلاین پس از اتصال همگام می‌شود.</p>
-        <div class="buttons">
-          <button id="push-enable" type="button" disabled>فعال‌کردن اعلان</button>
-          <button id="push-disable" type="button" class="secondary" disabled>خاموش‌کردن اعلان</button>
-          <button id="push-check" type="button" class="secondary" disabled>بررسی وضعیت</button>
-          <button id="push-test" type="button" class="secondary" disabled>آزمایش همین گوشی</button>
+      <div id="settings-home">
+        <button type="button" class="settings-hero" data-settings-panel="notification-settings">
+          <span class="settings-hero-copy"><strong>اعلان‌های این دستگاه</strong><small>یادآوری دارو، آب و قرار</small><span id="settings-notification-state" class="settings-state">در حال بررسی…</span></span>
+          <span class="settings-hero-art" aria-hidden="true"><svg><use href="#i-bell"/></svg></span>
+        </button>
+        <h3>یادآوری‌ها</h3>
+        <div class="settings-group">
+          <button type="button" class="settings-row water-row" data-settings-panel="water-settings">
+            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-water"/></svg></span>
+            <span>آب<small id="settings-water-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
+          <button type="button" class="settings-row medicine-row" data-settings-panel="snooze-settings">
+            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-pill"/></svg></span>
+            <span>تعویق یادآوری دارو<small id="settings-snooze-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
+          <button type="button" class="settings-row visit-row" data-settings-panel="appointment-settings">
+            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-calendar"/></svg></span>
+            <span>یادآوری قرارها<small id="settings-appointment-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
         </div>
-        <p id="push-status" role="status">در حال آماده‌سازی اعلان…</p>
-        <p id="push-delivery" role="status"></p>
-        <p id="push-test-result" role="status"></p>
+        <h3>برنامه و داده‌ها</h3>
+        <div class="settings-group">
+          <button type="button" class="settings-row" data-settings-panel="display-settings">
+            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-sun"/></svg></span>
+            <span>ظاهر و زبان<small id="settings-display-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
+          <button type="button" class="settings-row" data-settings-panel="backup-settings">
+            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-lock"/></svg></span>
+            <span>بازیابی پشتیبان<small>فایل رمزدار اندروید</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
+          <button type="button" class="settings-row" data-open-account>
+            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-user"/></svg></span>
+            <span>حساب مدورا<small>ورود اختیاری با کد ایمیل</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
+        </div>
       </div>
-      </details>
-      <details id="water-settings" class="settings-tile water">
-        <summary><svg aria-hidden="true"><use href="#i-water"/></svg><span>آب<small>هدف روزانهٔ آب</small></span></summary>
-        <form id="water-goal-form">
-          <label>هدف روزانه (میلی‌لیتر)<input id="water-goal" inputmode="numeric" maxlength="5" required></label>
-          <label class="editor-switch">یادآوری آب<input type="checkbox" id="water-reminders-enabled" role="switch"></label>
+      <section id="display-settings" class="settings-panel" hidden>
+        <form id="display-form">
+          <fieldset class="settings-themes">
+            <legend>ظاهر</legend>
+            <label><input type="radio" name="theme" value="system" checked><span class="theme-sample" data-theme-sample="system" aria-hidden="true"></span><span>مطابق گوشی</span></label>
+            <label><input type="radio" name="theme" value="light"><span class="theme-sample" data-theme-sample="light" aria-hidden="true"></span><span>روشن</span></label>
+            <label><input type="radio" name="theme" value="dark"><span class="theme-sample" data-theme-sample="dark" aria-hidden="true"></span><span>تیره</span></label>
+          </fieldset>
+          <label>تقویم<select id="calendar-setting"><option value="persian">شمسی</option><option value="gregory">میلادی</option></select></label>
+          <label>زبان برنامه<select id="app-language"><option value="fa" lang="fa">فارسی</option><option value="en" lang="en">English</option></select></label>
+          <button type="submit" class="block-action">ذخیرهٔ تغییرات</button>
+        </form>
+      </section>
+      <section id="notification-settings" class="settings-panel" hidden>
+        <div class="settings-callout">
+          <h3>وضعیت اعلان این دستگاه</h3>
+          <p id="push-status" role="status">در حال آماده‌سازی اعلان…</p>
+        </div>
+        <div class="settings-push-actions">
+          <button id="push-enable" type="button" disabled>فعال‌کردن اعلان</button>
+          <button id="push-test" type="button" disabled hidden>آزمایش همین دستگاه</button>
+          <button id="push-check" type="button" class="secondary" disabled hidden>بررسی وضعیت</button>
+        </div>
+        <p id="push-test-result" class="settings-message" role="status"></p>
+        <details id="push-details" class="editor-options">
+          <summary>جزئیات ارسال اعلان</summary>
+          <p id="push-delivery" class="quiet" role="status"></p>
+          <p class="quiet">برای ارسال اعلان، زمان‌بندی و وضعیت رسیدن به هدف آب به سرور می‌رسد. تغییر آفلاین پس از اتصال همگام می‌شود.</p>
+        </details>
+        <button id="push-disable" type="button" class="text-button danger-link block-action" disabled hidden>خاموش‌کردن اعلان</button>
+      </section>
+      <section id="water-settings" class="settings-panel water-panel" hidden>
+        <form id="water-goal-form" novalidate>
+          <label>هدف روزانه (میلی‌لیتر)<input id="water-goal" dir="ltr" inputmode="numeric" maxlength="5" required></label>
+          <label class="feature-head editor-switch settings-switch">یادآوری آب<input type="checkbox" id="water-reminders-enabled" role="switch"></label>
           <div id="water-reminder-fields" hidden>
-            <div class="fields">
+            <div class="settings-time-grid">
               <label>شروع یادآوری<input id="water-reminders-start" type="time" value="08:00" required></label>
               <label>پایان یادآوری<input id="water-reminders-end" type="time" value="22:00" required></label>
             </div>
             <label>فاصلهٔ یادآوری<select id="water-reminders-interval"><option value="30">۳۰ دقیقه</option><option value="60">یک ساعت</option><option value="120">دو ساعت</option></select></label>
             <details class="editor-options"><summary>گزینه‌های بیشتر</summary>
               <label>تکرار یک‌باره<select id="water-reminders-repeat"><option value="0">خاموش</option><option value="5">۵ دقیقه بعد</option><option value="10">۱۰ دقیقه بعد</option><option value="15">۱۵ دقیقه بعد</option></select></label>
-              <button type="button" class="secondary" id="water-reminders-pause">توقف برای یک ساعت</button>
             </details>
           </div>
-          <button type="submit">ذخیرهٔ هدف</button>
+          <button type="submit" class="block-action">ذخیرهٔ تنظیمات آب</button>
         </form>
-      </details>
-      <details id="snooze-settings" class="settings-tile medicine">
-        <summary><svg aria-hidden="true"><use href="#i-bottle"/></svg><span>دارو<small>مدت تعویق اعلان دارو</small></span></summary>
+        <div id="water-pause-card" class="settings-callout" hidden>
+          <h3>وقفهٔ موقت</h3>
+          <p id="water-pause-status" class="quiet"></p>
+          <button type="button" class="secondary" id="water-reminders-pause">توقف برای یک ساعت</button>
+        </div>
+      </section>
+      <section id="snooze-settings" class="settings-panel" hidden>
         <form id="snooze-form">
-          <fieldset class="reminder-options"><legend>مدت تعویق دارو</legend>
-            <label><input type="radio" name="snooze-preset" value="10">۱۰ دقیقه</label>
-            <label><input type="radio" name="snooze-preset" value="30">۳۰ دقیقه</label>
-            <label><input type="radio" name="snooze-preset" value="60">۶۰ دقیقه</label>
-            <label><input type="radio" name="snooze-preset" value="custom">دلخواه</label>
+          <p class="quiet">وقتی مصرف یک نوبت را به تعویق می‌اندازی، مدورا بعد از این مدت دوباره یادآوری می‌کند.</p>
+          <fieldset class="settings-choices"><legend>مدت تعویق دارو</legend>
+            <label><input type="radio" name="snooze-preset" value="10" checked><span>۱۰ دقیقه</span></label>
+            <label><input type="radio" name="snooze-preset" value="30"><span>۳۰ دقیقه</span></label>
+            <label><input type="radio" name="snooze-preset" value="60"><span>۶۰ دقیقه</span></label>
+            <label><input type="radio" name="snooze-preset" value="custom"><span>دلخواه</span></label>
           </fieldset>
-          <label id="snooze-custom-row" hidden>مدت تعویق (دقیقه)<input id="snooze-minutes" inputmode="numeric" maxlength="4"></label>
-          <button type="submit">ذخیرهٔ مدت تعویق</button>
+          <label id="snooze-custom-row" hidden>مدت تعویق (دقیقه)<input id="snooze-minutes" dir="ltr" inputmode="numeric" maxlength="4"></label>
+          <button type="submit" class="block-action">ذخیرهٔ مدت تعویق</button>
         </form>
-      </details>
-      <details id="appointment-settings" class="settings-tile visit">
-        <summary><svg aria-hidden="true"><use href="#i-calendar"/></svg><span>قرارها<small>زمان شروع و تکرار یادآوری</small></span></summary>
-        <form id="appointment-settings-form">
+      </section>
+      <section id="appointment-settings" class="settings-panel" hidden>
+        <form id="appointment-settings-form" novalidate>
           <label>شروع یادآوری در روز قرار<input id="appointment-reminders-start" type="time" value="08:00" required></label>
           <label>تکرار تا ساعت قرار<select id="appointment-reminders-interval"><option value="60">هر ساعت</option><option value="120">هر دو ساعت</option></select></label>
           <p class="quiet">برای قرارهای زودتر از ساعت شروع، یک یادآوری یک ساعت قبل از قرار ارسال می‌شود.</p>
-          <button type="submit">ذخیرهٔ تنظیمات قرار</button>
+          <button type="submit" class="block-action">ذخیرهٔ تنظیمات قرار</button>
         </form>
-      </details>
-      <details id="backup-settings" class="settings-tile">
-        <summary><svg aria-hidden="true"><use href="#i-lock"/></svg><span>پشتیبان‌گیری<small>بازیابی فایل رمزدار اندروید</small></span></summary>
+      </section>
+      <section id="backup-settings" class="settings-panel" hidden>
         <form id="android-restore">
           <p>فایل پشتیبان مدورا با پسوند <bdi>.medora</bdi> روی همین دستگاه باز می‌شود.</p>
           <label class="backup-file-picker">
@@ -843,15 +880,14 @@
             <input id="android-backup-file" type="file" aria-label="انتخاب فایل پشتیبان" aria-describedby="android-backup-filename" required>
           </label>
           <label>رمز فایل<input id="android-backup-password" type="password" maxlength="128" autocomplete="off" spellcheck="false" required></label>
-          <p class="quiet">با بازیابی، داده‌های فعلی وب جایگزین می‌شوند. بعد از بازیابی، یادآوری‌ها را دوباره فعال کنید.</p>
+          <p class="settings-restore-note">با بازیابی، داده‌های فعلی وب جایگزین می‌شوند. بعد از بازیابی، یادآوری‌ها را دوباره فعال کنید.</p>
           <label class="editor-switch"><input type="checkbox" id="android-backup-confirm" required><span>جایگزینی سوابق فعلی را تأیید می‌کنم.</span></label>
           <p id="android-restore-status" role="status"></p>
           <button id="android-restore-submit" type="submit" class="block-action">بازیابی از فایل پشتیبان</button>
         </form>
-      </details>
-      <p id="settings-status" role="status" class="quiet"></p>
-      <button type="button" class="block-action" data-close="settings-dialog">انجام شد</button>
+      </section>
     </div>
+    <p id="settings-status" role="status" class="settings-message"></p>
   </dialog>
   <dialog id="date-picker" class="sheet value-picker" aria-labelledby="date-picker-title">
     <div class="sheet-body">

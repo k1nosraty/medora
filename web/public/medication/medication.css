@@ -239,11 +239,11 @@
 .sheet::before { content: ""; display: block; inline-size: 2rem; block-size: .2rem; border-radius: 1rem; margin: -.5rem auto .95rem; background: var(--muted); }
 .medora .settings-dialog {
   position: fixed;
-  inset-block: var(--settings-visible-top, 0px) auto;
+  --settings-height: var(--settings-visible-height, 100dvh);
+  inset-block: calc(var(--settings-visible-top, 0px) + max(.5rem, (var(--settings-height) - 42rem) / 2)) auto;
   margin: 0 auto;
-  transform: translateY(max(.5rem, calc((var(--settings-visible-height, 100vh) - 100%) / 2)));
-  inline-size: min(calc(100% - 1rem), 29rem);
-  max-block-size: calc(var(--settings-visible-height, 100vh) - 1rem);
+  inline-size: min(calc(100% - 1rem), 31rem);
+  max-block-size: min(42rem, calc(var(--settings-height) - 1rem));
   overflow: hidden;
 }
 .medora .settings-dialog[open] { display: flex; flex-direction: column; }
@@ -267,16 +267,9 @@
 .medora .editor-field input, .medora .editor-field textarea { padding: 0; min-block-size: 1.8rem; border: 0; border-radius: 0; inline-size: 100%; background: transparent; }
 .medora :is(.editor-field, .cabinet-search):has(:is(input, textarea):focus) { outline: .15rem solid var(--action); outline-offset: .15rem; }
 .medora :is(.editor-field, .cabinet-search) :is(input, textarea):focus-visible { outline: none; }
-.editor-options, .settings-tile { border-radius: 1rem; padding: .55rem .75rem; background: var(--panel); margin-block: .5rem; }
+.editor-options { border-radius: 1rem; padding: .55rem .75rem; background: var(--panel); margin-block: .5rem; }
 .medora summary { cursor: pointer; }
 .editor-options > summary { min-block-size: 2.75rem; align-content: center; }
-.settings-tile summary { display: flex; align-items: center; gap: .6rem; font-weight: 700; min-block-size: 3rem; list-style: none; }
-.settings-tile summary::-webkit-details-marker { display: none; }
-.settings-tile summary::after { content: "⌄"; margin-inline-start: auto; }
-.settings-tile[open] summary::after { content: "⌃"; }
-.settings-tile small { display: block; font-weight: 400; }
-.settings-tile .settings-fields { border-block-start: 1px solid var(--outline); margin-block-start: .4rem; padding-block-start: .4rem; }
-.medora .settings-tile form { padding: .4rem 0; border: 0; background: transparent; }
 .medora .field-error { color: var(--error); }
 .field-error:empty { display: none; }
 .medora .dose-options[open] > summary { color: var(--action); background: var(--field); border-radius: .8rem; }
@@ -348,10 +341,6 @@
 .medora #time-picker input[aria-invalid="true"] { border-color: var(--error); }
 .medora #time-error { text-align: center; font-size: .85rem; }
 .medora #settings-back { margin-inline: -.45rem 0; }
-.medora .settings-dialog[data-panel]:not([data-panel=""]) .settings-tile:not([open]),
-.medora .settings-dialog[data-panel]:not([data-panel=""]) .settings-tile[open] > summary { display: none; }
-.medora .settings-dialog .settings-tile[open] { padding: .65rem .8rem; }
-.medora .settings-dialog .settings-tile[open] .settings-fields { border: 0; padding: 0; margin: 0; }
 .medora #date-picker { background: var(--panel); }
 .medora #date-picker .sheet-body { box-sizing: border-box; min-block-size: min(76dvh, 38rem); display: flex; flex-direction: column; padding: 1.15rem .55rem 1.35rem; }
 .medora #date-picker h2 { text-align: start; }
@@ -564,15 +553,6 @@
 .medora #appearance-preview { display: block; padding: 0; background: transparent; border: 0; }
 .medora #appearance-preview-icon { display: block; }
 .medora .sheet-header { padding: .4rem .65rem; background: var(--dock-active); color: var(--ink); border-radius: 1.15rem; }
-.medora .settings-dialog .sheet-header { border-radius: 0 0 1.15rem 1.15rem; }
-.medora .settings-tile { border: 1px solid var(--outline); border-radius: 1.05rem; }
-.medora .settings-tile summary svg { box-sizing: content-box; border-radius: .65rem; padding: .4rem; background: var(--dock-active); color: var(--action); }
-.medora .settings-tile.water summary svg { background: var(--water); color: var(--water-ink); }
-.medora .settings-tile.visit summary svg { background: var(--visit); color: var(--visit-ink); }
-.medora .account-shortcut { display: flex; align-items: center; gap: .6rem; inline-size: 100%; text-align: start; background: var(--panel); }
-.medora .account-shortcut svg:first-child { box-sizing: content-box; border-radius: .65rem; padding: .4rem; background: var(--dock-active); color: var(--action); }
-.medora .account-shortcut svg:last-child { margin-inline-start: auto; transform: scaleX(-1); }
-.medora .settings-dialog[data-panel]:not([data-panel=""]) .account-shortcut { display: none; }
 .medora dialog { box-shadow: 0 .75rem 2.5rem var(--cast); }
 .medora #medication-dialog .sheet-body { padding-block-start: .6rem; }
 .medora #editor-banner .medication-banner { block-size: 8.1rem; }
