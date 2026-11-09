@@ -1,7 +1,7 @@
 name: Publish Medora preview
 on:
   push:
-    tags: ['v*-preview']
+    branches: ['release/*-preview']
 
 permissions:
   contents: read
@@ -28,10 +28,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
+          version="${GITHUB_REF_NAME#release/}"
+          tag="v$version"
           android_version="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*$/\1/p' app/build.gradle.kts)"
           test "$version" = "$android_version"
           test "$version" = "$(jq -er '.version' web/package.json)"
+
+          draft=false
+          if existing="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"; then
+            if [ "$existing" != true ]; then
+              echo "Release $tag is already published."
+              exit 0
+            fi
+            draft=true
+          fi
+
+          commit="$(git rev-parse HEAD)"
+          remote_tag="$(git ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}" |
+            awk '/\^\{\}$/ { peeled = $1; next } { tag = $1 } END { print (peeled ? peeled : tag) }')"
+          if [ -n "$remote_tag" ] && [ "$remote_tag" != "$commit" ]; then
+            echo "Tag $tag already points to a different commit." >&2
+            exit 1
+          fi
 
           awk -v heading="## [$version]" '
             index($0, heading) == 1 { found = 1; next }
@@ -41,17 +59,15 @@ jobs:
           ' CHANGELOG.md > release-notes.md
           test -s release-notes.md
 
-          apk="Medora-$GITHUB_REF_NAME.apk"
+          apk="Medora-$tag.apk"
           mv app-debug.apk "$apk"
           sha256sum "$apk" > SHA256SUMS.txt
 
-          if draft="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"; then
-            if [ "$draft" = true ]; then
-              gh release upload "$GITHUB_REF_NAME" "$apk" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
-              gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false \
-                --notes-file release-notes.md --prerelease --latest=false
-            fi
+          if [ "$draft" = true ]; then
+            gh release upload "$tag" "$apk" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --target "$commit" \
+              --notes-file release-notes.md --prerelease --latest=false
           else
-            gh release create "$GITHUB_REF_NAME" "$apk" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" \
-              --verify-tag --title "Medora $version" --notes-file release-notes.md --prerelease --latest=false
+            gh release create "$tag" "$apk" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" \
+              --target "$commit" --title "Medora $version" --notes-file release-notes.md --prerelease --latest=false
           fi

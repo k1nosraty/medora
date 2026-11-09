@@ -1,7 +1,7 @@
 name: Android checks
 on:
   push:
-    branches: ['**']
+    branches-ignore: ['release/*-preview']
   pull_request:
   workflow_dispatch:
   workflow_call:
