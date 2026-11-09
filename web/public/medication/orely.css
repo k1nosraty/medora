@@ -19,6 +19,7 @@
   --muted: #5f5974;
   --outline: #dedbef;
   --dock-active: #e8e4fc;
+  --today-rail-width: min(calc(100% - 1.35rem), 40rem);
 }
 @media (prefers-color-scheme: dark) {
   .medora:not([data-theme="light"]) {
@@ -114,7 +115,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora .story-label { display: inline-block; padding: .12rem .45rem; border: 1px solid #fff5; background: #fff2; border-radius: .7rem; font-size: .72rem; }
 .medora .story-copy h2 { margin: .35rem 0 .15rem; font-weight: 850; font-size: clamp(1.55rem, 6.5vw, 2.85rem); line-height: 1.18; text-wrap: balance; }
 .medora #story-summary { margin-block: .3rem 0; color: var(--cover-text); font-size: clamp(.75rem, 2.8vw, .95rem); }
-#today-dates { position: relative; z-index: 1; inline-size: min(calc(100% - 1.35rem), 40rem); margin: -1.35rem auto 0; }
+#today-dates { position: relative; z-index: 1; inline-size: var(--today-rail-width); margin: -1.35rem auto 0; }
 #today-dates:empty { display: none; }
 .medora #today-dates .day-controls, .medora .dock, .medora .settings-dialog .sheet-header, .medora .glass-toolbar {
   border: 1px solid var(--glass-rim);
@@ -152,6 +153,8 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   align-items: center;
 }
 .medora #today-dates .date-field { grid-column: 2; min-block-size: 2rem; padding: .1rem .3rem; font-size: .82rem; }
+.medora #today-dates .date-field:focus-within { outline: none; }
+.medora #today-dates .date-field:focus-visible { box-shadow: inset 0 0 0 2px var(--action); }
 .medora #today-reset {
   grid-column: 3;
   justify-self: end;
@@ -185,7 +188,9 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   display: grid;
   grid-template-columns: clamp(3.6rem, 22%, 5.3rem) minmax(0, 1fr);
   gap: .65rem;
-  margin: 0 0 .9rem;
+  box-sizing: border-box;
+  inline-size: var(--today-rail-width);
+  margin: 0 auto .9rem;
   padding: .45rem;
   border: 1px solid var(--outline);
   border-radius: 1.15rem;
@@ -235,7 +240,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   font-size: .75rem;
   line-height: 1.2;
 }
-.medora .today-water-actions [data-open-water] { flex: 1.16; border-color: transparent; background: var(--action); color: var(--on-action); }
+.medora .today-water-actions [data-open-water] { flex: 1.32; padding-inline: .13rem; border-color: transparent; background: var(--action); color: var(--on-action); }
 .medora .today-water-actions .secondary {
   border-color: color-mix(in srgb, var(--water-accent) 55%, var(--outline));
   background: color-mix(in srgb, var(--panel) 58%, var(--water));
@@ -384,8 +389,9 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   color: var(--action);
   box-shadow: 0 0 0 .28rem var(--panel), inset 0 1px 0 var(--glass-glint);
 }
-.today-state[data-complete="true"] .today-state-art { background: var(--mint); color: var(--mint-ink); transform: rotate(-7deg); }
 .medora .today-state-art svg { inline-size: 1.7rem; block-size: 1.7rem; }
+.today-state[data-complete="true"] .today-state-art { inline-size: 4.35rem; background: none; box-shadow: none; }
+.medora .today-state[data-complete="true"] .today-state-art svg { inline-size: 100%; block-size: 100%; }
 .medora .daily-sheet .timeline { padding-inline-start: .83rem; border-inline-start: 2px solid var(--outline); margin-block: 1rem; }
 .medora #timeline-title { margin-block-end: .45rem; }
 .medora .daily-sheet .timeline article::before {
@@ -928,11 +934,17 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 @media (min-width: 42rem) {
   .story-copy { align-self: center; padding-inline-start: 1rem; }
   .medora .today-story .story-art { max-block-size: 13.2rem; margin-block: -.5rem; }
-  .medora .daily-sheet { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: .7rem 1rem; align-items: start; }
-  .daily-main { grid-area: 1 / 1 / span 2; }
-  .daily-sheet:has(#today-water[hidden]) :is(.daily-main, #today-reminders) { grid-column: 1 / -1; }
-  .medora #today-water { grid-area: 1 / 2; margin: 0; }
-  .medora #today-reminders { grid-column: 2; margin: 0; }
+  .medora .daily-sheet {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    grid-template-areas: "water water" "daily reminders";
+    gap: .7rem 1rem;
+    align-items: start;
+  }
+  .medora .daily-sheet:has(#today-water[hidden]) { grid-template-areas: "daily daily" "reminders reminders"; }
+  .daily-main { grid-area: daily; }
+  .medora #today-water { grid-area: water; margin-block-end: 0; }
+  .medora #today-reminders { grid-area: reminders; margin: 0; }
   #plans { grid-auto-columns: min(48%, 23rem); }
   #visits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #visits > :is(h2, .visit-empty, .visit-featured) { grid-column: 1 / -1; }

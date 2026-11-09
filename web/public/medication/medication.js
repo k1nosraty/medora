@@ -882,7 +882,7 @@ function render() {
     art.setAttribute("aria-hidden", "true");
     const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     const symbol = document.createElementNS(icon.namespaceURI, "use");
-    symbol.setAttribute("href", completed ? "#i-check" : "#i-calendar");
+    symbol.setAttribute("href", completed ? "#art-today-complete" : "#i-calendar");
     icon.append(symbol);
     art.append(icon);
     const copy = element("div");

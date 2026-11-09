@@ -287,7 +287,39 @@
     <symbol id="i-glass-rim" viewBox="0 0 100 100"><path stroke="white" stroke-opacity=".72" stroke-width="5.5" d="M22 18l8 61"/><path stroke="#b7daf0" stroke-width="2.5" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/><ellipse stroke="white" stroke-opacity=".4" stroke-width="2.5" cx="50" cy="6.25" rx="37" ry="4.75"/></symbol>
     <linearGradient id="glass-fill"><stop stop-color="#e4f4ff" stop-opacity=".4"/><stop offset="1" stop-color="#f3faff" stop-opacity=".7"/></linearGradient>
     <linearGradient id="glass-water-fill" x2="0" y2="1"><stop stop-color="#89e5db"/><stop offset="1" stop-color="#339d96"/></linearGradient>
-    <linearGradient id="today-glass-water-fill" x2="0" y2="1"><stop stop-color="#a9d5f7"/><stop offset="1" stop-color="#5884c4"/></linearGradient>
+    <defs>
+      <path id="today-glass-body" d="M16 16Q50 8 84 16L76 76Q74 89 64 91Q50 95 36 91Q26 89 24 76Z"/>
+      <clipPath id="today-glass-clip"><use href="#today-glass-body"/></clipPath>
+      <linearGradient id="today-glass-shell" x2=".8" y2="1">
+        <stop stop-color="#faf8ff"/><stop offset=".55" stop-color="#e0e7fa"/><stop offset="1" stop-color="#a8b6df"/>
+      </linearGradient>
+      <linearGradient id="today-glass-water-fill" x2="0" y2="1">
+        <stop stop-color="#b5d7fa"/><stop offset="1" stop-color="#7188d0"/>
+      </linearGradient>
+    </defs>
+    <symbol id="art-today-glass" viewBox="0 0 100 100">
+      <ellipse cx="50" cy="94" rx="34" ry="4" fill="#504486" opacity=".24" stroke="none"/>
+      <path d="M8 27v10m-5-5h10m77 26v8m-4-4h8" stroke="#f8f2ff" stroke-width="2" opacity=".9"/>
+      <use href="#today-glass-body" fill="url(#today-glass-shell)" stroke="none"/>
+    </symbol>
+    <symbol id="art-today-glass-rim" viewBox="0 0 100 100">
+      <use href="#today-glass-body" fill="none" stroke="#9da5d3" stroke-width="2.2"/>
+      <ellipse cx="50" cy="16" rx="34" ry="6" fill="#f4f0ff" fill-opacity=".4" stroke="#f8f6ff" stroke-width="2.2"/>
+      <path d="m26 28 6 42q1 7 4 10" stroke="#fff" stroke-width="3" opacity=".72"/>
+      <path d="M44 85q14 2 23-3" stroke="#eff0ff" stroke-width="2" opacity=".66"/>
+    </symbol>
+    <symbol id="art-today-complete" viewBox="0 0 80 80">
+      <circle cx="39" cy="39" r="29" fill="#b8a4e8" opacity=".24" stroke="none"/>
+      <path d="M9 27v10m-5-5h10m56-13v10m-5-5h10M16 59v6m-3-3h6" stroke="#a890df" stroke-width="1.9"/>
+      <g transform="rotate(-13 37 39)">
+        <rect x="23" y="17" width="34" height="46" rx="8" fill="#6b5cb0" opacity=".25" stroke="none"/>
+        <rect x="20" y="14" width="34" height="46" rx="8" fill="#f5f0ff" stroke="#ac9bdd" stroke-width="1.6"/>
+        <rect x="28" y="11" width="18" height="9" rx="4" fill="#b8a4e8" stroke="none"/>
+        <path d="M28 29h18m-18 8h14m-14 8h9" stroke="#927fc5" stroke-width="2.1"/>
+      </g>
+      <circle cx="55" cy="53" r="15" fill="#d8edb9" stroke="#97b97c" stroke-width="1.6"/>
+      <path d="m48 53 5 5 9-10" stroke="#3e6041" stroke-width="2.8"/>
+    </symbol>
     <clipPath id="glass-clip"><path d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></clipPath>
     <symbol id="art-tablet" viewBox="0 0 100 100"><ellipse cx="50" cy="54" rx="34" ry="30" class="pill-edge"/><ellipse cx="50" cy="48" rx="34" ry="30" class="pill-body"/><ellipse cx="50" cy="46" rx="29" ry="25" class="pill-light"/><path class="pill-line" d="m30 62 38-32"/><path stroke="white" d="m32 65 39-33"/></symbol>
     <symbol id="art-blister" viewBox="0 0 100 100">
@@ -378,7 +410,7 @@
       <div data-screen="today" class="daily-sheet">
         <section id="today-water" class="water" aria-labelledby="today-water-label">
           <span class="today-water-art">
-            <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/><use href="#i-glass-rim"/></svg>
+            <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#art-today-glass"/><path class="glass-water" clip-path="url(#today-glass-clip)"/><use href="#art-today-glass-rim"/></svg>
           </span>
           <div class="today-water-body">
             <div class="water-info">
