@@ -312,3 +312,10 @@
 .medora .settings-dialog[data-panel]:not([data-panel=""]) .settings-tile[open] > summary { display: none; }
 .medora .settings-dialog .settings-tile[open] { padding: .65rem .8rem; }
 .medora .settings-dialog .settings-tile[open] .settings-fields { border: 0; padding: 0; margin: 0; }
+.medora #date-picker { background: var(--panel); }
+.medora #date-picker .sheet-body { box-sizing: border-box; min-block-size: min(76dvh, 38rem); display: flex; flex-direction: column; padding: 1.15rem .55rem 1.35rem; }
+.medora #date-picker h2 { text-align: start; }
+.medora #picker-days { flex: 1; align-items: center; }
+.medora #picker-days button { inline-size: min(100%, 2.85rem); margin-inline: auto; }
+.medora #date-picker .picker-actions { flex-wrap: wrap; }
+.medora #date-picker .picker-actions div { display: flex; gap: .25rem; }
