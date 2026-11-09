@@ -440,13 +440,13 @@ function scheduledDoses(state, day) {
 }
 
 function render() {
+  if (!$("day").value) return;
+  const day = dayNumber($("day").value);
+  dashboard.renderWellness(care, day);
   const medicines = Object.values(care.medicines);
   const noPlans = element("p", "برنامهٔ دارویی ثبت نشده است.");
   noPlans.className = "empty";
   $("plans").replaceChildren(...(medicines.length ? medicines.map(renderMedicine) : [noPlans]));
-  if (!$("day").value) return;
-  const day = dayNumber($("day").value);
-  dashboard.renderWellness(care, day);
   const daily = scheduledDoses(care, day);
   const doseCard = dose => renderDose(care.medicines[dose.medicineId], dose);
   const consumed = daily.filter(dose => dose.status === "taken").length;

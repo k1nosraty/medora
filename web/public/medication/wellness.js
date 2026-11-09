@@ -44,7 +44,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
   let calendarMonth = calendarSelection;
   let reportSpan = 30;
   let calendar;
-  let dateText;
+  let weekdayText;
   let shortDate;
   let monthText;
   let dayText;
@@ -54,11 +54,19 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     if (next === calendar) return;
     calendar = next;
     const format = options => new Intl.DateTimeFormat(`fa-IR-u-ca-${calendar}`, { ...options, timeZone: "UTC" });
-    dateText = format({ dateStyle: "full" });
+    weekdayText = format({ weekday: "long" });
     shortDate = format({ day: "numeric", month: "short" });
     monthText = format({ month: "long", year: "numeric" });
     dayText = format({ day: "numeric" });
     dayIndex = new Intl.DateTimeFormat(`en-u-ca-${calendar}-nu-latn`, { day: "numeric", timeZone: "UTC" });
+  }
+  function formatDay(day, includeWeekday = false) {
+    const date = day * dayMs;
+    const parts = monthText.formatToParts(date);
+    const month = parts.find(part => part.type === "month").value;
+    const year = parts.find(part => part.type === "year").value;
+    const label = `${dayText.format(date)} ${month} ${year}`;
+    return includeWeekday ? `${weekdayText.format(date)}، ${label}` : label;
   }
   function chooseDay(day, restoreFocus) {
     $("day").value = iso(day);
@@ -290,7 +298,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
 
   function dateButton(day, selected, choose) {
     const control = button(dayText.format(day * dayMs), () => choose(day));
-    control.setAttribute("aria-label", dateText.format(day * dayMs));
+    control.setAttribute("aria-label", formatDay(day, true));
     if (day === selected) control.setAttribute("aria-current", "date");
     return control;
   }
@@ -333,7 +341,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     ];
     const add = button("قرار جدید", () => openVisit(null, day));
     add.className = "block-action";
-    $("calendar-activity").replaceChildren(element("h2", dateText.format(day * dayMs)),
+    $("calendar-activity").replaceChildren(element("h2", formatDay(day, true)),
       ...(entries.length ? entries : [empty("فعالیتی ثبت نشده است.")]), add);
   }
 
@@ -379,17 +387,17 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     const goal = state.waterGoal ?? 2000;
     const future = day > today();
     const progress = Math.min(1, total / goal);
-    $("day-label").textContent = day === today() ? "امروز" : shortDate.format(day * dayMs);
-    $("pick-day").setAttribute("aria-label", `انتخاب تاریخ، ${dateText.format(day * dayMs)}`);
+    $("day-label").textContent = day === today() ? "امروز" : formatDay(day);
+    $("pick-day").setAttribute("aria-label", `انتخاب تاریخ، ${formatDay(day, true)}`);
     if (screen === "today") {
-      const start = day - weekIndex(day);
-      $("day-week").replaceChildren(...week.map((label, index) => {
-        const control = dateButton(start + index, day, selected => chooseDay(selected, "day-week"));
-        control.prepend(element("span", label));
+      $("day-week").replaceChildren(...week.map((_, index) => {
+        const date = day - 3 + index;
+        const control = dateButton(date, day, selected => chooseDay(selected, "day-week"));
+        control.prepend(element("span", week[weekIndex(date)]));
         return control;
       }));
     }
-    $("header-date").textContent = screen === "today" ? dateText.format(day * dayMs) : "";
+    $("header-date").textContent = screen === "today" ? formatDay(day, true) : "";
     $("today-water").hidden = future;
     $("future-schedule").hidden = !future;
     $("open-water-history").hidden = future;
@@ -460,7 +468,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
   }
   return {
     dayVisits, renderWellness, monthStart, chooseDay, show,
-    formatDay: day => dateText.format(day * dayMs),
+    formatDay,
     formatMonth: day => monthText.format(day * dayMs),
     formatDayNumber: day => dayText.format(day * dayMs),
     dateLimit: () => screen === "water" ? today() : Infinity

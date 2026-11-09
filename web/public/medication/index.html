@@ -26,6 +26,7 @@
     <symbol id="i-injection" viewBox="0 0 24 24"><path d="m7 15 8-8 3 3-8 8-3-3Zm9-10 5 5M7 17l-4 4m8-10 2 2m-5 1 2 2m4-8 2 2"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-glass" viewBox="0 0 100 100"><ellipse fill="#5b9abe" fill-opacity=".1" cx="50" cy="94" rx="34" ry="4"/><path fill="url(#glass-fill)" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></symbol>
     <symbol id="i-glass-rim" viewBox="0 0 100 100"><path stroke="white" stroke-opacity=".72" stroke-width="5.5" d="M22 18l8 61"/><path stroke="#b7daf0" stroke-width="2.5" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/><ellipse stroke="white" stroke-opacity=".4" stroke-width="2.5" cx="50" cy="6.25" rx="37" ry="4.75"/></symbol>
     <linearGradient id="glass-fill"><stop stop-color="#e4f4ff" stop-opacity=".4"/><stop offset="1" stop-color="#f3faff" stop-opacity=".7"/></linearGradient>
@@ -74,10 +75,10 @@
     <p id="boot-status" role="status">در حال بارگذاری مدورا…</p>
     <div id="app" hidden>
       <div id="day-controls" class="day-controls">
-        <button type="button" class="secondary day-arrow icon-button" id="next-day" aria-label="روز بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
-        <button id="pick-day" class="date-field" type="button"><svg aria-hidden="true"><use href="#i-calendar"/></svg><span id="day-label"></span></button>
+        <button type="button" class="secondary day-arrow icon-button" id="previous-day" aria-label="روز قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+        <button id="pick-day" class="date-field" type="button"><span id="day-label"></span><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
         <input id="day" type="date" hidden>
-        <button type="button" class="secondary day-arrow icon-button reverse" id="previous-day" aria-label="روز قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+        <button type="button" class="secondary day-arrow icon-button reverse" id="next-day" aria-label="روز بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
         <div id="day-week" class="day-week" aria-label="روزهای هفته"></div>
       </div>
       <div data-screen="today">
