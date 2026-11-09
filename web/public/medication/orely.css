@@ -66,7 +66,8 @@ html[dir="ltr"] .medora .account-shortcut svg:last-child { scale: -1 1; }
 .medora .header-tools .language-switch { display: inline-flex; gap: .28rem; padding-inline: .58rem; font: 750 .69rem system-ui, sans-serif; border-radius: 100vw; }
 .medora .header-tools .language-switch svg { inline-size: 1.02rem; block-size: 1.02rem; }
 .medora .page-heading { margin-block: .4rem .65rem; }
-.medora #app:not([data-active-screen]) .page-heading, .medora #app[data-active-screen="today"] .page-heading {
+.medora #app:not([data-active-screen]) .page-heading,
+.medora #app:is([data-active-screen="today"], [data-active-screen="insights"]) .page-heading {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;
@@ -116,7 +117,7 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 .medora .story-copy > p:last-child { margin-block-start: .4rem; inline-size: min(94%, 15rem); color: #faf5ff; font-size: clamp(.78rem, 2.8vw, .98rem); }
 #today-dates { position: relative; z-index: 1; margin: -1.15rem .6rem 0; }
 #today-dates:empty { display: none; }
-.medora #today-dates .day-controls, .medora .dock, .medora .settings-dialog .sheet-header {
+.medora #today-dates .day-controls, .medora .dock, .medora .settings-dialog .sheet-header, .medora .glass-toolbar {
   border: 1px solid var(--glass-rim);
   background: linear-gradient(132deg, var(--glass-glint), transparent 43%), color-mix(in srgb, var(--glass) 78%, transparent);
   box-shadow: inset 0 1px 0 var(--glass-glint), inset 0 -1px 0 var(--glass-rim), 0 .42rem 1.25rem var(--glass-shadow);
@@ -241,17 +242,25 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 .medora #plans .treatment > .buttons { margin-block-start: auto; }
 .medora #plans .treatment .treatment-name { min-block-size: 2.5rem; padding-inline: .12rem; line-height: 1.3; }
 .medora #plans .treatment .refill { background: var(--stage); }
-.medora .segmented, .medora .insights-tabs { background: var(--stage); padding: .24rem; border-radius: 1.18rem; }
-
-.visit-toolbar { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; margin-block: .65rem 1rem; }
-.medora #visit-filters { flex: 1 1 14rem; }
+.medora .segmented { padding: .24rem; border-radius: 1.18rem; }
+.medora .segmented:not(.glass-toolbar) { background: var(--stage); }
+.medora .glass-toolbar { padding: .3rem; border-radius: 1.18rem; }
+.visit-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: .3rem;
+  margin-block: 1rem;
+}
+.medora #visit-filters { background: transparent; padding: 0; }
+.medora #visit-filters button { min-inline-size: 0; border-radius: .9rem; text-wrap: balance; }
 .medora #visit-filters button[aria-pressed="true"],
 .medora #report-range button[aria-pressed="true"] {
-  background: var(--panel);
+  background: var(--dock-active);
   color: var(--action);
   box-shadow: 0 .14rem .35rem var(--glass-shadow);
 }
-.medora #visit-add { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; border-radius: 1rem; }
+.medora #visit-add { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; border-radius: .9rem; padding-inline: .58rem; }
 .medora #visit-add svg { inline-size: 1.1rem; block-size: 1.1rem; }
 #visits { display: grid; gap: .7rem; }
 .medora #visits > h2 { margin: .35rem .1rem 0; font-size: 1.04rem; }
@@ -307,13 +316,9 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 .medora .visit-featured :focus-visible { outline-color: var(--cover-text); }
 .medora .visit-empty { display: flex; align-items: center; justify-content: space-between; gap: .8rem; min-block-size: 7rem; }
 
-.medora #app[data-active-screen="insights"] .page-heading { margin-block-end: .9rem; }
 .medora .insights-tabs {
   gap: .25rem;
-  margin-block: .55rem .85rem;
-  border: 1px solid var(--glass-rim);
-  background: color-mix(in srgb, var(--glass) 78%, transparent);
-  box-shadow: 0 .2rem .7rem var(--glass-shadow);
+  margin-block: .75rem .95rem;
 }
 .medora .insights-tabs button { display: inline-flex; flex: 1; align-items: center; justify-content: center; gap: .35rem; border-radius: .9rem; border-color: transparent; }
 .medora .insights-tabs button[aria-pressed="true"] { background: var(--dock-active); color: var(--action); border-color: transparent; }
@@ -431,7 +436,7 @@ html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem au
   .medora .story-copy h2 { font-size: 1.64rem; }
   .medora .dock button { font-size: .68rem; }
   .medora .header-tools { gap: .28rem; }
-  .medora #visit-add { inline-size: 100%; }
+  .visit-toolbar { grid-template-columns: minmax(0, 1fr); }
 }
 .medora #today-dates .day-week { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .medora #today-dates .day-week .calendar-dots { gap: .13rem; }

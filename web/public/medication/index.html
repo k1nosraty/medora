@@ -187,7 +187,7 @@
         </section>
       </div>
       <div data-screen="appointments" hidden>
-        <div class="visit-toolbar">
+        <div class="visit-toolbar glass-toolbar">
           <div class="segmented" id="visit-filters" role="group" aria-label="بازهٔ قرارها">
             <button type="button" data-visit-filter="all" aria-pressed="true">همه</button>
             <button type="button" data-visit-filter="upcoming" aria-pressed="false">پیش‌رو</button>
@@ -215,7 +215,7 @@
         <section><h2>مصرف این روز</h2><div id="water-entries"></div></section>
       </div>
       <div data-screen="insights" hidden>
-        <div class="insights-tabs" role="group" aria-label="نمای گزارش و تقویم">
+        <div class="insights-tabs glass-toolbar" role="group" aria-label="نمای گزارش و تقویم">
           <button type="button" data-insight="calendar" aria-pressed="true"><svg aria-hidden="true"><use href="#i-calendar"/></svg>تقویم</button>
           <button type="button" data-insight="reports" aria-pressed="false"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش‌ها</button>
         </div>
@@ -236,7 +236,7 @@
           <section id="calendar-activity"></section>
         </div>
         <div id="reports-panel" hidden>
-          <div id="report-range" class="segmented" role="group" aria-label="بازهٔ گزارش">
+          <div id="report-range" class="segmented glass-toolbar" role="group" aria-label="بازهٔ گزارش">
             <button type="button" data-report-range="7" aria-pressed="false">هفته</button>
             <button type="button" data-report-range="30" aria-pressed="true">ماه</button>
             <button type="button" data-report-range="365" aria-pressed="false">سال</button>
@@ -564,23 +564,20 @@
     </div>
   </dialog>
   <dialog id="time-picker" class="sheet value-picker" aria-labelledby="time-picker-title">
-    <div class="sheet-body">
-      <h2 id="time-picker-title">ساعت یادآوری</h2>
-      <div class="clock-display" id="clock-display" dir="ltr">
-        <button type="button" id="clock-hour" aria-label="ساعت"></button><span>:</span><button type="button" id="clock-minute" aria-label="دقیقه"></button>
+    <form id="time-form" class="sheet-form sheet-body">
+      <h2 id="time-picker-title">انتخاب ساعت</h2>
+      <p class="quiet time-hint">زمان را با قالب ۲۴ ساعته وارد کنید.</p>
+      <div class="time-inputs" dir="ltr">
+        <label dir="auto">ساعت<input id="keyboard-hour" dir="ltr" inputmode="numeric" maxlength="2" autocomplete="off" autofocus></label>
+        <span aria-hidden="true">:</span>
+        <label dir="auto">دقیقه<input id="keyboard-minute" dir="ltr" inputmode="numeric" maxlength="2" autocomplete="off"></label>
       </div>
-      <div id="clock-dial" class="clock-dial" dir="ltr"></div>
-      <div id="clock-keyboard" class="fields" hidden>
-        <label>ساعت<input id="keyboard-hour" dir="ltr" inputmode="numeric" maxlength="2"></label>
-        <label>دقیقه<input id="keyboard-minute" dir="ltr" inputmode="numeric" maxlength="2"></label>
-      </div>
-      <button type="button" id="clock-mode" class="text-button">ورود عددی ساعت</button>
-      <p id="clock-error" class="field-error" role="alert"></p>
+      <p id="time-error" class="field-error" role="alert"></p>
       <div class="action-pair picker-actions">
         <button type="button" class="secondary" data-close="time-picker">انصراف</button>
-        <button type="button" id="picker-time-confirm">انتخاب</button>
+        <button type="submit" id="picker-time-confirm">انتخاب</button>
       </div>
-    </div>
+    </form>
   </dialog>
   <template id="phase-template">
     <fieldset class="phase">

@@ -1,24 +1,20 @@
-import { listSeparator, localDigits, locale, shortWeek, t, weekIndex } from "./locale.js";
+import { listSeparator, localDigits, shortWeek, t, weekIndex } from "./locale.js";
 const $ = id => document.getElementById(id);
 const dayMs = 86_400_000;
 const dayNumber = iso => Date.parse(`${iso}T00:00:00Z`) / dayMs;
 const isoDay = day => new Date(day * dayMs).toISOString().slice(0, 10);
-const digits = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false });
 const twoDigits = value => String(value).padStart(2, "0");
 
 export function installPickers({ today, selectedDay, dashboard }) {
   const fields = new WeakMap();
   const dateSheet = $("date-picker");
   const timeSheet = $("time-picker");
+  const timeInputs = [$("keyboard-hour"), $("keyboard-minute")];
   let shownMonth;
   let pickedDay;
   let dateLimit;
   let onPickDate;
   let timeField;
-  let hour;
-  let minute;
-  let clockUnit;
-  let keyboard;
 
   function drawDate() {
     $("picker-month").textContent = dashboard.formatMonth(shownMonth);
@@ -85,103 +81,35 @@ export function installPickers({ today, selectedDay, dashboard }) {
   });
   $("pick-day").addEventListener("click", () => openDate(selectedDay(), dashboard.dateLimit(), dashboard.chooseDay));
 
-  function drawClock() {
-    $("clock-hour").textContent = digits.format(hour);
-    $("clock-minute").textContent = digits.format(minute);
-    $("clock-hour").setAttribute("aria-pressed", String(clockUnit === "hour"));
-    $("clock-minute").setAttribute("aria-pressed", String(clockUnit === "minute"));
-    const isHour = clockUnit === "hour";
-    const count = isHour ? 24 : 12;
-    const selected = isHour ? hour : minute;
-    const angle = (selected % (isHour ? 12 : 60)) / (isHour ? 12 : 60);
-    const hand = document.createElement("span");
-    hand.className = "clock-hand";
-    hand.style.setProperty("--angle", `${angle}turn`);
-    if (isHour && hour >= 12) hand.classList.add("inner");
-    hand.setAttribute("aria-hidden", "true");
-    const controls = Array.from({ length: count }, (_, index) => {
-      const value = isHour ? index : index * 5;
-      const at = (value % (isHour ? 12 : 60)) / (isHour ? 12 : 60) * Math.PI * 2;
-      const radius = isHour && value >= 12 ? 27 : 41;
-      const control = document.createElement("button");
-      control.type = "button";
-      control.textContent = isHour ? value.toLocaleString(locale) : digits.format(value);
-      control.setAttribute("aria-pressed", String(value === selected));
-      control.style.left = `${50 + Math.sin(at) * radius}%`;
-      control.style.top = `${50 - Math.cos(at) * radius}%`;
-      control.addEventListener("click", () => {
-        if (isHour) {
-          hour = value;
-          clockUnit = "minute";
-        } else minute = value;
-        drawClock();
-        if (isHour) $("clock-minute").focus({ preventScroll: true });
-        else $("picker-time-confirm").focus({ preventScroll: true });
-      });
-      return control;
-    });
-    $("clock-dial").replaceChildren(hand, ...controls);
-  }
-
-  function keyboardValues() {
-    return [$("keyboard-hour"), $("keyboard-minute")].map(field => {
-      const value = field.value.trim().replace(/[۰-۹٠-٩]/g, char => String(char.charCodeAt(0) & 15));
-      return /^\d{1,2}$/.test(value) ? Number(value) : NaN;
-    });
-  }
-
-  function readKeyboard() {
-    const [h, m] = keyboardValues();
-    if (!(h >= 0 && h < 24 && m >= 0 && m < 60)) {
-      $("clock-error").textContent = t("ساعت و دقیقه را بررسی کنید.");
-      return false;
-    }
-    hour = h;
-    minute = m;
-    return true;
-  }
-
-  function clockMode(showKeyboard) {
-    keyboard = showKeyboard;
-    $("clock-error").textContent = "";
-    $("clock-keyboard").hidden = !keyboard;
-    $("clock-dial").hidden = keyboard;
-    $("clock-display").hidden = keyboard;
-    $("clock-mode").textContent = keyboard ? t("نمای ساعت") : t("ورود عددی ساعت");
-    if (keyboard) {
-      $("keyboard-hour").value = twoDigits(hour);
-      $("keyboard-minute").value = twoDigits(minute);
-    }
-    drawClock();
-  }
-
   function openTime(field) {
     timeField = field;
-    [hour, minute] = (field.value || "08:00").split(":").map(Number);
-    clockUnit = "hour";
-    clockMode(false);
+    const parts = localDigits(field.value || "08:00").split(":");
+    timeInputs.forEach((input, index) => {
+      input.value = parts[index];
+      input.removeAttribute("aria-invalid");
+    });
+    $("time-error").textContent = "";
     timeSheet.showModal();
+    timeInputs[0].select();
   }
 
-  $("clock-hour").addEventListener("click", () => { clockUnit = "hour"; drawClock(); });
-  $("clock-minute").addEventListener("click", () => { clockUnit = "minute"; drawClock(); });
-  $("clock-dial").addEventListener("click", event => {
-    if (clockUnit !== "minute" || event.target.closest("button")) return;
-    const dial = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - dial.left - dial.width / 2;
-    const y = event.clientY - dial.top - dial.height / 2;
-    if (Math.hypot(x, y) < 12) return;
-    minute = (Math.round(Math.atan2(x, -y) / (2 * Math.PI) * 60) + 60) % 60;
-    drawClock();
-  });
-  $("clock-mode").addEventListener("click", () => {
-    if (keyboard && !readKeyboard()) return;
-    clockMode(!keyboard);
-  });
-  $("picker-time-confirm").addEventListener("click", () => {
-    if (keyboard && !readKeyboard()) return;
+  $("time-form").addEventListener("submit", event => {
+    event.preventDefault();
+    const parts = timeInputs.map(input => {
+      const text = input.value.trim().replace(/[۰-۹٠-٩]/g, char => String(char.charCodeAt(0) & 15));
+      return /^\d{1,2}$/.test(text) ? Number(text) : NaN;
+    });
+    const invalid = parts.map((value, index) => !(value >= 0 && value < (index === 0 ? 24 : 60)));
+    timeInputs.forEach((input, index) => input.setAttribute("aria-invalid", String(invalid[index])));
+    const firstError = invalid.indexOf(true);
+    if (firstError !== -1) {
+      $("time-error").textContent = t("ساعت و دقیقه را بررسی کنید.");
+      timeInputs[firstError].focus();
+      timeInputs[firstError].select();
+      return;
+    }
     timeSheet.close();
-    setValue(timeField, `${twoDigits(hour)}:${twoDigits(minute)}`);
+    setValue(timeField, parts.map(twoDigits).join(":"));
   });
 
   function setValue(field, value) {

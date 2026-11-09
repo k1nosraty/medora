@@ -293,16 +293,6 @@
 .medora .fields .picker-control { flex: 1 1 7rem; }
 .medora .picker-control .editor-field { border: 0; padding: 0; background: none; }
 .medora .picker-field { inline-size: 100%; border-radius: 3rem; background: transparent; color: var(--action); }
-.clock-display { display: flex; justify-content: center; align-items: center; gap: .4rem; font-size: 2rem; }
-.medora .clock-display button { inline-size: 4rem; min-block-size: 3.5rem; background: var(--panel); border: 0; color: var(--ink); font-size: 1.85rem; }
-.medora .clock-display button[aria-pressed="true"] { background: var(--visit); color: var(--visit-ink); }
-.clock-dial { margin: 1rem auto; position: relative; inline-size: min(16rem, 100%); aspect-ratio: 1; background: var(--panel); border-radius: 50%; }
-.medora .clock-dial button { position: absolute; transform: translate(-50%, -50%); border: 0; background: transparent; color: var(--ink); min-block-size: 1.85rem; inline-size: 1.85rem; padding: 0; border-radius: 50%; font-size: .86rem; }
-.medora .clock-dial button[aria-pressed="true"] { background: var(--action); color: var(--on-action); }
-.clock-hand { position: absolute; inset-inline-start: 50%; inset-block-end: 50%; block-size: 41%; inline-size: .13rem; background: var(--action); transform-origin: center bottom; transform: translateX(-50%) rotate(var(--angle)); }
-.clock-hand.inner { block-size: 27%; }
-.clock-hand::after { content: ""; position: absolute; inset-block-end: -.18rem; inset-inline-start: -.13rem; inline-size: .4rem; block-size: .4rem; border-radius: 50%; background: var(--action); }
-.medora #clock-mode { display: block; margin: .45rem auto; }
 .intro { position: relative; box-sizing: border-box; min-block-size: 100vh; min-block-size: 100dvh; padding: max(2rem, env(safe-area-inset-top)) 1.5rem max(2rem, env(safe-area-inset-bottom)); overflow: hidden; }
 .welcome { background: linear-gradient(140deg, var(--hero-light), var(--hero-deep)); color: white; }
 .intro-content { position: relative; z-index: 1; max-inline-size: 32rem; margin: auto; text-align: center; }
@@ -333,11 +323,30 @@
 .medora #water-dialog .block-action { margin-block-start: .75rem; }
 .medora #time-picker { background: var(--panel); }
 .medora #time-picker .sheet-body { padding-block: 1.1rem 1.25rem; }
-.medora #time-picker h2 { font-size: 1.25rem; margin-block-end: 1rem; }
-.medora #time-picker .clock-dial { background: color-mix(in srgb, var(--action) 14%, var(--panel)); margin-block: 1.65rem; }
-.medora .clock-display button { font-size: 2.35rem; min-block-size: 4rem; }
-.medora .clock-display button[aria-pressed="true"] { background: color-mix(in srgb, var(--action) 14%, var(--panel)); color: var(--ink); }
-.medora #clock-mode { margin-block: .65rem 1rem; }
+.medora #time-picker h2 { font-size: 1.25rem; margin: 0; }
+.medora #time-picker .time-hint { text-align: center; }
+.time-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: .45rem;
+  max-inline-size: 17rem;
+  margin: .9rem auto .4rem;
+  text-align: center;
+}
+.medora #time-picker .time-inputs label { margin: 0; font-size: .85rem; color: var(--muted); }
+.medora #time-picker .time-inputs input {
+  inline-size: 100%;
+  min-block-size: 3.6rem;
+  margin-block-start: .25rem;
+  text-align: center;
+  font-size: 1.55rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.time-inputs > span { display: grid; align-items: center; block-size: 3.6rem; color: var(--muted); font-weight: 700; }
+.medora #time-picker input[aria-invalid="true"] { border-color: var(--error); }
+.medora #time-error { text-align: center; font-size: .85rem; }
 .medora #settings-back { margin-inline: -.45rem 0; }
 .medora .settings-dialog[data-panel]:not([data-panel=""]) .settings-tile:not([open]),
 .medora .settings-dialog[data-panel]:not([data-panel=""]) .settings-tile[open] > summary { display: none; }
