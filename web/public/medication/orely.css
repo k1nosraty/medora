@@ -79,9 +79,9 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   align-items: center;
-  min-block-size: clamp(8.7rem, 42vw, 12rem);
+  min-block-size: clamp(11.75rem, 48vw, 15.5rem);
   padding: clamp(.9rem, 3.5vw, 1.65rem);
-  padding-block-end: 1.35rem;
+  padding-block-end: 1.65rem;
   box-sizing: border-box;
   margin: .25rem 0 0;
   isolation: isolate;
@@ -114,7 +114,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora #story-summary { margin-block: .3rem 0; color: var(--cover-text); font-size: clamp(.75rem, 2.8vw, .95rem); }
 .medora #today-reset { color: var(--mint); padding-inline: 0; font-size: .8rem; }
 .medora #today-reset:focus-visible { outline-color: var(--mint); }
-#today-dates { position: relative; z-index: 1; margin: -.95rem .45rem 0; }
+#today-dates { position: relative; z-index: 1; inline-size: min(calc(100% - 1.35rem), 40rem); margin: -1.35rem auto 0; }
 #today-dates:empty { display: none; }
 .medora #today-dates .day-controls, .medora .dock, .medora .settings-dialog .sheet-header, .medora .glass-toolbar {
   border: 1px solid var(--glass-rim);
@@ -128,12 +128,15 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
 }
-.medora #today-dates .day-controls { margin: 0; padding: .12rem .5rem .38rem; border-radius: 1.35rem; }
+.medora #today-dates .day-controls { margin: 0; padding: .04rem .44rem .23rem; row-gap: .04rem; border-radius: 1.15rem; }
 .medora :is(#today-dates, .compact-day) .day-arrow { color: var(--action); }
-.medora :is(#today-dates, .compact-day) .date-field { min-block-size: 2.6rem; }
+.medora .compact-day .date-field { min-block-size: 2.6rem; }
+.medora #today-dates :is(.date-field, .day-arrow) { min-block-size: 2.5rem; }
+.medora #today-dates .day-arrow svg { inline-size: 1.25rem; block-size: 1.25rem; }
+.medora #today-dates .date-field { font-size: .82rem; }
 .medora #today-dates .day-week { grid-column: 1 / -1; gap: .22rem; }
 .medora .day-controls.compact-day { padding: .25rem .4rem; margin-block: .5rem .65rem; }
-.medora #today-dates .day-week button { min-block-size: 2.8rem; border-radius: 1rem; padding: .15rem .1rem; font-weight: 760; }
+.medora #today-dates .day-week button { min-block-size: 2.6rem; border-radius: .8rem; padding: .1rem; font-size: .8rem; font-weight: 760; }
 .medora #today-dates .day-week button span { color: var(--muted); }
 .medora #today-dates .day-week button[aria-current="date"] { background: var(--mint); color: var(--mint-ink); box-shadow: inset 0 1px #fff8; }
 .medora #today-dates .day-week button[aria-current="date"] span { color: var(--mint-ink); }
