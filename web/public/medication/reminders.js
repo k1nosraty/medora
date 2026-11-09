@@ -21,6 +21,8 @@ function controls(settings) {
   $("push-check").disabled = !settings?.token;
   $("push-test").disabled = !settings?.enabled;
   $("push-code-row").hidden = Boolean(settings?.enabled);
+  const todayReminders = $("today-reminders");
+  if (todayReminders) todayReminders.hidden = Boolean(settings?.enabled);
 }
 
 function serialize(action) {

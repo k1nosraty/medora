@@ -21,7 +21,7 @@ const mf = new Miniflare(convertV4MiniflareOptions({
   durableObjects: { PILOT: { className: "PushPilot", useSQLite: true }, REMINDERS: { className: "MedicationReminders", useSQLite: true } },
   outboundService: async request => {
     outbound.push({ at: Date.now(), url: request.url, auth: request.headers.get("Authorization"),
-      encoding: request.headers.get("Content-Encoding"), size: (await request.arrayBuffer()).byteLength });
+      encoding: request.headers.get("Content-Encoding"), topic: request.headers.get("Topic"), size: (await request.arrayBuffer()).byteLength });
     return new Response(null, { status: 201 });
   }
 }));
@@ -67,6 +67,7 @@ try {
   assert.equal(result.next, due+86_400_000);
   assert.equal(outbound.length, 1);
   assert.equal(outbound[0].encoding, "aes128gcm");
+  assert.match(outbound[0].topic, /^[a-f0-9]{32}$/);
   assert.equal(outbound[0].size, 4096);
   assert.ok(outbound[0].at>=due);
   assert.equal((await replace({ revision: 4, enabled: false })).next, null);

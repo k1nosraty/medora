@@ -1,13 +1,11 @@
 import { accessCare } from "./storage.js";
 import { changeReminderRevision, initializeReminders, syncReminders } from "./reminders.js";
+import { wellness } from "./wellness.js";
 
 const $ = id => document.getElementById(id);
 const dayLength = 86_400_000;
 const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const weekdayBits = [5, 6, 0, 1, 2, 3, 4];
-const persianDate = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-  dateStyle: "full", timeZone: "UTC"
-});
 let engine;
 let care;
 let editing;
@@ -207,7 +205,10 @@ function nextAmount(medicine) {
 
 function renderMedicine(medicine) {
   const card = element("article");
-  card.append(element("h3", medicine.name),
+  card.className = "medicine";
+  const heading = element("h3", medicine.name);
+  heading.dir = "auto";
+  card.append(heading,
     element("p", `${persianDigits(medicine.phases.length)} مرحلهٔ مصرف`));
   const controls = element("div");
   controls.className = "buttons";
@@ -250,12 +251,17 @@ function renderMedicine(medicine) {
 
 function renderDose(medicine, dose) {
   const card = element("article");
+  card.className = "medicine";
   const heading = element("h3", `${medicine.name}، ساعت ${persianDigits(timeText(dose.minute))}`);
+  heading.dir = "auto";
   const planned = dose.planned === null ? "مقدار برنامه مشخص نشده است." : `مقدار برنامه ${amountText(dose.planned)} ${medicine.unit}`;
   const states = { taken: "مصرف شد", skipped: "مصرف نشد" };
   let recorded = states[dose.status] ?? "در انتظار ثبت";
   if (dose.status === "taken" && dose.actual !== null) recorded += `، ${amountText(dose.actual)} ${medicine.unit}`;
-  card.append(heading, element("p", planned), element("p", recorded));
+  const badge = element("p", recorded);
+  badge.className = "badge";
+  badge.dataset.status = dose.status ?? "pending";
+  card.append(heading, element("p", planned), badge);
   if (dose.day > today()) return card;
   const label = element("label", "مقدار مصرف واقعی");
   const amount = element("input");
@@ -265,7 +271,9 @@ function renderDose(medicine, dose) {
   if (dose.actual != null) amount.value = amountText(dose.actual);
   if (dose.planned != null) amount.placeholder = amountText(dose.planned);
   label.append(amount);
-  card.append(label);
+  const actual = element("details");
+  actual.append(element("summary", "تغییر مقدار مصرف"), label);
+  card.append(actual);
 
   async function record(status) {
     try {
@@ -305,7 +313,7 @@ function render() {
   $("plans").replaceChildren(...(medicines.length ? medicines.map(renderMedicine) : [element("p", "هنوز دارویی اضافه نشده است.")]));
   if (!$("day").value) return;
   const day = dayNumber($("day").value);
-  $("day-label").textContent = persianDate.format(day * dayLength);
+  dashboard.renderWellness(care, day);
   const doses = new Map();
   for (const medicine of medicines) {
     for (const slot of engine.medicationSlots(rules(medicine.phases), day)) {
@@ -315,9 +323,12 @@ function render() {
   for (const [id, dose] of Object.entries(care.doses)) {
     if (dose.day === day && (dose.status || doses.has(id))) doses.set(id, dose);
   }
-  const cards = [...doses.values()].sort((a, b) => a.minute - b.minute)
-    .map(dose => renderDose(care.medicines[dose.medicineId], dose));
-  $("doses").replaceChildren(...(cards.length ? cards : [element("p", "برای این روز نوبتی وجود ندارد.")]));
+  const events = [...doses.values()].map(dose => ({ minute: dose.minute, card: renderDose(care.medicines[dose.medicineId], dose) }));
+  events.push(...dashboard.dayVisits(care, day));
+  events.sort((a, b) => a.minute - b.minute);
+  const empty = element("p", "برای این روز دارو یا قراری ثبت نشده است.");
+  empty.className = "empty";
+  $("doses").replaceChildren(...(events.length ? events.map(event => event.card) : [empty]));
 }
 
 async function reload() {
@@ -335,6 +346,7 @@ $("add").addEventListener("click", () => openEditor());
 $("add-phase").addEventListener("click", () => addPhase());
 $("cancel").addEventListener("click", () => { $("editor").hidden = true; editing = null; });
 window.addEventListener("focus", () => { void reload(); void syncReminders(true); });
+const dashboard = wellness({ getState: () => care, selectedDay: () => $("day").value ? dayNumber($("day").value) : today(), today, render, mutate });
 
 try {
   engine = await import("/care-engine/care-core.mjs");

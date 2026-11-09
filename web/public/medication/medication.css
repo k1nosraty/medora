@@ -1,37 +1,110 @@
-form, article, fieldset {
-  border: 1px solid GrayText;
-  border-radius: 0.65rem;
-  margin-block: 0.75rem;
-  padding: 0.85rem;
-  min-inline-size: 0;
+.medora {
+  --page: #eaf5ee;
+  --panel: #ddf1e8;
+  --field: #f7fcf9;
+  --ink: #103d38;
+  --muted: #46645e;
+  --outline: #accbc1;
+  --action: #006f68;
+  --on-action: #fff;
+  --water: #a8ddf2;
+  --water-ink: #075e8a;
+  --medicine: #fff0d8;
+  --medicine-ink: #805019;
+  --visit: #e9e0f7;
+  --visit-ink: #5b3f87;
+  --ok: #166534;
+  --ok-bg: #dcf4e3;
+  --warn: #92400e;
+  --error: #b42318;
+  --error-bg: #fde4e1;
+  background: var(--page);
+  color: var(--ink);
 }
-.fields, .weekdays {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 0.65rem;
-  margin-block: 0.65rem;
+@media (prefers-color-scheme: dark) {
+  .medora {
+    --page: #0b2423;
+    --panel: #153b37;
+    --field: #193f3a;
+    --ink: #e6fff6;
+    --muted: #b2d5ca;
+    --outline: #41685f;
+    --action: #66d8c2;
+    --on-action: #103d38;
+    --water: #103c50;
+    --water-ink: #c8eeff;
+    --medicine: #453919;
+    --medicine-ink: #ffe2a9;
+    --visit: #352d4e;
+    --visit-ink: #ecddff;
+    --ok: #8ae0ac;
+    --ok-bg: #234635;
+    --warn: #ffd18a;
+    --error: #ffb4ab;
+    --error-bg: #552e2b;
+  }
 }
-.fields label {
-  flex: 1 1 10rem;
-}
-.fields input {
-  inline-size: 100%;
-}
-.weekdays label {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  min-block-size: 2.75rem;
-  padding-inline: 0.25rem;
-}
-.weekdays input {
-  inline-size: 1.05rem;
-  min-block-size: auto;
-}
-h3, article p {
-  margin-block: 0.25rem;
-}
-[data-warning="true"] {
-  font-weight: 700;
+.medora [hidden] { display: none !important; }
+.icon-library { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; }
+.medora svg:not(.icon-library) { inline-size: 1.5rem; block-size: 1.5rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.medora svg:has(use[href="#i-mark"]) { stroke-width: 0; }
+.app-bar { background: linear-gradient(115deg, #103d38, #006f68); color: #fff; border-end-start-radius: 1.65rem; border-end-end-radius: 1.65rem; overflow: hidden; padding-block-start: env(safe-area-inset-top); }
+.app-bar-inner { position: relative; max-inline-size: 43rem; min-block-size: 6.25rem; margin-inline: auto; padding: 0.9rem 1rem; box-sizing: border-box; display: flex; gap: 0.75rem; align-items: center; }
+.brand-mark { flex: none; display: grid; place-items: center; inline-size: 2.9rem; block-size: 2.9rem; border: 1px solid #9cdccc; border-radius: 1rem; color: #c9f6e9; }
+.brand-name { font-size: 0.875rem; color: #daf4ed; }
+.medora h1 { font-size: 1.5rem; margin: 0; }
+.medora h2 { font-size: 1.22rem; }
+.medora h3 { font-size: 1.05rem; }
+.medora .app-bar p { margin: 0; color: #daf4ed; font-size: 0.875rem; }
+.medora .header-leaf { position: absolute; inset-inline-end: 0; inset-block-end: -2rem; inline-size: 8rem; block-size: 8rem; opacity: .12; pointer-events: none; }
+.medora .app-content { max-inline-size: 43rem; padding: .85rem max(1rem, env(safe-area-inset-right)) calc(7rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+.medora section { border: 0; padding: 0; margin-block: .85rem; }
+.medora p { margin-block: .35rem; overflow-wrap: anywhere; }
+.medora .quiet, .medora .empty { color: var(--muted); font-size: .9rem; }
+.day-controls, .feature-head, .section-heading, .feature-label { display: flex; align-items: center; gap: .6rem; }
+.day-controls, .feature-head, .section-heading { justify-content: space-between; }
+.day-controls { margin-block: .25rem .9rem; }
+.day-arrow { flex: none; }
+.date-field { position: relative; display: flex; align-items: center; justify-content: center; gap: .45rem; min-inline-size: 0; min-block-size: 3rem; padding-inline: .65rem; border: 1px solid var(--outline); border-radius: .9rem; background: var(--field); text-align: center; font-size: .875rem; font-weight: 650; }
+.date-field input { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.date-field input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; cursor: pointer; }
+.date-field:focus-within { outline: .15rem solid var(--action); outline-offset: .15rem; }
+.medora .feature, .medora article, .medora form, .medora fieldset { padding: .9rem; border: 1px solid var(--outline); border-radius: 1.2rem; background: var(--panel); min-inline-size: 0; }
+.medora .feature { border-start-start-radius: 1.75rem; border-end-end-radius: 1.75rem; }
+.medora .water { background: var(--water); color: var(--water-ink); }
+.medora .medicine { background: var(--medicine); color: var(--medicine-ink); }
+.medora .visit { background: var(--visit); color: var(--visit-ink); }
+.medora .water .quiet { color: inherit; }
+.medora .amount-line strong { font-size: 1.55rem; font-weight: 750; }
+.progress-ring { display: grid; flex: none; place-items: center; inline-size: clamp(3.5rem, 20vw, 5rem); aspect-ratio: 1; border-radius: 50%; background: conic-gradient(var(--water-ink) calc(var(--percent, 0) * 1%), var(--field) 0); }
+.progress-ring span { display: grid; place-items: center; inline-size: 76%; aspect-ratio: 1; background: var(--water); border-radius: 50%; font-size: .9rem; font-weight: 700; }
+.medora button, .medora input, .medora textarea, .medora select { min-block-size: 3rem; border-color: var(--outline); border-radius: .9rem; color: var(--ink); font: inherit; }
+.medora input, .medora select, .medora textarea { background: var(--field); border: 1px solid var(--outline); padding: .5rem .7rem; box-sizing: border-box; }
+.medora textarea { display: block; inline-size: 100%; resize: vertical; }
+.medora button { background: var(--action); border-color: var(--action); color: var(--on-action); font-weight: 650; }
+.medora button.secondary { background: var(--field); border-color: var(--outline); color: var(--ink); }
+.medora :focus-visible { outline: .15rem solid var(--action); outline-offset: .15rem; }
+.medora .empty { padding: .85rem; border: 1px dashed var(--outline); border-radius: 1rem; }
+.medora .badge { display: inline-block; padding: .15rem .65rem; border-radius: 100vw; color: var(--warn); background: var(--field); font-size: .875rem; }
+.medora .badge[data-status="taken"] { color: var(--ok); background: var(--ok-bg); }
+.medora .badge[data-status="skipped"] { color: var(--error); background: var(--error-bg); }
+.medora [data-warning="true"] { color: var(--warn); font-weight: 700; }
+.medora .app-status { min-block-size: 1.2rem; color: var(--muted); }
+.medora .dock { position: fixed; z-index: 2; inset-inline: max(.55rem, env(safe-area-inset-right)) max(.55rem, env(safe-area-inset-left)); inset-block-end: max(.45rem, env(safe-area-inset-bottom)); max-inline-size: 41rem; margin-inline: auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--outline); border-radius: 1.55rem; padding: .25rem; box-shadow: 0 .18rem .8rem #103d382b; }
+.medora .dock button { background: transparent; border: 0; color: var(--ink); padding: .27rem .1rem; font-size: .8rem; line-height: 1.3; display: grid; place-items: center; gap: .2rem; overflow-wrap: anywhere; }
+.medora .dock button[aria-current="page"] { background: var(--action); color: var(--on-action); }
+.medora .fields, .medora .weekdays { display: flex; flex-wrap: wrap; align-items: end; gap: .55rem; margin-block: .6rem; }
+.medora .fields label { flex: 1 1 9rem; min-inline-size: 0; }
+.medora .fields input { inline-size: 100%; }
+.medora .weekdays label { display: flex; align-items: center; gap: .28rem; min-block-size: 3rem; }
+.medora .weekdays input { inline-size: 1.08rem; min-block-size: auto; }
+.medora form label { display: block; margin-block: .35rem; }
+.medora .report-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .7rem; margin-block: .8rem; }
+.medora .report-summary p { border-radius: .85rem; padding: .6rem; background: var(--field); }
+.medora .report-chart { display: grid; gap: .3rem; }
+.medora .report-chart p { display: grid; grid-template-columns: 4rem 1fr 3rem; align-items: center; gap: .45rem; font-size: .85rem; }
+.medora .report-chart meter { inline-size: 100%; accent-color: var(--water-ink); }
+@media (max-width: 340px) {
+  .medora .dock button { font-size: .72rem; }
+  .section-heading { flex-wrap: wrap; }
 }

@@ -1,8 +1,9 @@
-const cacheName = "medora-medication-shell-v3";
+const cacheName = "medora-medication-shell-v4";
 const shell = [
   "/medication/",
   "/medication/medication.js",
   "/medication/reminders.js",
+  "/medication/wellness.js",
   "/medication/medication.css",
   "/medication/storage.js",
   "/care-engine/care-core.mjs",
