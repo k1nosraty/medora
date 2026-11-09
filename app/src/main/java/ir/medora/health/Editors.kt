@@ -41,7 +41,8 @@ fun EditDialog(
     onSaved: () -> Unit,
     requestPermission: () -> Unit,
     openNotifications: () -> Unit,
-    openExact: () -> Unit
+    openExact: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     if (editor.kind == "settings") {
         SettingsDialog(vm, close, onSaved, requestPermission, openNotifications, openExact)
@@ -426,6 +427,12 @@ fun EditDialog(
                 Button(onClick = ::save, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) {
                     if(vm.busy) {CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp))}
                     Text(if (vm.busy) tr("common.saving") else tr("common.save"))
+                }
+                if (onDelete != null) {
+                    TextButton(onClick = onDelete, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().testTag("editor-delete")) {
+                        val key = if (editor.medication != null) "medication.delete" else "appointment.delete"
+                        Text(tr(key), color = MaterialTheme.colorScheme.error)
+                    }
                 }
                 TextButton(onClick = close, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                     Text(tr("common.cancel"))

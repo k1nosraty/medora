@@ -160,8 +160,12 @@ data class HealthData(
     }
     fun deleteMedication(key:String,now:ZonedDateTime) {
         materialize(now);medications.removeAll { it.id==key }
-        doses.removeAll { it.medicationId==key && it.status==DoseStatus.PENDING &&
-            LocalDateTime.parse(it.wall).isAfter(now.toLocalDateTime()) }
+        doses.removeAll { it.medicationId == key && it.status in setOf(DoseStatus.PENDING, DoseStatus.SNOOZED) &&
+            it.scheduledAt(now.zone).isAfter(now.toInstant()) }
+        doses.replaceAll {
+            if (it.medicationId == key && it.status == DoseStatus.SNOOZED) it.copy(status = DoseStatus.PENDING, snoozeUntil = 0)
+            else it
+        }
     }
     fun mark(dose:Dose,status:DoseStatus,now:Instant,zone:ZoneId=ZoneId.systemDefault(),actualAmount:Int?=null) {
         val previous = doses.find { it.id == dose.id } ?: dose

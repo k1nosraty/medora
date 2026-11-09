@@ -252,6 +252,31 @@ class WellnessUiTest {
         compose.onNodeWithTag("details-edit").assertExists()
     }
 
+    @Test fun deleteFromDetailsAndEditorRequiresConfirmationAndKeepsDoseHistory() {
+        launch(compact = true)
+        compose.onNodeWithTag("nav-2").performClick()
+        compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
+        compose.onNodeWithTag("details-delete").performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("medication.deleteConfirm", "fa")).assertIsDisplayed()
+        compose.onNodeWithText(localizedText("common.cancel", "fa")).performClick()
+        compose.onNodeWithTag("medication-detail-ui-med").performScrollTo().performClick()
+        compose.onNodeWithTag("details-edit").performScrollTo().performClick()
+        compose.onNodeWithTag("editor-delete").performScrollTo().performClick()
+        compose.onNodeWithTag("confirm-delete").performClick()
+        compose.waitUntil(15000) { model.data?.medications?.isEmpty() == true && !model.busy }
+        val taken = model.data?.doses?.single { it.medicationId == "ui-med" && it.status == DoseStatus.TAKEN }
+        assertEquals("قرص آهن", taken?.name)
+        compose.onNodeWithTag("medication-detail-ui-med").assertDoesNotExist()
+
+        compose.onNodeWithTag("nav-3").performClick()
+        compose.onNodeWithText(localizedText("common.edit", "fa")).performScrollTo().performClick()
+        compose.onNodeWithTag("editor-delete").performScrollTo().performClick()
+        compose.onNodeWithText(localizedText("appointment.deleteConfirm", "fa")).assertIsDisplayed()
+        compose.onNodeWithTag("confirm-delete").performClick()
+        compose.waitUntil(15000) { model.data?.appointments?.isEmpty() == true && !model.busy }
+        compose.onNodeWithText("ویزیت متخصص قلب").assertDoesNotExist()
+    }
+
     @Test fun appearanceThemeChangesAndPersistsFromSettings() {
         launch(compact=true)
         compose.onNodeWithTag("settings").performClick()

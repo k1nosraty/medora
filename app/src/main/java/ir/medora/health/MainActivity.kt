@@ -162,6 +162,14 @@ class MainActivity : ComponentActivity() {
 data class Editor(val kind: String, val water: Water? = null, val medication: Medication? = null, val appointment: Appointment? = null, val date: String? = null)
 private data class PendingDeletion(val messageKey: String, val mutation: (HealthData) -> Unit)
 
+private fun medicationDeletion(id: String) = PendingDeletion("medication.deleteConfirm") {
+    it.deleteMedication(id, ZonedDateTime.now())
+}
+
+private fun appointmentDeletion(id: String) = PendingDeletion("appointment.deleteConfirm") {
+    it.appointments.removeAll { appointment -> appointment.id == id }
+}
+
 @Composable
 fun Panel(
     color: Color = MaterialTheme.colorScheme.surface,
@@ -305,10 +313,13 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
                 }
                 if (secondary == "water") WaterScreen(data, historyDate, { showHistoryPicker = true },
                     { editor = it.copy(date = history) }, { deletion = it }, vm)
-                else if (secondary == "calendar") ActivityCalendarScreen(data, vm, { editor = it })
+                else if (secondary == "calendar") ActivityCalendarScreen(data, vm, { editor = it }) {
+                    deletion = appointmentDeletion(it.id)
+                }
                 else if (secondary == "reports") ReportsScreen(data)
                 else when (tab) {
-                    0 -> TodayScreen(data, historyDate, { showHistoryPicker = true }, { history = it.toString() }, vm, requestPermission, openNotification, { tab = 2 }, { secondary = "water"; history = LocalDate.now().toString() }) { editor = it }
+                    0 -> TodayScreen(data, historyDate, { showHistoryPicker = true }, { history = it.toString() }, vm, requestPermission, openNotification, { tab = 2 }, { secondary = "water"; history = LocalDate.now().toString() },
+                        { deletion = appointmentDeletion(it.id) }) { editor = it }
                     1 -> WaterScreen(data, historyDate, { showHistoryPicker = true }, { editor = it.copy(date = history) }, { deletion = it }, vm)
                     2 -> MedicationScreen(data, historyDate, { showHistoryPicker = true }, { editor = it }, { deletion = it }, vm)
                     else -> AppointmentScreen(data, { editor = it }, { deletion = it }, vm)
@@ -329,20 +340,33 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
         )
     }
     deletion?.let { pending ->
+        var submitted by remember(pending) { mutableStateOf(false) }
         AlertDialog(
-            onDismissRequest = { deletion = null },
+            onDismissRequest = { if (!vm.busy) deletion = null },
             title = { Text(tr("common.delete")) },
-            text = { Text(tr(pending.messageKey)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(tr(pending.messageKey))
+                    if (submitted) vm.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+                }
+            },
             confirmButton = {
-                Button(onClick = { vm.change(pending.mutation) { deletion = null } }, enabled = !vm.busy,colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.error,contentColor=MaterialTheme.colorScheme.onError)) {
+                Button(onClick = {
+                    submitted = true
+                    vm.change(pending.mutation) { deletion = null }
+                }, enabled = !vm.busy,
+                    modifier = Modifier.testTag("confirm-delete"),
+                    colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.error,contentColor=MaterialTheme.colorScheme.onError)) {
                     Text(tr("common.delete"))
                 }
             },
-            dismissButton = { TextButton(onClick = { deletion = null }) { Text(tr("common.cancel")) } }
+            dismissButton = { TextButton(onClick = { deletion = null }, enabled = !vm.busy) { Text(tr("common.cancel")) } }
         )
     }
     editor?.let { current ->
         key(current) {
+            val target = current.medication?.let { medicationDeletion(it.id) }
+                ?: current.appointment?.let { appointmentDeletion(it.id) }
             EditDialog(
                 current,
                 vm,
@@ -354,7 +378,8 @@ fun HealthScreen(vm: HealthViewModel, requestPermission: () -> Unit, openNotific
                 },
                 requestPermission = requestPermission,
                 openNotifications = openNotification,
-                openExact = openExact
+                openExact = openExact,
+                onDelete = target?.let { pending -> { editor = null; deletion = pending } }
             )
         }
     }
@@ -383,6 +408,7 @@ private fun TodayScreen(
     openNotification: () -> Unit,
     viewMedications: () -> Unit,
     viewWater: () -> Unit,
+    deleteAppointment: (Appointment) -> Unit,
     openEditor: (Editor) -> Unit
 ) {
     val today = day
@@ -401,7 +427,8 @@ private fun TodayScreen(
                 event.dose?.let { DoseCard(it,vm,actionable=!future) }
                 event.appointment?.let { item ->
                     AppointmentCard(item,edit={openEditor(Editor("appointment",appointment=item))},
-                        toggle={vm.change({it.appointments.replace(item.copy(cancelled=!item.cancelled))})},delete={},showDelete=false,showActions=!future)
+                        toggle={vm.change({it.appointments.replace(item.copy(cancelled=!item.cancelled))})},
+                        delete={deleteAppointment(item)},showActions=!future)
                 }
             }
         }
@@ -577,17 +604,19 @@ private fun MedicationScreen(
             MedicationStockSummary(medication,vm)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { openEditor(Editor("medication", medication = medication)) }) { Text(tr("common.edit")) }
-                TextButton(onClick = {
-                    requestDelete(PendingDeletion("medication.deleteConfirm") {
-                        it.deleteMedication(medication.id, ZonedDateTime.now())
-                    })
-                }) { Text(tr("common.delete"), color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = { requestDelete(medicationDeletion(medication.id)) }) {
+                    Text(tr("medication.delete"), color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
     details?.let { selected ->
         val current=data.medications.find { it.id==selected.id }
-        if(current!=null) MedicationDetailsSheet(current,data,vm,{details=null},{details=null;openEditor(Editor("medication",medication=current))})
+        if (current != null) MedicationDetailsSheet(
+            current, data, vm, close = { details = null },
+            edit = { details = null; openEditor(Editor("medication", medication = current)) },
+            delete = { details = null; requestDelete(medicationDeletion(current.id)) }
+        )
     }
 
 }
@@ -613,12 +642,7 @@ private fun AppointmentScreen(
             appointment,
             edit = { openEditor(Editor("appointment", appointment = appointment)) },
             toggle = { vm.change({ it.appointments.replace(appointment.copy(cancelled = !appointment.cancelled)) }) },
-            delete = {
-                requestDelete(PendingDeletion("appointment.deleteConfirm") {
-                    it.appointments.removeAll { existing -> existing.id == appointment.id }
-                })
-            },
-            showDelete = true
+            delete = { requestDelete(appointmentDeletion(appointment.id)) }
         )
     }
 }
@@ -648,6 +672,7 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
     }
     val needsAction = dose.status == DoseStatus.PENDING || dose.status == DoseStatus.SNOOZED
     val medication = vm.data?.medications?.find { it.id == dose.medicationId }
+    val canAct = actionable && medication != null
     Panel(color=medicationSurface(medication?.color ?: dose.color),compact=true,feature=true) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MedicationBadge(medication?.icon ?: dose.icon, medication?.color ?: dose.color)
@@ -656,7 +681,7 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
                 Text(tr("dose.time", displayTime(dose.wall.substring(11))), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (actionable) Box {
+            if (canAct) Box {
                 IconButton(onClick = { menu = true }, enabled = !vm.busy, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.MoreVert, contentDescription = tr("a11y.changeDoseStatus"))
                 }
@@ -705,7 +730,7 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
         if (dose.quantityText().isNotBlank()) Text(localizedNumber(dose.quantityText(), LocalLanguage.current), style = MaterialTheme.typography.bodyMedium)
         if (dose.instructions.isNotBlank()) Text(dose.instructions,Modifier.padding(vertical=3.dp), style = MaterialTheme.typography.bodySmall)
         }
-        if (actionable && needsAction) {
+        if (canAct && needsAction) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { vm.change({ it.mark(dose, DoseStatus.TAKEN, Instant.now()) }) },
@@ -742,7 +767,6 @@ fun AppointmentCard(
     edit: () -> Unit,
     toggle: () -> Unit,
     delete: () -> Unit,
-    showDelete: Boolean = true,
     showActions: Boolean = true
 ) {
     val language = LocalLanguage.current
@@ -774,7 +798,7 @@ fun AppointmentCard(
             TextButton(onClick = toggle) {
                 Text(if (appointment.cancelled) tr("appointment.reactivate") else tr("appointment.cancel"))
             }
-            if (showDelete) TextButton(onClick = delete) { Text(tr("common.delete"), color = MaterialTheme.colorScheme.error) }
+            TextButton(onClick = delete) { Text(tr("appointment.delete"), color = MaterialTheme.colorScheme.error) }
         }
     }
 }

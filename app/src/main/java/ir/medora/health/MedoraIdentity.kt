@@ -165,7 +165,7 @@ fun MedoraTimePicker(initial: LocalTime, onDismiss: () -> Unit, onPicked: (Int, 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicationDetailsSheet(medication: Medication, data: HealthData, vm: HealthViewModel, close: () -> Unit, edit: () -> Unit) {
+fun MedicationDetailsSheet(medication: Medication, data: HealthData, vm: HealthViewModel, close: () -> Unit, edit: () -> Unit, delete: () -> Unit) {
     val language=LocalLanguage.current
     ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.background) {
@@ -183,6 +183,9 @@ fun MedicationDetailsSheet(medication: Medication, data: HealthData, vm: HealthV
                 Text(tr("medication.startDate") + ": " + displayDate(java.time.LocalDate.parse(medication.startDay)))
                 MedicationStockSummary(medication,vm)
                 PrimaryAction(tr("common.edit"), edit,Modifier.testTag("details-edit"))
+                TextButton(onClick = delete, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().testTag("details-delete")) {
+                    Text(tr("medication.delete"), color = MaterialTheme.colorScheme.error)
+                }
             }
             }
             item {Heading(tr("design.intakeHistory"))}

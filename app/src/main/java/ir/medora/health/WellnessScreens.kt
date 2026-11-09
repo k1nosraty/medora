@@ -116,7 +116,7 @@ fun ChoiceStrip(labels: List<String>, selected: Int, change: (Int) -> Unit) {
 }
 
 @Composable
-fun ActivityCalendarScreen(data: HealthData, vm: HealthViewModel, openEditor: (Editor) -> Unit) {
+fun ActivityCalendarScreen(data: HealthData, vm: HealthViewModel, openEditor: (Editor) -> Unit, deleteAppointment: (Appointment) -> Unit) {
     val calendar = LocalCalendar.current
     val language = LocalLanguage.current
     var selection by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
@@ -196,7 +196,7 @@ fun ActivityCalendarScreen(data: HealthData, vm: HealthViewModel, openEditor: (E
     appointments.forEach { appointment ->
         AppointmentCard(appointment, edit = { openEditor(Editor("appointment", appointment = appointment)) },
             toggle = { vm.change({ it.appointments.replace(appointment.copy(cancelled = !appointment.cancelled)) }) },
-            delete = {}, showDelete = false)
+            delete = { deleteAppointment(appointment) })
     }
     if (total == 0 && doses.isEmpty() && appointments.isEmpty()) Empty(tr("calendar.empty"))
     PrimaryAction(tr("appointment.new"), { openEditor(Editor("appointment", date = selectedDay.toString())) })

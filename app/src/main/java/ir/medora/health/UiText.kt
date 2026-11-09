@@ -248,6 +248,7 @@ private val copy = mapOf(
     "medication.historyEmpty" to ("برای این روز نوبت مصرف دارو ثبت نشده است." to "No doses are scheduled for this day."),
     "medication.paused" to ("یادآوری دارو متوقف است" to "Medication reminders paused"),
     "medication.active" to ("یادآوری دارو فعال است" to "Medication reminders active"),
+    "medication.delete" to ("حذف دارو" to "Delete medication"),
     "medication.deleteConfirm" to ("برنامهٔ دارو حذف شود؟ سوابق مصرف حفظ می‌شوند." to "Delete this medication schedule? Dose history will be kept."),
 
     "dose.pending" to ("مصرف ثبت نشده" to "Not marked as taken"),
@@ -269,6 +270,7 @@ private val copy = mapOf(
     "appointment.cancelled" to ("لغو شده" to "Cancelled"),
     "appointment.cancel" to ("لغو قرار" to "Cancel appointment"),
     "appointment.reactivate" to ("بازگرداندن قرار لغوشده" to "Restore cancelled appointment"),
+    "appointment.delete" to ("حذف قرار" to "Delete appointment"),
     "appointment.deleteConfirm" to ("این قرار حذف شود؟" to "Delete this appointment?"),
     "appointment.doctor" to ("نام پزشک یا عنوان قرار" to "Doctor or appointment title"),
     "appointment.timeZone" to ("منطقهٔ زمانی محل قرار" to "Appointment time zone"),
