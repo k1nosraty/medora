@@ -88,8 +88,8 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
   overflow: hidden;
   color: var(--cover-text);
   background:
-    radial-gradient(ellipse at 18% 20%, #dec5ff48, transparent 60%),
-    linear-gradient(138deg, var(--cover-shade), var(--cover) 68%, var(--cover-light));
+    radial-gradient(ellipse at 83% 15%, #eab5f762, transparent 56%),
+    linear-gradient(150deg, var(--cover-shade), var(--cover) 55%, var(--cover-light));
   border-radius: 2.1rem 2.1rem 1.3rem 1.3rem;
 }
 .medora .today-story::after {
@@ -102,10 +102,12 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
 }
 .medora .today-story .story-art {
   justify-self: center;
-  inline-size: min(110%, 15rem);
+  inline-size: min(116%, 18rem);
   block-size: auto;
-  stroke: none;
+  -webkit-mask-image: linear-gradient(#000 88%, transparent);
+  mask-image: linear-gradient(#000 88%, transparent);
 }
+html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .story-copy { min-inline-size: 0; }
 .medora .story-label { display: inline-block; padding: .12rem .45rem; border: 1px solid #fff5; background: #fff2; border-radius: .7rem; font-size: .72rem; }
 .medora .story-copy h2 { margin: .35rem 0 .15rem; font-weight: 850; font-size: clamp(1.55rem, 6.5vw, 2.85rem); line-height: 1.18; text-wrap: balance; }
