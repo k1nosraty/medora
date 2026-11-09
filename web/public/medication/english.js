@@ -1,4 +1,5 @@
 export default {
+  "بارگذاری دوباره": "Reload",
   "مقدار از حد مجاز بیشتر است.": "This amount is above the allowed limit.",
   "جست‌وجوی دارو": "Search medicines",
   "دارویی با این نام پیدا نشد.": "No medicines match your search.",

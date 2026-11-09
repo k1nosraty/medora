@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/medication/medication.css">
   <link rel="stylesheet" href="/medication/orely.css">
   <title>مدورا</title>
-  <script type="module" src="/medication/medication.js"></script>
+  <script type="module" src="/medication/bootstrap.js"></script>
 </head>
 <body class="medora">
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -100,6 +100,7 @@
   </header>
   <main class="app-content">
     <p id="boot-status" role="status">در حال بارگذاری مدورا…</p>
+    <button id="boot-retry" type="button" hidden>بارگذاری دوباره</button>
     <div id="app" hidden>
       <div class="page-heading"><h1 id="screen-title">امروز</h1><p id="header-date"></p></div>
       <section id="today-story" class="today-story" aria-labelledby="story-title">

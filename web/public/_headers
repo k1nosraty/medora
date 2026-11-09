@@ -4,5 +4,5 @@
   X-Content-Type-Options: nosniff
 /sw.js
   Cache-Control: no-cache
-/medication/sw.js
-  Cache-Control: no-cache
+/medication/*
+  Cache-Control: no-store

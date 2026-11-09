@@ -1,6 +1,7 @@
-const cacheName = "medora-medication-shell-v16";
+const cacheName = "medora-medication-shell-v17";
 const shell = [
   "/medication/",
+  "/medication/bootstrap.js",
   "/medication/medication.js",
   "/medication/locale.js",
   "/medication/english.js",
@@ -26,7 +27,8 @@ const shell = [
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(cacheName).then(cache => cache.addAll(shell)).then(() => self.skipWaiting()));
+  const requests = shell.map(path => new Request(path, { cache: "reload" }));
+  event.waitUntil(caches.open(cacheName).then(cache => cache.addAll(requests)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", event => {
@@ -45,9 +47,12 @@ self.addEventListener("fetch", event => {
   event.respondWith((async () => {
     const cache = await caches.open(cacheName);
     try {
-      const response = await fetch(event.request);
-      if (response.ok) await cache.put(url.pathname, response.clone());
-      return response;
+      const response = await fetch(event.request, { cache: "no-store" });
+      if (response.ok) {
+        await cache.put(url.pathname, response.clone());
+        return response;
+      }
+      return await cache.match(url.pathname) ?? response;
     } catch {
       return await cache.match(url.pathname) ?? Response.error();
     }

@@ -8,6 +8,21 @@ import { maxBackupBytes, readAndroidBackup } from "./android-backup.js";
 import { installAppearance, medicationBadge, medicationBanner } from "./medication-art.js";
 import { installAccount } from "./account.js";
 
+// An older cached page can still load this module from the current release.
+if (!document.getElementById("today-dates")) {
+  const url = new URL(location.href);
+  const firstAttempt = !url.searchParams.has("retry");
+  url.searchParams.set("retry", Date.now());
+  if (firstAttempt) location.replace(url);
+  else {
+    const link = document.createElement("a");
+    link.href = url;
+    link.textContent = t("بارگذاری دوباره");
+    document.getElementById("boot-status").replaceChildren(link);
+  }
+  throw new Error("Outdated Medora page");
+}
+
 localizeMarkup();
 const $ = id => document.getElementById(id);
 const dayLength = 86_400_000;
