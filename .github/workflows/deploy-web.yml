@@ -1,0 +1,51 @@
+name: Deploy Medora web
+
+on:
+  push:
+    branches: [deploy]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: medora-web-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test and build the shared care engine
+        run: bash gradlew -p care-core jvmTest buildWebEngine
+      - name: Install and test the web app
+        working-directory: web
+        run: |
+          npm ci
+          npm test
+          npm run test:care
+          npm run test:alarms
+      - name: Publish to Cloudflare Workers
+        working-directory: web
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [[ -z "$CLOUDFLARE_ACCOUNT_ID" || -z "$CLOUDFLARE_API_TOKEN" ]]; then
+            echo "::error::Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to the repository's Actions secrets."
+            exit 1
+          fi
+          npm run deploy -- --keep-vars --tag "$GITHUB_SHA"

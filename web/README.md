@@ -25,10 +25,16 @@ npm run dev
 
 برای انتشار دائمی از حساب Workers Free استفاده کنید.
 
+پوش به شاخهٔ `deploy`، موتور مشترک را می‌سازد، تست‌های وب را اجرا می‌کند و وب‌اپ را روی Worker فعلی منتشر می‌کند. برای راه‌اندازی، `CLOUDFLARE_ACCOUNT_ID` و `CLOUDFLARE_API_TOKEN` را در [Actions secrets مخزن](https://github.com/k1nosraty/medora/settings/secrets/actions) ثبت کنید. توکن باید دسترسی ویرایش Workers را فقط برای حسابی داشته باشد که مدورا روی آن اجرا می‌شود.
+
+برای انتشار دستی از پوشهٔ `web` اجرا کنید.
+
 ```bash
 npx wrangler login
-npm run deploy -- --secrets-file .pilot-secrets.json
+npm run deploy -- --keep-vars
 ```
+
+برای راه‌اندازی Worker تازه، پس از ساخت کلیدها دستور `npm run deploy -- --secrets-file .pilot-secrets.json` را اجرا کنید.
 
 Durable Objectهای SQLite روی Workers Free اجرا می‌شوند. هر نصب فقط یک alarm برای نزدیک‌ترین نوبت دارد. درخواست همگام‌سازی قدیمی، جای زمان‌بندی جدید را نمی‌گیرد. نوبت‌های هم‌زمان در یک اعلان جمع می‌شوند. تغییرات آفلاین تا اتصال و همگام‌سازی دوباره روی زمان‌بندی سرور اثر نمی‌گذارند. اگر نشانی سایت عوض شود، نصب و اجازهٔ اعلان باید روی نشانی جدید انجام شوند. دادهٔ مرورگر هم به نشانی قبلی وابسته است.
 
