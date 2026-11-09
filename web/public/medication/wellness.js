@@ -1,11 +1,18 @@
 import { defaultCalendar, listSeparator, locale, shortWeek, t, weekIndex } from "./locale.js";
 import { appointmentDefaults, appointmentOffsets, localZone, visitInstant, waterDefaults } from "./care-plan.js";
 import { localWall, timezone } from "./wall-clock.js";
+import { appearanceColors } from "./medication-art.js";
 
 const $ = id => document.getElementById(id);
 const dayMs = 86_400_000;
 const numbers = new Intl.NumberFormat(locale);
 const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), insights: t("گزارش و تقویم"), water: t("آب") };
+const visitCategories = {
+  general: t("عمومی"), dental: t("دندان‌پزشکی"), eye: t("چشم‌پزشکی"), skin: t("پوست و مو"),
+  heart: t("قلب و عروق"), lab: t("آزمایشگاه"), imaging: t("تصویربرداری")
+};
+const visitCategoryOf = category => Object.hasOwn(visitCategories, category) ? category : "general";
+const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "purple";
 const iso = day => new Date(day * dayMs).toISOString().slice(0, 10);
 const minutes = value => {
   const [hour, minute] = value.split(":").map(Number);
@@ -327,6 +334,31 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("settings-status").textContent = $("status").textContent;
   });
 
+  const visitCategory = $("visit-category");
+  const visitAppearance = $("visit-appearance");
+  const visitColors = Object.entries(appearanceColors).map(([color, title]) => {
+    const choice = element("input");
+    choice.type = "radio";
+    choice.name = "visit-color";
+    choice.value = color;
+    choice.dataset.ink = color;
+    const label = element("label");
+    label.append(choice, element("span", title));
+    $("visit-colors").querySelector(".visit-color-grid").append(label);
+    return choice;
+  });
+  for (const [category, title] of Object.entries(visitCategories)) visitCategory.add(new Option(title, category));
+
+  function selectedVisitColor() {
+    return visitColorOf(visitColors.find(choice => choice.checked)?.value);
+  }
+
+  function updateVisitAppearance() {
+    visitAppearance.dataset.ink = selectedVisitColor();
+    $("visit-appearance-preview").replaceChildren(visitIllustration(visitCategory.value));
+  }
+  visitAppearance.addEventListener("change", updateVisitAppearance);
+
   function openVisit(visit) {
     editingVisit = visit?.id ?? null;
     $("delete-edited-visit").hidden = !visit;
@@ -338,7 +370,12 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("visit-note").value = visit?.note ?? "";
     $("visit-contact").value = visit?.contact ?? "";
     $("visit-zone").value = visit?.zone ?? localZone();
-    $("visit-editor").querySelector("details").open = Boolean(visit?.note || visit?.contact || visit?.zone && visit.zone !== localZone());
+    $("visit-extra").open = Boolean(visit?.note || visit?.contact || visit?.zone && visit.zone !== localZone());
+    visitAppearance.open = false;
+    visitCategory.value = visitCategoryOf(visit?.category);
+    const color = visitColorOf(visit?.color);
+    for (const choice of visitColors) choice.checked = choice.value === color;
+    updateVisitAppearance();
     for (const field of visitOffsetFields) field.checked = (visit?.offsets ?? [60]).includes(Number(field.value));
     const preferences = getState().appointmentReminders ?? appointmentDefaults;
     $("visit-reminder-summary").textContent = t("از ساعت {0} روز قرار، هر {1} ساعت تا زمان قرار یادآوری می‌کنیم.", clockText(preferences.start), numbers.format(preferences.interval / 60));
@@ -372,9 +409,11 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const place = $("visit-place").value.trim();
     const note = $("visit-note").value.trim();
     const contact = $("visit-contact").value.trim();
+    const category = visitCategoryOf(visitCategory.value);
+    const color = selectedVisitColor();
     const zone = $("visit-zone").value.trim() || localZone();
     try { timezone(zone); } catch {
-      $("visit-editor").querySelector("details").open = true;
+      $("visit-extra").open = true;
       $("visit-error").textContent = t("منطقهٔ زمانی مطب را به‌شکل Asia/Tehran وارد کنید.");
       return;
     }
@@ -383,7 +422,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       if (editingVisit && !visits[id]) throw new Error(t("این قرار حذف شده است."));
       const offsets = [...(visits[id]?.offsets ?? []).filter(offset => !appointmentOffsets.includes(offset)),
         ...visitOffsetFields.filter(field => field.checked).map(field => Number(field.value))];
-      visits[id] = { id, name, day, time, place, note, contact, zone, offsets, cancelled: visits[id]?.cancelled ?? false };
+      visits[id] = { id, name, day, time, place, note, contact, zone, category, color, offsets, cancelled: visits[id]?.cancelled ?? false };
     }, t("قرار ذخیره شد."), true)) $("visit-dialog").close();
     else $("visit-error").textContent = $("status").textContent;
   });
@@ -394,22 +433,33 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const wall = localWall(instant, timezone(zone));
     return { day: Math.floor(wall / dayMs), time: new Date(wall).toISOString().slice(11, 16), instant };
   }
-  function visitIllustration() {
+  function visitIllustration(category = "general") {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     const use = document.createElementNS(svg.namespaceURI, "use");
+    const emblem = document.createElementNS(svg.namespaceURI, "use");
+    svg.setAttribute("viewBox", "0 0 160 132");
     svg.setAttribute("class", "visit-illustration");
     svg.setAttribute("aria-hidden", "true");
     use.setAttribute("href", "#art-visit");
-    svg.append(use);
+    emblem.setAttribute("href", category === "general" ? "#i-plus" : `#i-visit-${category}`);
+    emblem.setAttribute("x", "117");
+    emblem.setAttribute("y", "88");
+    emblem.setAttribute("width", "22");
+    emblem.setAttribute("height", "22");
+    emblem.setAttribute("stroke", "#324a31");
+    emblem.setAttribute("stroke-width", "2");
+    svg.append(use, emblem);
     return svg;
   }
 
   function visitCard(visit, actionable, variant = "compact") {
     const card = element("article", "", "visit visit-card");
+    const category = visitCategoryOf(visit.category);
+    card.dataset.ink = visitColorOf(visit.color);
     if (variant !== "compact") {
       card.classList.add("visit-shelf-card");
       const banner = element("div", "", "visit-banner");
-      banner.append(visitIllustration());
+      banner.append(visitIllustration(category));
       if (variant === "next") {
         card.classList.add("visit-featured");
         banner.append(element("span", t("نزدیک‌ترین قرار"), "visit-eyebrow"));
@@ -429,6 +479,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     hour.dir = "ltr";
     const body = element("div", "", "visit-card-body");
     body.append(title, hour);
+    if (category !== "general") body.append(element("span", visitCategories[category], "visit-category"));
     const header = element("div", "", "visit-card-header");
     header.append(day, body);
     const details = variant === "compact" ? card : element("div", "", "visit-shelf-details");
@@ -606,7 +657,6 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("today-water").hidden = future;
     $("future-schedule").hidden = !future;
     $("open-water-history").hidden = future;
-    $("today-actions").hidden = future;
     $("water-custom-action").hidden = future;
     $("today-water-label").textContent = day === today() ? t("مصرف آب امروز") : t("مصرف آب این روز");
     $("water-entry").hidden = future;

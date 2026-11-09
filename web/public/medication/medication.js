@@ -703,9 +703,8 @@ function render() {
     hero.className = "studio-hero studio-rest";
     const copy = element("div");
     copy.append(element("p", t("برنامهٔ امروز")), element("h2", daily.length ? t("همهٔ نوبت‌ها بررسی شدند") : t("روزتان را بچینید")),
-      element("p", daily.length ? t("{0} نوبت مصرف‌شده", localDigits(consumed)) : t("با افزودن اولین دارو، زمان مصرف را اینجا ببینید.")));
-    const add = action(t("افزودن دارو"), () => openEditor());
-    hero.append(medicationBanner("capsule", "green"), copy, add);
+      element("p", daily.length ? t("{0} نوبت مصرف‌شده", localDigits(consumed)) : t("از «افزودن» در نوار پایین، اولین دارو را ثبت کنید.")));
+    hero.append(medicationBanner("capsule", "green"), copy);
     focus.append(hero);
   }
   focus.hidden = day !== today() || document.querySelector('[data-screen="today"]').hidden;

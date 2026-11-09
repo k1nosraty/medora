@@ -265,6 +265,8 @@
 .medora .sheet-body .fields label { flex-basis: 7rem; }
 .medora .editor-field { padding: .4rem .65rem; margin-block: .6rem; border-radius: .9rem; border: 1px solid var(--outline); background: var(--field); color: var(--muted); }
 .medora .editor-field input, .medora .editor-field textarea { padding: 0; min-block-size: 1.8rem; border: 0; border-radius: 0; inline-size: 100%; background: transparent; }
+.medora :is(.editor-field, .cabinet-search):has(:is(input, textarea):focus) { outline: .15rem solid var(--action); outline-offset: .15rem; }
+.medora :is(.editor-field, .cabinet-search) :is(input, textarea):focus-visible { outline: none; }
 .editor-options, .settings-tile { border-radius: 1rem; padding: .55rem .75rem; background: var(--panel); margin-block: .5rem; }
 .medora summary { cursor: pointer; }
 .editor-options > summary { min-block-size: 2.75rem; align-content: center; }
@@ -531,7 +533,6 @@
 .medora .studio-hero .dose-options summary { inset-inline-end: .5rem; inset-block-start: .4rem; background: var(--hero-deep); border-radius: .65rem; }
 .medora .studio-hero .dose-options[open] > summary { color: #fff; }
 .medora .studio-hero :focus-visible { outline-color: var(--lime); }
-.medora .studio-rest > button { margin-block-start: .75rem; }
 
 #plans { display: grid; gap: .65rem; }
 #plans > * { margin-block: 0; }
