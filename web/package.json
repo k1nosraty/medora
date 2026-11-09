@@ -1,5 +1,6 @@
 {
   "name": "medora-web-pilot",
+  "version": "0.5.0-preview",
   "private": true,
   "type": "module",
   "engines": { "node": ">=22" },

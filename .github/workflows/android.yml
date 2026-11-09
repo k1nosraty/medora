@@ -1,5 +1,10 @@
 name: Android checks
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -1,55 +1,57 @@
-name: Publish Android preview
+name: Publish Medora preview
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags: ['v*-preview']
+
 permissions:
-  contents: write
+  contents: read
 concurrency:
-  group: medora-release
+  group: medora-release-${{ github.ref_name }}
   cancel-in-progress: false
+
 jobs:
+  checks:
+    uses: ./.github/workflows/android.yml
+
   publish:
+    needs: checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/download-artifact@v4
         with:
-          distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
-      - run: sdkmanager 'platforms;android-35' 'build-tools;36.0.0'
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Use official Maven repositories for CI
-        run: sed -i '/maven.aliyun.com/d' settings.gradle.kts
-      - run: chmod +x gradlew
-      - run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
-      - name: Publish installable preview
+          name: medora-debug-apk
+      - name: Publish checked APK and changelog
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk Medora-v0.3.0-preview.apk
-          sha256sum Medora-v0.3.0-preview.apk > SHA256SUMS.txt
-          cat > release-notes.md <<'NOTES'
-          Medora 0.3.0 — Medication Personalization & Jade UI preview
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          android_version="$(sed -n 's/^[[:space:]]*versionName = "\([^"]*\)".*$/\1/p' app/build.gradle.kts)"
+          test "$version" = "$android_version"
+          test "$version" = "$(jq -er '.version' web/package.json)"
 
-          - Choose medication icons: tablet, capsule, syrup, ampoule, ointment, drops and spray.
-          - Choose six medication colors; appearance is shown in Today, medication lists and detailed reminder notifications.
-          - Configure medication snooze: 10, 30 or 60 minutes, or a custom duration of 1–1440 minutes.
-          - Browse future days in Today; upcoming doses and appointments are visible without completion actions.
-          - Approved deep jade and warm white palette, clearer text contrast, and matching dark surfaces.
-          - Refined rounded bottom dock with clipped touch feedback, mint selection states and centered Today.
-          - Includes earlier time-picker crash and medication/appointment separation fixes.
+          awk -v heading="## [$version]" '
+            index($0, heading) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+            END { if (!found) exit 1 }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
 
-          Download Medora-v0.3.0-preview.apk to install on Android 8 or later.
-          This preview APK uses the Android debug signing key and is not a production-signed release. Android or Play Protect may show installation warnings. Updates from an existing installation require the same signing certificate; back up your data before considering reinstalling.
-          Validation: 42 unit tests, debug APK and instrumentation build, and Android lint passed. Ten targeted Android 10 device checks (11 test methods) passed with 19 screenshots covering Persian/English light/dark navigation, medication appearance, notification privacy, future schedules, snooze settings and time dialogs.
-          Device QA: https://github.com/k1nosraty/medora/actions/runs/38141699639
-          NOTES
-          if gh release view v0.3.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release v0.3.0 already exists; leaving it unchanged."
+          apk="Medora-$GITHUB_REF_NAME.apk"
+          mv app-debug.apk "$apk"
+          sha256sum "$apk" > SHA256SUMS.txt
+
+          if draft="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"; then
+            if [ "$draft" = true ]; then
+              gh release upload "$GITHUB_REF_NAME" "$apk" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+              gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false \
+                --notes-file release-notes.md --prerelease --latest=false
+            fi
           else
-            gh release create v0.3.0 Medora-v0.3.0-preview.apk SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Medora 0.3.0 — Medication Personalization & Jade UI Preview" --notes-file release-notes.md --prerelease
+            gh release create "$GITHUB_REF_NAME" "$apk" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" \
+              --verify-tag --title "Medora $version" --notes-file release-notes.md --prerelease --latest=false
           fi
