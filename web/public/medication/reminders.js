@@ -1,5 +1,5 @@
 import { defaultCalendar, language, listSeparator, locale, t } from "./locale.js";
-import { accessCare } from "./storage.js";
+import { accessCare, accessCareSettings } from "./storage.js";
 import { scheduleForPush, localZone } from "./care-plan.js";
 import { matchesSubscriptionId } from "./subscription-id.js";
 
@@ -12,6 +12,7 @@ let registration;
 let subscription;
 let publicKey;
 let operation = Promise.resolve();
+let pendingSync;
 
 export function changeReminderRevision(state) {
   if (state.reminders?.enabled) state.reminders.revision += 1;
@@ -74,8 +75,8 @@ function deliveryText(result) {
   }
 }
 
-async function sync(check = false) {
-  let state = await accessCare();
+async function sync(check = false, snapshot) {
+  let state = await accessCareSettings();
   let settings = state.reminders;
   controls(settings);
   if (!settings?.token) return;
@@ -86,7 +87,7 @@ async function sync(check = false) {
     const validSubscription = subscription && Notification.permission !== "denied" &&
       await matchesSubscriptionId(settings.token.split(".")[0], subscription.toJSON());
     if (settings.zone !== zone || settings.planVersion !== 2 || (settings.language ?? "fa") !== language || !validSubscription) {
-      state = await accessCare(current => {
+      state = await accessCareSettings(current => {
         const reminder = current.reminders;
         if (reminder.token !== settings.token || !reminder.enabled) return;
         reminder.zone = zone;
@@ -101,22 +102,29 @@ async function sync(check = false) {
 
   try {
     let remote;
+    let latest;
     if (settings.revision > (settings.synced ?? 0)) {
       status(t("در حال همگام‌سازی اعلان…"));
       if (settings.enabled && !subscription) return status(t("در حال آماده‌سازی اشتراک اعلان…"));
-      const plan = settings.enabled ? { ...scheduleForPush(state, zone, localDay()), language, subscription: subscription.toJSON() } : {};
+      let plan = {};
+      if (settings.enabled) {
+        const current = await accessCare(undefined, { snapshot });
+        if (current.reminders?.token !== settings.token || current.reminders.revision !== settings.revision) return;
+        plan = { ...scheduleForPush(current, zone, localDay()), language, subscription: subscription.toJSON() };
+      }
       remote = await request(api, "PUT", settings.token, { revision: settings.revision, enabled: settings.enabled, ...plan });
-      await accessCare(current => {
+      latest = (await accessCareSettings(current => {
         const reminder = current.reminders;
-        if (reminder.token === settings.token) reminder.synced = Math.max(reminder.synced ?? 0, settings.revision);
-      });
+        if (reminder?.token === settings.token) reminder.synced = Math.max(reminder.synced ?? 0, settings.revision);
+      })).reminders;
     } else if (check) {
       remote = await request(api, "GET", settings.token);
     }
     if (!remote) return;
 
-    const latest = (await accessCare()).reminders;
-    if (latest.token !== settings.token || latest.revision !== settings.revision) return;
+    if (!latest) latest = (await accessCareSettings()).reminders;
+    if (latest?.token !== settings.token || latest.revision !== settings.revision) return;
+    controls(latest);
     const formatDate = new Intl.DateTimeFormat(`${locale}-u-ca-${state.calendar ?? defaultCalendar}`, { dateStyle: "medium", timeStyle: "short" });
     const lastKind = kindText(remote.last?.kinds);
     $("push-delivery").textContent = remote.last
@@ -130,7 +138,7 @@ async function sync(check = false) {
     } else if (settings.enabled && !remote.enabled && remote.last?.status === "gone") {
       await subscription?.unsubscribe().catch(() => {});
       subscription = null;
-      const updated = await accessCare(current => {
+      const updated = await accessCareSettings(current => {
         if (current.reminders.token === settings.token && current.reminders.revision === settings.revision) current.reminders.enabled = false;
       });
       controls(updated.reminders);
@@ -146,12 +154,23 @@ async function sync(check = false) {
     status(error.message === "rate_limit" ? t("تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره بررسی کنید.") : error.message === "bad_schedule"
       ? t("زمان‌بندی روی سرور ثبت نشد. تعداد مرحله‌ها و نوبت‌های آینده را بررسی کنید.")
       : t("همگام‌سازی اعلان انجام نشد. پس از اتصال، «بررسی وضعیت» را بزنید."));
+    controls((await accessCareSettings()).reminders);
   }
-  controls((await accessCare()).reminders);
 }
 
-export function syncReminders(check = false) {
-  return serialize(() => sync(check)).catch(() => status(t("خواندن وضعیت اعلان انجام نشد.")));
+export function syncReminders(check = false, snapshot) {
+  if (pendingSync) {
+    pendingSync.check ||= check;
+    pendingSync.snapshot = snapshot ?? pendingSync.snapshot;
+    return pendingSync.promise;
+  }
+  const queued = { check, snapshot };
+  pendingSync = queued;
+  queued.promise = serialize(() => {
+    pendingSync = null;
+    return sync(queued.check, queued.snapshot);
+  }).catch(() => status(t("خواندن وضعیت اعلان انجام نشد.")));
+  return queued.promise;
 }
 
 export async function initializeReminders() {
@@ -183,7 +202,7 @@ export async function initializeReminders() {
     }
     subscription = await root.pushManager.getSubscription();
     registration = root;
-    const settings = (await accessCare()).reminders;
+    const settings = (await accessCareSettings()).reminders;
     controls(settings);
     if (settings?.token) await syncReminders(true);
     else status(t("برای دریافت یادآوری، «فعال‌کردن اعلان» را بزنید و مجوز گوشی را تأیید کنید."));
@@ -206,11 +225,11 @@ $("push-enable").addEventListener("click", () => {
     try {
       subscription = await ready;
       const push = subscription.toJSON();
-      const old = (await accessCare()).reminders;
+      const old = (await accessCareSettings()).reminders;
       const existingToken = old?.token && await matchesSubscriptionId(old.token.split(".")[0], push) ? old.token : null;
       const token = existingToken ?? (await request(`${api}/enroll`, "POST", null, { subscription: push })).token;
       const remote = await request(api, "GET", token);
-      const updated = await accessCare(state => {
+      const updated = await accessCareSettings(state => {
         const previous = state.reminders;
         const revision = Math.max(previous?.token === token ? previous.revision : 0, remote.revision) + 1;
         state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion: 2, language };
@@ -220,14 +239,14 @@ $("push-enable").addEventListener("click", () => {
     } catch (error) {
       status(error.message === "rate_limit" ? t("تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره تلاش کنید.") :
         t("فعال‌کردن اعلان انجام نشد. اتصال و مجوز اعلان را بررسی کنید."));
-      controls((await accessCare()).reminders);
+      controls((await accessCareSettings()).reminders);
     }
   }).catch(() => status(t("فعال‌کردن اعلان انجام نشد.")));
 });
 
 $("push-disable").addEventListener("click", () => {
   void serialize(async () => {
-    const state = await accessCare(current => {
+    const state = await accessCareSettings(current => {
       changeReminderRevision(current);
       current.reminders.enabled = false;
     });
@@ -248,13 +267,13 @@ $("push-test").addEventListener("click", () => {
   $("push-test-result").textContent = t("در حال ارسال اعلان آزمایشی…");
   void serialize(async () => {
     try {
-      const settings = (await accessCare()).reminders;
+      const settings = (await accessCareSettings()).reminders;
       const result = await request(`${api}/test`, "POST", settings.token, {});
       $("push-test-result").textContent = deliveryText(result);
     } catch {
       $("push-test-result").textContent = t("آزمون ارسال انجام نشد. اتصال را بررسی کنید.");
     } finally {
-      controls((await accessCare()).reminders);
+      controls((await accessCareSettings()).reminders);
     }
   }).catch(() => {});
 });

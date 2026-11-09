@@ -1,4 +1,4 @@
-const cacheName = "medora-medication-shell-v36";
+const cacheName = "medora-medication-shell-v37";
 const shell = [
   "/medication/",
   "/medication/bootstrap.js",
@@ -13,9 +13,15 @@ const shell = [
   "/medication/reminders.js",
   "/medication/subscription-id.js",
   "/medication/wellness.js",
+  "/medication/dom.js",
+  "/medication/care-index.js",
+  "/medication/daily-view.js",
+  "/medication/appointments-view.js",
+  "/medication/insights-view.js",
   "/medication/care-plan.js",
   "/medication/wall-clock.js",
   "/medication/android-backup.js",
+  "/medication/backup-restore-view.js",
   "/medication/medication-art.js",
   "/medication/pickers.js",
   "/medication/medication.css",
@@ -23,12 +29,15 @@ const shell = [
   "/care-engine/care-core.mjs",
   "/icon-192.png",
   "/style.css",
-  "/vazirmatn.ttf"
+  "/vazirmatn.woff2"
 ];
+let shellCache;
+const openShell = () => shellCache ??= caches.open(cacheName);
 
 self.addEventListener("install", event => {
   const requests = shell.map(path => new Request(path, { cache: "reload" }));
-  event.waitUntil(caches.open(cacheName).then(cache => cache.addAll(requests)).then(() => self.skipWaiting()));
+  // An update waits for old windows to close so one page always uses one shell.
+  event.waitUntil(openShell().then(cache => cache.addAll(requests)));
 });
 
 self.addEventListener("activate", event => {
@@ -42,19 +51,9 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || event.request.method !== "GET" ||
-      (!shell.includes(url.pathname) && !url.pathname.startsWith("/care-engine/"))) return;
+  if (url.origin !== self.location.origin || event.request.method !== "GET" || !shell.includes(url.pathname)) return;
   event.respondWith((async () => {
-    const cache = await caches.open(cacheName);
-    try {
-      const response = await fetch(event.request, { cache: "no-store" });
-      if (response.ok) {
-        await cache.put(url.pathname, response.clone());
-        return response;
-      }
-      return await cache.match(url.pathname) ?? response;
-    } catch {
-      return await cache.match(url.pathname) ?? Response.error();
-    }
+    const cache = await openShell();
+    return await cache.match(url.pathname) ?? fetch(event.request);
   })());
 });

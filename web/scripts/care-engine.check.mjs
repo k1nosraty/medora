@@ -8,9 +8,36 @@ import {
 } from "../public/care-engine/care-core.mjs";
 import { nextMedicationReminder, nextCareReminder, validSchedule } from "../src/medication-schedule.mjs";
 import { scheduleForPush } from "../public/medication/care-plan.js";
+import { createCareIndex } from "../public/medication/care-index.js";
 
 const day = iso => Date.parse(`${iso}T00:00:00Z`) / 86_400_000;
 const instant = iso => Date.parse(iso);
+
+test("calendar index keeps exact-date plans and historical or removed doses visible", () => {
+  const start = day("2026-11-09");
+  const state = {
+    medicines: {
+      exact: { id: "exact", dates: [start + 2], phases: [{ start, end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 500 }] }] },
+      paused: { id: "paused", paused: true, phases: [] }
+    },
+    doses: {
+      "paused|old": { medicineId: "paused", day: start, minute: 720, status: "taken" },
+      "removed|old": { medicineId: "removed", day: start + 1, minute: 660, imported: true },
+      "paused|obsolete": { medicineId: "paused", day: start + 3, minute: 720, status: null }
+    },
+    water: [{ day: start, amount: 250 }, { day: start, amount: 150 }],
+    visits: { clinic: { day: start, time: "23:30", zone: "America/New_York" } }
+  };
+  const index = createCareIndex(state, { WebPhase, WebSlot, medicationSlots }, "Asia/Tehran");
+  assert.deepEqual([0, 1, 2, 3].map(offset => index.hasDoses(start + offset)), [true, true, true, false]);
+  assert.equal(index.dosesOn(start)[0].status, "taken");
+  assert.equal(index.dosesOn(start + 1)[0].imported, true);
+  assert.equal(index.dosesOn(start + 2)[0].planned, 500);
+  assert.deepEqual(index.dosesOn(start + 3), []);
+  assert.deepEqual(index.doseTotals(start, start + 3), { taken: 1, recorded: 1 });
+  assert.equal(index.waterTotal(start), 400);
+  assert.equal(index.visitsOn(start + 1)[0].time, "08:00");
+});
 
 test("browser exports use the shared phase and stock rules", () => {
   const half = new WebSlot(480, quantityFromText("۰٫۵"));

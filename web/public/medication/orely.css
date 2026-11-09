@@ -499,6 +499,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora #visit-add { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: .3rem; border-radius: 5rem; padding-inline: .75rem; }
 .medora #visit-add svg { inline-size: 1.1rem; block-size: 1.1rem; }
 #visits { display: grid; gap: .7rem; }
+.medora #visits-more { grid-column: 1 / -1; justify-self: center; padding-inline: 1rem; }
 .medora #visits > h2 { margin: .35rem .1rem 0; font-size: 1.04rem; }
 .medora #visits article { margin: 0; }
 .visit-card-header { display: flex; align-items: flex-start; gap: .75rem; }

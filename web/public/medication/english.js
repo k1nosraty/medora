@@ -1,4 +1,5 @@
 export default {
+  "نمایش قرارهای بیشتر": "Show more appointments",
   "پیش‌رو": "Upcoming",
   "قرارهای بعدی": "Later appointments",
   "راهنمای تقویم": "Calendar key",

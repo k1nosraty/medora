@@ -1,4 +1,12 @@
+@font-face {
+  font-family: Medora Vazirmatn;
+  src: url("/vazirmatn.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 .medora {
+  font-family: Medora Vazirmatn, system-ui, sans-serif;
   color-scheme: light;
   --page: #f5f0f8;
   --panel: #fbf7fd;

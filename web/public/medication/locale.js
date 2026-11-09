@@ -1,7 +1,6 @@
-import english from "./english.js";
-
 const key = "medora-language";
 export const language = localStorage.getItem(key) === "en" ? "en" : "fa";
+const english = language === "en" ? (await import("./english.js")).default : {};
 export const locale = language === "en" ? "en-US" : "fa-IR";
 export const defaultCalendar = language === "en" ? "gregory" : "persian";
 const weekStart = language === "en" ? 0 : 6;

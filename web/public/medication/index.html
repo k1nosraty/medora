@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/medication/medication.css">
   <link rel="stylesheet" href="/medication/orely.css">
+  <link rel="modulepreload" href="/medication/medication.js">
+  <link rel="modulepreload" href="/care-engine/care-core.mjs">
   <title>مدورا</title>
   <script type="module" src="/medication/bootstrap.js"></script>
 </head>
@@ -481,7 +483,7 @@
       </div>
       <div data-screen="water" hidden>
         <section class="feature water">
-          <div class="feature-head water-summary">
+          <div id="water-summary" class="feature-head water-summary">
             <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/><use href="#i-glass-rim"/></svg>
             <div class="water-info"><strong id="water-date"></strong><p class="amount-line"><strong id="water-total">۰</strong> از <span id="water-goal-label">۲٬۰۰۰</span> میلی‌لیتر</p><progress class="water-progress" id="water-progress" max="1" value="0" aria-label="پیشرفت هدف آب"></progress><p class="quiet" id="water-remaining"></p></div>
           </div>

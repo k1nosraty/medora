@@ -8,8 +8,16 @@ export const waterDefaults = { enabled: false, start: "08:00", end: "22:00", int
 export const appointmentDefaults = { start: "08:00", interval: 120 };
 export const appointmentOffsets = [60, 120, 1440];
 
-export function visitInstant(visit, fallbackZone) {
-  const base = instantForWall(visit.day * dayMs + clockMinute(visit.time) * minuteMs, timezone(visit.zone ?? fallbackZone), new Map());
+export function waterGoalReached(state, day) {
+  return (state.water ?? []).reduce((sum, entry) => sum + (entry.day === day ? entry.amount : 0), 0) >=
+    (state.waterGoal ?? 2000);
+}
+
+export function visitInstant(visit, fallbackZone, clocks = new Map()) {
+  const zone = visit.zone ?? fallbackZone;
+  if (!clocks.has(zone)) clocks.set(zone, { clock: timezone(zone), offsets: new Map() });
+  const { clock, offsets } = clocks.get(zone);
+  const base = instantForWall(visit.day * dayMs + clockMinute(visit.time) * minuteMs, clock, offsets);
   return base + Math.floor(Number(visit.time.slice(6)) * 1000);
 }
 
@@ -52,9 +60,10 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
   const appointments = new Map();
   const visitSettings = state.appointmentReminders ?? appointmentDefaults;
   const displayClock = timezone(zone);
+  const visitClocks = new Map();
   for (const visit of Object.values(state.visits ?? {})) {
     if (visit.cancelled) continue;
-    const instant = visitInstant(visit, zone);
+    const instant = visitInstant(visit, zone, visitClocks);
     if (!(instant > now)) continue;
     const day = Math.floor(localWall(instant, displayClock) / dayMs);
     for (const at of appointmentReminders(visit, visitSettings, zone, instant)) {
@@ -62,10 +71,9 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
     }
   }
   const waterSettings = state.waterReminders ?? waterDefaults;
-  const total = (state.water ?? []).reduce((sum, entry) => sum + (entry.day === today ? entry.amount : 0), 0);
   const water = waterSettings.enabled ? {
     start: clockMinute(waterSettings.start), end: clockMinute(waterSettings.end), interval: waterSettings.interval,
-    repeat: waterSettings.repeat, pauseUntil: waterSettings.pauseUntil, goalDay: total >= (state.waterGoal ?? 2000) ? today : null
+    repeat: waterSettings.repeat, pauseUntil: waterSettings.pauseUntil, goalDay: waterGoalReached(state, today) ? today : null
   } : null;
   return { zone, rules, appointments: [...appointments.values()], water };
 }

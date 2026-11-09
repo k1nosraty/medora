@@ -6,6 +6,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "dev": "wrangler dev",
+    "predeploy": "node scripts/version-offline-shell.mjs",
     "deploy": "wrangler deploy",
     "pilot:secrets": "node scripts/pilot-secrets.mjs",
     "test": "node --test",

@@ -4,9 +4,12 @@ import { changeReminderRevision, initializeReminders, syncReminders } from "./re
 import { wellness } from "./wellness.js";
 import { installPickers } from "./pickers.js";
 import { clockMinute, localZone, minuteMs } from "./care-plan.js";
-import { maxBackupBytes, readAndroidBackup } from "./android-backup.js";
 import { installAppearance, medicationBadge, medicationBanner } from "./medication-art.js";
 import { installAccount } from "./account.js";
+import { $, element } from "./dom.js";
+import { compilePhases, createCareIndex, doseId, doseTime, isoDay, timeText } from "./care-index.js";
+import { renderToday } from "./daily-view.js";
+import { installBackupRestore } from "./backup-restore-view.js";
 
 // An older cached page can still load this module from the current release.
 if (!document.getElementById("today-dates")) {
@@ -24,7 +27,6 @@ if (!document.getElementById("today-dates")) {
 }
 
 localizeMarkup();
-const $ = id => document.getElementById(id);
 const dayLength = 86_400_000;
 const weekdays = [t("شنبه"), t("یکشنبه"), t("دوشنبه"), t("سه‌شنبه"), t("چهارشنبه"), t("پنجشنبه"), t("جمعه")];
 const weekdayBits = [5, 6, 0, 1, 2, 3, 4];
@@ -47,8 +49,6 @@ function dayNumber(iso) {
   }
   return ms / dayLength;
 }
-const isoDay = number => new Date(number * dayLength).toISOString().slice(0, 10);
-const timeText = minute => [Math.floor(minute / 60), minute % 60].map(part => String(part).padStart(2, "0")).join(":");
 const amountText = value => localDigits(engine.quantityToText(value));
 function doseUnit(unit, amount) {
   if (unit !== "tablet" && unit !== "قرص") return unit;
@@ -75,15 +75,9 @@ function quantity(input, optional = false) {
   return amount;
 }
 
-function rules(phases) {
-  return phases.map(phase => new engine.WebPhase(
-    phase.start, phase.end, phase.interval, phase.mask,
-    phase.slots.map(slot => new engine.WebSlot(slot.minute, slot.amount))
-  ));
-}
 function slotsFor(medicine, day) {
   if (medicine.dates?.length && !medicine.dates.includes(day)) return [];
-  return engine.medicationSlots(rules(medicine.phases), day);
+  return engine.medicationSlots(compilePhases(engine, medicine.phases), day);
 }
 
 function updateSlotLabels(container) {
@@ -386,18 +380,21 @@ function editorPhases() {
   return { phases, dates: exact ? editorDates : [] };
 }
 
-async function mutate(change, success, scheduleChanged = false) {
+async function mutate(change, success, scheduleChanged = false, day) {
   if (busy) return false;
   busy = true;
   $("app").setAttribute("aria-busy", "true");
   try {
+    let needsSync = false;
     care = await accessCare(state => {
+      const revision = state.reminders?.revision;
       change(state);
       if (scheduleChanged) changeReminderRevision(state);
-    });
+      needsSync = state.reminders?.revision !== revision;
+    }, { snapshot: care, day });
     render();
     $("status").textContent = success;
-    if (scheduleChanged) void syncReminders();
+    if (needsSync) void syncReminders(false, care);
     return true;
   } catch (error) {
     $("status").textContent = error instanceof Error && error.name === "Error" ? error.message : t("ذخیره انجام نشد. دوباره تلاش کنید.");
@@ -427,7 +424,7 @@ $("editor").addEventListener("submit", async event => {
     }
     const phased = $("phased-mode").checked;
     const { phases, dates } = editorPhases();
-    if (!engine.validMedicationPhases(rules(phases))) {
+    if (!engine.validMedicationPhases(compilePhases(engine, phases))) {
       throw new Error(t("ترتیب تاریخ‌ها، هم‌پوشانی مرحله‌ها، روزهای هفته و ساعت‌های تکراری را بررسی کنید."));
     }
     const unit = $("unit").value.trim();
@@ -472,11 +469,6 @@ $("editor").addEventListener("submit", async event => {
   }
 });
 
-function element(tag, text) {
-  const item = document.createElement(tag);
-  if (text) item.textContent = text;
-  return item;
-}
 function action(label, click, secondary = false) {
   const button = element("button", label);
   button.type = "button";
@@ -484,9 +476,6 @@ function action(label, click, secondary = false) {
   button.addEventListener("click", click);
   return button;
 }
-
-const doseId = (med, day, minute) => `${med.id}|${day}|${minute}`;
-const doseTime = (day, minute) => new Date(`${isoDay(day)}T${timeText(minute)}:00`).getTime();
 
 function requestDeletion({ title, message, change, success, parent }) {
   deletion = { change, success, parent };
@@ -558,7 +547,7 @@ function nextPlannedDose(phases, dates = [], notBefore = 0, excluded = () => fal
   const now = Date.now();
   const earliest = new Date(Math.max(now, notBefore));
   if (earliest.getFullYear() > 9999) return null;
-  const compiled = rules(phases);
+  const compiled = compilePhases(engine, phases);
   const find = (day, slots) => slots.find(slot => {
     const at = doseTime(day, slot.minuteOfDay);
     return at > now && at >= notBefore && !excluded(day, slot.minuteOfDay);
@@ -783,7 +772,7 @@ function renderDose(medicine, dose, featured = false) {
         const snoozeUntil = status === "snoozed" ? Math.max(Date.now(), scheduled, existing?.snoozeUntil ?? 0) +
           (state.medicationSnoozeMinutes ?? 10) * minuteMs : 0;
         state.doses[id] = { ...existing, medicineId: saved.id, day: dose.day, minute: dose.minute, planned, status, actual, debit, snoozeUntil };
-      }, status === "snoozed" ? t("نوبت به تعویق افتاد.") : t("وضعیت نوبت ثبت شد."), true);
+      }, status === "snoozed" ? t("نوبت به تعویق افتاد.") : t("وضعیت نوبت ثبت شد."), true, dose.day);
     } catch (error) {
       $("status").textContent = error.message;
     }
@@ -816,98 +805,54 @@ function renderDose(medicine, dose, featured = false) {
   return card;
 }
 
-function scheduledDoses(state, day) {
-  const doses = new Map();
-  for (const medicine of Object.values(state.medicines)) {
-    if (medicine.paused) continue;
-    for (const slot of slotsFor(medicine, day)) {
-      const scheduled = doseTime(day, slot.minuteOfDay);
-      if (scheduled < (medicine.effectiveFrom ?? 0)) continue;
-      doses.set(doseId(medicine, day, slot.minuteOfDay), { medicineId: medicine.id, day, minute: slot.minuteOfDay, planned: slot.milliUnits });
-    }
+let indexedState;
+let careIndex;
+const percentFormat = new Intl.NumberFormat(locale, { style: "percent" });
+
+function currentIndex() {
+  const zone = localZone();
+  if (indexedState !== care || careIndex.zone !== zone) {
+    indexedState = care;
+    careIndex = createCareIndex(care, engine, zone);
   }
-  for (const [id, dose] of Object.entries(state.doses)) {
-    if (dose.day === day && (dose.imported || dose.status || doses.has(id) || !state.medicines[dose.medicineId])) doses.set(id, dose);
-  }
-  return [...doses.values()].sort((a, b) => a.minute - b.minute);
+  return careIndex;
 }
 
-function render() {
-  if (!$("day").value) return;
-  const day = dayNumber($("day").value);
-  dashboard.renderWellness(care, day);
+function renderMedications(daily) {
   const medicines = Object.values(care.medicines);
   $("cabinet-count").textContent = medicines.length === 1 ? t("۱ دارو") : t("{0} دارو", localDigits(medicines.length));
-  const noPlans = element("p", t("برنامهٔ دارویی ثبت نشده است."));
-  noPlans.className = "empty";
+  const noPlans = element("p", t("برنامهٔ دارویی ثبت نشده است."), "empty");
   $("plans").replaceChildren(...(medicines.length ? medicines.map(renderMedicine) : [noPlans]));
   filterCabinet();
-  const daily = scheduledDoses(care, day);
-  const doseCard = dose => renderDose(care.medicines[dose.medicineId], dose);
   const consumed = daily.filter(dose => dose.status === "taken").length;
-  const skipped = daily.filter(dose => dose.status === "skipped").length;
-  const reviewed = consumed + skipped;
-  $("today-count").hidden = daily.length === 0;
-  $("today-count").textContent = t("{0} از {1} نوبت بررسی شد", localDigits(reviewed), localDigits(daily.length));
+  const doseCard = dose => renderDose(care.medicines[dose.medicineId], dose);
   const percent = daily.length ? Math.round(consumed * 100 / daily.length) : 0;
   $("med-day-summary").hidden = daily.length === 0;
   $("med-day-count").textContent = t("{0} از {1} نوبت", localDigits(consumed), localDigits(daily.length));
   $("med-day-ring").style.setProperty("--percent", percent);
-  $("med-day-ring").firstElementChild.textContent = new Intl.NumberFormat(locale, { style: "percent" }).format(percent / 100);
+  $("med-day-ring").firstElementChild.textContent = percentFormat.format(percent / 100);
   const noDoses = element("p", t("برای این روز نوبت مصرف دارو ثبت نشده است."));
   noDoses.className = "empty";
   $("med-day-doses").replaceChildren(...(daily.length ? daily.map(doseCard) : [noDoses]));
-  const now = Date.now();
-  const pending = day === today() ? daily.filter(dose => {
-    const medicine = care.medicines[dose.medicineId];
-    return medicine && !medicine.paused && (!dose.status || dose.status === "snoozed");
-  }).map(dose => ({ dose, time: dose.snoozeUntil || doseTime(dose.day, dose.minute) })).sort((a, b) => a.time - b.time) : [];
-  const focused = (pending.find(item => item.time >= now) ?? pending.at(-1))?.dose;
-  const visits = dashboard.dayVisits(care, day);
-  const doseLabel = daily.length === 1 ? t("۱ نوبت دارو") : t("{0} نوبت دارو", localDigits(daily.length));
-  const visitLabel = visits.length === 1 ? t("۱ قرار") : t("{0} قرار", localDigits(visits.length));
-  $("story-summary").textContent = daily.length || visits.length
-    ? `${doseLabel} · ${visitLabel}`
-    : t("برای این روز هنوز نوبت یا قراری ثبت نشده.");
-  const focus = $("today-focus");
-  focus.replaceChildren();
-  if (focused) focus.append(renderDose(care.medicines[focused.medicineId], focused, true));
-  else if (day === today()) {
-    const completed = daily.length > 0 && reviewed === daily.length;
-    const hero = element("div");
-    hero.className = "today-state";
-    hero.dataset.complete = String(completed);
-    const art = element("span");
-    art.className = "today-state-art";
-    art.setAttribute("aria-hidden", "true");
-    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const symbol = document.createElementNS(icon.namespaceURI, "use");
-    symbol.setAttribute("href", completed ? "#art-today-complete" : "#i-calendar");
-    icon.append(symbol);
-    art.append(icon);
-    const copy = element("div");
-    const title = completed ? t("همهٔ نوبت‌ها بررسی شدند") : daily.length ? t("سوابق نوبت‌ها") : t("روزتان را بچینید");
-    const summary = completed ? t("{0} مصرف شد · {1} مصرف نشد", localDigits(consumed), localDigits(skipped)) :
-      daily.length ? t("نوبت‌های این روز را در فهرست پایین ببینید.") : t("از «افزودن» در نوار پایین، اولین دارو را ثبت کنید.");
-    copy.append(element("h3", title), element("p", summary));
-    hero.append(copy, art);
-    focus.append(hero);
-  }
-  focus.hidden = day !== today() || document.querySelector('[data-screen="today"]').hidden;
-  const events = daily.filter(dose => dose !== focused).map(dose => ({ minute: dose.minute, card: doseCard(dose) }));
-  events.push(...visits);
-  events.sort((a, b) => a.minute - b.minute);
-  $("timeline-title").textContent = focused ? t("بقیهٔ نوبت‌ها و قرارها") : t("نوبت‌ها و قرارها");
-  $("doses").closest(".timeline").hidden = day === today() && events.length === 0;
-  const empty = element("p", focused ? t("نوبت دیگری برای امروز ثبت نشده است.") : t("برای این روز دارو یا قراری ثبت نشده است."));
-  empty.className = "empty";
-  $("doses").replaceChildren(...(events.length ? events.map(({ card }) => card) : [empty]));
+}
+
+function render() {
+  if (!care || !$("day").value) return;
+  const day = selectedDay();
+  const index = currentIndex();
+  const screen = dashboard.screen();
+  dashboard.renderWellness(care, day, index);
+  if (screen === "medications") renderMedications(index.dosesOn(day));
+  else if (screen === "today") renderToday(care, day, today(), index.dosesOn(day), dashboard.dayVisits(index, day), renderDose);
 }
 
 async function reload() {
   if (busy) return;
+  const snapshot = care;
   try {
-    care = await accessCare();
+    const latest = await accessCare(undefined, { snapshot });
+    if (busy || care !== snapshot) return;
+    care = latest;
     render();
   } catch {
     $("status").textContent = t("خواندن سوابق محلی انجام نشد.");
@@ -979,80 +924,18 @@ $("editor").addEventListener("input", event => {
 window.addEventListener("focus", () => {
   if (!engine || !care) return;
   void reload();
-  void syncReminders(true);
+  void syncReminders(true, care);
 });
 const selectedDay = () => $("day").value ? dayNumber($("day").value) : today();
 const dashboard = wellness({
-  getState: () => care, selectedDay, today, render, mutate, requestDeletion, scheduledDoses, renderDose,
+  getState: () => care, selectedDay, today, render, mutate, requestDeletion, renderDose,
   refreshFields: container => pickers.refresh(container)
 });
 const pickers = installPickers({ selectedDay, today, dashboard });
 const updateAppearance = installAppearance();
 installAccount();
 
-const backupForm = $("android-restore");
-const backupInput = $("android-backup-file");
-const emptyBackupFilename = $("android-backup-filename").textContent;
-
-function backupFeedback(message, state) {
-  const status = $("android-restore-status");
-  status.dataset.state = state;
-  status.textContent = message;
-  if (message) status.scrollIntoView({ block: "nearest" });
-}
-
-backupForm.addEventListener("reset", () => {
-  $("android-backup-filename").textContent = emptyBackupFilename;
-  backupFeedback("", "");
-});
-backupInput.addEventListener("change", () => {
-  const file = backupInput.files[0];
-  $("android-backup-filename").textContent = file?.name ?? emptyBackupFilename;
-  backupFeedback("", "");
-});
-
-backupForm.addEventListener("submit", async event => {
-  event.preventDefault();
-  const file = backupInput.files[0];
-  const field = $("android-backup-password");
-  const submit = $("android-restore-submit");
-  if (submit.disabled) return;
-  if (!file || file.size > maxBackupBytes) {
-    backupFeedback(t("یک فایل پشتیبان با حجم حداکثر ۱۶ مگابایت انتخاب کنید."), "error");
-    return;
-  }
-  const password = field.value;
-  field.value = "";
-  const isCurrent = () => $("settings-dialog").open && $("settings-dialog").dataset.panel === "backup-settings" &&
-    backupInput.files[0] === file;
-  submit.disabled = true;
-  backupFeedback(t("در حال بررسی فایل…"), "busy");
-  try {
-    const backup = await readAndroidBackup(new Uint8Array(await file.arrayBuffer()), password,
-      phases => engine.validMedicationPhases(rules(phases)), localZone());
-    if (!isCurrent()) return;
-    if (!$("android-backup-confirm").checked) {
-      backupFeedback("", "");
-      return;
-    }
-    const success = await mutate(state => {
-      changeReminderRevision(state);
-      if (state.reminders) state.reminders.enabled = false;
-      Object.assign(state, backup);
-    }, t("سوابق اندروید بازیابی شد."), true);
-    if (!isCurrent()) return;
-    if (success) {
-      backupForm.reset();
-      backupFeedback(t("سوابق بازیابی شدند. اعلان‌ها را در تنظیمات دوباره فعال کنید."), "success");
-    } else {
-      backupFeedback(t("ذخیرهٔ سوابق انجام نشد. دوباره تلاش کنید."), "error");
-    }
-  } catch {
-    if (isCurrent()) backupFeedback(t("فایل یا رمز معتبر نیست، یا این نسخه از فایل پشتیبانی نمی‌شود."), "error");
-  } finally {
-    submit.disabled = false;
-  }
-});
+installBackupRestore(mutate, phases => engine.validMedicationPhases(compilePhases(engine, phases)));
 
 function showIntro() {
   const hasRecords = Object.keys(care.medicines).length || Object.keys(care.doses).length ||
@@ -1081,12 +964,11 @@ function showIntro() {
 }
 
 try {
-  engine = await import("/care-engine/care-core.mjs");
+  [engine, care] = await Promise.all([import("/care-engine/care-core.mjs"), accessCare()]);
   const params = new URLSearchParams(location.search);
   const day = params.get("day");
   $("day").value = /^\d{4}-\d{2}-\d{2}$/.test(day ?? "") ? day : isoDay(today());
   if (!$("day").value) $("day").value = isoDay(today());
-  care = await accessCare();
   render();
   $("app").hidden = false;
   $("boot-status").hidden = true;
