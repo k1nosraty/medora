@@ -618,11 +618,14 @@ function renderMedicine(medicine) {
   status.className = "quiet";
   const profile = element("div");
   profile.className = "treatment-profile";
-  profile.append(medicationBanner(medicine.icon, medicine.color), top, status);
-  if (medicine.instructions) profile.append(element("p", medicine.instructions));
-  if (medicine.phased || medicine.phases.length > 1) profile.append(element("p", t("{0} مرحلهٔ مصرف", localDigits(medicine.phases.length))));
-  else profile.append(element("p", t("ساعت‌های مصرف: {0}", medicine.phases[0].slots.map(slot => localDigits(timeText(slot.minute))).join(" · "))));
-  profile.append(element("p", t("شروع از {0}", dashboard.formatDay(medicine.phases[0].start))));
+  const details = element("div");
+  details.className = "treatment-details";
+  details.append(top, status);
+  if (medicine.instructions) details.append(element("p", medicine.instructions));
+  if (medicine.phased || medicine.phases.length > 1) details.append(element("p", t("{0} مرحلهٔ مصرف", localDigits(medicine.phases.length))));
+  else details.append(element("p", t("ساعت‌های مصرف: {0}", medicine.phases[0].slots.map(slot => localDigits(timeText(slot.minute))).join(" · "))));
+  details.append(element("p", t("شروع از {0}", dashboard.formatDay(medicine.phases[0].start))));
+  profile.append(medicationBanner(medicine.icon, medicine.color), details);
   card.append(profile);
   if (medicine.stock !== null) {
     const upcoming = medicine.paused ? null : nextAmount(medicine);
@@ -715,6 +718,7 @@ function renderDose(medicine, dose, featured = false) {
   badge.className = "badge";
   badge.dataset.status = dose.status ?? "pending";
   const info = element("div");
+  info.className = "dose-info";
   if (featured) {
     const due = dose.snoozeUntil || doseTime(dose.day, dose.minute);
     const eyebrow = element("p", dose.status === "snoozed" ? t("نوبت به‌تعویق‌افتاده") : due >= Date.now() ? t("نوبت بعدی") : t("نوبت ثبت‌نشده"));
@@ -736,7 +740,7 @@ function renderDose(medicine, dose, featured = false) {
   if (!featured) result.append(badge);
   if (planned) result.append(element("p", planned));
   if (instructions) result.append(element("p", instructions));
-  if (result.childElementCount) card.append(result);
+  if (result.childElementCount) info.append(result);
   if (dose.day > today() || !medicine || medicine.paused) return card;
   const canSnooze = slotsFor(medicine, dose.day).some(slot => slot.minuteOfDay === dose.minute);
   const label = element("label", t("مقدار مصرف واقعی"));
@@ -800,9 +804,13 @@ function renderDose(medicine, dose, featured = false) {
     if (canSnooze) quick.append(snooze());
     card.append(quick);
   }
-  if (dose.status === "snoozed") card.append(element("p", t("یادآوری بعدی {0}", new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium", timeStyle: "short"
-  }).format(dose.snoozeUntil))));
+  if (dose.status === "snoozed") {
+    const reminder = element("p", t("یادآوری بعدی {0}", new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium", timeStyle: "short"
+    }).format(dose.snoozeUntil)));
+    reminder.className = "dose-snoozed";
+    card.append(reminder);
+  }
   return card;
 }
 

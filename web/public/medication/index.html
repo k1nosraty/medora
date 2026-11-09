@@ -377,24 +377,22 @@
           <span class="today-water-art">
             <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/><use href="#i-glass-rim"/></svg>
           </span>
-          <div class="water-info">
-            <h2 id="today-water-label">مصرف آب</h2>
-            <p class="amount-line"><strong id="today-water-total">۰</strong> از <span class="today-water-target"><span id="today-water-goal">۲٬۰۰۰</span> میلی‌لیتر</span></p>
-            <div class="today-water-meter">
+          <div class="today-water-body">
+            <div class="water-info">
+              <h2 id="today-water-label">مصرف آب</h2>
+              <p class="amount-line"><strong id="today-water-total">۰</strong> از <span class="today-water-target"><span id="today-water-goal">۲٬۰۰۰</span> میلی‌لیتر</span></p>
               <progress class="water-progress" id="today-water-progress" aria-label="پیشرفت هدف آب" max="1" value="0"></progress>
               <span id="today-water-percent" aria-hidden="true"></span>
             </div>
-          </div>
-          <div class="today-water-actions">
-            <button type="button" class="secondary" data-open-water>ثبت آب</button>
-            <div class="today-water-links">
+            <div class="today-water-actions">
+              <button type="button" data-open-water>ثبت آب</button>
               <button type="button" class="secondary" id="today-water-quick" aria-label="ثبت سریع ۲۵۰ میلی‌لیتر آب"><bdi>+۲۵۰</bdi><small>میلی‌لیتر</small></button>
               <button id="open-water-history" type="button" class="secondary" data-destination="water" aria-label="سوابق آب">سوابق</button>
             </div>
-          </div>
-          <div id="today-water-feedback" class="today-water-feedback" hidden>
-            <span id="today-water-message"></span>
-            <button type="button" class="text-button" id="today-water-undo">برگشت ثبت</button>
+            <div id="today-water-feedback" class="today-water-feedback" hidden>
+              <span id="today-water-message"></span>
+              <button type="button" class="text-button" id="today-water-undo">برگشت ثبت</button>
+            </div>
           </div>
         </section>
         <div class="daily-main">

@@ -730,7 +730,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const category = visitCategoryOf(visit.category);
     card.dataset.ink = visitColorOf(visit.color);
     if (variant !== "compact") {
-      card.classList.add("visit-shelf-card");
+      card.classList.add(variant === "day" ? "visit-day-card" : "visit-shelf-card");
       const banner = element("div", "", "visit-banner");
       banner.append(visitIllustration(category));
       if (variant === "next") {
@@ -757,7 +757,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       body.append(element("bdi", label, "visit-category"));
     }
     const header = element("div", "", "visit-card-header");
-    header.append(day, body);
+    if (variant !== "day") header.append(day);
+    header.append(body);
     const details = variant === "compact" ? card : element("div", "", "visit-shelf-details");
     details.append(header);
     if (visit.zone && visit.zone !== localZone()) {
@@ -767,6 +768,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     if (visit.cancelled) details.append(element("p", t("قرار لغو شده"), "badge"));
     if (visit.note) details.append(element("p", visit.note));
     if (visit.contact) details.append(element("p", t("تماس: {0}", visit.contact), "quiet"));
+    if (details !== card) card.append(details);
     if (actionable) {
       const controls = element("div", "", "buttons");
       controls.append(button(t("ویرایش"), () => openVisit(visit)), button(visit.cancelled ? t("فعال‌کردن قرار") : t("لغو قرار"), () => {
@@ -778,9 +780,9 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       const remove = button(t("حذف قرار"), () => deleteVisit(visit.id));
       remove.className = "text-button danger-link";
       controls.append(remove);
-      details.append(controls);
+      if (variant === "day") card.append(controls);
+      else details.append(controls);
     }
-    if (details !== card) card.append(details);
     return card;
   }
 
@@ -788,7 +790,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     return Object.values(state.visits ?? {}).filter(visit => !visit.cancelled)
       .map(visit => ({ visit, local: displayVisit(visit) }))
       .filter(({ local }) => local.day === day)
-      .map(({ visit, local }) => ({ minute: minutes(local.time), card: visitCard(visit, day <= today()) }));
+      .map(({ visit, local }) => ({ minute: minutes(local.time), card: visitCard(visit, day <= today(), "day") }));
   }
 
   function renderVisits(state) {
