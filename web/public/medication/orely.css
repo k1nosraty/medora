@@ -77,19 +77,19 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
 .medora .today-story {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.03fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   align-items: center;
-  min-block-size: clamp(11rem, 48vw, 15rem);
+  min-block-size: clamp(8.7rem, 42vw, 12rem);
   padding: clamp(.9rem, 3.5vw, 1.65rem);
-  padding-block-end: 1.7rem;
+  padding-block-end: 1.35rem;
   box-sizing: border-box;
   margin: .25rem 0 0;
   isolation: isolate;
   overflow: hidden;
   color: var(--cover-text);
   background:
-    radial-gradient(ellipse at 83% 15%, #eab5f762, transparent 56%),
-    linear-gradient(150deg, var(--cover-shade), var(--cover) 55%, var(--cover-light));
+    radial-gradient(ellipse at 18% 20%, #dec5ff48, transparent 60%),
+    linear-gradient(138deg, var(--cover-shade), var(--cover) 68%, var(--cover-light));
   border-radius: 2.1rem 2.1rem 1.3rem 1.3rem;
 }
 .medora .today-story::after {
@@ -100,21 +100,19 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
   border-radius: 1.8rem 1.8rem 1.05rem 1.05rem;
   pointer-events: none;
 }
-.today-story img {
+.medora .today-story .story-art {
   justify-self: center;
-  align-self: end;
-  inline-size: min(108%, 24rem);
+  inline-size: min(110%, 15rem);
   block-size: auto;
-  -webkit-mask-image: linear-gradient(#000 88%, transparent);
-  mask-image: linear-gradient(#000 88%, transparent);
+  stroke: none;
 }
-html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 .story-copy { min-inline-size: 0; }
-.medora .story-label { display: inline-flex; align-items: center; gap: .35rem; padding: .17rem .5rem; border: 1px solid #fff5; background: #fff2; border-radius: 100vw; font-size: .72rem; font-weight: 650; }
-.medora .story-label svg { inline-size: .95rem; block-size: .95rem; }
-.medora .story-copy h2 { margin: .4rem 0 .15rem; font-weight: 850; font-size: clamp(1.55rem, 5.5vw, 2.8rem); line-height: 1.15; text-wrap: balance; }
-.medora .story-copy > p:last-child { margin-block-start: .4rem; inline-size: min(94%, 15rem); color: #faf5ff; font-size: clamp(.78rem, 2.8vw, .98rem); }
-#today-dates { position: relative; z-index: 1; margin: -1.15rem .6rem 0; }
+.medora .story-label { display: inline-block; padding: .12rem .45rem; border: 1px solid #fff5; background: #fff2; border-radius: .7rem; font-size: .72rem; }
+.medora .story-copy h2 { margin: .35rem 0 .15rem; font-weight: 850; font-size: clamp(1.55rem, 6.5vw, 2.85rem); line-height: 1.18; text-wrap: balance; }
+.medora #story-summary { margin-block: .3rem 0; color: var(--cover-text); font-size: clamp(.75rem, 2.8vw, .95rem); }
+.medora #today-reset { color: var(--mint); padding-inline: 0; font-size: .8rem; }
+.medora #today-reset:focus-visible { outline-color: var(--mint); }
+#today-dates { position: relative; z-index: 1; margin: -.95rem .45rem 0; }
 #today-dates:empty { display: none; }
 .medora #today-dates .day-controls, .medora .dock, .medora .settings-dialog .sheet-header, .medora .glass-toolbar {
   border: 1px solid var(--glass-rim);
@@ -123,15 +121,49 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
   -webkit-backdrop-filter: blur(22px) saturate(150%);
   backdrop-filter: blur(22px) saturate(150%);
 }
-.medora #today-dates .day-controls { margin: 0; padding: .12rem .5rem .45rem; border-radius: 1.45rem; }
-.medora #today-dates .date-field { justify-content: flex-start; min-block-size: 2.6rem; }
-.medora #today-dates .day-arrow { order: 1; color: var(--action); }
-.medora #today-dates .day-week { order: 2; gap: .22rem; }
+.medora :is(#today-dates .day-controls, .day-controls.compact-day) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+.medora #today-dates .day-controls { margin: 0; padding: .12rem .5rem .38rem; border-radius: 1.35rem; }
+.medora :is(#today-dates, .compact-day) .day-arrow { color: var(--action); }
+.medora :is(#today-dates, .compact-day) .date-field { min-block-size: 2.6rem; }
+.medora #today-dates .day-week { grid-column: 1 / -1; gap: .22rem; }
+.medora .day-controls.compact-day { padding: .25rem .4rem; margin-block: .5rem .65rem; }
 .medora #today-dates .day-week button { min-block-size: 2.8rem; border-radius: 1rem; padding: .15rem .1rem; font-weight: 760; }
 .medora #today-dates .day-week button span { color: var(--muted); }
 .medora #today-dates .day-week button[aria-current="date"] { background: var(--mint); color: var(--mint-ink); box-shadow: inset 0 1px #fff8; }
 .medora #today-dates .day-week button[aria-current="date"] span { color: var(--mint-ink); }
-.medora .daily-sheet { margin-block-start: 1rem; }
+.medora .daily-sheet { margin-block-start: .75rem; }
+.medora #today-water {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .55rem;
+  margin: 0 0 .9rem;
+  padding: .5rem .65rem;
+  border: 1px solid color-mix(in srgb, var(--water-ink) 19%, var(--water));
+  border-radius: 1.15rem;
+  background: linear-gradient(125deg, var(--glass-glint), transparent 60%), var(--water);
+}
+.today-water-art {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  aspect-ratio: 1;
+  border-radius: .8rem;
+  background: color-mix(in srgb, var(--water-ink) 16%, var(--water));
+}
+.medora #today-water .water-glass { inline-size: 1.75rem; block-size: 1.95rem; }
+.medora #today-water-label { margin: 0; color: inherit; font-size: .98rem; }
+.medora #today-water .amount-line { margin: .13rem 0 .2rem; font-size: .78rem; }
+.medora #today-water .water-progress { block-size: .31rem; margin: 0; background: color-mix(in srgb, var(--water-ink) 21%, var(--water)); }
+.today-water-actions { display: grid; justify-items: stretch; }
+.medora .today-water-actions button { min-block-size: 2.4rem; padding: .2rem .6rem; font-size: .8rem; }
+.medora .today-water-actions .secondary { border-color: transparent; background: var(--panel); color: var(--water-ink); }
+.medora .today-water-actions .text-button { min-block-size: 2rem; color: var(--water-ink); }
+.daily-main { min-inline-size: 0; }
 .daily-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: 0 0 .55rem; }
 .medora .daily-heading h2 { font-size: 1.25rem; margin: 0; }
 .medora .daily-heading output { padding: .2rem .62rem; border-radius: 100vw; background: var(--dock-active); color: var(--action); font-size: .75rem; font-weight: 740; }
@@ -165,9 +197,30 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 .medora .daily-sheet .studio-hero button.secondary { background: var(--panel); color: var(--ink); border-color: var(--outline); }
 .medora .daily-sheet .studio-hero button:not(.secondary) { background: var(--mint); color: var(--mint-ink); border-color: var(--mint); }
 .medora .daily-sheet .studio-hero :focus-visible { outline-color: var(--action); }
-.medora .daily-sheet .studio-rest { min-block-size: 8rem; }
-.medora .daily-sheet .studio-rest > div:not(.medication-banner) { inline-size: 64%; }
-.medora .daily-sheet .studio-rest > div:not(.medication-banner) > p:first-child { display: none; }
+.today-state {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .85rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--outline);
+  border-radius: 1.35rem;
+  background: linear-gradient(115deg, var(--panel), var(--stage));
+}
+.medora .today-state h3 { margin: 0; font-size: 1.13rem; }
+.medora .today-state p { color: var(--muted); font-size: .87rem; }
+.today-state-art {
+  display: grid;
+  place-items: center;
+  inline-size: 3.45rem;
+  aspect-ratio: 1;
+  border-radius: 42%;
+  background: var(--dock-active);
+  color: var(--action);
+  box-shadow: 0 0 0 .28rem var(--panel), inset 0 1px 0 var(--glass-glint);
+}
+.today-state[data-complete="true"] .today-state-art { background: var(--mint); color: var(--mint-ink); transform: rotate(-7deg); }
+.medora .today-state-art svg { inline-size: 1.7rem; block-size: 1.7rem; }
 .medora .daily-sheet .timeline { padding-inline-start: .83rem; border-inline-start: 2px solid var(--outline); margin-block: 1rem; }
 .medora #timeline-title { margin-block-end: .45rem; }
 .medora .daily-sheet .timeline article::before {
@@ -648,11 +701,11 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 
 @media (min-width: 42rem) {
   .story-copy { align-self: center; padding-inline-start: 1rem; }
-  .medora .daily-sheet { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: .7rem 1rem; align-items: start; }
-  .daily-heading, #future-schedule { grid-column: 1 / -1; }
-  .medora .daily-sheet .timeline, .medora .daily-sheet #today-water { margin-block: 0; }
-  .medora .daily-sheet #today-water { grid-column: 2; grid-row: 2 / span 2; }
-  .medora .daily-sheet #today-reminders { grid-column: 2; }
+  .medora .daily-sheet { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: .7rem 1rem; align-items: start; }
+  .daily-main { grid-area: 1 / 1 / span 2; }
+  .daily-sheet:has(#today-water[hidden]) :is(.daily-main, #today-reminders) { grid-column: 1 / -1; }
+  .medora #today-water { grid-area: 1 / 2; margin: 0; }
+  .medora #today-reminders { grid-column: 2; margin: 0; }
   #plans { grid-auto-columns: min(37%, 18rem); }
   #visits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #visits > :is(h2, .visit-empty, .visit-featured) { grid-column: 1 / -1; }

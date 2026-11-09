@@ -40,6 +40,7 @@ function clockText(value) { return value.replace(/\d/g, digit => numbers.format(
 export function wellness({ getState, selectedDay, today, render, mutate, requestDeletion, scheduledDoses, renderDose, refreshFields }) {
   let screen = "today";
   let mainScreen = "today";
+  const selectedDates = new Map();
   let editingVisit = null;
   let editingWater = null;
   let visitFilter = "all";
@@ -78,6 +79,10 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     return includeWeekday ? `${weekdayText.format(date)}، ${label}` : label;
   }
   function chooseDay(day, restoreFocus) {
+    if (screen === "today" || screen === "medications") {
+      if (day === today()) selectedDates.delete(screen);
+      else selectedDates.set(screen, day);
+    }
     $("day").value = iso(day);
     render();
     if (restoreFocus) $(restoreFocus).querySelector('[aria-current="date"]')?.focus();
@@ -220,7 +225,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       return;
     }
     if (!Object.hasOwn(titles, destination)) return;
-    if (destination === "water") $("day").value = iso(today());
+    if (destination === "water") $("day").value = iso(Math.min(selectedDay(), today()));
+    if (destination === "today" || destination === "medications") $("day").value = iso(selectedDates.get(destination) ?? today());
     if (destination === "insights") {
       calendarMonth = calendarSelection = today();
       openInsight("calendar");
@@ -243,6 +249,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     document.querySelector(".brand-mark").hidden = !$("screen-back").hidden;
     dayControls.hidden = !["today", "water", "medications"].includes(screen);
     dayControls.classList.toggle("single-date", screen !== "today");
+    dayControls.classList.toggle("compact-day", screen === "medications");
     render();
     scrollTo(0, 0);
   }
@@ -255,6 +262,10 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       chooseDay(selectedDay() + delta);
     });
   }
+  $("today-reset").addEventListener("click", () => {
+    chooseDay(today());
+    $("pick-day").focus({ preventScroll: true });
+  });
 
   function addWater(amount, day = selectedDay(), time = localClock(), id = null) {
     if (!Number.isInteger(amount) || amount < 1 || amount > 10000 || !Number.isInteger(day) || day > today()) {
@@ -846,6 +857,12 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("day-label").textContent = screen === "today" ? monthText.format(day * dayMs) : day === today() ? t("امروز") : formatDay(day);
     $("pick-day").setAttribute("aria-label", t("انتخاب تاریخ، {0}", formatDay(day, true)));
     if (screen === "today") {
+      const date = day * dayMs;
+      $("story-date").dateTime = iso(day);
+      $("story-date").textContent = weekdayText.format(date) + listSeparator + shortDate.format(date);
+      $("story-date").setAttribute("aria-label", formatDay(day, true));
+      $("story-title").textContent = day === today() ? t("امروز با مدورا") : t("برنامهٔ این روز");
+      $("today-reset").hidden = day === today();
       const visitDays = new Set(Object.values(state.visits ?? {}).filter(visit => !visit.cancelled).map(visit => displayVisit(visit).day));
       $("day-week").replaceChildren(...Array.from({ length: 7 }, (_, index) => {
         const date = day - 3 + index;
@@ -868,13 +885,12 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("water-entry").hidden = future;
     $("today-water-total").textContent = numbers.format(total);
     $("today-water-goal").textContent = numbers.format(goal);
-    $("today-water-remaining").textContent = total >= goal ? t("هدف این روز کامل شد.") : t("{0} میلی‌لیتر تا هدف", numbers.format(goal - total));
     $("today-water-progress").value = progress;
     $("water-progress").value = progress;
     $("water-date").textContent = day === today() ? t("امروز") : shortDate.format(day * dayMs);
     $("water-total").textContent = numbers.format(total);
     $("water-goal-label").textContent = numbers.format(goal);
-    $("water-remaining").textContent = $("today-water-remaining").textContent;
+    $("water-remaining").textContent = total >= goal ? t("هدف این روز کامل شد.") : t("{0} میلی‌لیتر تا هدف", numbers.format(goal - total));
     const level = 90 - 78 * progress;
     for (const glass of document.querySelectorAll(".glass-water")) {
       glass.setAttribute("d", progress ? `M0 ${level}C30 ${level - 7} 65 ${level + 8} 100 ${level}V100H0Z` : "");

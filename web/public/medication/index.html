@@ -282,6 +282,7 @@
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
     <symbol id="i-glass" viewBox="0 0 100 100"><ellipse fill="#5b9abe" fill-opacity=".1" cx="50" cy="94" rx="34" ry="4"/><path fill="url(#glass-fill)" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></symbol>
     <symbol id="i-glass-rim" viewBox="0 0 100 100"><path stroke="white" stroke-opacity=".72" stroke-width="5.5" d="M22 18l8 61"/><path stroke="#b7daf0" stroke-width="2.5" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/><ellipse stroke="white" stroke-opacity=".4" stroke-width="2.5" cx="50" cy="6.25" rx="37" ry="4.75"/></symbol>
     <linearGradient id="glass-fill"><stop stop-color="#e4f4ff" stop-opacity=".4"/><stop offset="1" stop-color="#f3faff" stop-opacity=".7"/></linearGradient>
@@ -356,46 +357,65 @@
       <div class="page-heading"><h1 id="screen-title">امروز</h1><p id="header-date"></p></div>
       <section id="today-story" class="today-story" aria-labelledby="story-title">
         <div class="story-copy">
-          <p class="story-label"><svg aria-hidden="true"><use href="#i-sun"/></svg>مراقبت روزانه</p>
-          <h2 id="story-title">سلامت امروز شما</h2>
-          <p>نوبت‌ها، آب و قرارهای امروز</p>
+          <time id="story-date" class="story-label"></time>
+          <h2 id="story-title">امروز با مدورا</h2>
+          <p id="story-summary"></p>
+          <button type="button" id="today-reset" class="text-button" hidden>بازگشت به امروز</button>
         </div>
-        <img src="/medication/care-illustration.svg" width="560" height="350" alt="">
+        <svg class="story-art" viewBox="0 0 208 156" aria-hidden="true">
+          <defs>
+            <linearGradient id="story-glass" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".52"/><stop offset="1" stop-color="#fff" stop-opacity=".07"/></linearGradient>
+          </defs>
+          <circle cx="102" cy="78" r="63" fill="#f9e9ff" fill-opacity=".1"/>
+          <ellipse cx="105" cy="82" rx="97" ry="39" transform="rotate(-22 105 82)" fill="none" stroke="#f8ebff" stroke-opacity=".45"/>
+          <g transform="rotate(-12 103 77)">
+            <rect x="63" y="36" width="83" height="88" rx="26" fill="#211a53" fill-opacity=".23"/>
+            <rect x="57" y="30" width="83" height="88" rx="26" fill="url(#story-glass)" stroke="#fff" stroke-opacity=".68"/>
+            <rect x="62" y="35" width="73" height="78" rx="21" fill="none" stroke="#fff" stroke-opacity=".21"/>
+            <use href="#i-mark" x="75" y="50" width="47" height="47" color="#e3f2c9"/>
+          </g>
+          <circle cx="28" cy="101" r="16" fill="#aee2da" fill-opacity=".89"/>
+          <use href="#i-water" x="19" y="92" width="18" height="18" fill="none" stroke="#25594e" stroke-width="1.65"/>
+          <circle cx="170" cy="47" r="18" fill="#f1dbfc" fill-opacity=".9"/>
+          <use href="#i-pill" x="159" y="36" width="22" height="22" fill="none" stroke="#5c467c" stroke-width="1.55"/>
+          <path d="M169 104v15m-7.5-7.5h15M41 35v12m-6-6h12" fill="none" stroke="#faf0ff" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
       </section>
       <div id="today-dates"></div>
       <div id="day-controls" class="day-controls">
         <button type="button" class="secondary day-arrow icon-button" id="previous-day" aria-label="روز قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
-        <button id="pick-day" class="date-field" type="button"><span id="day-label"></span><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+        <button id="pick-day" class="date-field" type="button"><span id="day-label" aria-live="polite"></span><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
         <input id="day" type="date" hidden>
         <button type="button" class="secondary day-arrow icon-button reverse" id="next-day" aria-label="روز بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
         <div id="day-week" class="day-week" aria-label="روزهای هفته"></div>
       </div>
       <div data-screen="today" class="daily-sheet">
-        <div class="daily-heading">
-          <h2 id="day-title">برنامهٔ روز</h2>
-          <output id="today-count" aria-label="تعداد نوبت‌های ثبت‌شده" hidden></output>
-        </div>
-        <div id="today-focus" hidden></div>
-        <p id="future-schedule" class="quiet" hidden>برنامهٔ آینده. ثبت مصرف فقط از روز موعد فعال می‌شود.</p>
-        <section class="timeline" aria-labelledby="timeline-title">
-          <h3 id="timeline-title">ادامهٔ روز</h3>
-          <div id="doses"></div>
-        </section>
-        <section id="today-water" class="feature water">
-          <div class="feature-head">
-            <div class="water-info">
-              <strong id="today-water-label">مصرف آب</strong>
-              <p class="amount-line"><strong id="today-water-total">۰</strong> از <span id="today-water-goal">۲٬۰۰۰</span> میلی‌لیتر</p>
-              <progress class="water-progress" id="today-water-progress" aria-label="پیشرفت هدف آب" max="1" value="0"></progress>
-              <p class="quiet" id="today-water-remaining"></p>
-            </div>
+        <section id="today-water" class="water" aria-labelledby="today-water-label">
+          <span class="today-water-art">
             <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/><use href="#i-glass-rim"/></svg>
+          </span>
+          <div class="water-info">
+            <h2 id="today-water-label">مصرف آب</h2>
+            <p class="amount-line"><strong id="today-water-total">۰</strong> از <span id="today-water-goal">۲٬۰۰۰</span> میلی‌لیتر</p>
+            <progress class="water-progress" id="today-water-progress" aria-label="پیشرفت هدف آب" max="1" value="0"></progress>
           </div>
-          <div class="chapter-actions">
+          <div class="today-water-actions">
             <button type="button" class="secondary" data-open-water>ثبت آب</button>
-            <button id="open-water-history" type="button" class="text-button" data-destination="water">آب و سوابق</button>
+            <button id="open-water-history" type="button" class="text-button" data-destination="water">سوابق آب</button>
           </div>
         </section>
+        <div class="daily-main">
+          <div class="daily-heading">
+            <h2 id="day-title">برنامهٔ روز</h2>
+            <output id="today-count" aria-label="تعداد نوبت‌های ثبت‌شده" hidden></output>
+          </div>
+          <div id="today-focus" hidden></div>
+          <p id="future-schedule" class="quiet" hidden>برنامهٔ آینده. ثبت مصرف فقط از روز موعد فعال می‌شود.</p>
+          <section class="timeline" aria-labelledby="timeline-title">
+            <h3 id="timeline-title">نوبت‌ها و قرارها</h3>
+            <div id="doses"></div>
+          </section>
+        </div>
         <section id="today-reminders" class="feature mist" hidden>
           <h2>یادآوری‌ها</h2>
           <p class="quiet">وضعیت اعلان این گوشی را در تنظیمات مدورا ببینید.</p>
