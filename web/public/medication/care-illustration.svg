@@ -19,10 +19,6 @@
       <circle cx="5" cy="5" r="1.4" fill="#F5F0FF" fill-opacity=".34"/>
     </pattern>
   </defs>
-  <path d="M0 295C82 209 146 205 234 230c100 29 178-19 249-105 29-35 61-40 77-38v263H0Z" fill="#C1A5FF" opacity=".16"/>
-  <path d="M0 326c114-71 212 12 313-25 124-46 174-114 247-113v162H0Z" fill="#24256C" opacity=".27"/>
-  <ellipse cx="276" cy="194" rx="239" ry="105" transform="rotate(-12 276 194)" stroke="#F4EEFF" stroke-opacity=".38"/>
-  <ellipse cx="283" cy="181" rx="180" ry="133" transform="rotate(16 283 181)" stroke="#E8DDFF" stroke-opacity=".24"/>
   <circle cx="447" cy="101" r="61" fill="#EBBBED" opacity=".23"/>
   <circle cx="447" cy="101" r="60.5" stroke="#FFF" stroke-opacity=".3"/>
   <path d="M427 78h47v48h-47z" fill="url(#dots)"/>

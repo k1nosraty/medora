@@ -454,17 +454,6 @@
   border-radius: 1rem;
   background: radial-gradient(ellipse at 72% 18%, color-mix(in srgb, var(--pill-base) 54%, transparent), transparent 65%), linear-gradient(145deg, var(--art-fill), var(--panel));
 }
-.medication-banner::before, .medication-banner::after {
-  content: "";
-  position: absolute;
-  inline-size: 9.4rem;
-  aspect-ratio: 1;
-  border-radius: 48%;
-  transform: rotate(-26deg) scaleY(.72);
-  border: 1px solid #fff5;
-  background: linear-gradient(130deg, #fff4, transparent 68%);
-}
-.medication-banner::after { inline-size: 11.8rem; transform: rotate(23deg) scaleY(.58); border-color: #fff4; background: transparent; }
 .medora .medication-banner .medication-badge {
   position: absolute;
   z-index: 1;
@@ -491,7 +480,6 @@
   background: color-mix(in srgb, var(--glass) 82%, transparent);
 }
 .medication-banner[data-shape="tablet"] { --art-tilt: -25deg; --art-shift: -5%; }
-.medication-banner[data-shape="tablet"]::before { border-radius: 24%; }
 .medication-banner[data-shape="syrup"] { --art-tilt: 14deg; --art-shift: 9%; }
 .medication-banner[data-shape="injection"] { --art-tilt: 30deg; --art-shift: 14%; }
 .medication-banner[data-shape="ointment"] { --art-tilt: -17deg; --art-shift: -8%; }

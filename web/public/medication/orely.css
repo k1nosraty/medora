@@ -76,10 +76,12 @@ html[dir="ltr"] .medora .account-shortcut svg:last-child { scale: -1 1; }
 }
 .medora .today-story {
   position: relative;
-  display: flex;
-  min-block-size: clamp(13rem, 63vw, 17rem);
-  padding: clamp(1.1rem, 4.5vw, 1.85rem);
-  padding-block-end: 3.25rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.03fr) minmax(0, 1fr);
+  align-items: center;
+  min-block-size: clamp(11rem, 48vw, 15rem);
+  padding: clamp(.9rem, 3.5vw, 1.65rem);
+  padding-block-end: 1.7rem;
   box-sizing: border-box;
   margin: .25rem 0 0;
   isolation: isolate;
@@ -99,20 +101,20 @@ html[dir="ltr"] .medora .account-shortcut svg:last-child { scale: -1 1; }
   pointer-events: none;
 }
 .today-story img {
-  position: absolute;
-  z-index: -1;
-  inset-inline-end: -5%;
-  inset-block-end: .5rem;
-  inline-size: min(80%, 31rem);
+  justify-self: center;
+  align-self: end;
+  inline-size: min(108%, 24rem);
   block-size: auto;
+  -webkit-mask-image: linear-gradient(#000 88%, transparent);
+  mask-image: linear-gradient(#000 88%, transparent);
 }
 html[dir="rtl"] .today-story img { transform: scaleX(-1); }
-.story-copy { inline-size: min(61%, 24rem); align-self: flex-start; }
-.medora .story-label { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .62rem; border: 1px solid #fff5; background: #fff2; border-radius: 100vw; font-size: .75rem; font-weight: 650; }
+.story-copy { min-inline-size: 0; }
+.medora .story-label { display: inline-flex; align-items: center; gap: .35rem; padding: .17rem .5rem; border: 1px solid #fff5; background: #fff2; border-radius: 100vw; font-size: .72rem; font-weight: 650; }
 .medora .story-label svg { inline-size: .95rem; block-size: .95rem; }
-.medora .story-copy h2 { margin: .48rem 0 .15rem; font-weight: 850; font-size: clamp(1.8rem, 6.8vw, 3.1rem); line-height: 1.15; text-wrap: balance; }
+.medora .story-copy h2 { margin: .4rem 0 .15rem; font-weight: 850; font-size: clamp(1.55rem, 5.5vw, 2.8rem); line-height: 1.15; text-wrap: balance; }
 .medora .story-copy > p:last-child { margin-block-start: .4rem; inline-size: min(94%, 15rem); color: #faf5ff; font-size: clamp(.78rem, 2.8vw, .98rem); }
-#today-dates { position: relative; z-index: 1; margin: -2.1rem .6rem 0; }
+#today-dates { position: relative; z-index: 1; margin: -1.15rem .6rem 0; }
 #today-dates:empty { display: none; }
 .medora #today-dates .day-controls, .medora .dock, .medora .settings-dialog .sheet-header {
   border: 1px solid var(--glass-rim);
@@ -121,11 +123,11 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
   -webkit-backdrop-filter: blur(22px) saturate(150%);
   backdrop-filter: blur(22px) saturate(150%);
 }
-.medora #today-dates .day-controls { margin: 0; padding: .22rem .5rem .52rem; border-radius: 1.6rem; }
+.medora #today-dates .day-controls { margin: 0; padding: .12rem .5rem .45rem; border-radius: 1.45rem; }
 .medora #today-dates .date-field { justify-content: flex-start; min-block-size: 2.6rem; }
 .medora #today-dates .day-arrow { order: 1; color: var(--action); }
 .medora #today-dates .day-week { order: 2; gap: .22rem; }
-.medora #today-dates .day-week button { min-block-size: 3.15rem; border-radius: 1.1rem; padding: .22rem .1rem; font-weight: 760; }
+.medora #today-dates .day-week button { min-block-size: 2.8rem; border-radius: 1rem; padding: .15rem .1rem; font-weight: 760; }
 .medora #today-dates .day-week button span { color: var(--muted); }
 .medora #today-dates .day-week button[aria-current="date"] { background: var(--mint); color: var(--mint-ink); box-shadow: inset 0 1px #fff8; }
 .medora #today-dates .day-week button[aria-current="date"] span { color: var(--mint-ink); }
@@ -141,8 +143,19 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
   border-radius: 1.5rem;
   box-shadow: 0 .3rem .8rem var(--glass-shadow);
 }
-.medora .daily-sheet .studio-hero .medication-banner { inset-block-start: .08rem; }
-.medora .daily-sheet .studio-hero .dose-header p { color: var(--muted); }
+.medora .daily-sheet .studio-hero .medication-banner {
+  inset-block-start: .6rem;
+  inset-inline-end: 2rem;
+  inline-size: min(30%, 9rem);
+  block-size: 6rem;
+}
+.medora .daily-sheet .studio-hero .medication-badge { inline-size: min(80%, 5.5rem); }
+.medora .daily-sheet .studio-hero .banner-echo { display: none; }
+.medora .daily-sheet .studio-hero .dose-header { min-block-size: auto; padding-block-start: .15rem; }
+.medora .daily-sheet .studio-hero .dose-header > div { min-inline-size: 0; }
+.medora .daily-sheet .studio-hero .dose-result { min-block-size: 1.8rem; }
+.medora .daily-sheet .studio-hero .dose-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .12rem .45rem; margin-block-end: .3rem; }
+.medora .daily-sheet .studio-hero .dose-meta p { margin: 0; color: var(--muted); }
 .medora .daily-sheet .studio-hero .dose-header p:not(.hero-kicker),
 .medora .daily-sheet .studio-hero .badge,
 .medora .daily-sheet .studio-hero .dose-options summary {
@@ -278,9 +291,7 @@ html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem au
 .medora .welcome .intro-content > .block-action { margin-block-start: 1.25rem; background: var(--mint); color: var(--mint-ink); }
 
 @media (min-width: 42rem) {
-  .medora .today-story { min-block-size: 17rem; }
   .story-copy { align-self: center; padding-inline-start: 1rem; }
-  .today-story img { inset-inline-end: 0; }
   .medora .daily-sheet { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: .7rem 1rem; align-items: start; }
   .daily-heading, #future-schedule { grid-column: 1 / -1; }
   .medora .daily-sheet .timeline, .medora .daily-sheet #today-water { margin-block: 0; }
@@ -291,7 +302,6 @@ html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem au
 @media (max-width: 360px) {
   .medora .app-content { padding-inline: .7rem; }
   .medora .today-story { padding-inline: .85rem; }
-  .today-story img { inset-inline-end: -9%; }
   .medora .story-copy h2 { font-size: 1.64rem; }
   .medora .dock button { font-size: .68rem; }
   .medora .header-tools { gap: .28rem; }
@@ -317,7 +327,6 @@ html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem au
 .medora .dose-stepper button { padding: 0; min-block-size: 2.75rem; background: var(--stage); border: 0; color: var(--action); font-size: 1rem; }
 .medora .dose-stepper input { text-align: center; min-inline-size: 0; }
 @media (max-width: 420px) {
-  .today-story img { inset-inline-end: -10%; inline-size: 74%; }
   .medora .basic-fields { grid-template-columns: 1fr; gap: 0; }
   .medora .basic-fields > .editor-field { margin-block: .3rem; }
 }
