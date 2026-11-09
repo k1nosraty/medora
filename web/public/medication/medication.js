@@ -15,6 +15,7 @@ let care;
 let editing;
 let editingRevision;
 let busy = false;
+let deletion;
 const doseStates = { taken: "مصرف شد", skipped: "مصرف نشد", snoozed: "به تعویق افتاد" };
 
 function dayNumber(iso) {
@@ -92,6 +93,7 @@ function addPhase(phase = { start: today(), end: null, interval: 1, mask: 127, s
 function openEditor(medicine) {
   editing = medicine?.id;
   editingRevision = medicine?.revision;
+  $("delete-edited-medication").hidden = !medicine;
   $("editor-title").textContent = medicine ? "ویرایش دارو" : "داروی جدید";
   $("name").value = medicine?.name ?? "";
   $("instructions").value = medicine?.instructions ?? "";
@@ -251,6 +253,74 @@ function action(label, click, secondary = false) {
 }
 
 const doseId = (med, day, minute) => `${med.id}|${day}|${minute}`;
+const doseTime = (day, minute) => new Date(`${isoDay(day)}T${timeText(minute)}:00`).getTime();
+
+function requestDeletion({ title, message, change, success, parent }) {
+  deletion = { change, success, parent };
+  $("delete-title").textContent = title;
+  $("delete-message").textContent = message;
+  $("delete-error").textContent = "";
+  $("delete-dialog").showModal();
+}
+
+$("cancel-delete").addEventListener("click", () => $("delete-dialog").close());
+$("delete-dialog").addEventListener("cancel", event => {
+  if ($("confirm-delete").disabled) event.preventDefault();
+});
+$("delete-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const { change, success, parent } = deletion;
+  const confirm = $("confirm-delete");
+  const cancel = $("cancel-delete");
+  confirm.disabled = cancel.disabled = true;
+  try {
+    if (await mutate(change, success, true)) {
+      $("delete-dialog").close();
+      if (parent) $(parent).close();
+    } else {
+      $("delete-error").textContent = "حذف انجام نشد. دوباره تلاش کنید.";
+    }
+  } finally {
+    confirm.disabled = cancel.disabled = false;
+  }
+});
+
+function deleteMedicine(id, parent) {
+  const medicine = care.medicines[id];
+  if (!medicine) return;
+  requestDeletion({
+    title: "حذف دارو",
+    message: `برنامهٔ «${medicine.name}» حذف شود؟ سوابق مصرف حفظ می‌شوند.`,
+    success: "برنامهٔ دارو حذف شد.",
+    parent,
+    change(state) {
+      const saved = state.medicines[id];
+      if (!saved) return;
+      const now = Date.now();
+      for (const [key, dose] of Object.entries(state.doses)) {
+        if (dose.medicineId !== id) continue;
+        const unrecorded = !dose.status || dose.status === "snoozed";
+        if (unrecorded && doseTime(dose.day, dose.minute) > now) {
+          delete state.doses[key];
+          continue;
+        }
+        dose.name ??= saved.name;
+        dose.instructions ??= saved.instructions;
+        dose.unit ??= saved.unit;
+        dose.icon = saved.icon ?? dose.icon;
+        dose.color = saved.color ?? dose.color;
+        if (dose.status === "snoozed") {
+          dose.status = null;
+          dose.snoozeUntil = 0;
+        }
+      }
+      delete state.medicines[id];
+    }
+  });
+}
+
+$("delete-edited-medication").addEventListener("click", () => deleteMedicine(editing, "medication-dialog"));
+
 function nextAmount(medicine) {
   const now = new Date();
   const todayDay = today();
@@ -336,7 +406,12 @@ function renderMedicine(medicine) {
   }
   const edit = action("ویرایش", () => openEditor(medicine), true);
   edit.className = "text-button";
-  card.append(edit);
+  const remove = action("حذف دارو", () => deleteMedicine(medicine.id));
+  remove.className = "text-button danger-link";
+  const actions = element("div");
+  actions.className = "buttons";
+  actions.append(edit, remove);
+  card.append(actions);
   return card;
 }
 
@@ -354,7 +429,9 @@ function openMedicine(medicine) {
     const status = doseStates[dose.status];
     history.append(element("li", `${dashboard.formatDay(dose.day)}، ${persianDigits(timeText(dose.minute))} · ${status}`));
   }
-  $("medicine-details-body").replaceChildren(summary, edit, heading, entries.length ? history : element("p", "هنوز مصرفی ثبت نشده است."));
+  const remove = action("حذف دارو", () => deleteMedicine(medicine.id, "medicine-details"));
+  remove.className = "text-button danger-link";
+  $("medicine-details-body").replaceChildren(summary, edit, remove, heading, entries.length ? history : element("p", "هنوز مصرفی ثبت نشده است."));
   $("medicine-details").showModal();
 }
 
@@ -414,7 +491,7 @@ function renderDose(medicine, dose) {
         if ((!existing || status === "snoozed") && !active) throw new Error("برنامهٔ این نوبت تغییر کرده است. صفحه را تازه کنید.");
         const planned = existing ? existing.planned : active.milliUnits;
         const actual = status === "taken" ? entered ?? existing?.actual ?? planned : null;
-        const scheduled = new Date(`${isoDay(dose.day)}T${timeText(dose.minute)}:00`).getTime();
+        const scheduled = doseTime(dose.day, dose.minute);
         const tracked = saved.stock !== null && (existing?.unit ?? saved.unit) === saved.unit && scheduled >= (saved.stockTrackedFrom ?? 0);
         if (tracked && status === "taken" && actual === null) {
           throw new Error("برای کم‌کردن از موجودی، مقدار مصرف را وارد کنید.");
@@ -458,13 +535,13 @@ function scheduledDoses(state, day) {
   for (const medicine of Object.values(state.medicines)) {
     if (medicine.paused) continue;
     for (const slot of slotsFor(medicine, day)) {
-      const scheduled = new Date(`${isoDay(day)}T${timeText(slot.minuteOfDay)}:00`).getTime();
+      const scheduled = doseTime(day, slot.minuteOfDay);
       if (scheduled < (medicine.effectiveFrom ?? 0)) continue;
       doses.set(doseId(medicine, day, slot.minuteOfDay), { medicineId: medicine.id, day, minute: slot.minuteOfDay, planned: slot.milliUnits });
     }
   }
   for (const [id, dose] of Object.entries(state.doses)) {
-    if (dose.day === day && (dose.imported || dose.status || doses.has(id))) doses.set(id, dose);
+    if (dose.day === day && (dose.imported || dose.status || doses.has(id) || !state.medicines[dose.medicineId])) doses.set(id, dose);
   }
   return [...doses.values()].sort((a, b) => a.minute - b.minute);
 }
@@ -532,7 +609,7 @@ window.addEventListener("focus", () => {
 });
 const selectedDay = () => $("day").value ? dayNumber($("day").value) : today();
 const dashboard = wellness({
-  getState: () => care, selectedDay, today, render, mutate, scheduledDoses, renderDose,
+  getState: () => care, selectedDay, today, render, mutate, requestDeletion, scheduledDoses, renderDose,
   refreshFields: container => pickers.refresh(container)
 });
 const pickers = installPickers({ selectedDay, today, dashboard });

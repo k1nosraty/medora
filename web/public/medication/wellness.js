@@ -36,7 +36,7 @@ function localClock() {
 }
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 
-export function wellness({ getState, selectedDay, today, render, mutate, scheduledDoses, renderDose, refreshFields }) {
+export function wellness({ getState, selectedDay, today, render, mutate, requestDeletion, scheduledDoses, renderDose, refreshFields }) {
   let screen = "today";
   let mainScreen = "today";
   let editingVisit = null;
@@ -85,6 +85,16 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     "backup-settings": "پشتیبان‌گیری"
   };
   let waterPauseUntil = 0;
+  const settings = $("settings-dialog");
+  function fitSettings() {
+    const viewport = window.visualViewport;
+    if (!settings.open || !viewport) return;
+    const zoomed = viewport.scale !== 1;
+    settings.style.setProperty("--settings-visible-height", `${zoomed ? window.innerHeight : viewport.height}px`);
+    settings.style.setProperty("--settings-visible-top", `${zoomed ? 0 : viewport.offsetTop}px`);
+  }
+  window.visualViewport?.addEventListener("resize", fitSettings);
+  window.visualViewport?.addEventListener("scroll", fitSettings);
   const snoozePresets = [...document.querySelectorAll('[name="snooze-preset"]')];
   const visitOffsetFields = [...document.querySelectorAll('[name="visit-offset"]')];
   function setOption(id, value) {
@@ -98,7 +108,6 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     select.value = value;
   }
   function selectSettings(panel) {
-    const settings = $("settings-dialog");
     settings.dataset.panel = panel || "";
     $("settings-mark").hidden = Boolean(panel);
     $("settings-back").hidden = !panel;
@@ -106,6 +115,10 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     $("settings-status").textContent = "";
     for (const id of Object.keys(settingsPanels)) $(id).open = panel === id;
     const data = getState();
+    if (panel === "display-settings") {
+      $("calendar-setting").value = data.calendar ?? "persian";
+      $("theme-setting").value = data.theme ?? "system";
+    }
     if (panel === "backup-settings") {
       $("android-restore").reset();
       $("android-restore-status").textContent = "";
@@ -136,13 +149,13 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
       $("appointment-reminders-interval").value = appointment.interval;
       refreshFields($("appointment-settings-form"));
     }
-    settings.scrollTop = 0;
+    $("settings-content").scrollTop = 0;
   }
   for (const id of Object.keys(settingsPanels)) {
     $(id).querySelector("summary").addEventListener("click", event => {
       event.preventDefault();
       selectSettings(id);
-      $("settings-back").focus();
+      $("settings-back").focus({ preventScroll: true });
     });
   }
   $("settings-back").addEventListener("click", () => {
@@ -150,11 +163,12 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     selectSettings();
     $(selected)?.querySelector("summary").focus();
   });
-  $("settings-dialog").addEventListener("close", () => $("android-restore").reset());
+  settings.addEventListener("close", () => $("android-restore").reset());
   function show(destination, notifications = false) {
     if (destination === "settings") {
       selectSettings(notifications ? "notification-settings" : null);
-      $("settings-dialog").showModal();
+      settings.showModal();
+      fitSettings();
       return;
     }
     if (!Object.hasOwn(titles, destination)) return;
@@ -312,6 +326,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
 
   function openVisit(visit, date = selectedDay()) {
     editingVisit = visit?.id ?? null;
+    $("delete-edited-visit").hidden = !visit;
     $("visit-form-title").textContent = visit ? "ویرایش قرار" : "قرار جدید";
     $("visit-name").value = visit?.name ?? "";
     $("visit-day").value = iso(visit?.day ?? date);
@@ -329,6 +344,18 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     $("visit-dialog").showModal();
   }
   for (const control of document.querySelectorAll("[data-open-visit]")) control.addEventListener("click", () => openVisit());
+  function deleteVisit(id, parent) {
+    const visit = getState().visits?.[id];
+    if (!visit) return;
+    requestDeletion({
+      title: "حذف قرار",
+      message: `قرار «${visit.name}» حذف شود؟ یادآوری‌های این قرار هم لغو می‌شوند.`,
+      success: "قرار حذف شد.",
+      parent,
+      change(state) { delete state.visits?.[id]; }
+    });
+  }
+  $("delete-edited-visit").addEventListener("click", () => deleteVisit(editingVisit, "visit-dialog"));
   $("visit-editor").addEventListener("submit", async event => {
     event.preventDefault();
     const name = $("visit-name").value.trim();
@@ -364,7 +391,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     const wall = localWall(instant, timezone(zone));
     return { day: Math.floor(wall / dayMs), time: new Date(wall).toISOString().slice(11, 16), instant };
   }
-  function visitCard(visit, controlsMode = "read") {
+  function visitCard(visit, actionable = false) {
     const card = element("article", "", "visit");
     const title = element("h3", visit.name, "visit-title");
     title.dir = "auto";
@@ -377,7 +404,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     if (visit.cancelled) card.append(element("p", "قرار لغو شده", "badge"));
     if (visit.note) card.append(element("p", visit.note));
     if (visit.contact) card.append(element("p", `تماس: ${visit.contact}`, "quiet"));
-    if (controlsMode !== "read") {
+    if (actionable) {
       const controls = element("div", "", "buttons");
       controls.append(button("ویرایش", () => openVisit(visit)), button(visit.cancelled ? "فعال‌کردن قرار" : "لغو قرار", () => {
         void mutate(state => {
@@ -385,9 +412,9 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
           if (saved) saved.cancelled = !saved.cancelled;
         }, "وضعیت قرار ذخیره شد.", true);
       }));
-      if (controlsMode === "list") controls.append(button("حذف", () => {
-        if (confirm("این قرار حذف شود؟")) void mutate(state => { delete state.visits[visit.id]; }, "قرار حذف شد.", true);
-      }));
+      const remove = button("حذف قرار", () => deleteVisit(visit.id));
+      remove.className = "text-button danger-link";
+      controls.append(remove);
       card.append(controls);
     }
     return card;
@@ -397,7 +424,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     return Object.values(state.visits ?? {}).filter(visit => !visit.cancelled)
       .map(visit => ({ visit, local: displayVisit(visit) }))
       .filter(({ local }) => local.day === day)
-      .map(({ visit, local }) => ({ minute: minutes(local.time), card: visitCard(visit, day > today() ? "read" : "edit") }));
+      .map(({ visit, local }) => ({ minute: minutes(local.time), card: visitCard(visit, day <= today()) }));
   }
 
   function renderVisits(state) {
@@ -407,11 +434,11 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     const past = visits.filter(({ visit, at }) => visit.cancelled || at < now).reverse().map(({ visit }) => visit);
     const content = [];
     if (upcoming.length && visitFilter !== "past") {
-      content.push(element("h2", "نزدیک‌ترین قرار"), ...upcoming.map(visit => visitCard(visit, "list")));
+      content.push(element("h2", "نزدیک‌ترین قرار"), ...upcoming.map(visit => visitCard(visit, true)));
     }
     if (past.length && visitFilter !== "upcoming") {
       if (visitFilter === "all") content.push(element("h2", "گذشته و لغوشده"));
-      content.push(...past.map(visit => visitCard(visit, "list")));
+      content.push(...past.map(visit => visitCard(visit, true)));
     }
     $("visits").replaceChildren(...(content.length ? content : [empty("در این بخش قراری ندارید.")]));
   }
@@ -457,7 +484,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
     const entries = [
       ...(totals.has(day) ? [element("article", `${numbers.format(totals.get(day))} میلی‌لیتر آب`, "water")] : []),
       ...scheduledDoses(state, day).map(dose => renderDose(state.medicines[dose.medicineId], dose)),
-      ...Object.values(state.visits ?? {}).filter(visit => displayVisit(visit).day === day).map(visit => visitCard(visit, "edit"))
+      ...Object.values(state.visits ?? {}).filter(visit => displayVisit(visit).day === day).map(visit => visitCard(visit, true))
     ];
     const add = button("قرار جدید", () => openVisit(null, day));
     add.className = "block-action";
@@ -497,10 +524,6 @@ export function wellness({ getState, selectedDay, today, render, mutate, schedul
   function renderWellness(state, day) {
     setCalendar(state.calendar ?? "persian");
     document.body.dataset.theme = state.theme ?? "system";
-    if (!$("settings-dialog").open) {
-      $("calendar-setting").value = calendar;
-      $("theme-setting").value = document.body.dataset.theme;
-    }
     const totals = new Map();
     for (const entry of state.water ?? []) totals.set(entry.day, (totals.get(entry.day) ?? 0) + entry.amount);
     const total = totals.get(day) ?? 0;

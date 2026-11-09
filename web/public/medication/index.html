@@ -249,6 +249,7 @@
         </details>
         <p id="editor-status" class="field-error" role="status"></p>
         <button type="submit" class="block-action">ذخیرهٔ دارو</button>
+        <button type="button" id="delete-edited-medication" class="text-button danger-link block-action" hidden>حذف دارو</button>
         <button type="button" class="text-button block-action" data-close="medication-dialog">انصراف</button>
       </div>
     </form>
@@ -290,7 +291,19 @@
         </fieldset>
         <p id="visit-error" role="alert" class="field-error"></p>
         <button type="submit" class="block-action">ذخیرهٔ قرار</button>
+        <button type="button" id="delete-edited-visit" class="text-button danger-link block-action" hidden>حذف قرار</button>
         <button type="button" class="text-button block-action" data-close="visit-dialog">انصراف</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="delete-dialog" class="confirm-dialog" role="alertdialog" aria-labelledby="delete-title" aria-describedby="delete-message">
+    <form id="delete-form">
+      <h2 id="delete-title"></h2>
+      <p id="delete-message"></p>
+      <p id="delete-error" class="field-error" role="alert"></p>
+      <div class="action-pair">
+        <button type="button" class="secondary" id="cancel-delete" autofocus>انصراف</button>
+        <button type="submit" class="danger-button" id="confirm-delete">حذف</button>
       </div>
     </form>
   </dialog>
@@ -301,7 +314,7 @@
       <div><h2 id="settings-title">تنظیمات مدورا</h2><p id="settings-subtitle">یادآوری‌ها مطابق برنامهٔ روزانهٔ شما</p></div>
       <button class="icon-button" type="button" data-close="settings-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
     </div>
-    <div class="sheet-body">
+    <div id="settings-content" class="sheet-body">
       <details id="display-settings" class="settings-tile">
         <summary><svg aria-hidden="true"><use href="#i-calendar"/></svg><span>زمان و تقویم<small>تقویم و ظاهر برنامه</small></span></summary>
         <form id="display-form">

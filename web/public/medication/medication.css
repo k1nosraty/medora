@@ -219,8 +219,24 @@
 .medora:has(dialog[open]) { overflow: hidden; }
 .medora dialog.sheet { inset-block: auto 0; margin: 0 auto; inline-size: min(100%, 36rem); max-inline-size: 100%; max-block-size: 93vh; max-block-size: 93dvh; border-radius: 1.65rem 1.65rem 0 0; padding-block: 1.55rem env(safe-area-inset-bottom); padding-inline: 1rem; }
 .sheet::before { content: ""; display: block; inline-size: 2rem; block-size: .2rem; border-radius: 1rem; margin: -.5rem auto .95rem; background: var(--muted); }
-.medora .settings-dialog { inline-size: min(calc(100% - 1rem), 29rem); max-block-size: 92vh; max-block-size: 92dvh; }
-.medora .settings-dialog .sheet-body { padding: .75rem; }
+.medora .settings-dialog {
+  position: fixed;
+  inset-block: var(--settings-visible-top, 0px) auto;
+  margin: 0 auto;
+  transform: translateY(max(.5rem, calc((var(--settings-visible-height, 100vh) - 100%) / 2)));
+  inline-size: min(calc(100% - 1rem), 29rem);
+  max-block-size: calc(var(--settings-visible-height, 100vh) - 1rem);
+  overflow: hidden;
+}
+.medora .settings-dialog[open] { display: flex; flex-direction: column; }
+.settings-dialog .sheet-header { flex: none; }
+.medora .settings-dialog .sheet-body { padding: .75rem; min-block-size: 0; overflow: auto; overscroll-behavior: contain; }
+.medora .settings-dialog :is(input, select) { max-inline-size: 100%; }
+.medora .confirm-dialog { inline-size: min(calc(100% - 1.5rem), 25rem); }
+.medora .confirm-dialog form { padding: 1rem; border: 0; background: transparent; }
+.confirm-dialog .action-pair { margin-block-start: .75rem; }
+.medora button.danger-link { color: var(--error); }
+.medora button.danger-button { background: var(--error); color: var(--page); border-color: var(--error); }
 .medora .sheet-form { border: 0; border-radius: 0; background: transparent; padding: 0; }
 .sheet-header { display: flex; align-items: center; gap: .45rem; padding: .28rem .65rem; background: linear-gradient(115deg, #103d38, #006f68); color: #fff; border-radius: 0 0 1.2rem 1.2rem; }
 .sheet-header > svg { color: #b4ead8; }
