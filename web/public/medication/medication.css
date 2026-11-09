@@ -1,19 +1,27 @@
 .medora {
   color-scheme: light;
-  --page: #eaf5ee;
-  --panel: #ddf1e8;
-  --field: #f7fcf9;
-  --ink: #103d38;
-  --muted: #46645e;
-  --outline: #accbc1;
-  --action: #006f68;
+  --page: #f5f0f8;
+  --panel: #fbf7fd;
+  --field: #fffaff;
+  --ink: #291f33;
+  --muted: #655872;
+  --outline: #ded1eb;
+  --action: #583583;
   --on-action: #fff;
-  --water: #a8ddf2;
-  --water-ink: #075e8a;
-  --medicine: #fff0d8;
-  --medicine-ink: #805019;
-  --visit: #e9e0f7;
-  --visit-ink: #5b3f87;
+  --water: #dcefe9;
+  --water-ink: #24584e;
+  --medicine: #fcf4eb;
+  --medicine-ink: #623d23;
+  --visit: #f5e5ee;
+  --visit-ink: #763858;
+  --hero-deep: #28173c;
+  --hero-light: #694283;
+  --hero-edge: #8a679d;
+  --glass: #fff9ff;
+  --dock-active: #e9dff5;
+  --lime: #e1f5a1;
+  --lime-ink: #2e3a18;
+  --cast: #38204324;
   --ok: #166534;
   --ok-bg: #dcf4e3;
   --warn: #92400e;
@@ -25,20 +33,28 @@
 @media (prefers-color-scheme: dark) {
   .medora:not([data-theme="light"]) {
     color-scheme: dark;
-    --page: #0b2423;
-    --panel: #153b37;
-    --field: #193f3a;
-    --ink: #e6fff6;
-    --muted: #b2d5ca;
-    --outline: #41685f;
-    --action: #66d8c2;
-    --on-action: #103d38;
-    --water: #103c50;
-    --water-ink: #c8eeff;
-    --medicine: #453919;
-    --medicine-ink: #ffe2a9;
-    --visit: #352d4e;
-    --visit-ink: #ecddff;
+    --page: #151b20;
+    --panel: #222b32;
+    --field: #1a2228;
+    --ink: #f1f5f1;
+    --muted: #b8c3c4;
+    --outline: #414f55;
+    --action: #d0e99d;
+    --on-action: #1c2a17;
+    --water: #243e3c;
+    --water-ink: #bcf0df;
+    --medicine: #302b24;
+    --medicine-ink: #f0dbc4;
+    --visit: #34323a;
+    --visit-ink: #f3d3d9;
+    --hero-deep: #172228;
+    --hero-light: #334b4d;
+    --hero-edge: #536766;
+    --glass: #253036;
+    --dock-active: #35463e;
+    --lime: #d8ec9f;
+    --lime-ink: #243016;
+    --cast: #0008;
     --ok: #8ae0ac;
     --ok-bg: #234635;
     --warn: #ffd18a;
@@ -79,7 +95,7 @@
 .medora .badge[data-status="skipped"] { color: var(--error); background: var(--error-bg); }
 .medora [data-warning="true"] { color: var(--warn); font-weight: 700; }
 .medora .app-status { min-block-size: 1.2rem; color: var(--muted); }
-.medora .dock { position: fixed; z-index: 2; inset-inline: max(.55rem, env(safe-area-inset-right)) max(.55rem, env(safe-area-inset-left)); inset-block-end: max(.45rem, env(safe-area-inset-bottom)); max-inline-size: 41rem; margin-inline: auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--outline); border-radius: 1.55rem; padding: .25rem; box-shadow: 0 .18rem .8rem #103d382b; }
+.medora .dock { position: fixed; z-index: 2; inset-inline: max(.55rem, env(safe-area-inset-right)) max(.55rem, env(safe-area-inset-left)); inset-block-end: max(.45rem, env(safe-area-inset-bottom)); max-inline-size: 41rem; margin-inline: auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--outline); border-radius: 1.55rem; padding: .25rem; box-shadow: 0 .38rem 1.4rem var(--cast); }
 .medora .dock button { background: transparent; border: 0; color: var(--ink); padding: .27rem .1rem; font-size: .8rem; line-height: 1.3; display: grid; place-items: center; gap: .2rem; overflow-wrap: anywhere; }
 .medora .fields, .medora .weekdays { display: flex; flex-wrap: wrap; align-items: end; gap: .55rem; margin-block: .6rem; }
 .medora .fields label { flex: 1 1 9rem; min-inline-size: 0; }
@@ -94,20 +110,28 @@
 
 .medora[data-theme="dark"] {
   color-scheme: dark;
-  --page: #0b2423;
-  --panel: #153b37;
-  --field: #193f3a;
-  --ink: #e6fff6;
-  --muted: #b2d5ca;
-  --outline: #41685f;
-  --action: #66d8c2;
-  --on-action: #103d38;
-  --water: #103c50;
-  --water-ink: #c8eeff;
-  --medicine: #453919;
-  --medicine-ink: #ffe2a9;
-  --visit: #352d4e;
-  --visit-ink: #ecddff;
+  --page: #151b20;
+  --panel: #222b32;
+  --field: #1a2228;
+  --ink: #f1f5f1;
+  --muted: #b8c3c4;
+  --outline: #414f55;
+  --action: #d0e99d;
+  --on-action: #1c2a17;
+  --water: #243e3c;
+  --water-ink: #bcf0df;
+  --medicine: #302b24;
+  --medicine-ink: #f0dbc4;
+  --visit: #34323a;
+  --visit-ink: #f3d3d9;
+  --hero-deep: #172228;
+  --hero-light: #334b4d;
+  --hero-edge: #536766;
+  --glass: #253036;
+  --dock-active: #35463e;
+  --lime: #d8ec9f;
+  --lime-ink: #243016;
+  --cast: #0008;
   --ok: #8ae0ac;
   --ok-bg: #234635;
   --warn: #ffd18a;
@@ -118,14 +142,13 @@
 .medora h2 { font-size: 1.1rem; }
 .medora h3 { margin-block: 0 .18rem; font-size: 1rem; }
 .medora .app-content { padding-block-start: .55rem; }
-.app-bar { background: linear-gradient(115deg, #103d38, #006f68); color: #fff; border-radius: 0 0 1.25rem 1.25rem; overflow: hidden; padding-block-start: env(safe-area-inset-top); }
+.app-bar { background: var(--page); color: var(--ink); border-radius: 0 0 1.25rem 1.25rem; overflow: hidden; padding-block-start: env(safe-area-inset-top); }
 .app-bar-inner { display: flex; align-items: center; position: relative; box-sizing: border-box; max-inline-size: 43rem; margin-inline: auto; min-block-size: 3.5rem; padding: .55rem .85rem; gap: .45rem; }
-.brand-mark { display: grid; place-items: center; flex: none; inline-size: 1.9rem; block-size: 1.9rem; color: #b4ead8; }
+.brand-mark { display: grid; place-items: center; flex: none; inline-size: 1.9rem; block-size: 1.9rem; color: var(--action); }
 .medora .brand-mark svg { inline-size: 1.8rem; block-size: 1.8rem; }
 .medora h1 { font-size: 1.3rem; margin: 0; }
-.medora .app-bar p { margin: 0; color: #daf4ed; font-size: .76rem; }
+.medora .app-bar p { margin: 0; color: var(--muted); font-size: .76rem; }
 .medora .app-bar p:empty { display: none; }
-.medora svg.header-leaf { position: absolute; inset-inline-end: .65rem; inset-block-end: -.1rem; inline-size: 3rem; block-size: 3rem; transform: rotate(25deg); color: #7acdbb; opacity: .16; pointer-events: none; }
 .medora .icon-button, .medora .text-button { background: transparent; border: 0; color: inherit; }
 .medora .icon-button { display: inline-grid; place-items: center; padding: .3rem; min-inline-size: 2.75rem; min-block-size: 2.75rem; }
 .medora .text-button { color: var(--action); min-block-size: 2.75rem; padding-inline: .3rem; }
@@ -159,11 +182,6 @@
 .medora .water-quick button[data-water-preset] { border-color: var(--outline); }
 .medora .water-quick button[aria-pressed="true"] { background: var(--visit); border-color: var(--visit); }
 .medora .timeline { margin-block-start: .45rem; }
-.timeline-event { position: relative; padding-inline-start: 1.35rem; }
-.timeline-event::before { content: ""; position: absolute; inset-block: 1.1rem -.75rem; inset-inline-start: .42rem; border-inline-start: 1px solid var(--outline); }
-.timeline-event:last-child::before { inset-block-end: 0; }
-.timeline-event::after { content: ""; position: absolute; inset-block-start: .95rem; inset-inline-start: .15rem; inline-size: .57rem; block-size: .57rem; background: var(--medicine-ink); border-radius: 50%; }
-.timeline-visit::after { background: var(--visit-ink); }
 .medora .dock { inset-inline: max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-left)); padding: .15rem .3rem; border-radius: 1.6rem; }
 .medora .dock button { min-block-size: 3.8rem; grid-template-rows: 2.25rem auto; gap: .08rem; color: var(--muted); }
 .medora .dock button svg { inline-size: 1.15rem; block-size: 1.15rem; }
@@ -190,8 +208,8 @@
 .medora input[role="switch"]:checked { background: var(--action); }
 .medora input[role="switch"]:checked::before { margin-inline-start: auto; }
 .medora [data-color="green"] { background: var(--panel); color: var(--ink); }
-.medora [data-color="blue"] { background: var(--water); color: var(--water-ink); }
-.medora [data-color="purple"] { background: var(--visit); color: var(--visit-ink); }
+.medora [data-color="blue"] { background: color-mix(in srgb, #8ecfe8 25%, var(--panel)); color: var(--ink); }
+.medora [data-color="purple"] { background: color-mix(in srgb, #b8a4e8 24%, var(--panel)); color: var(--ink); }
 .medora [data-color="rose"] { background: var(--error-bg); color: var(--error); }
 .segmented { display: flex; gap: .15rem; background: var(--panel); border-radius: 1rem; }
 .medora .segmented button { background: transparent; border: 0; color: var(--muted); flex: 1 1 0; padding-inline: .15rem; font-size: .86rem; }
@@ -215,7 +233,7 @@
 .report-chart > div { flex: 1; block-size: var(--bar); border-radius: .22rem .22rem 0 0; background: var(--water-ink); }
 .medora #report-chart-dates { direction: ltr; }
 .medora dialog { box-sizing: border-box; color: var(--ink); background: var(--page); padding: 0; max-inline-size: min(calc(100% - 1rem), 36rem); border: 0; border-radius: 1.5rem; }
-.medora dialog::backdrop { background: #081b1ab3; }
+.medora dialog::backdrop { background: #131720ae; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .medora:has(dialog[open]) { overflow: hidden; }
 .medora dialog.sheet { inset-block: auto 0; margin: 0 auto; inline-size: min(100%, 36rem); max-inline-size: 100%; max-block-size: 93vh; max-block-size: 93dvh; border-radius: 1.65rem 1.65rem 0 0; padding-block: 1.55rem env(safe-area-inset-bottom); padding-inline: 1rem; }
 .sheet::before { content: ""; display: block; inline-size: 2rem; block-size: .2rem; border-radius: 1rem; margin: -.5rem auto .95rem; background: var(--muted); }
@@ -238,8 +256,8 @@
 .medora button.danger-link { color: var(--error); }
 .medora button.danger-button { background: var(--error); color: var(--page); border-color: var(--error); }
 .medora .sheet-form { border: 0; border-radius: 0; background: transparent; padding: 0; }
-.sheet-header { display: flex; align-items: center; gap: .45rem; padding: .28rem .65rem; background: linear-gradient(115deg, #103d38, #006f68); color: #fff; border-radius: 0 0 1.2rem 1.2rem; }
-.sheet-header > svg { color: #b4ead8; }
+.sheet-header { display: flex; align-items: center; gap: .45rem; padding: .28rem .65rem; background: var(--page); color: var(--ink); border-radius: 0 0 1.2rem 1.2rem; }
+.sheet-header > svg { color: var(--action); }
 .sheet-header h2 { margin: 0; font-size: 1.25rem; }
 .sheet-header p { font-size: .8rem; }
 .medora .sheet-header .icon-button { margin-inline-start: auto; }
@@ -286,14 +304,14 @@
 .clock-hand::after { content: ""; position: absolute; inset-block-end: -.18rem; inset-inline-start: -.13rem; inline-size: .4rem; block-size: .4rem; border-radius: 50%; background: var(--action); }
 .medora #clock-mode { display: block; margin: .45rem auto; }
 .intro { position: relative; box-sizing: border-box; min-block-size: 100vh; min-block-size: 100dvh; padding: max(2rem, env(safe-area-inset-top)) 1.5rem max(2rem, env(safe-area-inset-bottom)); overflow: hidden; }
-.welcome { background: linear-gradient(#103d38, #006f68); color: white; }
+.welcome { background: linear-gradient(140deg, var(--hero-light), var(--hero-deep)); color: white; }
 .intro-content { position: relative; z-index: 1; max-inline-size: 32rem; margin: auto; text-align: center; }
 .medora .intro-landscape { position: absolute; inset: auto 0 0; inline-size: 100%; block-size: min(21rem, 46vh); stroke: none; }
-.medora .intro-mark { inline-size: min(9rem, 26vh); block-size: min(9rem, 26vh); color: #b8ead5; margin-block: 1rem .65rem; }
+.medora .intro-mark { inline-size: min(9rem, 26vh); block-size: min(9rem, 26vh); color: var(--lime); margin-block: 1rem .65rem; }
 .medora .welcome h1 { font-size: 2.35rem; }
 .medora .welcome h2 { margin-block: 1.1rem .75rem; font-size: 1.25rem; }
 .medora .welcome p { color: #ddf1e8; }
-.medora .welcome button { margin-block: clamp(2rem, 12vh, 5rem) .8rem; border-radius: 3rem; background: #b8ead5; color: #103d38; }
+.medora .welcome button { margin-block: clamp(2rem, 12vh, 5rem) .8rem; border-radius: 3rem; background: var(--lime); color: var(--lime-ink); }
 .permission-art { position: relative; block-size: min(15rem, 33vh); }
 .medora .permission-art .intro-landscape { block-size: 100%; }
 .medora .permission-art .intro-mark { position: relative; z-index: 1; inline-size: 5rem; block-size: 5rem; color: #9e6515; stroke-width: .8; }
@@ -390,3 +408,203 @@
 .medora .appearance-grid button[aria-pressed="true"] { outline: 2px solid var(--action); outline-offset: -2px; }
 .appearance-swatch { inline-size: 2rem; block-size: 2rem; border-radius: 50%; background: var(--pill-base); }
 .medora #appearance-preview { display: flex; gap: .65rem; align-items: center; }
+
+/* Studio */
+.medora { background: radial-gradient(ellipse at 15% 0, color-mix(in srgb, var(--dock-active) 52%, transparent), transparent 32rem), var(--page); min-block-size: 100dvh; }
+.medora .app-bar { background: transparent; }
+.medora .app-content { max-inline-size: 46rem; }
+.app-bar-inner { max-inline-size: 46rem; padding: .65rem max(1rem, env(safe-area-inset-right)) .25rem max(1rem, env(safe-area-inset-left)); }
+.wordmark { font-size: 1.2rem; font-weight: 850; }
+.medora .brand-mark { border-radius: .62rem; background: var(--dock-active); }
+.medora .brand-mark svg { inline-size: 1.12rem; block-size: 1.12rem; }
+.medora .header-tools { margin-inline-start: auto; display: flex; gap: .55rem; }
+.medora .header-tools button { background: var(--panel); color: var(--action); border: 1px solid var(--field); border-radius: 50%; box-shadow: 0 .15rem .45rem var(--cast), inset 0 1px 0 var(--glass); }
+.medora .header-tools svg { inline-size: 1.18rem; block-size: 1.18rem; }
+.page-heading { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: .15rem 1rem; margin-block: .15rem .65rem; }
+.medora .page-heading h1 { font-size: clamp(1.8rem, 6.6vw, 2.55rem); font-weight: 880; line-height: 1.38; }
+.medora .page-heading p { color: var(--muted); font-size: .85rem; }
+.medora .feature, .medora article { border-radius: 1.3rem; padding: .8rem .95rem; }
+.medora .empty { background: var(--panel); }
+.medora .day-controls { gap: .2rem; background: var(--panel); border-radius: 1.2rem; margin-block: .7rem 1.25rem; padding: .35rem .45rem; }
+.medora .day-week { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.medora .day-week button { min-block-size: 2.7rem; }
+.medora .day-week button[aria-current="date"] { background: var(--dock-active); color: var(--action); }
+.medora #day-title, .medora #med-day-title { margin-block: .5rem .7rem; font-weight: 800; }
+.medora .timeline .dose-card:not(.studio-hero) { background: var(--panel); color: var(--ink); }
+.chapter-actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-block-start: .45rem; }
+.medora .chapter-actions .text-button { color: inherit; }
+.medora .dock { max-inline-size: 44rem; border-radius: 2.4rem; padding: .2rem; border-color: var(--glass); background: color-mix(in srgb, var(--glass) 82%, transparent); -webkit-backdrop-filter: blur(20px) saturate(145%); backdrop-filter: blur(20px) saturate(145%); box-shadow: 0 .35rem 1.2rem var(--cast), inset 0 0 .5rem var(--glass); }
+.medora .dock button { border-radius: 2.05rem; padding-inline: .08rem; }
+.medora .dock button[aria-current="page"] { background: var(--dock-active); box-shadow: inset 0 1px 0 var(--glass), 0 .1rem .38rem var(--cast); }
+.medora .dock [aria-current="page"] .dock-mark { background: transparent; color: var(--action); }
+.medora .dock .dock-add { color: var(--ink); }
+.dock-add span { display: grid; place-items: center; inline-size: 1.75rem; aspect-ratio: 1; border-radius: 50%; color: var(--lime-ink); background: var(--lime); box-shadow: 0 0 .65rem color-mix(in srgb, var(--lime) 48%, transparent); }
+
+.medication-banner {
+  --art-tilt: -12deg;
+  --art-shift: 0%;
+  --art-fill: color-mix(in srgb, var(--pill-base) 31%, var(--panel));
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  block-size: 7.8rem;
+  color: var(--ink);
+  border-radius: 1rem;
+  background: radial-gradient(ellipse at 72% 18%, color-mix(in srgb, var(--pill-base) 54%, transparent), transparent 65%), linear-gradient(145deg, var(--art-fill), var(--panel));
+}
+.medication-banner::before, .medication-banner::after {
+  content: "";
+  position: absolute;
+  inline-size: 9.4rem;
+  aspect-ratio: 1;
+  border-radius: 48%;
+  transform: rotate(-26deg) scaleY(.72);
+  border: 1px solid #fff5;
+  background: linear-gradient(130deg, #fff4, transparent 68%);
+}
+.medication-banner::after { inline-size: 11.8rem; transform: rotate(23deg) scaleY(.58); border-color: #fff4; background: transparent; }
+.medora .medication-banner .medication-badge {
+  position: absolute;
+  z-index: 1;
+  inline-size: 6.8rem;
+  block-size: 6.8rem;
+  stroke-width: 1.35;
+  transform: translateX(var(--art-shift)) rotate(var(--art-tilt));
+  filter: drop-shadow(0 .45rem .48rem #19112238);
+}
+.medora .medication-banner .banner-echo {
+  z-index: 0;
+  opacity: .48;
+  transform: translate(-78%, -12%) rotate(28deg) scale(.65);
+}
+.medication-banner span {
+  position: absolute;
+  z-index: 2;
+  inset-inline-start: .65rem;
+  inset-block-end: .55rem;
+  padding: .12rem .53rem;
+  font-size: .73rem;
+  font-weight: 750;
+  border-radius: 100vw;
+  background: color-mix(in srgb, var(--glass) 82%, transparent);
+}
+.medication-banner[data-shape="tablet"] { --art-tilt: -25deg; --art-shift: -5%; }
+.medication-banner[data-shape="tablet"]::before { border-radius: 24%; }
+.medication-banner[data-shape="syrup"] { --art-tilt: 14deg; --art-shift: 9%; }
+.medication-banner[data-shape="injection"] { --art-tilt: 30deg; --art-shift: 14%; }
+.medication-banner[data-shape="ointment"] { --art-tilt: -17deg; --art-shift: -8%; }
+.medication-banner[data-shape="drops"] { --art-tilt: 21deg; }
+.medication-banner[data-shape="spray"] { --art-tilt: -8deg; --art-shift: 9%; }
+
+.medora .studio-hero {
+  isolation: isolate;
+  position: relative;
+  overflow: hidden;
+  padding: clamp(.95rem, 3.5vw, 1.35rem);
+  border: 1px solid var(--hero-edge);
+  border-radius: 1.55rem;
+  background: radial-gradient(ellipse at 10% 96%, var(--hero-light), transparent 60%), linear-gradient(120deg, var(--hero-deep), var(--hero-light));
+  color: #fff9ff;
+  box-shadow: 0 .45rem 1rem var(--cast);
+}
+.studio-hero > :not(.medication-banner) { position: relative; z-index: 1; }
+.medora .studio-hero .medication-banner {
+  position: absolute;
+  inset-inline-end: -.2rem;
+  inset-block-start: 0;
+  inline-size: min(48%, 14rem);
+  block-size: min(100%, 10.4rem);
+  background: radial-gradient(ellipse at 58% 48%, color-mix(in srgb, var(--pill-base) 23%, transparent), transparent 70%);
+  border-radius: 0;
+}
+.medora .studio-hero .medication-banner span { display: none; }
+.medora .studio-hero .medication-badge { inline-size: min(87%, 9rem); block-size: auto; aspect-ratio: 1; }
+.medora .studio-hero .dose-header, .medora .studio-rest > div:not(.medication-banner) { inline-size: 60%; min-block-size: 5rem; padding: 0; }
+.medora .studio-hero h3, .medora .studio-rest h2 { font-size: clamp(1.2rem, 5.6vw, 1.95rem); line-height: 1.35; overflow-wrap: anywhere; }
+.medora .studio-hero .dose-header p { color: #f4eaf7; margin-block: 0 .35rem; }
+.medora .studio-hero .dose-header p:not(.hero-kicker) { display: inline-block; background: #ffffff20; color: #fff; border-radius: .6rem; padding-inline: .45rem; font-weight: 750; }
+.medora .studio-hero .dose-result { inline-size: 69%; }
+.medora .studio-hero .badge { background: #ffffff1f; color: #fff; }
+.medora .studio-hero button:not(.secondary) { background: var(--lime); color: var(--lime-ink); border-color: var(--lime); }
+.medora .studio-hero button.secondary { background: var(--hero-deep); color: #fff; border-color: var(--hero-edge); }
+.medora .studio-hero .dose-quick { grid-template-columns: 1fr auto; margin-block-start: .7rem; }
+.medora .studio-hero .dose-options { position: static; }
+.medora .studio-hero .dose-options summary { inset-inline-end: .5rem; inset-block-start: .4rem; background: var(--hero-deep); border-radius: .65rem; }
+.medora .studio-hero .dose-options[open] > summary { color: #fff; }
+.medora .studio-hero :focus-visible { outline-color: var(--lime); }
+.medora .studio-rest > button { margin-block-start: .75rem; }
+
+#plans { display: grid; gap: .65rem; }
+#plans > * { margin-block: 0; }
+.medora #plans-heading {
+  margin-block-end: .65rem;
+  padding: .6rem .8rem;
+  background: linear-gradient(125deg, var(--dock-active), var(--visit));
+  border: 1px solid var(--outline);
+  border-radius: 1.25rem;
+}
+.medora #plans-heading h2 { margin: 0; }
+.medora .treatment { padding: .55rem .7rem; background: var(--panel); color: var(--ink); }
+.treatment-profile {
+  display: flow-root;
+  padding: .2rem 0;
+}
+.treatment-profile .medication-banner {
+  float: inline-end;
+  inline-size: 44%;
+  block-size: 8.35rem;
+  margin-inline-start: .6rem;
+  margin-block-end: .25rem;
+}
+.medora .treatment:first-child .treatment-profile .medication-banner { block-size: 9.1rem; }
+.medora .treatment form { background: var(--field); }
+.medora .refill { padding-block: 0; border: 1px solid var(--outline); }
+.medora .refill form { margin-block: 0 .55rem; }
+.medora #medicine-details-body > .medication-banner { margin-block-end: .55rem; }
+.medora .treatment-name { font-size: 1.12rem; color: inherit; }
+.medora :is(.treatment-name, .dose-header h3, .sheet-header h2, .visit-title) { min-inline-size: 0; overflow-wrap: anywhere; }
+.medora .treatment input[role="switch"] { flex: none; }
+.medora #appearance-preview { display: block; padding: 0; background: transparent; border: 0; }
+.medora #appearance-preview-icon { display: block; }
+.medora .sheet-header { padding: .4rem .65rem; background: var(--dock-active); color: var(--ink); border-radius: 1.15rem; }
+.medora .settings-dialog .sheet-header { border-radius: 0 0 1.15rem 1.15rem; }
+.medora .settings-tile { border: 1px solid var(--outline); border-radius: 1.05rem; }
+.medora .settings-tile summary svg { box-sizing: content-box; border-radius: .65rem; padding: .4rem; background: var(--dock-active); color: var(--action); }
+.medora .settings-tile.water summary svg { background: var(--water); color: var(--water-ink); }
+.medora .settings-tile.visit summary svg { background: var(--visit); color: var(--visit-ink); }
+.medora .account-shortcut { display: flex; align-items: center; gap: .6rem; inline-size: 100%; text-align: start; background: var(--panel); }
+.medora .account-shortcut svg:first-child { box-sizing: content-box; border-radius: .65rem; padding: .4rem; background: var(--dock-active); color: var(--action); }
+.medora .account-shortcut svg:last-child { margin-inline-start: auto; transform: scaleX(-1); }
+.medora .settings-dialog[data-panel]:not([data-panel=""]) .account-shortcut { display: none; }
+.medora dialog { box-shadow: 0 .75rem 2.5rem var(--cast); }
+.medora #medication-dialog .sheet-body { padding-block-start: .6rem; }
+.medora #editor-banner .medication-banner { block-size: 8.1rem; }
+.wizard-steps { padding: 0; margin-block: .7rem 1rem; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .28rem; }
+.wizard-steps li { display: flex; align-items: center; justify-content: center; gap: .27rem; min-block-size: 2.5rem; color: var(--muted); text-align: center; line-height: 1.3; font-size: .75rem; border: 1px solid var(--outline); border-radius: .8rem; }
+.wizard-steps li span { font-weight: 750; }
+.wizard-steps li[aria-current="step"] { background: var(--dock-active); color: var(--action); font-weight: 800; border-color: var(--dock-active); }
+.wizard-steps li[data-complete="true"] { background: var(--ok-bg); color: var(--ok); }
+.medora [data-editor-step] h3 { font-size: 1.15rem; font-weight: 800; margin-block-end: .55rem; }
+.basic-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.medora .basic-fields .editor-field { min-inline-size: 0; }
+.wizard-actions { display: flex; gap: .5rem; }
+.medora .wizard-actions button { border-radius: 3rem; }
+.medora #editor-next { flex: 1; background: var(--lime); border-color: var(--lime); color: var(--lime-ink); }
+#editor-review { padding: .7rem .9rem; background: var(--panel); border: 1px solid var(--outline); border-radius: 1rem; overflow-wrap: anywhere; }
+#editor-review h4 { margin-block: 0; font-size: 1.1rem; }
+#editor-review ol { padding-inline-start: 1.25rem; }
+#editor-review li { padding-block: .3rem; }
+.medora #account-dialog form { margin-block: .65rem; }
+.medora #account-dialog input { display: block; inline-size: 100%; margin-block-start: .25rem; }
+.medora #account-status[data-error] { color: var(--error); }
+.medora .intro-mark { color: var(--lime); }
+.medora .intro-landscape { opacity: .56; mix-blend-mode: luminosity; }
+
+@media (min-width: 38rem) {
+  #plans { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  #plans > :first-child { grid-column: 1 / -1; }
+  .medora .treatment:first-child .treatment-profile .medication-banner { block-size: 10rem; }
+  .medora dialog.sheet { inset-block: 0; margin: auto; max-block-size: min(92dvh, 49rem); border-radius: 1.65rem; padding-block-end: .5rem; }
+}

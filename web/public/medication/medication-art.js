@@ -17,6 +17,23 @@ export function medicationBadge(shape, color) {
   return svg;
 }
 
+export function medicationBanner(shape, color) {
+  const type = knownShape(shape);
+  const banner = document.createElement("div");
+  banner.className = "medication-banner";
+  banner.dataset.shape = type;
+  banner.dataset.ink = knownColor(color);
+  banner.setAttribute("aria-hidden", "true");
+  const art = medicationBadge(type, color);
+  if (type === "tablet") art.firstElementChild.setAttribute("href", "#art-blister");
+  const echo = medicationBadge(type, color);
+  echo.classList.add("banner-echo");
+  const caption = document.createElement("span");
+  caption.textContent = shapes[type];
+  banner.append(echo, art, caption);
+  return banner;
+}
+
 export function installAppearance() {
   const dialog = $("appearance-dialog");
   let shape;
@@ -28,6 +45,7 @@ export function installAppearance() {
     const tile = $("medicine-appearance");
     tile.dataset.color = knownColor(selectedColor);
     $("medicine-appearance-icon").replaceChildren(medicationBadge(type, selectedColor));
+    $("editor-banner").replaceChildren(medicationBanner(type, selectedColor));
     tile.setAttribute("aria-label", `ظاهر دارو (اختیاری)، ${shapes[knownShape(type)]}، ${colors[knownColor(selectedColor)]}`);
   }
   function choice(id, title, pressed, click) {
@@ -65,7 +83,7 @@ export function installAppearance() {
       return option;
     }));
     $("appearance-preview").dataset.color = color;
-    $("appearance-preview-icon").replaceChildren(medicationBadge(shape, color));
+    $("appearance-preview-icon").replaceChildren(medicationBanner(shape, color));
   }
 
   $("medicine-appearance").addEventListener("click", () => {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#006f68">
+  <meta name="theme-color" content="#f5f0f8">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="stylesheet" href="/style.css">
@@ -21,6 +21,8 @@
     <symbol id="i-reports" viewBox="0 0 24 24"><path d="M4 4v16h16M9 16v-5m5 5V7m5 9v-3"/></symbol>
     <symbol id="i-settings" viewBox="0 0 24 24"><path d="m10 3-1 3-3 1-2 3 2 2v3l2 3 3-1 3 1 2-2v-3l2-2-1-3-3-1-1-3Z" transform="translate(1 1)"/><circle cx="12" cy="12" r="2.5"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5ZM10 21h4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
@@ -31,6 +33,17 @@
     <linearGradient id="glass-water-fill" x2="0" y2="1"><stop stop-color="#84d3fc"/><stop offset="1" stop-color="#36a7e8"/></linearGradient>
     <clipPath id="glass-clip"><path d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></clipPath>
     <symbol id="art-tablet" viewBox="0 0 100 100"><ellipse cx="50" cy="54" rx="34" ry="30" class="pill-edge"/><ellipse cx="50" cy="48" rx="34" ry="30" class="pill-body"/><ellipse cx="50" cy="46" rx="29" ry="25" class="pill-light"/><path class="pill-line" d="m30 62 38-32"/><path stroke="white" d="m32 65 39-33"/></symbol>
+    <symbol id="art-blister" viewBox="0 0 100 100">
+      <rect x="22" y="10" width="61" height="86" rx="12" class="pill-edge"/>
+      <rect x="17" y="5" width="61" height="86" rx="12" class="pill-body"/>
+      <rect x="21" y="9" width="53" height="78" rx="9" fill="none" stroke="white" stroke-opacity=".6"/>
+      <g class="pill-light">
+        <ellipse cx="35" cy="24" rx="8" ry="10"/><ellipse cx="59" cy="24" rx="8" ry="10"/>
+        <ellipse cx="35" cy="48" rx="8" ry="10"/><ellipse cx="59" cy="48" rx="8" ry="10"/>
+        <ellipse cx="35" cy="72" rx="8" ry="10"/><ellipse cx="59" cy="72" rx="8" ry="10"/>
+      </g>
+      <path d="M31 21l6 5m18-5 6 5M31 45l6 5m18-5 6 5M31 69l6 5m18-5 6 5" class="pill-line" opacity=".45"/>
+    </symbol>
     <symbol id="art-capsule" viewBox="0 0 100 100"><g transform="rotate(-38 50 50)"><path class="pill-light" d="M29 50V30a21 21 0 0 1 42 0v20Z"/><path class="pill-body" d="M29 50h42v20a21 21 0 0 1-42 0Z"/><path class="pill-line" d="M29 50h42"/><path stroke="white" stroke-width="4" d="M36 24v16"/></g></symbol>
     <symbol id="art-syrup" viewBox="0 0 100 100"><rect x="25" y="29" width="44" height="58" rx="10" class="pill-edge"/><rect x="28" y="29" width="38" height="52" rx="8" class="pill-body"/><rect x="32" y="15" width="30" height="17" rx="4" class="pill-body"/><rect x="31" y="49" width="32" height="20" rx="3" class="pill-light"/><path class="pill-line" d="M76 61v24"/><ellipse cx="76" cy="56" rx="5" ry="8" class="pill-light"/></symbol>
     <symbol id="art-injection" viewBox="0 0 100 100"><rect x="37" y="40" width="26" height="49" rx="8" class="pill-body"/><rect x="41" y="21" width="18" height="27" rx="5" class="pill-light"/><ellipse cx="50" cy="17.5" rx="7" ry="9.5" class="pill-body"/><path class="pill-line" d="M41 32h18"/><rect x="41" y="57" width="18" height="23" rx="4" class="pill-light"/><path stroke="white" d="M43 47v5"/></symbol>
@@ -72,13 +85,18 @@
     <div class="app-bar-inner">
       <div class="brand-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></div>
       <button id="screen-back" type="button" class="icon-button" aria-label="بازگشت" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
-      <div><h1 id="screen-title">امروز</h1><p id="header-date"></p></div>
-      <svg class="header-leaf" aria-hidden="true"><use href="#i-mark"/></svg>
+      <span class="wordmark">مدورا</span>
+      <div class="header-tools">
+        <button type="button" class="icon-button" id="open-account" data-open-account aria-label="حساب کاربری"><svg aria-hidden="true"><use href="#i-user"/></svg></button>
+        <button type="button" class="icon-button" data-destination="settings" aria-label="تنظیمات"><svg aria-hidden="true"><use href="#i-settings"/></svg></button>
+      </div>
     </div>
   </header>
   <main class="app-content">
     <p id="boot-status" role="status">در حال بارگذاری مدورا…</p>
     <div id="app" hidden>
+      <div class="page-heading"><h1 id="screen-title">امروز</h1><p id="header-date"></p></div>
+      <div id="today-focus" hidden></div>
       <div id="day-controls" class="day-controls">
         <button type="button" class="secondary day-arrow icon-button" id="previous-day" aria-label="روز قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
         <button id="pick-day" class="date-field" type="button"><span id="day-label"></span><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
@@ -88,6 +106,10 @@
       </div>
       <div data-screen="today">
         <p id="future-schedule" class="quiet" hidden>برنامهٔ آینده. ثبت مصرف فقط از روز موعد فعال می‌شود.</p>
+        <section class="timeline" aria-labelledby="day-title">
+          <h2 id="day-title">برنامهٔ روز</h2>
+          <div id="doses"></div>
+        </section>
         <section id="today-water" class="feature water">
           <div class="feature-head">
             <div class="water-info">
@@ -98,12 +120,10 @@
             </div>
             <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/><use href="#i-glass-rim"/></svg>
           </div>
-          <button type="button" class="block-action" data-open-water>ثبت آب</button>
-        </section>
-        <button id="open-water-history" type="button" class="text-button" data-destination="water">آب و سوابق</button>
-        <section class="timeline" aria-labelledby="day-title">
-          <h2 id="day-title">برنامهٔ روز</h2>
-          <div id="doses"></div>
+          <div class="chapter-actions">
+            <button type="button" class="secondary" data-open-water>ثبت آب</button>
+            <button id="open-water-history" type="button" class="text-button" data-destination="water">آب و سوابق</button>
+          </div>
         </section>
         <div id="today-actions" class="action-pair">
           <button type="button" class="secondary" data-open-medication>افزودن دارو</button>
@@ -116,13 +136,18 @@
         </section>
       </div>
       <div data-screen="medications" hidden>
-        <div class="section-heading" id="plans-heading"><h2 id="plans-title">برنامهٔ داروها</h2><button id="add" type="button" data-open-medication>＋ داروی جدید</button></div>
-        <div id="med-day-summary" class="feature feature-head">
-          <div><strong id="med-day-count"></strong><p class="quiet">مصرف ثبت‌شده</p></div>
-          <div id="med-day-ring" class="progress-ring"><span></span></div>
-        </div>
-        <div id="med-day-doses"></div>
-        <section aria-labelledby="treatments-title"><h2 id="treatments-title">برنامه‌های مصرف</h2><div id="plans"></div></section>
+        <section aria-labelledby="plans-title">
+          <div class="section-heading" id="plans-heading"><h2 id="plans-title">قفسهٔ داروهای من</h2><button id="add" type="button" data-open-medication>＋ داروی جدید</button></div>
+          <div id="plans"></div>
+        </section>
+        <section aria-labelledby="med-day-title">
+          <h2 id="med-day-title">نوبت‌های روز</h2>
+          <div id="med-day-summary" class="feature feature-head">
+            <div><strong id="med-day-count"></strong><p class="quiet">مصرف ثبت‌شده</p></div>
+            <div id="med-day-ring" class="progress-ring"><span></span></div>
+          </div>
+          <div id="med-day-doses"></div>
+        </section>
       </div>
       <div data-screen="appointments" hidden>
         <div class="segmented" id="visit-filters" role="group" aria-label="بازهٔ قرارها">
@@ -184,11 +209,11 @@
       </div>
       <p id="status" class="app-status" role="status"></p>
       <nav class="dock" aria-label="ناوبری مدورا">
+        <button type="button" data-destination="today" aria-current="page"><span class="dock-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></span>امروز</button>
         <button type="button" data-destination="medications"><svg aria-hidden="true"><use href="#i-bottle"/></svg>داروها</button>
         <button type="button" data-destination="appointments"><svg aria-hidden="true"><use href="#i-calendar"/></svg>قرارها</button>
-        <button type="button" data-destination="today" aria-current="page"><span class="dock-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></span>امروز</button>
         <button type="button" data-destination="insights"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش‌ها</button>
-        <button type="button" data-destination="settings"><svg aria-hidden="true"><use href="#i-settings"/></svg>تنظیمات</button>
+        <button type="button" class="dock-add" data-open-medication><span><svg aria-hidden="true"><use href="#i-plus"/></svg></span>افزودن</button>
       </nav>
     </div>
   </main>
@@ -216,41 +241,60 @@
     <form id="editor" class="sheet-form" novalidate>
       <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="editor-title">داروی جدید</h2><button class="icon-button" type="button" data-close="medication-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
       <div class="sheet-body">
-        <label class="editor-field">نام دارو یا مکمل<input id="name" maxlength="120" required></label>
-        <label class="editor-field">مقدار یا دستور مصرف (اختیاری)<textarea id="instructions" rows="2" maxlength="600"></textarea></label>
-        <button type="button" id="medicine-appearance" class="medicine appearance-tile">
-          <span id="medicine-appearance-icon"></span><span>ظاهر دارو (اختیاری)</span><svg aria-hidden="true"><use href="#i-expand"/></svg>
-        </button>
-        <input type="hidden" id="medicine-icon" value="capsule"><input type="hidden" id="medicine-color" value="gold">
-        <label class="feature-head editor-switch">برنامهٔ چندمرحله‌ای<input type="checkbox" id="phased-mode" role="switch"></label>
-        <div id="basic-schedule">
-          <label class="editor-field">ساعت یادآوری<input id="basic-time" type="time" value="08:00" required></label>
-          <p class="quiet" id="basic-extra-times" hidden></p>
-          <p class="quiet" id="basic-repeat">هر روز</p><p class="quiet" id="basic-start"></p>
-        </div>
-        <details id="advanced-plan" class="editor-options">
-          <summary>تنظیم روزها و ساعت‌های بیشتر</summary>
-          <p class="quiet phase-only">مرحله تا پایان روز انتخاب‌شده ادامه دارد.</p>
-          <div id="phases"></div>
-          <label class="single-plan-only">تاریخ‌های مشخص (اختیاری)
-            <textarea id="specific-dose-dates" dir="ltr" rows="2" placeholder="2026-11-09, 2026-11-16"></textarea>
-            <small>تاریخ‌ها را به میلادی وارد کنید و با ویرگول جدا کنید.</small>
-          </label>
-          <button id="add-phase" type="button" class="secondary phase-only">افزودن مرحله</button>
-        </details>
-        <p class="field-error" id="phase-mode-warning" hidden>با ذخیره در حالت عادی، تاریخ پایان، مرحله‌های بعدی و فاصلهٔ تکرار حذف می‌شوند.</p>
-        <details id="inventory-options" class="editor-options">
-          <summary>دوز و موجودی دارو</summary>
-          <div class="fields">
-            <label>واحد مصرف<input id="unit" value="قرص" maxlength="30" required></label>
-            <label>موجودی اولیه (اختیاری)<input id="stock" dir="ltr" inputmode="decimal" maxlength="11"></label>
-            <label>آستانهٔ هشدار موجودی<input id="threshold" dir="ltr" inputmode="decimal" maxlength="11" value="۲"></label>
+        <div id="editor-banner" class="wizard-banner"></div>
+        <ol id="editor-steps" class="wizard-steps" aria-label="مراحل ثبت دارو">
+          <li><span>۱</span>نام و شکل</li><li><span>۲</span>دوز و برنامه</li><li><span>۳</span>مرور و ذخیره</li>
+        </ol>
+        <section data-editor-step="0" aria-labelledby="editor-identity">
+          <h3 id="editor-identity" tabindex="-1">چه دارویی مصرف می‌کنید؟</h3>
+          <label class="editor-field">نام دارو یا مکمل<input id="name" maxlength="120" required></label>
+          <button type="button" id="medicine-appearance" class="medicine appearance-tile">
+            <span id="medicine-appearance-icon"></span><span>ظاهر دارو (اختیاری)</span><svg aria-hidden="true"><use href="#i-expand"/></svg>
+          </button>
+          <input type="hidden" id="medicine-icon" value="capsule"><input type="hidden" id="medicine-color" value="gold">
+        </section>
+        <section data-editor-step="1" aria-labelledby="editor-schedule" hidden>
+          <h3 id="editor-schedule" tabindex="-1">چه وقت و چه مقدار؟</h3>
+          <label class="editor-field">دستور مصرف (اختیاری)<textarea id="instructions" rows="2" maxlength="600"></textarea></label>
+          <label class="feature-head editor-switch">برنامهٔ چندمرحله‌ای<input type="checkbox" id="phased-mode" role="switch"></label>
+          <div id="basic-schedule">
+            <div class="basic-fields">
+              <label class="editor-field">ساعت یادآوری<input id="basic-time" type="time" value="08:00" required></label>
+              <label class="editor-field">دوز (اختیاری)<input id="basic-dose" dir="ltr" inputmode="decimal" maxlength="11" placeholder="مثلاً ۰٫۵"></label>
+            </div>
+            <p class="quiet" id="basic-extra-times" hidden></p>
+            <p class="quiet" id="basic-repeat">هر روز</p><p class="quiet" id="basic-start"></p>
           </div>
-        </details>
+          <details id="advanced-plan" class="editor-options">
+            <summary>تنظیم روزها و ساعت‌های بیشتر</summary>
+            <p class="quiet phase-only">مرحله تا پایان روز انتخاب‌شده ادامه دارد.</p>
+            <div id="phases"></div>
+            <label class="single-plan-only">تاریخ‌های مشخص (اختیاری)
+              <textarea id="specific-dose-dates" dir="ltr" rows="2" placeholder="2026-11-09, 2026-11-16"></textarea>
+              <small>تاریخ‌ها را به میلادی وارد کنید و با ویرگول جدا کنید.</small>
+            </label>
+            <button id="add-phase" type="button" class="secondary phase-only">افزودن مرحله</button>
+          </details>
+          <p class="field-error" id="phase-mode-warning" hidden>با ذخیره در حالت عادی، تاریخ پایان، مرحله‌های بعدی و فاصلهٔ تکرار حذف می‌شوند.</p>
+          <details id="inventory-options" class="editor-options">
+            <summary>موجودی و واحد مصرف</summary>
+            <div class="fields">
+              <label>واحد مصرف<input id="unit" value="قرص" maxlength="30" required></label>
+              <label>موجودی اولیه (اختیاری)<input id="stock" dir="ltr" inputmode="decimal" maxlength="11"></label>
+              <label>آستانهٔ هشدار موجودی<input id="threshold" dir="ltr" inputmode="decimal" maxlength="11" value="۲"></label>
+            </div>
+          </details>
+        </section>
+        <section data-editor-step="2" aria-labelledby="editor-confirm" hidden>
+          <h3 id="editor-confirm" tabindex="-1">برنامه را یک بار مرور کنید</h3>
+          <div id="editor-review"></div>
+        </section>
         <p id="editor-status" class="field-error" role="status"></p>
-        <button type="submit" class="block-action">ذخیرهٔ دارو</button>
+        <div class="wizard-actions">
+          <button type="submit" id="editor-next">ادامه</button>
+          <button type="button" id="editor-back" class="secondary" hidden>مرحلهٔ قبل</button>
+        </div>
         <button type="button" id="delete-edited-medication" class="text-button danger-link block-action" hidden>حذف دارو</button>
-        <button type="button" class="text-button block-action" data-close="medication-dialog">انصراف</button>
       </div>
     </form>
   </dialog>
@@ -307,6 +351,24 @@
       </div>
     </form>
   </dialog>
+  <dialog id="account-dialog" class="sheet" aria-labelledby="account-title">
+    <div class="sheet-header"><svg aria-hidden="true"><use href="#i-user"/></svg><h2 id="account-title">حساب مدورا</h2><button type="button" class="icon-button" data-close="account-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="sheet-body">
+      <p class="quiet">ورود اختیاری است. برنامه و سوابق روی همین دستگاه نگه‌داری می‌شوند.</p>
+      <form id="email-start" hidden>
+        <label>نشانی ایمیل<input id="account-email" type="email" dir="ltr" autocomplete="email" maxlength="254" required></label>
+        <button type="submit" class="block-action">ارسال کد ورود</button>
+      </form>
+      <form id="email-verify" hidden>
+        <p>کد ارسال‌شده به <bdi id="account-recipient"></bdi> را وارد کنید.</p>
+        <label>کد ۶ رقمی<input id="account-code" dir="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9۰-۹٠-٩]{6}" required></label>
+        <div class="buttons"><button type="submit">تأیید و ورود</button><button type="button" id="email-change" class="secondary">تغییر ایمیل یا ارسال دوباره</button></div>
+      </form>
+      <div id="account-session" class="feature" hidden><p>وارد شده‌اید <bdi id="account-address"></bdi></p><button id="email-logout" type="button" class="secondary">خروج از حساب</button></div>
+      <p id="account-status" class="quiet" role="status"></p>
+      <button type="button" id="account-dismiss" class="text-button" data-close="account-dialog">ادامه بدون ورود</button>
+    </div>
+  </dialog>
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
     <div class="sheet-header">
       <svg id="settings-mark" aria-hidden="true"><use href="#i-mark"/></svg>
@@ -315,6 +377,10 @@
       <button class="icon-button" type="button" data-close="settings-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
     </div>
     <div id="settings-content" class="sheet-body">
+      <button type="button" class="settings-tile account-shortcut secondary" data-open-account>
+        <svg aria-hidden="true"><use href="#i-user"/></svg><span>حساب مدورا<small>ورود اختیاری با کد ایمیل</small></span>
+        <svg aria-hidden="true"><use href="#i-back"/></svg>
+      </button>
       <details id="display-settings" class="settings-tile">
         <summary><svg aria-hidden="true"><use href="#i-calendar"/></svg><span>زمان و تقویم<small>تقویم و ظاهر برنامه</small></span></summary>
         <form id="display-form">

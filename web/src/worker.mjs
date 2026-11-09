@@ -3,8 +3,10 @@ import { vapidHeaders } from "@block65/webcrypto-web-push";
 import { pilotConfig, smallJson, validSubscription } from "./validation.mjs";
 import { handleMedicationReminders } from "./medication-reminders.mjs";
 import { sendPush } from "./push.mjs";
+import { handleEmailAuth } from "./email-auth.mjs";
 
 export { MedicationReminders } from "./medication-reminders.mjs";
+export { EmailAccount } from "./email-auth.mjs";
 
 const hour = 3_600_000;
 const expiry = 180_000;
@@ -18,6 +20,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url);
 
     const vapid = pilotConfig(env);
     if (!vapid) return reply({ error: "unconfigured" }, 503);

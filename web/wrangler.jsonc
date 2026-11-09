@@ -12,16 +12,19 @@
   },
   "ratelimits": [
     { "name": "PUSH_ENROLL_LIMIT", "namespace_id": "750501", "simple": { "limit": 30, "period": 60 } },
-    { "name": "PUSH_DEVICE_LIMIT", "namespace_id": "750502", "simple": { "limit": 60, "period": 60 } }
+    { "name": "PUSH_DEVICE_LIMIT", "namespace_id": "750502", "simple": { "limit": 60, "period": 60 } },
+    { "name": "EMAIL_AUTH_LIMIT", "namespace_id": "750503", "simple": { "limit": 8, "period": 60 } }
   ],
   "durable_objects": {
     "bindings": [
       { "name": "PILOT", "class_name": "PushPilot" },
-      { "name": "REMINDERS", "class_name": "MedicationReminders" }
+      { "name": "REMINDERS", "class_name": "MedicationReminders" },
+      { "name": "EMAIL_ACCOUNTS", "class_name": "EmailAccount" }
     ]
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["PushPilot"] },
-    { "tag": "v2", "new_sqlite_classes": ["MedicationReminders"] }
+    { "tag": "v2", "new_sqlite_classes": ["MedicationReminders"] },
+    { "tag": "v3", "new_sqlite_classes": ["EmailAccount"] }
   ]
 }

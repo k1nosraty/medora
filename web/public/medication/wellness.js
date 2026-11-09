@@ -177,9 +177,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     if (!["water", "insights"].includes(destination)) mainScreen = destination;
     screen = destination;
     const dayControls = $("day-controls");
-    const plansHeading = $("plans-heading");
-    if (screen === "medications") plansHeading.after(dayControls);
-    else $("app").prepend(dayControls);
+    if (screen === "medications") $("med-day-title").after(dayControls);
+    else $("today-focus").after(dayControls);
     for (const view of document.querySelectorAll("[data-screen]")) view.hidden = view.dataset.screen !== screen;
     for (const item of document.querySelectorAll(".dock [data-destination]")) {
       if (item.dataset.destination === (screen === "water" ? "today" : screen)) item.setAttribute("aria-current", "page");
@@ -521,6 +520,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   function renderWellness(state, day) {
     setCalendar(state.calendar ?? "persian");
     document.body.dataset.theme = state.theme ?? "system";
+    const dark = state.theme === "dark" || (state.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+    document.querySelector('meta[name="theme-color"]').content = dark ? "#151b20" : "#f5f0f8";
     const totals = new Map();
     for (const entry of state.water ?? []) totals.set(entry.day, (totals.get(entry.day) ?? 0) + entry.amount);
     const total = totals.get(day) ?? 0;
@@ -530,8 +531,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("day-label").textContent = day === today() ? "امروز" : formatDay(day);
     $("pick-day").setAttribute("aria-label", `انتخاب تاریخ، ${formatDay(day, true)}`);
     if (screen === "today") {
-      $("day-week").replaceChildren(...week.map((_, index) => {
-        const date = day - 3 + index;
+      $("day-week").replaceChildren(...Array.from({ length: 5 }, (_, index) => {
+        const date = day - 2 + index;
         const control = dateButton(date, day, selected => chooseDay(selected, "day-week"));
         control.prepend(element("span", week[weekIndex(date)]));
         return control;
