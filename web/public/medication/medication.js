@@ -1,6 +1,7 @@
 import { accessCare } from "./storage.js";
 import { changeReminderRevision, initializeReminders, syncReminders } from "./reminders.js";
 import { wellness } from "./wellness.js";
+import { installPickers } from "./pickers.js";
 
 const $ = id => document.getElementById(id);
 const dayLength = 86_400_000;
@@ -69,7 +70,10 @@ function addPhase(phase = { start: today(), end: null, interval: 1, mask: 127, s
   });
   const slots = fieldset.querySelector(".slots");
   phase.slots.forEach(slot => addSlot(slots, slot));
-  fieldset.querySelector(".add-slot").addEventListener("click", () => addSlot(slots));
+  fieldset.querySelector(".add-slot").addEventListener("click", () => {
+    addSlot(slots);
+    pickers.refresh($("editor"));
+  });
   fieldset.querySelector(".remove-phase").addEventListener("click", () => {
     if ($("phases").children.length > 1) fieldset.remove();
   });
@@ -94,32 +98,45 @@ function openEditor(medicine) {
   $("phases").replaceChildren();
   if (medicine) medicine.phases.forEach(addPhase);
   else addPhase();
-  $("basic-time").value = $("phases").querySelector(".time").value;
-  $("basic-start").textContent = `شروع از ${dashboard.formatDay(medicine?.phases[0].start ?? today())}`;
-  $("advanced-plan").open = Boolean(medicine && !simpleSchedule());
+  $("phased-mode").checked = Boolean(medicine?.phased || needsPhases());
+  $("advanced-plan").open = $("phased-mode").checked;
   $("inventory-options").open = false;
   updateEditorMode();
   $("medication-dialog").showModal();
 }
 
-function simpleSchedule() {
+function needsPhases() {
   const phases = $("phases");
   const first = phases.firstElementChild;
-  return phases.children.length === 1 && !first.querySelector(".end").value &&
-    first.querySelector(".interval").value === "1" && first.querySelectorAll(".weekdays input:checked").length === 7 &&
-    first.querySelectorAll(".time").length === 1 && !first.querySelector(".amount").value.trim();
+  return phases.children.length > 1 || Boolean(first.querySelector(".end").value) || first.querySelector(".interval").value !== "1";
 }
 
 function updateEditorMode() {
   if (!$("phases").children.length) return;
-  const simple = !$("advanced-plan").open && simpleSchedule();
+  const phased = $("phased-mode").checked;
+  $("editor").dataset.phased = String(phased);
+  const simple = !phased && !$("advanced-plan").open;
   $("basic-schedule").hidden = !simple;
   $("basic-time").disabled = !simple;
-  if (simple) $("basic-time").value = $("phases").querySelector(".time").value;
+  $("phase-mode-warning").hidden = phased || !needsPhases();
+  if (simple) {
+    const first = $("phases").firstElementChild;
+    const times = Array.from(first.querySelectorAll(".time"), field => field.value);
+    $("basic-time").value = times[0];
+    $("basic-extra-times").hidden = times.length === 1;
+    $("basic-extra-times").textContent = times.slice(1).map(persianDigits).join(" · ");
+    const days = [...first.querySelectorAll(".weekdays label")].filter(field => field.querySelector("input").checked);
+    $("basic-repeat").textContent = days.length === 7 ? "هر روز" : days.map(day => day.textContent).join(" · ");
+    const start = first.querySelector(".start").value;
+    $("basic-start").textContent = start ? `شروع از ${dashboard.formatDay(dayNumber(start))}` : "";
+  }
+  pickers.refresh($("editor"));
 }
 
 function editorPhases() {
-  return Array.from($("phases").children, fieldset => {
+  const phased = $("phased-mode").checked;
+  const active = phased ? Array.from($("phases").children) : [$("phases").firstElementChild];
+  return active.map(fieldset => {
     const field = name => fieldset.querySelector(name);
     const slots = Array.from(field(".slots").children, row => {
       const [hour, minute] = row.querySelector(".time").value.split(":").map(Number);
@@ -129,8 +146,8 @@ function editorPhases() {
     }).sort((a, b) => a.minute - b.minute);
     return {
       start: dayNumber(field(".start").value),
-      end: field(".end").value ? dayNumber(field(".end").value) + 1 : null,
-      interval: Number(field(".interval").value),
+      end: phased && field(".end").value ? dayNumber(field(".end").value) + 1 : null,
+      interval: phased ? Number(field(".interval").value) : 1,
       mask: Array.from(field(".weekdays").querySelectorAll(":checked")).reduce((mask, input) => mask | Number(input.value), 0),
       slots
     };
@@ -165,7 +182,10 @@ $("editor").addEventListener("submit", async event => {
   const id = editing ?? crypto.randomUUID();
   try {
     $("editor-status").textContent = "";
-    if (!Array.from($("phases").querySelectorAll("input")).every(field => field.validity.valid)) {
+    const phased = $("phased-mode").checked;
+    const active = phased ? $("phases") : $("phases").firstElementChild;
+    const selector = phased ? "input" : "input:not(.end, .interval)";
+    if (!Array.from(active.querySelectorAll(selector)).every(field => field.validity.valid)) {
       $("advanced-plan").open = true;
       throw new Error("تاریخ شروع، فاصلهٔ تکرار و ساعت هر مرحله را بررسی کنید.");
     }
@@ -189,7 +209,7 @@ $("editor").addEventListener("submit", async event => {
       state.medicines[id] = {
         ...saved,
         id, name, unit: saved?.unit ?? unit, phases, stock: saved?.stock ?? stock, threshold,
-        instructions: $("instructions").value.trim(), icon: $("medicine-icon").value, color: $("medicine-color").value,
+        instructions: $("instructions").value.trim(), icon: $("medicine-icon").value, color: $("medicine-color").value, phased,
         revision: (saved?.revision ?? 0) + 1
       };
     }, "برنامهٔ دارو ذخیره شد.", true)) {
@@ -251,10 +271,6 @@ function renderMedicine(medicine) {
   const heading = action(medicine.name, () => openMedicine(medicine));
   heading.dir = "auto";
   heading.className = "text-button treatment-name";
-  const info = element("div");
-  info.append(heading, element("p", `${persianDigits(medicine.phases.length)} مرحلهٔ مصرف`));
-  const controls = element("div");
-  controls.className = "buttons";
   const toggle = element("input");
   toggle.type = "checkbox";
   toggle.role = "switch";
@@ -268,11 +284,16 @@ function renderMedicine(medicine) {
       saved.revision += 1;
     }, paused ? "برنامهٔ دارو متوقف شد." : "برنامهٔ دارو فعال شد.", true)) toggle.checked = !toggle.checked;
   });
-  controls.append(toggle, action("ویرایش", () => openEditor(medicine), true));
   const top = element("div");
   top.className = "feature-head";
-  top.append(icon(medicineIcons[medicine.icon] ?? "pill"), info, controls);
-  card.append(top);
+  top.append(icon(medicineIcons[medicine.icon] ?? "pill"), heading, toggle);
+  const status = element("p", medicine.paused ? "برنامه متوقف است" : "برنامه فعال است");
+  status.className = "quiet";
+  card.append(top, status);
+  if (medicine.instructions) card.append(element("p", medicine.instructions));
+  if (medicine.phased || medicine.phases.length > 1) card.append(element("p", `${persianDigits(medicine.phases.length)} مرحلهٔ مصرف`));
+  else card.append(element("p", `ساعت‌های مصرف: ${medicine.phases[0].slots.map(slot => persianDigits(timeText(slot.minute))).join(" · ")}`));
+  card.append(element("p", `شروع از ${dashboard.formatDay(medicine.phases[0].start)}`));
   if (medicine.stock !== null) {
     const upcoming = medicine.paused ? null : nextAmount(medicine);
     const low = upcoming !== null && engine.isLowStock(medicine.stock, medicine.threshold, upcoming);
@@ -305,6 +326,9 @@ function renderMedicine(medicine) {
     });
     card.append(purchase);
   }
+  const edit = action("ویرایش", () => openEditor(medicine), true);
+  edit.className = "text-button";
+  card.append(edit);
   return card;
 }
 
@@ -401,30 +425,39 @@ function renderDose(medicine, dose) {
   return card;
 }
 
-function render() {
-  const medicines = Object.values(care.medicines);
-  $("plans").replaceChildren(...(medicines.length ? medicines.map(renderMedicine) : [element("p", "هنوز دارویی اضافه نشده است.")]));
-  if (!$("day").value) return;
-  const day = dayNumber($("day").value);
-  dashboard.renderWellness(care, day);
+function scheduledDoses(state, day) {
   const doses = new Map();
-  for (const medicine of medicines) {
+  for (const medicine of Object.values(state.medicines)) {
     if (medicine.paused) continue;
     for (const slot of engine.medicationSlots(rules(medicine.phases), day)) {
       doses.set(doseId(medicine, day, slot.minuteOfDay), { medicineId: medicine.id, day, minute: slot.minuteOfDay, planned: slot.milliUnits });
     }
   }
-  for (const [id, dose] of Object.entries(care.doses)) {
+  for (const [id, dose] of Object.entries(state.doses)) {
     if (dose.day === day && (dose.status || doses.has(id))) doses.set(id, dose);
   }
-  const daily = [...doses.values()].sort((a, b) => a.minute - b.minute);
+  return [...doses.values()].sort((a, b) => a.minute - b.minute);
+}
+
+function render() {
+  const medicines = Object.values(care.medicines);
+  const noPlans = element("p", "برنامهٔ دارویی ثبت نشده است.");
+  noPlans.className = "empty";
+  $("plans").replaceChildren(...(medicines.length ? medicines.map(renderMedicine) : [noPlans]));
+  if (!$("day").value) return;
+  const day = dayNumber($("day").value);
+  dashboard.renderWellness(care, day);
+  const daily = scheduledDoses(care, day);
   const doseCard = dose => renderDose(care.medicines[dose.medicineId], dose);
   const consumed = daily.filter(dose => dose.status === "taken").length;
   const percent = daily.length ? Math.round(consumed * 100 / daily.length) : 0;
+  $("med-day-summary").hidden = daily.length === 0;
   $("med-day-count").textContent = `${persianDigits(consumed)} از ${persianDigits(daily.length)} نوبت`;
   $("med-day-ring").style.setProperty("--percent", percent);
   $("med-day-ring").firstElementChild.textContent = `${persianDigits(percent)}٪`;
-  $("med-day-doses").replaceChildren(...(daily.length ? daily.map(doseCard) : [element("p", "برای این روز نوبت دارویی ندارید.")]));
+  const noDoses = element("p", "برای این روز نوبت مصرف دارو ثبت نشده است.");
+  noDoses.className = "empty";
+  $("med-day-doses").replaceChildren(...(daily.length ? daily.map(doseCard) : [noDoses]));
   const events = daily.map(dose => ({ minute: dose.minute, card: doseCard(dose) }));
   events.push(...dashboard.dayVisits(care, day));
   events.sort((a, b) => a.minute - b.minute);
@@ -452,11 +485,53 @@ async function reload() {
 $("day").addEventListener("change", render);
 for (const control of document.querySelectorAll("[data-open-medication]")) control.addEventListener("click", () => openEditor());
 for (const control of document.querySelectorAll("[data-close]")) control.addEventListener("click", () => $(control.dataset.close).close());
-$("add-phase").addEventListener("click", () => addPhase());
+$("add-phase").addEventListener("click", () => {
+  addPhase();
+  pickers.refresh($("editor"));
+});
 $("advanced-plan").addEventListener("toggle", updateEditorMode);
+$("phased-mode").addEventListener("change", () => {
+  $("advanced-plan").open = $("phased-mode").checked;
+  updateEditorMode();
+});
 $("basic-time").addEventListener("input", () => { $("phases").querySelector(".time").value = $("basic-time").value; });
-window.addEventListener("focus", () => { void reload(); void syncReminders(true); });
-const dashboard = wellness({ getState: () => care, selectedDay: () => $("day").value ? dayNumber($("day").value) : today(), today, render, mutate });
+window.addEventListener("focus", () => {
+  if (!engine || !care) return;
+  void reload();
+  void syncReminders(true);
+});
+const selectedDay = () => $("day").value ? dayNumber($("day").value) : today();
+const dashboard = wellness({
+  getState: () => care, selectedDay, today, render, mutate, scheduledDoses, renderDose,
+  refreshFields: container => pickers.refresh(container)
+});
+const pickers = installPickers({ selectedDay, today, dashboard });
+
+function showIntro() {
+  const hasRecords = Object.keys(care.medicines).length || Object.keys(care.doses).length ||
+    care.water?.length || Object.keys(care.visits ?? {}).length || care.reminders ||
+    care.theme || care.calendar || care.waterGoal;
+  if (care.intro === "done" || hasRecords) return;
+  function show(step) {
+    document.querySelector(".app-bar").hidden = step !== "done";
+    $("app").hidden = step !== "done";
+    $("welcome-screen").hidden = step !== "welcome";
+    $("permission-screen").hidden = step !== "permission";
+  }
+  async function advance(step) {
+    if (await mutate(state => { state.intro = step; }, "")) {
+      show(step);
+      return true;
+    }
+    return false;
+  }
+  $("welcome-start").addEventListener("click", () => void advance("permission"));
+  $("intro-later").addEventListener("click", () => void advance("done"));
+  $("intro-notifications").addEventListener("click", async () => {
+    if (await advance("done")) dashboard.show("settings", true);
+  });
+  show(care.intro ?? "welcome");
+}
 
 try {
   engine = await import("/care-engine/care-core.mjs");
@@ -467,6 +542,7 @@ try {
   render();
   $("app").hidden = false;
   $("boot-status").hidden = true;
+  showIntro();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/medication/sw.js").catch(() => {});
   void initializeReminders();
 } catch {

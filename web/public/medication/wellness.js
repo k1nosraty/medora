@@ -33,12 +33,15 @@ function localClock() {
 }
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 
-export function wellness({ getState, selectedDay, today, render, mutate }) {
+export function wellness({ getState, selectedDay, today, render, mutate, scheduledDoses, renderDose, refreshFields }) {
   let screen = "today";
+  let mainScreen = "today";
   let editingVisit = null;
   let editingWater = null;
   let visitFilter = "all";
   let insight = "calendar";
+  let calendarSelection = today();
+  let calendarMonth = calendarSelection;
   let reportSpan = 30;
   let calendar;
   let dateText;
@@ -62,14 +65,46 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     render();
     if (restoreFocus) $(restoreFocus).querySelector('[aria-current="date"]')?.focus();
   }
+  const settingsPanels = {
+    "display-settings": "زبان و تقویم",
+    "notification-settings": "اعلان‌ها",
+    "water-settings": "آب"
+  };
+  function selectSettings(panel) {
+    const settings = $("settings-dialog");
+    settings.dataset.panel = panel || "";
+    $("settings-mark").hidden = Boolean(panel);
+    $("settings-back").hidden = !panel;
+    $("settings-subtitle").textContent = settingsPanels[panel] ?? "یادآوری‌ها مطابق برنامهٔ روزانهٔ شما";
+    $("settings-status").textContent = "";
+    for (const id of Object.keys(settingsPanels)) $(id).open = panel === id;
+    settings.scrollTop = 0;
+  }
+  for (const id of Object.keys(settingsPanels)) {
+    $(id).querySelector("summary").addEventListener("click", event => {
+      event.preventDefault();
+      selectSettings(id);
+      $("settings-back").focus();
+    });
+  }
+  $("settings-back").addEventListener("click", () => {
+    const selected = $("settings-dialog").dataset.panel;
+    selectSettings();
+    $(selected)?.querySelector("summary").focus();
+  });
   function show(destination, notifications = false) {
     if (destination === "settings") {
-      $("settings-status").textContent = "";
-      $("notification-settings").open = notifications;
+      selectSettings(notifications ? "notification-settings" : null);
       $("settings-dialog").showModal();
       return;
     }
     if (!Object.hasOwn(titles, destination)) return;
+    if (destination === "water") $("day").value = iso(today());
+    if (destination === "insights") {
+      calendarMonth = calendarSelection = today();
+      openInsight("calendar");
+    }
+    if (!["water", "insights"].includes(destination)) mainScreen = destination;
     screen = destination;
     const dayControls = $("day-controls");
     const plansHeading = $("plans-heading");
@@ -88,7 +123,7 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     render();
     scrollTo(0, 0);
   }
-  $("screen-back").addEventListener("click", () => show("today"));
+  $("screen-back").addEventListener("click", () => show(mainScreen));
   for (const button of document.querySelectorAll("[data-destination]")) {
     button.addEventListener("click", () => show(button.dataset.destination, button.hasAttribute("data-open-notifications")));
   }
@@ -132,11 +167,17 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     $("water-error").textContent = "";
     $("water-options").open = Boolean(entry || custom);
     updateWaterSelection();
+    refreshFields($("water-dialog"));
     $("water-dialog").showModal();
   }
   for (const control of document.querySelectorAll("[data-open-water]")) {
     control.addEventListener("click", () => openWater(null, control.id === "water-custom-action"));
   }
+  $("water-custom-preset").addEventListener("click", () => {
+    $("water-options").open = true;
+    $("water-amount").focus();
+    $("water-amount").select();
+  });
   $("water-amount").addEventListener("input", updateWaterSelection);
   for (const control of document.querySelectorAll("[data-water-preset]")) control.addEventListener("click", () => {
     $("water-amount").value = control.dataset.waterPreset;
@@ -168,16 +209,17 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     $("settings-status").textContent = $("status").textContent;
   });
 
-  function openVisit(visit) {
+  function openVisit(visit, date = selectedDay()) {
     editingVisit = visit?.id ?? null;
     $("visit-form-title").textContent = visit ? "ویرایش قرار" : "قرار جدید";
     $("visit-name").value = visit?.name ?? "";
-    $("visit-day").value = iso(visit?.day ?? selectedDay());
+    $("visit-day").value = iso(visit?.day ?? date);
     $("visit-time").value = visit?.time ?? localClock();
     $("visit-place").value = visit?.place ?? "";
     $("visit-note").value = visit?.note ?? "";
     $("visit-editor").querySelector("details").open = Boolean(visit?.note);
     $("visit-error").textContent = "";
+    refreshFields($("visit-dialog"));
     $("visit-dialog").showModal();
   }
   for (const control of document.querySelectorAll("[data-open-visit]")) control.addEventListener("click", () => openVisit());
@@ -201,22 +243,23 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     else $("visit-error").textContent = $("status").textContent;
   });
 
-  function visitCard(visit, details = false) {
+  function visitCard(visit, controlsMode = "read") {
     const card = element("article", "", "visit");
     const title = element("h3", visit.name, "visit-title");
     title.dir = "auto";
     card.append(title, element("p", `${shortDate.format(visit.day * dayMs)} · ${clockText(visit.time)}`));
-    if (visit.place) card.append(element("p", visit.place, "quiet"));
+    if (visit.place) card.append(element("p", `مکان: ${visit.place}`, "quiet"));
     if (visit.cancelled) card.append(element("p", "قرار لغو شده", "badge"));
-    if (details) {
-      if (visit.note) card.append(element("p", visit.note));
+    if (visit.note) card.append(element("p", visit.note));
+    if (controlsMode !== "read") {
       const controls = element("div", "", "buttons");
       controls.append(button("ویرایش", () => openVisit(visit)), button(visit.cancelled ? "فعال‌کردن قرار" : "لغو قرار", () => {
         void mutate(state => {
           const saved = state.visits[visit.id];
           if (saved) saved.cancelled = !saved.cancelled;
         }, "وضعیت قرار ذخیره شد.");
-      }), button("حذف", () => {
+      }));
+      if (controlsMode === "list") controls.append(button("حذف", () => {
         if (confirm("این قرار حذف شود؟")) void mutate(state => { delete state.visits[visit.id]; }, "قرار حذف شد.");
       }));
       card.append(controls);
@@ -226,7 +269,7 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
 
   function dayVisits(state, day) {
     return Object.values(state.visits ?? {}).filter(visit => visit.day === day && !visit.cancelled)
-      .map(visit => ({ minute: minutes(visit.time), card: visitCard(visit) }));
+      .map(visit => ({ minute: minutes(visit.time), card: visitCard(visit, day > today() ? "read" : "edit") }));
   }
 
   function renderVisits(state) {
@@ -236,15 +279,17 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     const past = visits.filter(visit => !upcoming.includes(visit)).reverse();
     const content = [];
     if (upcoming.length && visitFilter !== "past") {
-      content.push(element("h2", "نزدیک‌ترین قرار"), visitCard(upcoming[0], true));
-      if (upcoming.length > 1) content.push(element("h2", "قرارهای پیش‌رو"), ...upcoming.slice(1).map(visit => visitCard(visit, true)));
+      content.push(element("h2", "نزدیک‌ترین قرار"), ...upcoming.map(visit => visitCard(visit, "list")));
     }
-    if (past.length && visitFilter !== "upcoming") content.push(element("h2", "گذشته و لغوشده"), ...past.map(visit => visitCard(visit, true)));
+    if (past.length && visitFilter !== "upcoming") {
+      if (visitFilter === "all") content.push(element("h2", "گذشته و لغوشده"));
+      content.push(...past.map(visit => visitCard(visit, "list")));
+    }
     $("visits").replaceChildren(...(content.length ? content : [empty("در این بخش قراری ندارید.")]));
   }
 
-  function dateButton(day, selected, container) {
-    const control = button(dayText.format(day * dayMs), () => chooseDay(day, container));
+  function dateButton(day, selected, choose) {
+    const control = button(dayText.format(day * dayMs), () => choose(day));
     control.setAttribute("aria-label", dateText.format(day * dayMs));
     if (day === selected) control.setAttribute("aria-current", "date");
     return control;
@@ -254,20 +299,24 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     return day - Number(dayIndex.formatToParts(day * dayMs).find(part => part.type === "day").value) + 1;
   }
 
-  function renderCalendar(state, day, totals, doses) {
-    const start = monthStart(day);
+  function renderCalendar(state, totals) {
+    const day = calendarSelection;
+    const start = monthStart(calendarMonth);
     const month = monthText.format(start * dayMs);
     const slots = week.map(label => element("span", label, "quiet"));
     for (let offset = 0; offset < weekIndex(start); offset++) slots.push(element("span"));
     const visits = Object.values(state.visits ?? {}).filter(visit => !visit.cancelled);
     const visitDays = new Set(visits.map(visit => visit.day));
-    const doseDays = new Set(doses.map(dose => dose.day));
     for (let date = start; monthText.format(date * dayMs) === month; date++) {
-      const control = dateButton(date, day, "calendar-days");
+      const control = dateButton(date, day, selected => {
+        calendarSelection = selected;
+        render();
+        $("calendar-days").querySelector('[aria-current="date"]')?.focus();
+      });
       const dots = element("span", "", "calendar-dots");
       dots.setAttribute("aria-hidden", "true");
       for (const [exists, kind, label] of [
-        [totals.has(date), "water", "ثبت آب"], [doseDays.has(date), "medicine", "ثبت دارو"], [visitDays.has(date), "visit", "قرار پزشکی"]
+        [totals.has(date), "water", "ثبت آب"], [scheduledDoses(state, date).length, "medicine", "نوبت دارو"], [visitDays.has(date), "visit", "قرار پزشکی"]
       ]) if (exists) {
         dots.append(element("i", "", kind));
         control.setAttribute("aria-label", `${control.getAttribute("aria-label")}، ${label}`);
@@ -278,11 +327,14 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     $("calendar-month").textContent = month;
     $("calendar-days").replaceChildren(...slots);
     const entries = [
-      ...(totals.has(day) ? [element("p", `${numbers.format(totals.get(day))} میلی‌لیتر آب`)] : []),
-      ...doses.filter(dose => dose.day === day).map(dose => element("p", `${state.medicines[dose.medicineId]?.name ?? "دارو"} · ${dose.status === "taken" ? "مصرف شد" : "مصرف نشد"}`)),
-      ...visits.filter(visit => visit.day === day).map(visit => visitCard(visit))
+      ...(totals.has(day) ? [element("article", `${numbers.format(totals.get(day))} میلی‌لیتر آب`, "water")] : []),
+      ...scheduledDoses(state, day).map(dose => renderDose(state.medicines[dose.medicineId], dose)),
+      ...Object.values(state.visits ?? {}).filter(visit => visit.day === day).map(visit => visitCard(visit, "edit"))
     ];
-    $("calendar-activity").replaceChildren(element("h2", "فعالیت این روز"), ...(entries.length ? entries : [empty("فعالیتی ثبت نشده است.")]));
+    const add = button("قرار جدید", () => openVisit(null, day));
+    add.className = "block-action";
+    $("calendar-activity").replaceChildren(element("h2", dateText.format(day * dayMs)),
+      ...(entries.length ? entries : [empty("فعالیتی ثبت نشده است.")]), add);
   }
 
   function renderReports(day, goal, totals, doses) {
@@ -328,16 +380,18 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     const future = day > today();
     const progress = Math.min(1, total / goal);
     $("day-label").textContent = day === today() ? "امروز" : shortDate.format(day * dayMs);
+    $("pick-day").setAttribute("aria-label", `انتخاب تاریخ، ${dateText.format(day * dayMs)}`);
     if (screen === "today") {
       const start = day - weekIndex(day);
       $("day-week").replaceChildren(...week.map((label, index) => {
-        const control = dateButton(start + index, day, "day-week");
+        const control = dateButton(start + index, day, selected => chooseDay(selected, "day-week"));
         control.prepend(element("span", label));
         return control;
       }));
     }
     $("header-date").textContent = screen === "today" ? dateText.format(day * dayMs) : "";
     $("today-water").hidden = future;
+    $("future-schedule").hidden = !future;
     $("open-water-history").hidden = future;
     $("today-actions").hidden = future;
     $("water-custom-action").hidden = future;
@@ -350,6 +404,7 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     $("water-progress").value = progress;
     $("water-date").textContent = day === today() ? "امروز" : shortDate.format(day * dayMs);
     $("water-total").textContent = numbers.format(total);
+    $("water-goal-label").textContent = numbers.format(goal);
     $("water-remaining").textContent = $("today-water-remaining").textContent;
     const level = 90 - 78 * progress;
     for (const glass of document.querySelectorAll(".glass-water")) {
@@ -373,8 +428,8 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
 
     if (screen === "insights") {
       const doses = Object.values(state.doses).filter(dose => dose.status);
-      if (insight === "calendar") renderCalendar(state, day, totals, doses);
-      else renderReports(day, goal, totals, doses);
+      if (insight === "calendar") renderCalendar(state, totals);
+      else renderReports(today(), goal, totals, doses);
     }
   }
 
@@ -387,13 +442,27 @@ export function wellness({ getState, selectedDay, today, render, mutate }) {
     });
   }
   chooseOption("visit-filter", value => { visitFilter = value; });
-  chooseOption("insight", value => {
+  function openInsight(value) {
     insight = value;
+    for (const control of document.querySelectorAll("[data-insight]")) {
+      control.setAttribute("aria-pressed", String(control.dataset.insight === value));
+    }
     $("calendar-panel").hidden = value !== "calendar";
     $("reports-panel").hidden = value !== "reports";
-  });
+  }
+  chooseOption("insight", openInsight);
   chooseOption("report-range", value => { reportSpan = Number(value); });
-  $("previous-month").addEventListener("click", () => chooseDay(monthStart(monthStart(selectedDay()) - 1)));
-  $("next-month").addEventListener("click", () => chooseDay(monthStart(monthStart(selectedDay()) + 32)));
-  return { dayVisits, renderWellness, formatDay: day => dateText.format(day * dayMs) };
+  for (const [id, delta] of [["previous-month", -1], ["next-month", 32]]) {
+    $(id).addEventListener("click", () => {
+      calendarMonth = monthStart(monthStart(calendarMonth) + delta);
+      render();
+    });
+  }
+  return {
+    dayVisits, renderWellness, monthStart, chooseDay, show,
+    formatDay: day => dateText.format(day * dayMs),
+    formatMonth: day => monthText.format(day * dayMs),
+    formatDayNumber: day => dayText.format(day * dayMs),
+    dateLimit: () => screen === "water" ? today() : Infinity
+  };
 }

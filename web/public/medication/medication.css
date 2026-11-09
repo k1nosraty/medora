@@ -58,8 +58,6 @@
 .day-controls, .feature-head, .section-heading { justify-content: space-between; }
 .day-arrow { flex: none; }
 .date-field { position: relative; display: flex; align-items: center; justify-content: center; gap: .45rem; min-inline-size: 0; min-block-size: 3rem; padding-inline: .65rem; border: 1px solid var(--outline); border-radius: .9rem; background: var(--field); text-align: center; font-size: .875rem; font-weight: 650; }
-.date-field input { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.date-field input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; cursor: pointer; }
 .date-field:focus-within { outline: .15rem solid var(--action); outline-offset: .15rem; }
 .medora .feature, .medora article, .medora form, .medora fieldset { padding: .9rem; border: 1px solid var(--outline); border-radius: 1.2rem; background: var(--panel); min-inline-size: 0; }
 .medora .feature { border-start-start-radius: 1.75rem; border-end-end-radius: 1.75rem; }
@@ -148,7 +146,7 @@
 .medora .amount-line strong { font-size: 1.14rem; }
 .medora svg.water-glass { inline-size: 3.6rem; block-size: 4.4rem; }
 .medora .water-summary .water-glass { inline-size: 4.65rem; block-size: 5.5rem; }
-.glass-water { fill: #45aee5; fill-opacity: .82; stroke: none; }
+.glass-water { fill: url(#glass-water-fill); stroke: none; }
 .medora .water-progress { display: block; inline-size: 100%; block-size: .25rem; border: 0; border-radius: 1rem; margin-block: .38rem; background: #075e8a26; color: var(--water-ink); appearance: none; -webkit-appearance: none; }
 .water-progress::-webkit-progress-bar { background: #075e8a26; border-radius: 1rem; }
 .water-progress::-webkit-progress-value { background: var(--water-ink); border-radius: 1rem; }
@@ -185,9 +183,8 @@
 .dose-options summary { position: absolute; inset-inline-end: .4rem; inset-block-start: .3rem; min-inline-size: 2.6rem; min-block-size: 2.6rem; text-align: center; align-content: center; font-size: 1.35rem; list-style: none; }
 .dose-options summary::-webkit-details-marker { display: none; }
 .dose-options[open] { margin-block: .5rem; }
-.medora .treatment-name { font-weight: 750; text-align: start; }
+.medora .treatment-name { flex: 1; font-weight: 750; text-align: start; }
 .treatment p { font-size: .85rem; }
-.treatment .buttons { align-items: center; margin: 0; margin-inline-start: auto; }
 .medora input[role="switch"] { appearance: none; inline-size: 2.45rem; min-block-size: 1.4rem; padding: .13rem; margin: .35rem; border-radius: 2rem; background: var(--outline); cursor: pointer; }
 .medora input[role="switch"]::before { content: ""; display: block; block-size: 1rem; inline-size: 1rem; border-radius: 50%; background: var(--field); }
 .medora input[role="switch"]:checked { background: var(--action); }
@@ -251,3 +248,67 @@
 .medora .entry-row button, .medora .visit .buttons button { min-block-size: 2.75rem; min-inline-size: 2.75rem; }
 .medora .entry-row button { color: var(--ink); padding-inline: .3rem; }
 .medora #water-selection { font-size: .9rem; }
+.medora button.date-field { background: transparent; border: 0; color: var(--action); }
+.medora .value-picker { max-inline-size: 100%; }
+.value-picker h2 { text-align: center; margin-block-start: 0; }
+.medora .value-picker .calendar-grid { row-gap: .12rem; }
+.medora .value-picker .calendar-grid button[aria-pressed="true"] { background: var(--action); color: var(--on-action); border-radius: 50%; }
+.medora .value-picker .calendar-grid button { min-block-size: clamp(2rem, 7dvh, 3rem); }
+.picker-actions { margin-block-start: .85rem; }
+.medora .picker-control { min-inline-size: 0; }
+.medora .fields .picker-control { flex: 1 1 7rem; }
+.medora .picker-control .editor-field { border: 0; padding: 0; background: none; }
+.medora .picker-field { inline-size: 100%; border-radius: 3rem; background: transparent; color: var(--action); }
+.clock-display { display: flex; justify-content: center; align-items: center; gap: .4rem; font-size: 2rem; }
+.medora .clock-display button { inline-size: 4rem; min-block-size: 3.5rem; background: var(--panel); border: 0; color: var(--ink); font-size: 1.85rem; }
+.medora .clock-display button[aria-pressed="true"] { background: var(--visit); color: var(--visit-ink); }
+.clock-dial { margin: 1rem auto; position: relative; inline-size: min(16rem, 100%); aspect-ratio: 1; background: var(--panel); border-radius: 50%; }
+.medora .clock-dial button { position: absolute; transform: translate(-50%, -50%); border: 0; background: transparent; color: var(--ink); min-block-size: 1.85rem; inline-size: 1.85rem; padding: 0; border-radius: 50%; font-size: .86rem; }
+.medora .clock-dial button[aria-pressed="true"] { background: var(--action); color: var(--on-action); }
+.clock-hand { position: absolute; inset-inline-start: 50%; inset-block-end: 50%; block-size: 41%; inline-size: .13rem; background: var(--action); transform-origin: center bottom; transform: translateX(-50%) rotate(var(--angle)); }
+.clock-hand.inner { block-size: 27%; }
+.clock-hand::after { content: ""; position: absolute; inset-block-end: -.18rem; inset-inline-start: -.13rem; inline-size: .4rem; block-size: .4rem; border-radius: 50%; background: var(--action); }
+.medora #clock-mode { display: block; margin: .45rem auto; }
+.intro { position: relative; box-sizing: border-box; min-block-size: 100vh; min-block-size: 100dvh; padding: max(2rem, env(safe-area-inset-top)) 1.5rem max(2rem, env(safe-area-inset-bottom)); overflow: hidden; }
+.welcome { background: linear-gradient(#103d38, #006f68); color: white; }
+.intro-content { position: relative; z-index: 1; max-inline-size: 32rem; margin: auto; text-align: center; }
+.medora .intro-landscape { position: absolute; inset: auto 0 0; inline-size: 100%; block-size: min(21rem, 46vh); stroke: none; }
+.medora .intro-mark { inline-size: min(9rem, 26vh); block-size: min(9rem, 26vh); color: #b8ead5; margin-block: 1rem .65rem; }
+.medora .welcome h1 { font-size: 2.35rem; }
+.medora .welcome h2 { margin-block: 1.1rem .75rem; font-size: 1.25rem; }
+.medora .welcome p { color: #ddf1e8; }
+.medora .welcome button { margin-block: clamp(2rem, 12vh, 5rem) .8rem; border-radius: 3rem; background: #b8ead5; color: #103d38; }
+.permission-art { position: relative; block-size: min(15rem, 33vh); }
+.medora .permission-art .intro-landscape { block-size: 100%; }
+.medora .permission-art .intro-mark { position: relative; z-index: 1; inline-size: 5rem; block-size: 5rem; color: #9e6515; stroke-width: .8; }
+.medora #permission-screen h1, .medora #permission-screen p { margin-block: 1rem; }
+.medora .editor-switch { display: flex; gap: .6rem; align-items: center; padding-block: .2rem; }
+.medora .editor-switch input { flex: none; }
+.medora [data-phased="true"] #advanced-plan > summary,
+.medora [data-phased="false"] .phase-only,
+.medora [data-phased="false"] .phase:not(:first-child),
+.medora [data-phased="false"] .phase legend { display: none; }
+.medora [data-phased="false"] .phase:first-child { border: 0; padding: 0; }
+
+.medora .sheet button.block-action, .medora .picker-actions button { border-radius: 3rem; }
+.medora #water-dialog .sheet-body { padding-block: 1rem 1.35rem; }
+.medora #water-presets { display: flex; gap: .45rem; margin-block: 0 .45rem; }
+.medora #water-presets button { min-inline-size: 3.35rem; }
+.medora #water-options { padding: .25rem 0; background: transparent; }
+.medora #water-options summary { color: var(--action); }
+.medora #water-dialog .block-action { margin-block-start: .75rem; }
+.medora #medicine-appearance summary { display: flex; align-items: center; gap: .5rem; min-block-size: 3.25rem; }
+.medora #medicine-appearance summary::after { content: "⌄"; margin-inline-start: auto; }
+.medora #medicine-appearance[open] summary::after { content: "⌃"; }
+.medora #time-picker { background: var(--panel); }
+.medora #time-picker .sheet-body { padding-block: 1.1rem 1.25rem; }
+.medora #time-picker h2 { font-size: 1.25rem; margin-block-end: 1rem; }
+.medora #time-picker .clock-dial { background: color-mix(in srgb, var(--action) 14%, var(--panel)); margin-block: 1.65rem; }
+.medora .clock-display button { font-size: 2.35rem; min-block-size: 4rem; }
+.medora .clock-display button[aria-pressed="true"] { background: color-mix(in srgb, var(--action) 14%, var(--panel)); color: var(--ink); }
+.medora #clock-mode { margin-block: .65rem 1rem; }
+.medora #settings-back { margin-inline: -.45rem 0; }
+.medora .settings-dialog[data-panel]:not([data-panel=""]) .settings-tile:not([open]),
+.medora .settings-dialog[data-panel]:not([data-panel=""]) .settings-tile[open] > summary { display: none; }
+.medora .settings-dialog .settings-tile[open] { padding: .65rem .8rem; }
+.medora .settings-dialog .settings-tile[open] .settings-fields { border: 0; padding: 0; margin: 0; }

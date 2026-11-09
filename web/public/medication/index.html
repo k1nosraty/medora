@@ -26,9 +26,42 @@
     <symbol id="i-injection" viewBox="0 0 24 24"><path d="m7 15 8-8 3 3-8 8-3-3Zm9-10 5 5M7 17l-4 4m8-10 2 2m-5 1 2 2m4-8 2 2"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
-    <symbol id="i-glass" viewBox="0 0 100 100"><path fill="#e4f4ff" fill-opacity=".48" stroke="#b7daf0" stroke-width="2" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/><path stroke="white" stroke-opacity=".72" stroke-width="5" d="M22 18l8 61"/></symbol>
+    <symbol id="i-glass" viewBox="0 0 100 100"><ellipse fill="#5b9abe" fill-opacity=".1" cx="50" cy="94" rx="34" ry="4"/><path fill="url(#glass-fill)" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></symbol>
+    <symbol id="i-glass-rim" viewBox="0 0 100 100"><path stroke="white" stroke-opacity=".72" stroke-width="5.5" d="M22 18l8 61"/><path stroke="#b7daf0" stroke-width="2.5" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/><ellipse stroke="white" stroke-opacity=".4" stroke-width="2.5" cx="50" cy="6.25" rx="37" ry="4.75"/></symbol>
+    <linearGradient id="glass-fill"><stop stop-color="#e4f4ff" stop-opacity=".4"/><stop offset="1" stop-color="#f3faff" stop-opacity=".7"/></linearGradient>
+    <linearGradient id="glass-water-fill" x2="0" y2="1"><stop stop-color="#84d3fc"/><stop offset="1" stop-color="#36a7e8"/></linearGradient>
     <clipPath id="glass-clip"><path d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></clipPath>
+    <symbol id="i-landscape" viewBox="0 0 100 100">
+      <circle fill="#f3c56a" opacity=".85" cx="72" cy="48" r="21"/>
+      <path fill="#2b9984" d="M0 52C25 28 38 72 62 52C79 24 93 49 100 38V100H0Z"/>
+      <path fill="#187569" d="M0 67C25 43 38 87 62 67C79 39 93 64 100 53V100H0Z"/>
+      <path fill="#0f5048" d="M0 82C25 58 38 102 62 82C79 54 93 79 100 68V100H0Z"/>
+      <path fill="#66d8c2" opacity=".24" d="M12 98C-5 70 8 38 25 28C31 54 26 79 12 98ZM14 68C2 50 5 32 15 14C23 38 23 57 14 68Z"/>
+    </symbol>
   </svg>
+  <div id="welcome-screen" class="intro welcome" hidden>
+    <svg class="intro-landscape" aria-hidden="true"><use href="#i-landscape"/></svg>
+    <div class="intro-content">
+      <svg class="intro-mark" aria-hidden="true"><use href="#i-mark"/></svg>
+      <h1>مدورا</h1>
+      <h2>همراه سلامتی، هر روز</h2>
+      <p>یادآوری آب، دارو و قرارهای پزشکی</p>
+      <button type="button" id="welcome-start" class="block-action">شروع کنید</button>
+      <p class="quiet">سوابق روی همین گوشی می‌ماند.</p>
+    </div>
+  </div>
+  <div id="permission-screen" class="intro" hidden>
+    <div class="intro-content">
+      <div class="permission-art">
+        <svg class="intro-landscape" aria-hidden="true"><use href="#i-landscape"/></svg>
+        <svg class="intro-mark" aria-hidden="true"><use href="#i-bell"/></svg>
+      </div>
+      <h1>یادآوری‌ها به اجازهٔ شما نیاز دارند</h1>
+      <p>برای دریافت یادآوری نوبت دارو هنگام بسته‌بودن مدورا، اعلان‌ها را فعال کنید.</p>
+      <button type="button" id="intro-notifications" class="block-action">فعال‌کردن اعلان‌ها</button>
+      <button type="button" id="intro-later" class="secondary block-action">فعلاً نه</button>
+    </div>
+  </div>
   <header class="app-bar">
     <div class="app-bar-inner">
       <div class="brand-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></div>
@@ -42,11 +75,13 @@
     <div id="app" hidden>
       <div id="day-controls" class="day-controls">
         <button type="button" class="secondary day-arrow icon-button" id="next-day" aria-label="روز بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
-        <label class="date-field"><svg aria-hidden="true"><use href="#i-calendar"/></svg><span id="day-label"></span><input id="day" type="date" aria-label="انتخاب تاریخ روز" required></label>
+        <button id="pick-day" class="date-field" type="button"><svg aria-hidden="true"><use href="#i-calendar"/></svg><span id="day-label"></span></button>
+        <input id="day" type="date" hidden>
         <button type="button" class="secondary day-arrow icon-button reverse" id="previous-day" aria-label="روز قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
         <div id="day-week" class="day-week" aria-label="روزهای هفته"></div>
       </div>
       <div data-screen="today">
+        <p id="future-schedule" class="quiet" hidden>برنامهٔ آینده. ثبت مصرف فقط از روز موعد فعال می‌شود.</p>
         <section id="today-water" class="feature water">
           <div class="feature-head">
             <div class="water-info">
@@ -55,7 +90,7 @@
               <progress class="water-progress" id="today-water-progress" aria-label="پیشرفت هدف آب" max="1" value="0"></progress>
               <p class="quiet" id="today-water-remaining"></p>
             </div>
-            <svg class="water-glass" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/></svg>
+            <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/><use href="#i-glass-rim"/></svg>
           </div>
           <button type="button" class="block-action" data-open-water>ثبت آب</button>
         </section>
@@ -95,8 +130,8 @@
       <div data-screen="water" hidden>
         <section class="feature water">
           <div class="feature-head water-summary">
-            <svg class="water-glass" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/></svg>
-            <div class="water-info"><strong id="water-date"></strong><p class="amount-line"><strong id="water-total">۰</strong> میلی‌لیتر</p><progress class="water-progress" id="water-progress" max="1" value="0" aria-label="پیشرفت هدف آب"></progress><p class="quiet" id="water-remaining"></p></div>
+            <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/><use href="#i-glass-rim"/></svg>
+            <div class="water-info"><strong id="water-date"></strong><p class="amount-line"><strong id="water-total">۰</strong> از <span id="water-goal-label">۲٬۰۰۰</span> میلی‌لیتر</p><progress class="water-progress" id="water-progress" max="1" value="0" aria-label="پیشرفت هدف آب"></progress><p class="quiet" id="water-remaining"></p></div>
           </div>
           <div id="water-entry">
             <div class="water-quick">
@@ -107,7 +142,7 @@
           </div>
         </section>
         <button id="water-custom-action" type="button" class="block-action" data-open-water>مقدار دلخواه</button>
-        <section><h2>مصرف آب</h2><div id="water-entries"></div></section>
+        <section><h2>مصرف این روز</h2><div id="water-entries"></div></section>
       </div>
       <div data-screen="insights" hidden>
         <div class="insights-tabs" role="group" aria-label="نمای گزارش و تقویم">
@@ -158,14 +193,16 @@
         <div id="water-presets" class="water-quick">
           <button type="button" data-water-preset="150" aria-pressed="false">۱۵۰</button><button type="button" data-water-preset="250" aria-pressed="true">۲۵۰</button><button type="button" data-water-preset="500" aria-pressed="false">۵۰۰</button>
         </div>
+        <button type="button" id="water-custom-preset" class="secondary">سفارشی</button>
         <p id="water-selection" aria-live="polite"></p>
         <details id="water-options" class="editor-options">
-          <summary>مقدار دلخواه و زمان ثبت</summary>
+          <summary>گزینه‌های بیشتر</summary>
           <label>مقدار دلخواه (میلی‌لیتر)<input id="water-amount" inputmode="numeric" maxlength="5" required></label>
           <div class="fields"><label>تاریخ<input id="water-log-day" type="date" required></label><label>ساعت<input id="water-log-time" type="time" required></label></div>
         </details>
         <p id="water-error" role="alert" class="field-error"></p>
         <button type="submit" class="block-action">ذخیره</button>
+        <button type="button" class="text-button block-action" data-close="water-dialog">انصراف</button>
       </div>
     </form>
   </dialog>
@@ -176,20 +213,23 @@
         <label class="editor-field">نام دارو یا مکمل<input id="name" maxlength="120" required></label>
         <label class="editor-field">مقدار یا دستور مصرف (اختیاری)<textarea id="instructions" rows="2" maxlength="600"></textarea></label>
         <details id="medicine-appearance" class="editor-options medicine">
-          <summary>ظاهر دارو (اختیاری)</summary>
+          <summary><svg aria-hidden="true"><use href="#i-pill"/></svg>ظاهر دارو (اختیاری)</summary>
           <label>نماد<select id="medicine-icon"><option value="pill">قرص</option><option value="capsule">کپسول</option><option value="drops">قطره</option><option value="syrup">شربت</option><option value="injection">آمپول</option></select></label>
           <label>رنگ<select id="medicine-color"><option value="gold">طلایی</option><option value="green">سبز</option><option value="blue">آبی</option><option value="purple">بنفش</option><option value="rose">صورتی</option></select></label>
         </details>
+        <label class="feature-head editor-switch">برنامهٔ چندمرحله‌ای<input type="checkbox" id="phased-mode" role="switch"></label>
         <div id="basic-schedule">
           <label class="editor-field">ساعت یادآوری<input id="basic-time" type="time" value="08:00" required></label>
-          <p class="quiet">هر روز</p><p class="quiet" id="basic-start"></p>
+          <p class="quiet" id="basic-extra-times" hidden></p>
+          <p class="quiet" id="basic-repeat">هر روز</p><p class="quiet" id="basic-start"></p>
         </div>
         <details id="advanced-plan" class="editor-options">
           <summary>تنظیم روزها و ساعت‌های بیشتر</summary>
-          <p class="quiet">تاریخ‌ها در ورودی به میلادی‌اند. مرحله تا پایان روز انتخاب‌شده ادامه دارد.</p>
+          <p class="quiet phase-only">مرحله تا پایان روز انتخاب‌شده ادامه دارد.</p>
           <div id="phases"></div>
-          <button id="add-phase" type="button" class="secondary">افزودن مرحله</button>
+          <button id="add-phase" type="button" class="secondary phase-only">افزودن مرحله</button>
         </details>
+        <p class="field-error" id="phase-mode-warning" hidden>با ذخیره در حالت عادی، تاریخ پایان، مرحله‌های بعدی و فاصلهٔ تکرار حذف می‌شوند.</p>
         <details id="inventory-options" class="editor-options">
           <summary>دوز و موجودی دارو</summary>
           <div class="fields">
@@ -200,6 +240,7 @@
         </details>
         <p id="editor-status" class="field-error" role="status"></p>
         <button type="submit" class="block-action">ذخیرهٔ دارو</button>
+        <button type="button" class="text-button block-action" data-close="medication-dialog">انصراف</button>
       </div>
     </form>
   </dialog>
@@ -218,11 +259,17 @@
         <details class="editor-options"><summary>گزینه‌های بیشتر</summary><label class="editor-field">یادداشت<textarea id="visit-note" maxlength="600" rows="2"></textarea></label></details>
         <p id="visit-error" role="alert" class="field-error"></p>
         <button type="submit" class="block-action">ذخیرهٔ قرار</button>
+        <button type="button" class="text-button block-action" data-close="visit-dialog">انصراف</button>
       </div>
     </form>
   </dialog>
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
-    <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><div><h2 id="settings-title">تنظیمات مدورا</h2><p>یادآوری‌ها مطابق برنامهٔ روزانهٔ شما</p></div><button class="icon-button" type="button" data-close="settings-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="sheet-header">
+      <svg id="settings-mark" aria-hidden="true"><use href="#i-mark"/></svg>
+      <button type="button" id="settings-back" class="icon-button" aria-label="بازگشت به تنظیمات" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+      <div><h2 id="settings-title">تنظیمات مدورا</h2><p id="settings-subtitle">یادآوری‌ها مطابق برنامهٔ روزانهٔ شما</p></div>
+      <button class="icon-button" type="button" data-close="settings-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
     <div class="sheet-body">
       <details id="display-settings" class="settings-tile">
         <summary><svg aria-hidden="true"><use href="#i-calendar"/></svg><span>زمان و تقویم<small>تقویم و ظاهر برنامه</small></span></summary>
@@ -248,7 +295,7 @@
         <p id="push-test-result" role="status"></p>
       </div>
       </details>
-      <details class="settings-tile water">
+      <details id="water-settings" class="settings-tile water">
         <summary><svg aria-hidden="true"><use href="#i-water"/></svg><span>آب<small>هدف روزانهٔ آب</small></span></summary>
         <form id="water-goal-form">
           <label>هدف روزانه (میلی‌لیتر)<input id="water-goal" inputmode="numeric" maxlength="5" required></label>
@@ -259,19 +306,55 @@
       <button type="button" class="block-action" data-close="settings-dialog">انجام شد</button>
     </div>
   </dialog>
+  <dialog id="date-picker" class="sheet value-picker" aria-labelledby="date-picker-title">
+    <div class="sheet-body">
+      <h2 id="date-picker-title">انتخاب تاریخ</h2>
+      <div class="feature-head calendar-head">
+        <button type="button" id="picker-previous-month" class="icon-button" aria-label="ماه قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+        <strong id="picker-month"></strong>
+        <button type="button" id="picker-next-month" class="icon-button reverse" aria-label="ماه بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+      </div>
+      <div id="picker-days" class="calendar-grid"></div>
+      <div class="feature-head picker-actions">
+        <button type="button" class="text-button" data-close="date-picker">انصراف</button>
+        <button type="button" class="text-button" id="picker-today">امروز</button>
+        <button type="button" class="text-button" id="picker-clear-date" hidden>پاک‌کردن</button>
+        <button type="button" id="picker-date-confirm">انتخاب</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="time-picker" class="sheet value-picker" aria-labelledby="time-picker-title">
+    <div class="sheet-body">
+      <h2 id="time-picker-title">ساعت یادآوری</h2>
+      <div class="clock-display" id="clock-display" dir="ltr">
+        <button type="button" id="clock-hour" aria-label="ساعت"></button><span>:</span><button type="button" id="clock-minute" aria-label="دقیقه"></button>
+      </div>
+      <div id="clock-dial" class="clock-dial" dir="ltr"></div>
+      <div id="clock-keyboard" class="fields" hidden>
+        <label>ساعت<input id="keyboard-hour" dir="ltr" inputmode="numeric" maxlength="2"></label>
+        <label>دقیقه<input id="keyboard-minute" dir="ltr" inputmode="numeric" maxlength="2"></label>
+      </div>
+      <button type="button" id="clock-mode" class="text-button">ورود عددی ساعت</button>
+      <p id="clock-error" class="field-error" role="alert"></p>
+      <div class="action-pair picker-actions">
+        <button type="button" class="secondary" data-close="time-picker">انصراف</button>
+        <button type="button" id="picker-time-confirm">انتخاب</button>
+      </div>
+    </div>
+  </dialog>
   <template id="phase-template">
     <fieldset class="phase">
       <legend>مرحلهٔ مصرف</legend>
       <div class="fields">
         <label>روز شروع<input class="start" type="date" required></label>
-        <label>روز پایان (اختیاری)<input class="end" type="date"></label>
-        <label>فاصلهٔ تکرار (هفته)<input class="interval" type="number" inputmode="numeric" dir="ltr" min="1" max="52" value="1" required></label>
+        <label class="phase-only">روز پایان (اختیاری)<input class="end" type="date"></label>
+        <label class="phase-only">فاصلهٔ تکرار (هفته)<input class="interval" type="number" inputmode="numeric" dir="ltr" min="1" max="52" value="1" required></label>
       </div>
       <div class="weekdays" aria-label="روزهای مصرف"></div>
       <div class="slots"></div>
       <div class="buttons">
         <button type="button" class="add-slot secondary">افزودن ساعت</button>
-        <button type="button" class="remove-phase secondary">حذف مرحله</button>
+        <button type="button" class="remove-phase secondary phase-only">حذف مرحله</button>
       </div>
     </fieldset>
   </template>
