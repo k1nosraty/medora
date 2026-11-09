@@ -4,9 +4,17 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 import { smallJson, validSubject, validSubscription } from "../src/validation.mjs";
+import { pushTopic } from "../src/push.mjs";
 
 const ecdh = createECDH("prime256v1");
 const keys = { p256dh: ecdh.generateKeys().toString("base64url"), auth: Buffer.alloc(16).toString("base64url") };
+
+test("coalescing topics use the APNs-compatible shape for every tag", async () => {
+  const topic = await pushTopic("dose-abc123");
+  assert.match(topic, /^[a-f0-9]{32}$/);
+  assert.equal(await pushTopic("dose-abc123"), topic);
+  assert.notEqual(await pushTopic("dose-abc124"), topic);
+});
 
 test("restricts outbound push subscriptions to supported HTTPS providers", () => {
   const token = "push-token-long-enough";
