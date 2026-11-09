@@ -45,6 +45,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   let editingVisit = null;
   let editingWater = null;
   let quickWaterEntry;
+  const dayWeek = $("day-week");
+  let weekSlide;
   let visitFilter = "all";
   let insight = "calendar";
   let calendarSelection = today();
@@ -252,6 +254,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     dayControls.hidden = !["today", "water", "medications"].includes(screen);
     dayControls.classList.toggle("single-date", screen !== "today");
     dayControls.classList.toggle("compact-day", screen === "medications");
+    $("today-reset").hidden = screen !== "today" || selectedDay() === today();
     render();
     scrollTo(0, 0);
   }
@@ -261,12 +264,25 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   }
   for (const [id, delta] of [["previous-day", -1], ["next-day", 1]]) {
     $(id).addEventListener("click", () => {
+      const animate = screen === "today" && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const outgoing = animate ? dayWeek.children[delta > 0 ? 0 : 6]?.cloneNode(true) : null;
       chooseDay(selectedDay() + delta);
+      if (!outgoing) return;
+      outgoing.inert = true;
+      outgoing.setAttribute("aria-hidden", "true");
+      outgoing.classList.add("day-week-ghost");
+      outgoing.dataset.edge = delta > 0 ? "start" : "end";
+      dayWeek.append(outgoing);
+      const direction = document.documentElement.dir === "rtl" ? -1 : 1;
+      weekSlide = dayWeek.animate(
+        [{ transform: `translateX(${direction * delta * 100 / 7}%)` }, { transform: "none" }],
+        { duration: 210, easing: "ease-out" }
+      );
+      weekSlide.onfinish = () => outgoing.remove();
     });
   }
   $("today-reset").addEventListener("click", () => {
-    chooseDay(today());
-    $("pick-day").focus({ preventScroll: true });
+    chooseDay(today(), "day-week");
   });
 
   async function addWater(amount, day = selectedDay(), time = localClock(), id = null) {
@@ -932,9 +948,11 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       $("story-title").textContent = day === today() ? t("امروز با مدورا") : t("برنامهٔ این روز");
       $("today-reset").hidden = day === today();
       const visitDays = new Set(Object.values(state.visits ?? {}).filter(visit => !visit.cancelled).map(visit => displayVisit(visit).day));
-      $("day-week").replaceChildren(...Array.from({ length: 7 }, (_, index) => {
+      weekSlide?.cancel();
+      dayWeek.replaceChildren(...Array.from({ length: 7 }, (_, index) => {
         const date = day - 3 + index;
         const control = dateButton(date, day, selected => chooseDay(selected, "day-week"));
+        if (date === today()) control.classList.add("calendar-today");
         const marks = element("span", "", "calendar-dots");
         marks.setAttribute("aria-hidden", "true");
         if (scheduledDoses(state, date).length) marks.append(element("i", "", "medicine"));
