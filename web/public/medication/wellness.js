@@ -1,4 +1,4 @@
-import { defaultCalendar, language, listSeparator, locale, selectLanguage, shortWeek, t, weekIndex } from "./locale.js";
+import { defaultCalendar, language, listSeparator, localDigits, locale, selectLanguage, shortWeek, t, weekIndex } from "./locale.js";
 import { appointmentDefaults, appointmentOffsets, appointmentReminders, localZone, visitInstant, waterDefaults } from "./care-plan.js";
 import { localWall, timezone } from "./wall-clock.js";
 import { appearanceColors } from "./medication-art.js";
@@ -6,6 +6,7 @@ import { appearanceColors } from "./medication-art.js";
 const $ = id => document.getElementById(id);
 const dayMs = 86_400_000;
 const numbers = new Intl.NumberFormat(locale);
+const percent = new Intl.NumberFormat(locale, { style: "percent" });
 const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), insights: t("گزارش و تقویم"), water: t("آب") };
 const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "purple";
 const iso = day => new Date(day * dayMs).toISOString().slice(0, 10);
@@ -43,6 +44,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   const selectedDates = new Map();
   let editingVisit = null;
   let editingWater = null;
+  let quickWaterEntry;
   let visitFilter = "all";
   let insight = "calendar";
   let calendarSelection = today();
@@ -267,63 +269,120 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("pick-day").focus({ preventScroll: true });
   });
 
-  function addWater(amount, day = selectedDay(), time = localClock(), id = null) {
-    if (!Number.isInteger(amount) || amount < 1 || amount > 10000 || !Number.isInteger(day) || day > today()) {
-      $("water-error").textContent = day > today() ? t("برای روز آینده نمی‌شود آب ثبت کرد.") : t("مقدار آب باید از ۱ تا ۱۰٬۰۰۰ میلی‌لیتر باشد.");
-      return false;
-    }
+  async function addWater(amount, day = selectedDay(), time = localClock(), id = null) {
+    if (day > today()) return null;
     const entry = { id: id ?? crypto.randomUUID(), day, time, amount };
-    return mutate(state => {
+    const saved = await mutate(state => {
       const list = state.water ??= [];
       const index = list.findIndex(item => item.id === entry.id);
       if (index >= 0) list[index] = entry;
       else if (id) throw new Error(t("این ثبت آب حذف شده است."));
       else list.push(entry);
     }, t("آب ثبت شد."), true);
+    return saved ? entry : null;
   }
   for (const button of document.querySelectorAll("[data-water-add]")) {
     button.addEventListener("click", () => addWater(Number(button.dataset.waterAdd)));
   }
+  function findQuickWater(state, entry) {
+    return state.water?.find(record => record.id === entry.id && record.amount === entry.amount &&
+      record.day === entry.day && record.time === entry.time);
+  }
+  function renderQuickWaterFeedback(state, day) {
+    if (quickWaterEntry && !findQuickWater(state, quickWaterEntry)) quickWaterEntry = null;
+    $("today-water-feedback").hidden = quickWaterEntry?.day !== day;
+  }
+  const quickWaterButton = $("today-water-quick");
+  quickWaterButton.addEventListener("click", async () => {
+    if (quickWaterButton.disabled || selectedDay() !== today()) return;
+    quickWaterButton.disabled = true;
+    try {
+      const entry = await addWater(250);
+      if (!entry) return;
+      quickWaterEntry = entry;
+      $("today-water-message").textContent = t("{0} میلی‌لیتر ثبت شد.", numbers.format(entry.amount));
+      renderQuickWaterFeedback(getState(), selectedDay());
+    } finally {
+      quickWaterButton.disabled = false;
+    }
+  });
+  $("today-water-undo").addEventListener("click", async () => {
+    const entry = quickWaterEntry;
+    if (!entry) return;
+    if (await mutate(state => {
+      const record = findQuickWater(state, entry);
+      if (!record) throw new Error(t("این ثبت تغییر کرده یا حذف شده است."));
+      state.water = state.water.filter(item => item.id !== entry.id);
+    }, t("ثبت آب برگشت داده شد."), true)) quickWaterButton.focus({ preventScroll: true });
+  });
+
   function updateWaterSelection() {
     const value = integer($("water-amount").value);
-    $("water-selection").textContent = Number.isFinite(value) ? t("{0} میلی‌لیتر", numbers.format(value)) : "";
     for (const control of document.querySelectorAll("[data-water-preset]")) {
       control.setAttribute("aria-pressed", String(Number(control.dataset.waterPreset) === value));
     }
   }
+  function updateWaterWhen() {
+    const day = Date.parse(`${$("water-log-day").value}T00:00:00Z`) / dayMs;
+    const time = $("water-log-time").value;
+    $("water-when").textContent = Number.isInteger(day) && time
+      ? `${day === today() ? t("امروز") : formatDay(day)} · ${clockText(time)}`
+      : "";
+  }
   function openWater(entry, custom = false) {
     editingWater = entry?.id ?? null;
     $("water-dialog-title").textContent = entry ? t("ویرایش ثبت آب") : t("ثبت آب");
-    $("water-amount").value = entry?.amount ?? "250";
+    $("water-amount").value = localDigits(entry?.amount ?? 250);
     $("water-log-day").value = iso(entry?.day ?? selectedDay());
     $("water-log-day").max = iso(today());
     $("water-log-time").value = entry?.time ?? localClock();
     $("water-error").textContent = "";
-    $("water-options").open = Boolean(entry || custom);
+    $("water-options").open = Boolean(entry);
     updateWaterSelection();
+    updateWaterWhen();
     refreshFields($("water-dialog"));
     $("water-dialog").showModal();
+    if (custom) {
+      $("water-amount").focus();
+      $("water-amount").select();
+    }
   }
   for (const control of document.querySelectorAll("[data-open-water]")) {
     control.addEventListener("click", () => openWater(null, control.id === "water-custom-action"));
   }
-  $("water-custom-preset").addEventListener("click", () => {
-    $("water-options").open = true;
-    $("water-amount").focus();
-    $("water-amount").select();
-  });
   $("water-amount").addEventListener("input", updateWaterSelection);
+  $("water-custom").addEventListener("input", () => { $("water-error").textContent = ""; });
+  for (const field of [$("water-log-day"), $("water-log-time")]) field.addEventListener("change", updateWaterWhen);
   for (const control of document.querySelectorAll("[data-water-preset]")) control.addEventListener("click", () => {
-    $("water-amount").value = control.dataset.waterPreset;
+    $("water-amount").value = localDigits(control.dataset.waterPreset);
     $("water-error").textContent = "";
     updateWaterSelection();
   });
   $("water-custom").addEventListener("submit", async event => {
     event.preventDefault();
+    const submit = $("water-custom").querySelector('[type="submit"]');
+    if (submit.disabled) return;
+    const error = $("water-error");
     const value = integer($("water-amount").value);
     const day = Date.parse(`${$("water-log-day").value}T00:00:00Z`) / dayMs;
-    if (await addWater(value, day, $("water-log-time").value, editingWater)) $("water-dialog").close();
-    else if (!$("water-error").textContent) $("water-error").textContent = $("status").textContent;
+    const time = $("water-log-time").value;
+    if (!(value >= 1 && value <= 10000)) {
+      error.textContent = t("مقدار آب باید از ۱ تا ۱۰٬۰۰۰ میلی‌لیتر باشد.");
+      $("water-amount").focus();
+      return;
+    }
+    if (!Number.isInteger(day) || day > today() || !time) {
+      error.textContent = day > today() ? t("برای روز آینده نمی‌شود آب ثبت کرد.") : t("تاریخ و ساعت ثبت را انتخاب کنید.");
+      $("water-options").open = true;
+      return;
+    }
+    submit.disabled = true;
+    try {
+      if (await addWater(value, day, time, editingWater)) $("water-dialog").close();
+      else error.textContent = t("ذخیره انجام نشد. دوباره تلاش کنید.");
+    } finally {
+      submit.disabled = false;
+    }
   });
   async function saveSettings(control, change, success, scheduleChanged = false) {
     if (control.disabled) return false;
@@ -886,6 +945,10 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("today-water-total").textContent = numbers.format(total);
     $("today-water-goal").textContent = numbers.format(goal);
     $("today-water-progress").value = progress;
+    $("today-water-percent").textContent = percent.format(progress);
+    $("today-water").toggleAttribute("data-goal-reached", total >= goal);
+    quickWaterButton.hidden = day !== today();
+    renderQuickWaterFeedback(state, day);
     $("water-progress").value = progress;
     $("water-date").textContent = day === today() ? t("امروز") : shortDate.format(day * dayMs);
     $("water-total").textContent = numbers.format(total);
@@ -897,7 +960,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     }
 
     if (screen === "water") {
-      const entries = (state.water ?? []).filter(entry => entry.day === day).reverse();
+      const entries = (state.water ?? []).filter(entry => entry.day === day).reverse()
+        .sort((a, b) => b.time.localeCompare(a.time));
       $("water-entries").replaceChildren(...(entries.length ? entries.map(entry => {
         const row = element("article", "", "entry-row");
         row.append(element("span", t("{0} میلی‌لیتر · {1}", numbers.format(entry.amount), clockText(entry.time))), button(t("ویرایش"), () => openWater(entry)),
