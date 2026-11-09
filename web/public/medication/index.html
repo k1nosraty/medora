@@ -379,7 +379,7 @@
           </span>
           <div class="water-info">
             <h2 id="today-water-label">مصرف آب</h2>
-            <p class="amount-line"><strong id="today-water-total">۰</strong> از <span id="today-water-goal">۲٬۰۰۰</span> میلی‌لیتر</p>
+            <p class="amount-line"><strong id="today-water-total">۰</strong> از <span class="today-water-target"><span id="today-water-goal">۲٬۰۰۰</span> میلی‌لیتر</span></p>
             <div class="today-water-meter">
               <progress class="water-progress" id="today-water-progress" aria-label="پیشرفت هدف آب" max="1" value="0"></progress>
               <span id="today-water-percent" aria-hidden="true"></span>
@@ -388,8 +388,8 @@
           <div class="today-water-actions">
             <button type="button" class="secondary" data-open-water>ثبت آب</button>
             <div class="today-water-links">
-              <button type="button" class="text-button" id="today-water-quick" aria-label="ثبت سریع ۲۵۰ میلی‌لیتر آب"><bdi>+۲۵۰</bdi></button>
-              <button id="open-water-history" type="button" class="text-button" data-destination="water" aria-label="سوابق آب">سوابق</button>
+              <button type="button" class="secondary" id="today-water-quick" aria-label="ثبت سریع ۲۵۰ میلی‌لیتر آب"><bdi>+۲۵۰</bdi><small>میلی‌لیتر</small></button>
+              <button id="open-water-history" type="button" class="secondary" data-destination="water" aria-label="سوابق آب">سوابق</button>
             </div>
           </div>
           <div id="today-water-feedback" class="today-water-feedback" hidden>

@@ -152,23 +152,32 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .today-water-art {
   display: grid;
   place-items: center;
-  inline-size: 2.5rem;
+  inline-size: 3rem;
   aspect-ratio: 1;
   border-radius: .8rem;
   background: color-mix(in srgb, var(--water-ink) 16%, var(--water));
 }
-.medora #today-water .water-glass { inline-size: 1.75rem; block-size: 1.95rem; }
+.medora #today-water .water-glass { inline-size: 2.35rem; block-size: 2.65rem; }
 .medora #today-water-label { margin: 0; color: inherit; font-size: .98rem; }
 .medora #today-water .amount-line { margin: .13rem 0 .2rem; font-size: .78rem; }
+.today-water-target { white-space: nowrap; }
 .today-water-meter { display: flex; align-items: center; gap: .32rem; }
-.medora #today-water .water-progress { flex: 1; min-inline-size: 0; block-size: .31rem; margin: 0; background: color-mix(in srgb, var(--water-ink) 21%, var(--water)); }
+.medora #today-water .water-progress { flex: 0 1 5.25rem; min-inline-size: 0; block-size: .23rem; margin: 0; background: color-mix(in srgb, var(--water-ink) 21%, var(--water)); }
 .medora #today-water-percent { font-size: .73rem; font-variant-numeric: tabular-nums; }
 .medora #today-water[data-goal-reached] #today-water-percent { font-weight: 800; }
-.today-water-actions { display: grid; min-inline-size: 0; }
-.today-water-links { display: flex; justify-content: center; }
+.today-water-actions { display: grid; gap: .25rem; min-inline-size: 0; }
+.today-water-links { display: flex; justify-content: center; gap: .25rem; }
 .medora .today-water-actions button { min-block-size: 2.75rem; padding: .15rem .36rem; font-size: .8rem; }
-.medora .today-water-actions .secondary { border-color: transparent; background: var(--panel); color: var(--water-ink); }
-.medora .today-water-links .text-button { min-inline-size: 2.75rem; color: var(--water-ink); font-size: .75rem; }
+.medora .today-water-actions > .secondary { border-color: transparent; background: var(--panel); color: var(--water-ink); }
+.medora .today-water-links .secondary {
+  min-inline-size: 2.75rem;
+  border-color: color-mix(in srgb, var(--water-ink) 37%, var(--water));
+  border-radius: .7rem;
+  background: color-mix(in srgb, var(--panel) 58%, var(--water));
+  color: var(--water-ink);
+  font-size: .75rem;
+}
+.today-water-links small { display: block; font-size: .61rem; font-weight: 500; }
 .today-water-feedback {
   grid-column: 1 / -1;
   display: flex;
