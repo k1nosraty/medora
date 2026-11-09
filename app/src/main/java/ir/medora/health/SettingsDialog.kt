@@ -22,6 +22,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -113,8 +114,8 @@ fun SettingsDialog(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         MedoraHeader(tr("settings.title"),tr(if(tab<0) "settings.subtitle" else when(tab) {
-                            0 -> "settings.waterTab";1 -> "settings.medicationsTab";2 -> "settings.appointmentsTab";3 -> "settings.notificationsTab";else -> "settings.display"
-                        }),onBack=if(tab>=0) ({tab=-1}) else null,onClose={if(!vm.busy) close()})
+                            0 -> "settings.waterTab";1 -> "settings.medicationsTab";2 -> "settings.appointmentsTab";3 -> "settings.notificationsTab";5 -> "backup.title";else -> "settings.display"
+                        }),onBack=if(tab>=0) ({if(!vm.busy) tab=-1}) else null,onClose={if(!vm.busy) close()})
                         Column(
                             Modifier.weight(1f, fill = false).verticalScroll(scroll).padding(horizontal=16.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -126,8 +127,10 @@ fun SettingsDialog(
                                     SettingsCategoryTile(tr("settings.waterTab"),tr("settings.waterGoal"),0) {tab=0}
                                     SettingsCategoryTile(tr("settings.medicationsTab"),tr("settings.medicationSnooze"),1) {tab=1}
                                     SettingsCategoryTile(tr("settings.appointmentsTab"),tr("appointment.earlyReminders"),2) {tab=2}
+                                    SettingsCategoryTile(tr("backup.title"),tr("backup.summary"),5) {tab=5}
                                 }
                                 4 -> DisplayPreferences(language,calendar,{language=it},{calendar=it})
+                                5 -> BackupSettings(vm)
                                 0 -> WaterSettings(
                                     goal, { goal = it;error=null }, waterEnabled, { waterEnabled = it }, start, { start = it;error=null },
                                     end, { end = it;error=null }, interval, { next -> interval = next; if (repeatMinutes >= next) repeatMinutes = 0 },
@@ -140,7 +143,7 @@ fun SettingsDialog(
                         }
                         error?.let { Text(tr(it),modifier=Modifier.padding(horizontal=16.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                         vm.error?.let { Text(tr(it),modifier=Modifier.padding(horizontal=16.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                        Button(onClick = ::save, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().padding(horizontal=16.dp).heightIn(min = 50.dp)) {
+                        if (tab != 5) Button(onClick = ::save, enabled = !vm.busy, modifier = Modifier.fillMaxWidth().padding(horizontal=16.dp).heightIn(min = 50.dp)) {
                             if(vm.busy) {CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Spacer(Modifier.width(8.dp))}
                             Text(if (vm.busy) tr("common.saving") else tr("common.saveSettings"))
                         }
@@ -312,6 +315,11 @@ private fun NotificationSettings(
     }
     Panel(compact = true) {
         Text(tr("settings.phonePermissions"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        if (vm.channelBlocked) Text(tr("settings.reminderChannelBlocked"), color = MaterialTheme.colorScheme.error)
+        vm.next?.let { reminder ->
+            val dateTime = Instant.ofEpochMilli(reminder.at).atZone(ZoneId.systemDefault())
+            Text(tr("settings.nextReminder", displayDate(dateTime.toLocalDate()), displayTime(dateTime.toLocalTime())))
+        }
         if (vm.exact) Text(tr("settings.exactEnabled"), color = wellnessAccent(MedoraColors.Success))
         else OutlinedButton(onClick = openExact, modifier = Modifier.fillMaxWidth()) { Text(tr("settings.enableExact")) }
         TextButton(onClick = openNotifications) { Text(tr("settings.openNotificationSettings")) }

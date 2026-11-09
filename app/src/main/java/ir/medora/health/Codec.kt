@@ -1,5 +1,7 @@
 package ir.medora.health
 
+import ir.medora.care.DoseSlot
+import ir.medora.care.MedicationPhase
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -9,16 +11,28 @@ object Codec {
     private fun JSONObject.list(key:String):List<JSONObject> = getJSONArray(key).let { a ->(0 until a.length()).map { a.getJSONObject(it) } }
     private fun JSONObject.strings(key:String):List<String> = getJSONArray(key).let { a ->(0 until a.length()).map { a.getString(it) } }
     private fun JSONObject.ints(key:String):Set<Int> = getJSONArray(key).let { a ->(0 until a.length()).map { a.getInt(it) }.toSet() }
+    private fun JSONObject.optionalInt(key:String):Int? = if(isNull(key)) null else getInt(key)
+    private fun encodePhase(phase:MedicationPhase)=obj(
+        "start" to phase.startDay,"endBefore" to phase.endBeforeDay,"intervalWeeks" to phase.intervalWeeks,
+        "weekdayMask" to phase.weekdayMask,"slots" to array(phase.slots.map { obj("minute" to it.minuteOfDay,"amount" to it.milliUnits) })
+    )
+    private fun decodePhase(j:JSONObject)=MedicationPhase(
+        j.getInt("start"),j.optionalInt("endBefore"),j.getInt("intervalWeeks"),j.getInt("weekdayMask"),
+        j.list("slots").map { DoseSlot(it.getInt("minute"),it.optionalInt("amount")) }
+    )
     fun encode(d:HealthData):String = obj(
-        "schema" to 7,"settings" to d.settings.let { s ->obj("goal" to s.goal,"waterEnabled" to s.waterEnabled,"start" to s.start,"end" to s.end,
+        "schema" to 8,"settings" to d.settings.let { s ->obj("goal" to s.goal,"waterEnabled" to s.waterEnabled,"start" to s.start,"end" to s.end,
             "interval" to s.interval,"repeat" to s.repeat,"pauseUntil" to s.pauseUntil,"consent" to s.consent,"private" to s.privateNotifications,
             "appointmentStart" to s.appointmentStart,"appointmentInterval" to s.appointmentInterval,
             "language" to s.language,"calendar" to s.calendar,"medicationSnoozeMinutes" to s.medicationSnoozeMinutes) },
         "water" to array(d.water.map { obj("id" to it.id,"ml" to it.ml,"day" to it.day,"at" to it.at) }),
         "medications" to array(d.medications.map { obj("id" to it.id,"name" to it.name,"instructions" to it.instructions,"startDay" to it.startDay,
-            "times" to array(it.times),"weekdays" to array(it.weekdays),"dates" to array(it.dates),"active" to it.active,"effectiveFrom" to it.effectiveFrom,"icon" to it.icon.name,"color" to it.color.name) }),
+            "times" to array(it.times),"weekdays" to array(it.weekdays),"dates" to array(it.dates),"active" to it.active,"effectiveFrom" to it.effectiveFrom,"icon" to it.icon.name,"color" to it.color.name,
+            "phases" to array(it.phases.map(::encodePhase)),"unit" to it.unit,"amount" to it.milliUnits,
+            "stock" to it.stock?.let { s -> obj("balance" to s.balance,"threshold" to s.threshold,"trackedFrom" to s.trackedFrom,"alerted" to s.alerted) }) }),
         "doses" to array(d.doses.map { obj("id" to it.id,"medicationId" to it.medicationId,"name" to it.name,"instructions" to it.instructions,
-            "wall" to it.wall,"status" to it.status.name,"snoozeUntil" to it.snoozeUntil,"updatedAt" to it.updatedAt,"icon" to it.icon.name,"color" to it.color.name) }),
+            "wall" to it.wall,"status" to it.status.name,"snoozeUntil" to it.snoozeUntil,"updatedAt" to it.updatedAt,"icon" to it.icon.name,"color" to it.color.name,
+            "amount" to it.milliUnits,"unit" to it.unit,"actualAmount" to it.actualMilliUnits,"stockDebit" to it.stockDebit) }),
         "appointments" to array(d.appointments.map { obj("id" to it.id,"title" to it.title,"wall" to it.wall,"zone" to it.zone,
             "location" to it.location,"notes" to it.notes,"contact" to it.contact,"offsets" to array(it.offsets),"cancelled" to it.cancelled) }),
         "acknowledged" to array(d.waterAcknowledged),"snoozes" to JSONObject(d.waterSnoozes as Map<*,*>),
@@ -27,7 +41,7 @@ object Codec {
         "reminderCheckpoint" to d.reminderCheckpoint,"deliveredReminders" to JSONObject(d.deliveredReminders as Map<*,*>)
     ).toString()
     fun decode(text:String):HealthData {
-        val j=JSONObject(text);val schema=j.getInt("schema");require(schema in 2..7) { "نسخه اطلاعات پشتیبانی نمی‌شود" }
+        val j=JSONObject(text);val schema=j.getInt("schema");require(schema in 2..8) { "نسخه اطلاعات پشتیبانی نمی‌شود" }
         val s=j.getJSONObject("settings")
         val d=HealthData(settings=Settings(s.getInt("goal"),s.getBoolean("waterEnabled"),s.getString("start"),s.getString("end"),
             s.getInt("interval"),s.getInt("repeat"),s.getLong("pauseUntil"),s.getBoolean("consent"),
@@ -35,9 +49,12 @@ object Codec {
             s.optInt("appointmentInterval",120),s.optString("language","fa"),s.optString("calendar","jalali"),s.optInt("medicationSnoozeMinutes",10)),through=j.getString("through"))
         j.list("water").forEach { d.water += Water(it.getString("id"),it.getInt("ml"),it.getString("day"),it.getLong("at")) }
         j.list("medications").forEach { d.medications += Medication(it.getString("id"),it.getString("name"),it.getString("instructions"),
-            it.getString("startDay"),it.strings("times"),it.ints("weekdays"),it.strings("dates").toSet(),it.getBoolean("active"),it.optLong("effectiveFrom",0),MedicationIcon.parse(it.optString("icon")),MedicationColor.parse(it.optString("color"))) }
+            it.getString("startDay"),it.strings("times"),it.ints("weekdays"),it.strings("dates").toSet(),it.getBoolean("active"),it.optLong("effectiveFrom",0),MedicationIcon.parse(it.optString("icon")),MedicationColor.parse(it.optString("color")),
+            if(it.has("phases")) it.list("phases").map(::decodePhase) else emptyList(),it.optString("unit"),it.optionalInt("amount"),
+            it.optJSONObject("stock")?.let { s -> MedicationStock(s.getInt("balance"),s.getInt("threshold"),s.getLong("trackedFrom"),s.optBoolean("alerted")) }) }
         j.list("doses").forEach { d.doses += Dose(it.getString("id"),it.getString("medicationId"),it.getString("name"),it.getString("instructions"),
-            it.getString("wall"),DoseStatus.valueOf(it.getString("status")),it.getLong("snoozeUntil"),it.getLong("updatedAt"),MedicationIcon.parse(it.optString("icon")),MedicationColor.parse(it.optString("color"))) }
+            it.getString("wall"),DoseStatus.valueOf(it.getString("status")),it.getLong("snoozeUntil"),it.getLong("updatedAt"),MedicationIcon.parse(it.optString("icon")),MedicationColor.parse(it.optString("color")),
+            it.optionalInt("amount"),it.optString("unit"),it.optionalInt("actualAmount"),it.optInt("stockDebit")) }
         j.list("appointments").forEach { d.appointments += Appointment(it.getString("id"),it.getString("title"),it.getString("wall"),it.getString("zone"),
             it.getString("location"),it.getString("notes"),it.getString("contact"),it.ints("offsets"),it.getBoolean("cancelled")) }
         d.waterAcknowledged += j.strings("acknowledged");d.handledActions += j.strings("handled")

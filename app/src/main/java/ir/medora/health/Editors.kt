@@ -27,6 +27,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import ir.medora.care.formatQuantity
+import ir.medora.care.parseQuantity
+import ir.medora.care.validatePhases
 import java.time.*
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -70,6 +73,16 @@ fun EditDialog(
     }
     var specific by remember(editor) { mutableStateOf(editor.medication?.dates?.isNotEmpty() ?: false) }
     var weekdays by remember(editor) { mutableStateOf(editor.medication?.weekdays ?: (1..7).toSet()) }
+    var phased by remember(editor) { mutableStateOf(editor.medication?.phases?.isNotEmpty() == true) }
+    var phases by remember(editor, calendar, language) {
+        mutableStateOf(editor.medication?.phases.orEmpty().map { PhaseDraft.fromPhase(it, calendar, language) })
+    }
+    var medicationUnit by remember(editor) { mutableStateOf(editor.medication?.unit.orEmpty()) }
+    var doseAmount by remember(editor) { mutableStateOf(editor.medication?.milliUnits?.let(::formatQuantity).orEmpty()) }
+    val originalStock = editor.medication?.stock
+    var trackStock by remember(editor) { mutableStateOf(originalStock != null) }
+    var initialStock by remember(editor) { mutableStateOf("") }
+    var threshold by remember(editor) { mutableStateOf(originalStock?.threshold?.let(::formatQuantity) ?: "2") }
     var amount by remember(editor) { mutableStateOf((editor.water?.ml ?: 250).toString()) }
     var zone by remember(editor) { mutableStateOf(editor.appointment?.zone ?: ZoneId.systemDefault().id) }
     var location by remember(editor) { mutableStateOf(editor.appointment?.location ?: "") }
@@ -149,24 +162,47 @@ fun EditDialog(
                         error = "validation.tooManyTimes"
                         return
                     }
-                    val parsedDates = if (specific) {
+                    val parsedDates = if (specific && !phased) {
                         if (dates.isBlank()) emptySet() else normalize(dates).replace('،', ',').split(',')
                             .map { CalendarSupport.fromInput(it.trim(), calendar).toString() }.toSet()
                     } else emptySet()
-                    if (specific && parsedDates.isEmpty() || !specific && weekdays.isEmpty()) {
+                    if (!phased && (specific && parsedDates.none { it >= medicationStart } || !specific && weekdays.isEmpty())) {
                         error = "validation.schedule"
                         return
                     }
+                    val parsedPhases = if (phased) {
+                        runCatching { phases.map { it.toPhase(calendar) }.also(::validatePhases) }.getOrElse {
+                            error = "care.invalidPhases"
+                            return
+                        }
+                    } else emptyList()
+                    val quantity = if (!phased && doseAmount.isNotBlank()) parseQuantity(doseAmount)?.takeIf { it > 0 } else null
+                    if ((!phased && doseAmount.isNotBlank() && quantity == null) || medicationUnit.trim().length > 40 ||
+                        (quantity != null || parsedPhases.any { phase -> phase.slots.any { it.milliUnits != null } }) && medicationUnit.isBlank()) {
+                        error = "care.invalidAmount"
+                        return
+                    }
+                    val stock = if (trackStock) {
+                        val balance = originalStock?.balance ?: parseQuantity(initialStock)
+                        val minStock = parseQuantity(threshold)
+                        val hasQuantities = if (phased) parsedPhases.all { phase -> phase.slots.all { it.milliUnits != null } } else quantity != null
+                        if (balance == null || minStock == null || !hasQuantities || medicationUnit.isBlank()) {
+                            error = "care.invalidStock"
+                            return
+                        }
+                        MedicationStock(balance, minStock, originalStock?.trackedFrom ?: Instant.now().toEpochMilli())
+                    } else null
                     val med = Medication(
                         id = editor.medication?.id ?: id(),
                         name = name.trim(),
                         instructions = instructions.trim(),
-                        startDay = medicationStart,
+                        startDay = parsedPhases.firstOrNull()?.let { LocalDate.ofEpochDay(it.startDay.toLong()).toString() } ?: medicationStart,
                         times = parsedTimes,
-                        weekdays = if (specific) emptySet() else weekdays,
+                        weekdays = if (phased) (1..7).toSet() else if (specific) emptySet() else weekdays,
                         dates = parsedDates,
                         active = editor.medication?.active ?: true,
-                        icon = medicationIcon, color = medicationColor
+                        icon = medicationIcon, color = medicationColor,
+                        phases = parsedPhases, unit = medicationUnit.trim(), milliUnits = quantity, stock = stock
                     )
                     val action: (HealthData) -> Unit = { current -> current.changeMedication(med, ZonedDateTime.now()) }
                     action
@@ -262,68 +298,90 @@ fun EditDialog(
                         Input(name, { name = it;error=null }, tr("medication.name"), required = true,error=if(error=="validation.medicationName") tr(error!!) else null)
                         Input(instructions, { instructions = it }, tr("medication.instructions"), singleLine = false)
                         MedicationAppearancePicker(medicationIcon, medicationColor, { medicationIcon = it }, { medicationColor = it })
-                        Text(tr("medication.time"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        times.forEachIndexed { index, time ->
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedButton(
-                                    onClick = { medicationTimePicker(index) },
-                                    modifier = Modifier.weight(1f).heightIn(min = 50.dp)
-                                ) {
-                                    Text(tr("medication.timeNumber", n(index + 1), displayTime(time)))
-                                }
-                                if (times.size > 1 && advancedSchedule) {
-                                    IconButton(onClick = {
-                                        times = times.filterIndexed { i, _ -> i != index }
-                                        error = null
-                                    }, modifier = Modifier.size(48.dp)) {
-                                        Icon(Icons.Default.DeleteOutline, contentDescription = tr("a11y.deleteDoseTime", n(index + 1)))
+                        SwitchRow(tr("care.phased"), phased) { enabled ->
+                            if (enabled && phases.isEmpty()) phases = listOf(PhaseDraft(
+                                start = CalendarSupport.inputDate(LocalDate.parse(medicationStart), calendar, language),
+                                days = weekdays.fold(0) { mask, day -> mask or (1 shl (day - 1)) }.takeIf { it != 0 } ?: 127,
+                                slots = times.map { PhaseSlotDraft(it,doseAmount) }
+                            ))
+                            phased = enabled
+                            error = null
+                        }
+                        if (phased) MedicationPhaseFields(phases) { phases = it; error = null }
+                        else {
+                            Text(tr("medication.time"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            times.forEachIndexed { index, time ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    OutlinedButton(
+                                        onClick = { medicationTimePicker(index) },
+                                        modifier = Modifier.weight(1f).heightIn(min = 50.dp)
+                                    ) {
+                                        Text(tr("medication.timeNumber", n(index + 1), displayTime(time)))
                                     }
+                                    if (times.size > 1 && advancedSchedule) {
+                                        IconButton(onClick = {
+                                            times = times.filterIndexed { i, _ -> i != index }
+                                            error = null
+                                        }, modifier = Modifier.size(48.dp)) {
+                                            Icon(Icons.Default.DeleteOutline, contentDescription = tr("a11y.deleteDoseTime", n(index + 1)))
+                                        }
+                                    }
+                                }
+                            }
+                            if (!advancedSchedule) {
+                                val summary = if(specific) tr("medication.specificSummary",n(normalize(dates).replace('،',',').split(',').count {it.isNotBlank()}))
+                                    else if(weekdays.size==7) tr("medication.everyDay")
+                                    else CalendarSupport.weekdayOrder(language).filter {it in weekdays}.joinToString(" · ") {localizedWeekday(it,language)}
+                                Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(tr("medication.startDate")+": "+displayDate(LocalDate.parse(medicationStart)),style=MaterialTheme.typography.bodySmall)
+                                TextButton(onClick = { advancedSchedule = true }) {
+                                    Icon(Icons.Default.ExpandMore, contentDescription = null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(tr("medication.advanced"))
+                                }
+                            } else {
+                                TextButton(onClick = { medicationTimePicker() }, enabled = times.size < 12) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(tr("medication.addTime"))
+                                }
+                                HorizontalDivider()
+                                Text(tr("medication.schedule"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                OutlinedButton(onClick = { datePickerTarget = "start" }, modifier = Modifier.testTag("medication-start-date").fillMaxWidth().heightIn(min = 50.dp)) {
+                                    Text(tr("medication.startDate") + ": " + CalendarSupport.formatDate(LocalDate.parse(medicationStart), calendar, language))
+                                }
+                                SwitchRow(tr("medication.specificDates"), specific) { specific = it }
+                                if (specific) {
+                                    val helper = tr(if (calendar == "jalali") "medication.dateExampleSolar" else "medication.dateExampleGregorian")
+                                    Input(dates, { dates = it }, tr("medication.dateList"), helper, singleLine = false)
+                                } else {
+                                    Text(tr("medication.weekdays"), style = MaterialTheme.typography.bodyMedium)
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        CalendarSupport.weekdayOrder(language).forEach { day ->
+                                            FilterChip(
+                                                selected = day in weekdays,
+                                                onClick = { weekdays = if (day in weekdays) weekdays - day else weekdays + day },
+                                                label = { Text(weekdayName(day)) }
+                                            )
+                                        }
+                                    }
+                                }
+                                TextButton(onClick = { advancedSchedule = false },modifier=Modifier.testTag("medication-collapse-schedule")) {
+                                    Icon(Icons.Default.ExpandLess, contentDescription = null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(tr("common.close"))
                                 }
                             }
                         }
-                        if (!advancedSchedule) {
-                            val summary = if(specific) tr("medication.specificSummary",n(normalize(dates).replace('،',',').split(',').count {it.isNotBlank()}))
-                                else if(weekdays.size==7) tr("medication.everyDay")
-                                else CalendarSupport.weekdayOrder(language).filter {it in weekdays}.joinToString(" · ") {localizedWeekday(it,language)}
-                            Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(tr("medication.startDate")+": "+displayDate(LocalDate.parse(medicationStart)),style=MaterialTheme.typography.bodySmall)
-                            TextButton(onClick = { advancedSchedule = true }) {
-                                Icon(Icons.Default.ExpandMore, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text(tr("medication.advanced"))
-                            }
-                        } else {
-                            TextButton(onClick = { medicationTimePicker() }, enabled = times.size < 12) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text(tr("medication.addTime"))
-                            }
-                            HorizontalDivider()
-                            Text(tr("medication.schedule"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            OutlinedButton(onClick = { datePickerTarget = "start" }, modifier = Modifier.testTag("medication-start-date").fillMaxWidth().heightIn(min = 50.dp)) {
-                                Text(tr("medication.startDate") + ": " + CalendarSupport.formatDate(LocalDate.parse(medicationStart), calendar, language))
-                            }
-                            SwitchRow(tr("medication.specificDates"), specific) { specific = it }
-                            if (specific) {
-                                val helper = tr(if (calendar == "jalali") "medication.dateExampleSolar" else "medication.dateExampleGregorian")
-                                Input(dates, { dates = it }, tr("medication.dateList"), helper, singleLine = false)
-                            } else {
-                                Text(tr("medication.weekdays"), style = MaterialTheme.typography.bodyMedium)
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    CalendarSupport.weekdayOrder(language).forEach { day ->
-                                        FilterChip(
-                                            selected = day in weekdays,
-                                            onClick = { weekdays = if (day in weekdays) weekdays - day else weekdays + day },
-                                            label = { Text(weekdayName(day)) }
-                                        )
-                                    }
-                                }
-                            }
-                            TextButton(onClick = { advancedSchedule = false },modifier=Modifier.testTag("medication-collapse-schedule")) {
-                                Icon(Icons.Default.ExpandLess, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text(tr("common.close"))
-                            }
+                        if (phased || doseAmount.isNotBlank() || advancedSchedule || trackStock) {
+                            if (!phased) Input(doseAmount, { doseAmount = it; error = null }, tr("care.amount"), keyboardType = KeyboardType.Decimal)
+                            if (trackStock && originalStock != null) Text(tr("care.unit") + " · " + medicationUnit)
+                            else Input(medicationUnit, { medicationUnit = it; error = null }, tr("care.unit"), tr("care.unitExample"))
+                        }
+                        SwitchRow(tr("care.trackStock"), trackStock) { trackStock = it; error = null }
+                        if (trackStock) {
+                            if (originalStock == null) Input(initialStock, { initialStock = it; error = null }, tr("care.initialStock"), keyboardType = KeyboardType.Decimal)
+                            Input(threshold, { threshold = it; error = null }, tr("care.threshold"), keyboardType = KeyboardType.Decimal)
                         }
                         Text(tr("medication.disclaimer"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

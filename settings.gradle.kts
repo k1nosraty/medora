@@ -18,3 +18,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Medora"
 include(":app")
+includeBuild("care-core")

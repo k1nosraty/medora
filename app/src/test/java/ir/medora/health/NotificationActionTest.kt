@@ -46,8 +46,8 @@ class NotificationActionTest {
     }
     @Test fun waterActionRejectsOldSnoozeAndAcknowledgedNotifications() {
         val d=HealthData(settings=Settings(consent=true,waterEnabled=true))
-        val base="water|2026-10-10|08:00"
-        val r=Reminder(base,"water",base,now.toInstant().toEpochMilli(),waterBase=base)
+        val r=Planner.plan(d,now.withHour(7),1).first { it.kind=="water" }
+        val base=r.waterBase
         assertTrue(d.applyReminderAction(r,"snooze",now))
         val snoozed=d.waterSnoozes.getValue(base)
         assertFalse(d.applyReminderAction(r,"done",now.plusMinutes(11)))
@@ -58,11 +58,26 @@ class NotificationActionTest {
     }
     @Test fun waterOutsideWindowAndAfterGoalCannotBeLoggedFromStaleNotification() {
         val d=HealthData(settings=Settings(consent=true,waterEnabled=true))
-        val r=Reminder("water","water","",now.toInstant().toEpochMilli(),waterBase="water|2026-10-10|08:00")
+        val r=Planner.plan(d,now.withHour(7),1).first { it.kind=="water" }
         assertFalse(d.applyReminderAction(r,"done",now.withHour(23)))
         d.addWater(2000,now)
         assertFalse(d.applyReminderAction(r,"done",now))
         assertEquals(2000,d.total("2026-10-10"))
+    }
+    @Test fun waterRemindersAndSnoozesMustStillMatchTheCurrentSchedule() {
+        val data = HealthData(settings = Settings(consent = true, waterEnabled = true, repeat = 10))
+        val slots = Planner.plan(data, now.withHour(7), 1).filter { it.kind == "water" }
+        val first = slots[0]
+        val retry = slots[1]
+        assertTrue(Planner.allowed(data, retry, now.plusMinutes(6)))
+        data.settings = data.settings.copy(repeat = 15)
+        assertFalse(data.applyReminderAction(retry, "done", now.plusMinutes(6)))
+
+        assertTrue(data.applyReminderAction(first, "snooze", now))
+        data.settings = data.settings.copy(start = "08:10")
+        assertTrue(Planner.plan(data, now, 1).none { it.waterBase == first.waterBase })
+        assertFalse(data.applyReminderAction(first.copy(at = data.waterSnoozes.getValue(first.waterBase)), "done", now.plusMinutes(11)))
+        assertTrue(data.water.isEmpty())
     }
     @Test fun appointmentPresentationConvertsClinicDateAcrossMidnight() {
         val a=Appointment(title="Visit",wall="2026-10-10T00:30",zone="Asia/Tehran")

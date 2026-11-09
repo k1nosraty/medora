@@ -92,6 +92,7 @@ kotlin {
     }
 }
 dependencies {
+    implementation("ir.medora:care-core:1.0")
     implementation(platform("androidx.compose:compose-bom:2025.03.00"))
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")

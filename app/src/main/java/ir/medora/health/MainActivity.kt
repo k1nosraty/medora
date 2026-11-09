@@ -48,6 +48,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import ir.medora.care.formatQuantity
 
 class MainActivity : ComponentActivity() {
     private lateinit var model: HealthViewModel
@@ -558,18 +559,22 @@ private fun MedicationScreen(
                 color = if (medication.active) wellnessAccent(MedoraColors.Success) else MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (medication.instructions.isNotBlank()) Text(medication.instructions)
-            Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { localizedNumber(it, language) })
-            val schedule = if (medication.dates.isNotEmpty()) {
-                medication.dates.sorted().joinToString(if (language == "fa") "، " else ", ") { date -> CalendarSupport.formatDate(LocalDate.parse(date), calendar, language) }
-            } else if (medication.weekdays.size == 7) {
-                tr("medication.everyDay")
-            } else {
-                CalendarSupport.weekdayOrder(language).filter { it in medication.weekdays }
-                    .joinToString(if (language == "fa") "، " else ", ") { day -> localizedWeekday(day, language) }
+            if (medication.phases.isNotEmpty()) Text(tr("care.phaseCount", n(medication.phases.size)))
+            else {
+                Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { localizedNumber(it, language) })
+                val schedule = if (medication.dates.isNotEmpty()) {
+                    medication.dates.sorted().joinToString(if (language == "fa") "، " else ", ") { date -> CalendarSupport.formatDate(LocalDate.parse(date), calendar, language) }
+                } else if (medication.weekdays.size == 7) {
+                    tr("medication.everyDay")
+                } else {
+                    CalendarSupport.weekdayOrder(language).filter { it in medication.weekdays }
+                        .joinToString(if (language == "fa") "، " else ", ") { day -> localizedWeekday(day, language) }
+                }
+                Text(schedule, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(schedule, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(tr("medication.startDate") + ": " + displayDate(LocalDate.parse(medication.startDay)),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            MedicationStockSummary(medication,vm)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { openEditor(Editor("medication", medication = medication)) }) { Text(tr("common.edit")) }
                 TextButton(onClick = {
@@ -622,6 +627,7 @@ private fun AppointmentScreen(
 @Composable
 fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
     var menu by remember { mutableStateOf(false) }
+    var editAmount by remember(dose.id) { mutableStateOf(false) }
     val statusKey = when (dose.status) {
         DoseStatus.PENDING -> "dose.pending"
         DoseStatus.TAKEN -> "dose.taken"
@@ -671,6 +677,10 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
                             }
                         )
                     }
+                    if (dose.unit.isNotBlank()) DropdownMenuItem(
+                        text = { Text(tr("care.actualAmount")) }, enabled = !vm.busy,
+                        onClick = { menu = false; editAmount = true }
+                    )
                 }
             }
         }
@@ -692,6 +702,7 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
                     Text(tr(statusKey), color = stateColor, style = MaterialTheme.typography.labelMedium)
                 }
             }
+        if (dose.quantityText().isNotBlank()) Text(localizedNumber(dose.quantityText(), LocalLanguage.current), style = MaterialTheme.typography.bodyMedium)
         if (dose.instructions.isNotBlank()) Text(dose.instructions,Modifier.padding(vertical=3.dp), style = MaterialTheme.typography.bodySmall)
         }
         if (actionable && needsAction) {
@@ -712,11 +723,15 @@ fun DoseCard(dose: Dose, vm: HealthViewModel, actionable: Boolean = true) {
         }
         if (dose.status == DoseStatus.SNOOZED) {
             Text(
-                tr("dose.until", displayTime(Instant.ofEpochMilli(dose.snoozeUntil).atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0))),
+                tr("dose.until", displayTime(dose.reminderAt(ZoneId.systemDefault()).atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0))),
                 style = MaterialTheme.typography.bodySmall,
                 color = wellnessAccent(MedoraColors.Warning)
             )
         }
+    }
+    if (editAmount) QuantityDialog("care.actualAmount", dose.unit,
+        (dose.actualMilliUnits ?: dose.milliUnits)?.let(::formatQuantity).orEmpty(), vm, { editAmount = false }) { amount ->
+        vm.change({ it.mark(dose, DoseStatus.TAKEN, Instant.now(), actualAmount = amount) }) { editAmount = false }
     }
 }
 

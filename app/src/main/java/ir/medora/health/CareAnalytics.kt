@@ -9,9 +9,8 @@ fun HealthData.calendarDoses(day: LocalDate, now: ZonedDateTime = ZonedDateTime.
     val stored = dayDoses(day.toString())
     if (!day.isAfter(now.toLocalDate())) return stored
     val result = stored.associateBy { it.id }.toMutableMap()
-    medications.filter { it.occurs(day) }.forEach { medication ->
-        medication.times.forEach { time ->
-            val dose = Dose.of(medication, day, time)
+    medications.forEach { medication ->
+        Dose.on(medication,day).forEach { dose ->
             val at = LocalDateTime.parse(dose.wall).atZone(now.zone).toInstant().toEpochMilli()
             if (at >= medication.effectiveFrom) result.putIfAbsent(dose.id, dose)
         }

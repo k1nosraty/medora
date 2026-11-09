@@ -35,7 +35,7 @@ class AuditRegressionTest {
     @Test fun recoveringAfterMidnightKeepsDeferredDose() {
         val late=before.withHour(23).withMinute(55)
         val d=data(medication(listOf("23:55")))
-        d.mark(d.dayDoses("2026-10-10").single(),DoseStatus.SNOOZED,late.toInstant())
+        d.mark(d.dayDoses("2026-10-10").single(),DoseStatus.SNOOZED,late.toInstant(),zone)
         d.reminderCheckpoint=late.toInstant().toEpochMilli()
         assertEquals(1,Planner.overdue(d,late.plusMinutes(15)).size)
     }
@@ -82,7 +82,7 @@ class AuditRegressionTest {
     @Test fun unchangedDeferredSlotSurvivesPlanEdit() {
         val d=data(medication(listOf("08:00")))
         val snoozeAt=before.withHour(8).withMinute(1)
-        d.mark(d.dayDoses("2026-10-10").single(),DoseStatus.SNOOZED,snoozeAt.toInstant())
+        d.mark(d.dayDoses("2026-10-10").single(),DoseStatus.SNOOZED,snoozeAt.toInstant(),zone)
         d.changeMedication(medication(listOf("08:00","14:00")),snoozeAt.plusMinutes(1))
         assertEquals(1,Planner.overdue(d,snoozeAt.plusMinutes(11)).size)
     }

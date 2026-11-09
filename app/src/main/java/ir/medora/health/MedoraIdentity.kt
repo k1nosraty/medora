@@ -117,8 +117,8 @@ fun MedoraEmptyArtwork(kind: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun SettingsCategoryTile(title: String, detail: String, index: Int, click: () -> Unit) {
-    val colors = listOf(MedoraColors.WaterContainer, MedoraColors.Warm, MedoraColors.Lavender, MedoraColors.PrimaryContainer, MedoraColors.PrimaryContainer)
-    val icons = listOf(Icons.Default.WaterDrop, Icons.Default.Medication, Icons.Default.Event, Icons.Default.Notifications, Icons.Default.Palette)
+    val colors = listOf(MedoraColors.WaterContainer, MedoraColors.Warm, MedoraColors.Lavender, MedoraColors.PrimaryContainer, MedoraColors.PrimaryContainer, MedoraColors.PrimaryContainer)
+    val icons = listOf(Icons.Default.WaterDrop, Icons.Default.Medication, Icons.Default.Event, Icons.Default.Notifications, Icons.Default.Palette, Icons.Default.Lock)
     Surface(color = wellnessTint(colors[index]), shape = MedoraFeatureShape,
         modifier = Modifier.fillMaxWidth().clip(MedoraFeatureShape).clickable(role = Role.Button, onClick = click)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -178,8 +178,10 @@ fun MedicationDetailsSheet(medication: Medication, data: HealthData, vm: HealthV
                     IconButton(onClick = close) { Icon(Icons.Default.Close, tr("common.close")) }
                 }
                 if (medication.instructions.isNotBlank()) Text(medication.instructions)
-                Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { localizedNumber(it,language) })
+                if (medication.phases.isNotEmpty()) Text(tr("care.phaseCount", n(medication.phases.size)))
+                else Text(tr("medication.times") + ": " + medication.times.joinToString(" · ") { localizedNumber(it,language) })
                 Text(tr("medication.startDate") + ": " + displayDate(java.time.LocalDate.parse(medication.startDay)))
+                MedicationStockSummary(medication,vm)
                 PrimaryAction(tr("common.edit"), edit,Modifier.testTag("details-edit"))
             }
             }
