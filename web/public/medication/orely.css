@@ -77,7 +77,7 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
 .medora .today-story {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.28fr) minmax(0, 1fr);
   align-items: center;
   min-block-size: clamp(11.75rem, 48vw, 15.5rem);
   padding: clamp(.9rem, 3.5vw, 1.65rem);
@@ -102,7 +102,7 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
 }
 .medora .today-story .story-art {
   justify-self: center;
-  inline-size: min(116%, 18rem);
+  inline-size: min(126%, 19.5rem);
   block-size: auto;
   -webkit-mask-image: linear-gradient(#000 88%, transparent);
   mask-image: linear-gradient(#000 88%, transparent);
@@ -128,7 +128,18 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
 }
-.medora #today-dates .day-controls { margin: 0; padding: .04rem .44rem .23rem; row-gap: .04rem; border-radius: 1.15rem; }
+.medora #today-dates .day-controls {
+  margin: 0;
+  padding: .04rem .44rem .23rem;
+  row-gap: .04rem;
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(112deg, color-mix(in srgb, var(--glass-glint) 45%, transparent), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 53%, transparent), color-mix(in srgb, var(--panel) 82%, transparent));
+  box-shadow: inset 0 1px 1px var(--glass-glint), inset 0 -1px 0 var(--glass-rim), 0 .42rem 1.25rem var(--glass-shadow);
+  -webkit-backdrop-filter: blur(14px) saturate(155%);
+  backdrop-filter: blur(14px) saturate(155%);
+}
 .medora :is(#today-dates, .compact-day) .day-arrow { color: var(--action); }
 .medora .compact-day .date-field { min-block-size: 2.6rem; }
 .medora #today-dates :is(.date-field, .day-arrow) { min-block-size: 2.5rem; }
@@ -142,12 +153,15 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora #today-dates .day-week button[aria-current="date"] span { color: var(--mint-ink); }
 .medora .daily-sheet { margin-block-start: .75rem; }
 .medora #today-water {
+  --water: color-mix(in srgb, var(--cover) 11%, var(--panel));
+  --water-ink: var(--ink);
+  --water-accent: #8cb1e2;
   display: grid;
   grid-template-columns: clamp(3.6rem, 22%, 5.3rem) minmax(0, 1fr);
   gap: .65rem;
   margin: 0 0 .9rem;
   padding: .45rem;
-  border: 1px solid color-mix(in srgb, var(--water-ink) 19%, var(--water));
+  border: 1px solid var(--outline);
   border-radius: 1.15rem;
   background: linear-gradient(125deg, var(--glass-glint), transparent 60%), var(--water);
 }
@@ -155,7 +169,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   position: relative;
   border-radius: .9rem;
   background: linear-gradient(155deg, var(--glass-glint), transparent 64%),
-    color-mix(in srgb, var(--water-ink) 14%, var(--water));
+    color-mix(in srgb, var(--water-accent) 27%, var(--water));
 }
 .medora #today-water .water-glass {
   position: absolute;
@@ -163,6 +177,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   inline-size: 100%;
   block-size: 100%;
 }
+.medora #today-water .glass-water { fill: url(#today-glass-water-fill); }
 .today-water-body { min-inline-size: 0; padding: .16rem .13rem .08rem; }
 .medora #today-water .water-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .4rem; align-items: center; }
 .medora #today-water-label { margin: 0; color: inherit; font-size: .98rem; }
@@ -178,7 +193,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   grid-area: 1 / 2 / span 2;
   padding: .08rem .36rem;
   border-radius: .55rem;
-  background: color-mix(in srgb, var(--water-ink) 13%, var(--water));
+  background: color-mix(in srgb, var(--water-accent) 24%, var(--water));
   font-size: .74rem;
   font-weight: 750;
   font-variant-numeric: tabular-nums;
@@ -194,9 +209,9 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   font-size: .75rem;
   line-height: 1.2;
 }
-.medora .today-water-actions [data-open-water] { flex: 1.16; border-color: transparent; background: var(--water-ink); color: var(--water); }
+.medora .today-water-actions [data-open-water] { flex: 1.16; border-color: transparent; background: var(--action); color: var(--on-action); }
 .medora .today-water-actions .secondary {
-  border-color: color-mix(in srgb, var(--water-ink) 37%, var(--water));
+  border-color: color-mix(in srgb, var(--water-accent) 55%, var(--outline));
   background: color-mix(in srgb, var(--panel) 58%, var(--water));
   color: var(--water-ink);
 }
