@@ -32,4 +32,4 @@ const secrets = {
 const dotenv = Object.entries(secrets).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join("\n");
 await writeFile(".dev.vars", `${dotenv}\n`, { flag: "wx", mode: 0o600 });
 await writeFile(".pilot-secrets.json", `${JSON.stringify(secrets, null, 2)}\n`, { flag: "wx", mode: 0o600 });
-console.log("Created .dev.vars and .pilot-secrets.json. Share only PILOT_ACCESS_CODE with testers.");
+console.log("Created .dev.vars and .pilot-secrets.json. PILOT_ACCESS_CODE is for the separate /pilot/ tool.");

@@ -1,18 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
 import { nextCareReminder, validSchedule } from "./medication-schedule.mjs";
-import { smallJson, validSubscription } from "./validation.mjs";
+import { smallJson, validSubscription, validSubscriptionKey } from "./validation.mjs";
 import { sendPush } from "./push.mjs";
+import { matchesSubscriptionId, subscriptionId } from "../public/medication/subscription-id.js";
 
-const deviceId = /^[a-f0-9]{32}$/;
 const encoder = new TextEncoder();
 const sendWindow = 5 * 60_000;
 const kinds = { dose: "دارو", water: "آب", appointment: "قرار" };
 const reply = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
-
-async function subscriptionId(endpoint) {
-  const hash = await crypto.subtle.digest("SHA-256", encoder.encode(endpoint));
-  return Array.from(new Uint8Array(hash, 0, 16), byte => byte.toString(16).padStart(2, "0")).join("");
-}
 
 async function deviceSignature(secret, id) {
   const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -26,14 +21,13 @@ export async function handleMedicationReminders(request, env, url) {
   const authorization = request.headers.get("Authorization") ?? "";
 
   if (url.pathname === "/api/reminders/enroll" && request.method === "POST") {
-    if (!/^Bearer [a-f0-9]{36}$/.test(authorization) || !/^[a-f0-9]{36}$/.test(env.PILOT_ACCESS_CODE) ||
-        !crypto.subtle.timingSafeEqual(encoder.encode(authorization.slice(7)), encoder.encode(env.PILOT_ACCESS_CODE))) {
-      return reply({ error: "bad_code" }, 401);
-    }
+    const { success } = await env.PUSH_ENROLL_LIMIT.limit({ key: request.headers.get("CF-Connecting-IP") || "unknown" });
+    if (!success) return reply({ error: "rate_limit" }, 429);
     const body = await smallJson(request);
-    if (typeof body?.id !== "string" || !deviceId.test(body.id)) return reply({ error: "bad_request" }, 400);
-    const signature = await deviceSignature(env.REMINDER_SIGNING_KEY, body.id);
-    return reply({ token: `${body.id}.${signature}` });
+    const subscription = validSubscription(body?.subscription);
+    if (!subscription || !await validSubscriptionKey(subscription)) return reply({ error: "bad_subscription" }, 400);
+    const id = await subscriptionId(subscription);
+    return reply({ token: `${id}.${await deviceSignature(env.REMINDER_SIGNING_KEY, id)}` });
   }
 
   const testing = url.pathname === "/api/reminders/test" && request.method === "POST";
@@ -42,6 +36,8 @@ export async function handleMedicationReminders(request, env, url) {
   if (!match || !crypto.subtle.timingSafeEqual(encoder.encode(match[2]), encoder.encode(await deviceSignature(env.REMINDER_SIGNING_KEY, match[1])))) {
     return reply({ error: "unauthorized" }, 401);
   }
+  const { success } = await env.PUSH_DEVICE_LIMIT.limit({ key: match[1] });
+  if (!success) return reply({ error: "rate_limit" }, 429);
   const device = env.REMINDERS.getByName(match[1]);
   if (testing) return reply(await device.test());
   if (request.method === "GET") return reply(await device.status());
@@ -54,7 +50,7 @@ export async function handleMedicationReminders(request, env, url) {
   if (body.enabled) {
     const schedule = validSchedule(body);
     const subscription = validSubscription(body.subscription);
-    if (!schedule || !subscription || await subscriptionId(subscription.endpoint) !== match[1]) {
+    if (!schedule || !subscription || !await matchesSubscriptionId(match[1], subscription)) {
       return reply({ error: "bad_schedule" }, 400);
     }
     plan = { ...schedule, subscription };

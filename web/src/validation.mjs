@@ -44,6 +44,16 @@ export function validSubscription(value) {
   return { endpoint: endpoint.href, expirationTime: null, keys: { p256dh: value.keys.p256dh, auth: value.keys.auth } };
 }
 
+export async function validSubscriptionKey(subscription) {
+  try {
+    await crypto.subtle.importKey("raw", decodedKey(subscription.keys.p256dh, 65),
+      { name: "ECDH", namedCurve: "P-256" }, false, []);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function smallJson(request, limit = 4096) {
   if (!request.headers.get("content-type")?.startsWith("application/json") || !request.body) return null;
   const reader = request.body.getReader();

@@ -1,5 +1,6 @@
 import { accessCare } from "./storage.js";
 import { scheduleForPush, localZone } from "./care-plan.js";
+import { matchesSubscriptionId } from "./subscription-id.js";
 
 export { scheduleForPush };
 
@@ -24,7 +25,6 @@ function controls(settings) {
   $("push-disable").disabled = !settings?.enabled;
   $("push-check").disabled = !settings?.token;
   $("push-test").disabled = !settings?.enabled;
-  $("push-code-row").hidden = Boolean(settings?.enabled);
   const todayReminders = $("today-reminders");
   if (todayReminders) todayReminders.hidden = Boolean(settings?.enabled);
 }
@@ -35,7 +35,7 @@ function serialize(action) {
 }
 
 async function request(path, method, token, body) {
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
   if (body) headers["Content-Type"] = "application/json";
   const response = await fetch(path, { method, headers, body: body && JSON.stringify(body), cache: "no-store" });
   if (!response.ok) {
@@ -43,11 +43,6 @@ async function request(path, method, token, body) {
     throw new Error(error || "server");
   }
   return response.json();
-}
-
-async function endpointId(endpoint) {
-  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(endpoint));
-  return Array.from(new Uint8Array(hash, 0, 16), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function localDay() {
@@ -79,7 +74,7 @@ async function sync(check = false) {
   if (settings.enabled && registration) {
     subscription = await registration.pushManager.getSubscription();
     const validSubscription = subscription && Notification.permission !== "denied" &&
-      settings.token.startsWith(`${await endpointId(subscription.endpoint)}.`);
+      await matchesSubscriptionId(settings.token.split(".")[0], subscription.toJSON());
     if (settings.zone !== zone || settings.planVersion !== 2 || !validSubscription) {
       state = await accessCare(current => {
         const reminder = current.reminders;
@@ -135,7 +130,7 @@ async function sync(check = false) {
       status("اعلان نوبت‌ها خاموش است.");
     }
   } catch (error) {
-    status(error.message === "bad_schedule"
+    status(error.message === "rate_limit" ? "تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره بررسی کنید." : error.message === "bad_schedule"
       ? "زمان‌بندی روی سرور ثبت نشد. تعداد مرحله‌ها و نوبت‌های آینده را بررسی کنید."
       : "همگام‌سازی اعلان انجام نشد. پس از اتصال، «بررسی وضعیت» را بزنید.");
   }
@@ -176,7 +171,7 @@ export async function initializeReminders() {
     const settings = (await accessCare()).reminders;
     controls(settings);
     if (settings?.token) await syncReminders(true);
-    else status("برای دریافت اعلان، کد فعال‌سازی را وارد کنید.");
+    else status("برای دریافت یادآوری، «فعال‌کردن اعلان» را بزنید و مجوز گوشی را تأیید کنید.");
   } catch {
     status("راه‌اندازی اعلان انجام نشد. پس از اتصال، برنامه را دوباره باز کنید.");
   }
@@ -185,31 +180,28 @@ export async function initializeReminders() {
 $("push-enable").addEventListener("click", () => {
   // Safari requires subscribe to start during the button's user gesture.
   if (!registration || !publicKey) return;
-  const code = $("push-code").value.trim();
-  if (code && !/^[a-f0-9]{36}$/.test(code)) return status("کد فعال‌سازی را بررسی کنید.");
+  if (Notification.permission === "denied") return status("مجوز اعلان مدورا را در تنظیمات گوشی فعال کنید.");
   const ready = subscription ? Promise.resolve(subscription) : registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: publicKey });
   ready.catch(() => {});
   $("push-enable").disabled = true;
   void serialize(async () => {
     try {
       subscription = await ready;
-      const id = await endpointId(subscription.endpoint);
+      const push = subscription.toJSON();
       const old = (await accessCare()).reminders;
-      const existingToken = old?.token?.startsWith(`${id}.`) ? old.token : null;
-      if (!existingToken && !code) throw new Error("code_needed");
-      const token = existingToken ?? (await request(`${api}/enroll`, "POST", code, { id })).token;
+      const existingToken = old?.token && await matchesSubscriptionId(old.token.split(".")[0], push) ? old.token : null;
+      const token = existingToken ?? (await request(`${api}/enroll`, "POST", null, { subscription: push })).token;
       const remote = await request(api, "GET", token);
       const updated = await accessCare(state => {
         const previous = state.reminders;
         const revision = Math.max(previous?.token === token ? previous.revision : 0, remote.revision) + 1;
         state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion: 2 };
       });
-      $("push-code").value = "";
       controls(updated.reminders);
       await sync();
     } catch (error) {
-      status(error.message === "code_needed" ? "برای این اشتراک کد فعال‌سازی را وارد کنید." :
-        error.message === "bad_code" ? "کد فعال‌سازی درست نیست." : "فعال‌کردن اعلان انجام نشد. اتصال و مجوز اعلان را بررسی کنید.");
+      status(error.message === "rate_limit" ? "تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره تلاش کنید." :
+        "فعال‌کردن اعلان انجام نشد. اتصال و مجوز اعلان را بررسی کنید.");
       controls((await accessCare()).reminders);
     }
   }).catch(() => status("فعال‌کردن اعلان انجام نشد."));

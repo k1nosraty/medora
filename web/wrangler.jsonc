@@ -10,6 +10,10 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },
+  "ratelimits": [
+    { "name": "PUSH_ENROLL_LIMIT", "namespace_id": "750501", "simple": { "limit": 30, "period": 60 } },
+    { "name": "PUSH_DEVICE_LIMIT", "namespace_id": "750502", "simple": { "limit": 60, "period": 60 } }
+  ],
   "durable_objects": {
     "bindings": [
       { "name": "PILOT", "class_name": "PushPilot" },
