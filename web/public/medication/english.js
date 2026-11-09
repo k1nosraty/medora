@@ -455,6 +455,7 @@ export default {
   "برنامهٔ این روز": "Schedule for this day",
   "بازگشت به امروز": "Back to today",
   "سوابق آب": "Water history",
+  "سوابق": "History",
   "نوبت‌ها و قرارها": "Doses and appointments",
   "بقیهٔ نوبت‌ها و قرارها": "Other doses and appointments",
   "۱ نوبت دارو": "1 dose",
