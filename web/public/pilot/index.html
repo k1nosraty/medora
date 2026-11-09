@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#006f68">
+  <meta name="description" content="نمونهٔ آزمایشی اعلان وب مدورا">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="stylesheet" href="/style.css">
+  <title>آزمایش اعلان مدورا</title>
+  <script type="module" src="/pilot.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="/icon-192.png" width="60" height="60" alt="">
+      <h1>آزمایش اعلان مدورا</h1>
+      <p>این نسخه فقط برای آزمایش اعلان وب است و اطلاعات دارو دریافت نمی‌کند.</p>
+    </header>
+    <section aria-labelledby="setup-title">
+      <h2 id="setup-title">نصب روی آیفون</h2>
+      <ol>
+        <li>در مرورگر Safari، از منوی اشتراک‌گذاری «افزودن به صفحهٔ اصلی» را بزنید.</li>
+        <li>برنامه را از آیکون مدورا روی صفحهٔ اصلی باز کنید. آیفون باید نسخهٔ ۱۶٫۴ یا بالاتر داشته باشد.</li>
+        <li>«فعال‌کردن اعلان» را بزنید و اجازهٔ نمایش اعلان را بدهید.</li>
+      </ol>
+      <div class="buttons">
+        <button id="enable" disabled>فعال‌کردن اعلان</button>
+        <button id="reset" type="button" class="secondary" hidden>لغو اشتراک اعلان</button>
+      </div>
+      <p id="permission" role="status">در حال آماده‌سازی اعلان…</p>
+    </section>
+    <section aria-labelledby="test-title">
+      <h2 id="test-title">ارسال اعلان آزمایشی</h2>
+      <label for="code">کد آزمایش</label>
+      <input id="code" type="password" dir="ltr" maxlength="36" autocomplete="off" spellcheck="false" autocapitalize="none">
+      <div class="buttons">
+        <button id="send-now" disabled>ارسال فوری</button>
+        <button id="send-later" disabled>ارسال یک دقیقه بعد</button>
+        <button id="check" class="secondary" disabled>بررسی نتیجه</button>
+      </div>
+      <p>برای تست صفحهٔ قفل، ارسال یک دقیقه بعد را بزنید. وقتی زمان ارسال نمایش داده شد، برنامه را ببندید و گوشی را قفل کنید.</p>
+      <p id="result" role="status"></p>
+    </section>
+  </main>
+</body>
+</html>

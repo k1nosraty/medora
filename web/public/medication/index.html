@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#006f68">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/medication/medication.css">
+  <title>برنامهٔ داروی مدورا</title>
+  <script type="module" src="/medication/medication.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="/icon-192.png" width="60" height="60" alt="">
+      <h1>برنامهٔ دارو</h1>
+      <p>برنامهٔ دارو، دوز و موجودی در همین مرورگر ذخیره می‌شوند.</p>
+      <p id="boot-status" role="status">در حال بارگذاری برنامهٔ دارو…</p>
+    </header>
+    <div id="app" hidden>
+      <section aria-labelledby="push-title">
+        <h2 id="push-title">اعلان نوبت دارو</h2>
+        <p>برای ارسال اعلان، فقط ساعت‌ها و الگوی تکرار به سرور می‌رسند. تغییر آفلاین پس از اتصال همگام می‌شود.</p>
+        <label id="push-code-row">کد فعال‌سازی برای اشتراک تازه<input id="push-code" type="password" dir="ltr" maxlength="36" autocomplete="off" spellcheck="false"></label>
+        <div class="buttons">
+          <button id="push-enable" type="button" disabled>فعال‌کردن اعلان</button>
+          <button id="push-disable" type="button" class="secondary" disabled>خاموش‌کردن اعلان</button>
+          <button id="push-check" type="button" class="secondary" disabled>بررسی وضعیت</button>
+        </div>
+        <p id="push-status" role="status">در حال آماده‌سازی اعلان…</p>
+      </section>
+      <section aria-labelledby="plans-title">
+        <h2 id="plans-title">داروها</h2>
+        <div id="plans"></div>
+        <div class="buttons"><button id="add" type="button">افزودن دارو</button></div>
+        <form id="editor" hidden>
+          <h3 id="editor-title">برنامهٔ دارو</h3>
+          <div class="fields">
+            <label>نام دارو<input id="name" maxlength="120" required></label>
+            <label>واحد مصرف<input id="unit" value="قرص" maxlength="30" required></label>
+          </div>
+          <p>تاریخ‌ها را در تقویم میلادی وارد کنید. هر مرحله از روز شروع تا روز پایان، با احتساب هر دو روز، اجرا می‌شود.</p>
+          <div id="phases"></div>
+          <div class="buttons"><button id="add-phase" type="button" class="secondary">افزودن مرحله</button></div>
+          <div class="fields">
+            <label>موجودی اولیه (اختیاری)<input id="stock" dir="ltr" inputmode="decimal" maxlength="11"></label>
+            <label>آستانهٔ هشدار موجودی<input id="threshold" dir="ltr" inputmode="decimal" maxlength="11" value="۲"></label>
+          </div>
+          <div class="buttons">
+            <button type="submit">ذخیرهٔ برنامه</button>
+            <button id="cancel" type="button" class="secondary">انصراف</button>
+          </div>
+          <p id="editor-status" role="status"></p>
+        </form>
+      </section>
+      <section aria-labelledby="day-title">
+        <h2 id="day-title">نوبت‌های روز</h2>
+        <label for="day">انتخاب تاریخ میلادی</label>
+        <input id="day" type="date" required>
+        <p id="day-label"></p>
+        <div id="doses"></div>
+      </section>
+      <p id="status" role="status"></p>
+    </div>
+  </main>
+  <template id="phase-template">
+    <fieldset class="phase">
+      <legend>مرحلهٔ مصرف</legend>
+      <div class="fields">
+        <label>روز شروع<input class="start" type="date" required></label>
+        <label>روز پایان (اختیاری)<input class="end" type="date"></label>
+        <label>فاصلهٔ تکرار (هفته)<input class="interval" type="number" inputmode="numeric" dir="ltr" min="1" max="52" value="1" required></label>
+      </div>
+      <div class="weekdays" aria-label="روزهای مصرف"></div>
+      <div class="slots"></div>
+      <div class="buttons">
+        <button type="button" class="add-slot secondary">افزودن ساعت</button>
+        <button type="button" class="remove-phase secondary">حذف مرحله</button>
+      </div>
+    </fieldset>
+  </template>
+  <template id="slot-template">
+    <div class="fields slot">
+      <label>ساعت مصرف<input class="time" type="time" dir="ltr" value="08:00" required></label>
+      <label>مقدار هر نوبت<input class="amount" inputmode="decimal" dir="ltr" maxlength="11" placeholder="مثلاً ۰٫۵"></label>
+      <button type="button" class="remove-slot secondary">حذف ساعت</button>
+    </div>
+  </template>
+</body>
+</html>

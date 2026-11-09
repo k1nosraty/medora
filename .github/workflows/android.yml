@@ -22,3 +22,28 @@ jobs:
         with:
           name: medora-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: gradle/actions/setup-gradle@v4
+      - run: bash gradlew -p care-core jvmTest buildWebEngine
+      - run: npm ci
+        working-directory: web
+      - run: npm test
+        working-directory: web
+      - run: npm run test:care
+        working-directory: web
+      - run: npm run test:alarms
+        working-directory: web
+      - run: npm run deploy -- --dry-run
+        working-directory: web

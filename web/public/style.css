@@ -1,0 +1,75 @@
+@font-face {
+  font-family: Vazirmatn;
+  src: url("/vazirmatn.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+:root {
+  color-scheme: light dark;
+  font-family: Vazirmatn, system-ui, sans-serif;
+  --accent: #006f68;
+}
+body {
+  margin: 0;
+  line-height: 1.7;
+}
+main {
+  box-sizing: border-box;
+  max-inline-size: 42rem;
+  margin-inline: auto;
+  padding: 1.25rem;
+}
+header img {
+  border-radius: 1rem;
+}
+h1, h2 {
+  line-height: 1.45;
+  margin-block: 0.45rem;
+}
+section {
+  border-block-start: 1px solid GrayText;
+  margin-block-start: 1.5rem;
+  padding-block-start: 0.75rem;
+}
+ol {
+  padding-inline-start: 1.5rem;
+}
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-block-start: 0.75rem;
+}
+button, input {
+  box-sizing: border-box;
+  min-block-size: 2.75rem;
+  border: 1px solid GrayText;
+  border-radius: 0.55rem;
+  font: inherit;
+  padding: 0.4rem 0.75rem;
+}
+button {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 650;
+}
+button.secondary {
+  color: CanvasText;
+  background: Canvas;
+  border-color: GrayText;
+}
+button:disabled {
+  opacity: 0.5;
+}
+input {
+  display: block;
+  inline-size: min(100%, 20rem);
+}
+:focus-visible {
+  outline: 2px solid Highlight;
+  outline-offset: 3px;
+}
+#permission, #result {
+  min-block-size: 1.7em;
+}
