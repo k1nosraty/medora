@@ -48,6 +48,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   let calendar;
   let weekdayText;
   let shortDate;
+  let shortMonth;
   let monthText;
   let dayText;
   let dayIndex;
@@ -59,6 +60,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const format = options => new Intl.DateTimeFormat(`${locale}-u-ca-${calendar}`, { ...options, timeZone: "UTC" });
     weekdayText = format({ weekday: "long" });
     shortDate = format({ day: "numeric", month: "short" });
+    shortMonth = format({ month: "short" });
     monthText = format({ month: "long", year: "numeric" });
     dayText = format({ day: "numeric" });
     fullDate = format({ dateStyle: "long" });
@@ -392,12 +394,36 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const wall = localWall(instant, timezone(zone));
     return { day: Math.floor(wall / dayMs), time: new Date(wall).toISOString().slice(11, 16), instant };
   }
-  function visitCard(visit, actionable = false) {
-    const card = element("article", "", "visit");
+  function visitIllustration() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const use = document.createElementNS(svg.namespaceURI, "use");
+    svg.setAttribute("class", "visit-illustration");
+    svg.setAttribute("aria-hidden", "true");
+    use.setAttribute("href", "#art-visit");
+    svg.append(use);
+    return svg;
+  }
+
+  function visitCard(visit, actionable = false, featured = false) {
+    const card = element("article", "", featured ? "visit visit-card visit-featured" : "visit visit-card");
     const title = element("h3", visit.name, "visit-title");
     title.dir = "auto";
     const local = displayVisit(visit);
-    card.append(title, element("p", `${shortDate.format(local.day * dayMs)} · ${clockText(local.time)}`));
+    const date = local.day * dayMs;
+    const day = element("time", "", "visit-date");
+    day.dateTime = iso(local.day);
+    day.setAttribute("aria-label", formatDay(local.day, true));
+    day.append(element("strong", dayText.format(date)), element("span", shortMonth.format(date)));
+    const hour = element("time", clockText(local.time), "visit-hour");
+    hour.dateTime = new Date(local.instant).toISOString();
+    hour.dir = "ltr";
+    const body = element("div", "", "visit-card-body");
+    if (featured) body.append(element("p", t("نزدیک‌ترین قرار"), "visit-eyebrow"));
+    body.append(title, hour);
+    const header = element("div", "", "visit-card-header");
+    header.append(day, body);
+    if (featured) header.append(visitIllustration());
+    card.append(header);
     if (visit.zone && visit.zone !== localZone()) {
       card.append(element("p", t("ساعت مطب {0}، {1} ({2})", formatDay(visit.day), clockText(visit.time), visit.zone), "quiet"));
     }
@@ -435,13 +461,20 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const past = visits.filter(({ visit, at }) => visit.cancelled || at < now).reverse().map(({ visit }) => visit);
     const content = [];
     if (upcoming.length && visitFilter !== "past") {
-      content.push(element("h2", t("نزدیک‌ترین قرار")), ...upcoming.map(visit => visitCard(visit, true)));
+      const [next, ...later] = upcoming;
+      content.push(visitCard(next, true, true));
+      if (later.length) content.push(element("h2", t("قرارهای بعدی")), ...later.map(visit => visitCard(visit, true)));
     }
     if (past.length && visitFilter !== "upcoming") {
       if (visitFilter === "all") content.push(element("h2", t("گذشته و لغوشده")));
       content.push(...past.map(visit => visitCard(visit, true)));
     }
-    $("visits").replaceChildren(...(content.length ? content : [empty(t("در این بخش قراری ندارید."))]));
+    if (!content.length) {
+      const card = element("div", "", "visit-card visit-empty");
+      card.append(element("h2", t("در این بخش قراری ندارید.")), visitIllustration());
+      content.push(card);
+    }
+    $("visits").replaceChildren(...content);
   }
 
   function dateButton(day, selected, choose) {
@@ -469,6 +502,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
         render();
         $("calendar-days").querySelector('[aria-current="date"]')?.focus();
       });
+      if (date === today()) control.classList.add("calendar-today");
       const dots = element("span", "", "calendar-dots");
       dots.setAttribute("aria-hidden", "true");
       for (const [exists, kind, label] of [
@@ -501,8 +535,19 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const recorded = doses.filter(dose => dose.day >= first && dose.day <= last);
     const taken = recorded.filter(dose => dose.status === "taken").length;
     $("report-dates").textContent = t("از {0} تا {1}", shortDate.format(first * dayMs), shortDate.format(last * dayMs));
-    $("report-average").textContent = t("میانگین روزانه {0} میلی‌لیتر", numbers.format(Math.round(average)));
-    $("report-doses").textContent = t("{0} از {1} نوبت ثبت‌شده، مصرف شد.", numbers.format(taken), numbers.format(recorded.length));
+    const formattedAverage = numbers.format(Math.round(average));
+    $("report-water-number").textContent = formattedAverage;
+    $("report-goal-label").textContent = t("هدف روزانهٔ آب، {0} میلی‌لیتر", numbers.format(goal));
+    $("report-water-empty").hidden = range.some(amount => amount > 0);
+    const hasDoses = recorded.length > 0;
+    const ratio = hasDoses ? taken / recorded.length : 0;
+    $("report-dose-number").textContent = ratio.toLocaleString(locale, { style: "percent" });
+    $("report-dose-number").hidden = !hasDoses;
+    $("report-dose-progress").value = ratio;
+    $("report-dose-progress").hidden = !hasDoses;
+    $("report-doses").textContent = hasDoses
+      ? t("{0} از {1} نوبت ثبت‌شده، مصرف شد.", numbers.format(taken), numbers.format(recorded.length))
+      : t("هنوز مصرفی ثبت نشده است.");
     const bucketSize = reportSpan === 365 ? 30 : 1;
     const bars = [];
     for (let i = 0; i < range.length; i += bucketSize) {
@@ -511,7 +556,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     }
     const max = Math.max(goal, ...bars);
     const chart = $("report-chart");
-    chart.setAttribute("aria-label", t("نمودار مصرف آب؛ {0}", $("report-average").textContent));
+    chart.setAttribute("aria-label", t("نمودار مصرف آب؛ {0}", t("میانگین روزانه {0} میلی‌لیتر", formattedAverage)));
     chart.style.setProperty("--goal", `${goal / max * 100}%`);
     chart.replaceChildren(...bars.map((value, i) => {
       const bar = element("div");
