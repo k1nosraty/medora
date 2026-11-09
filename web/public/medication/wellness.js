@@ -7,11 +7,6 @@ const $ = id => document.getElementById(id);
 const dayMs = 86_400_000;
 const numbers = new Intl.NumberFormat(locale);
 const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), insights: t("گزارش و تقویم"), water: t("آب") };
-const visitCategories = {
-  general: t("عمومی"), dental: t("دندان‌پزشکی"), eye: t("چشم‌پزشکی"), skin: t("پوست و مو"),
-  heart: t("قلب و عروق"), lab: t("آزمایشگاه"), imaging: t("تصویربرداری")
-};
-const visitCategoryOf = category => Object.hasOwn(visitCategories, category) ? category : "general";
 const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "purple";
 const iso = day => new Date(day * dayMs).toISOString().slice(0, 10);
 const minutes = value => {
@@ -335,6 +330,9 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   });
 
   const visitCategory = $("visit-category");
+  const visitCategories = new Map(Array.from(visitCategory.options, option => [option.value, option.text]));
+  const visitCategoryOf = category => visitCategories.has(category) ? category : "general";
+  const visitCategoryName = $("visit-category-name");
   const visitAppearance = $("visit-appearance");
   const visitColors = Object.entries(appearanceColors).map(([color, title]) => {
     const choice = element("input");
@@ -347,14 +345,13 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("visit-colors").querySelector(".visit-color-grid").append(label);
     return choice;
   });
-  for (const [category, title] of Object.entries(visitCategories)) visitCategory.add(new Option(title, category));
-
   function selectedVisitColor() {
     return visitColorOf(visitColors.find(choice => choice.checked)?.value);
   }
 
   function updateVisitAppearance() {
     visitAppearance.dataset.ink = selectedVisitColor();
+    $("visit-category-name-field").hidden = visitCategory.value !== "custom";
     $("visit-appearance-preview").replaceChildren(visitIllustration(visitCategory.value));
   }
   visitAppearance.addEventListener("change", updateVisitAppearance);
@@ -373,6 +370,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("visit-extra").open = Boolean(visit?.note || visit?.contact || visit?.zone && visit.zone !== localZone());
     visitAppearance.open = false;
     visitCategory.value = visitCategoryOf(visit?.category);
+    visitCategoryName.value = visitCategory.value === "custom" ? visit?.categoryName ?? "" : "";
     const color = visitColorOf(visit?.color);
     for (const choice of visitColors) choice.checked = choice.value === color;
     updateVisitAppearance();
@@ -410,6 +408,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const note = $("visit-note").value.trim();
     const contact = $("visit-contact").value.trim();
     const category = visitCategoryOf(visitCategory.value);
+    const categoryName = category === "custom" ? visitCategoryName.value.trim() : "";
     const color = selectedVisitColor();
     const zone = $("visit-zone").value.trim() || localZone();
     try { timezone(zone); } catch {
@@ -422,7 +421,8 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       if (editingVisit && !visits[id]) throw new Error(t("این قرار حذف شده است."));
       const offsets = [...(visits[id]?.offsets ?? []).filter(offset => !appointmentOffsets.includes(offset)),
         ...visitOffsetFields.filter(field => field.checked).map(field => Number(field.value))];
-      visits[id] = { id, name, day, time, place, note, contact, zone, category, color, offsets, cancelled: visits[id]?.cancelled ?? false };
+      visits[id] = { id, name, day, time, place, note, contact, zone, category, color, offsets, cancelled: visits[id]?.cancelled ?? false,
+        ...(categoryName ? { categoryName } : {}) };
     }, t("قرار ذخیره شد."), true)) $("visit-dialog").close();
     else $("visit-error").textContent = $("status").textContent;
   });
@@ -435,20 +435,14 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   }
   function visitIllustration(category = "general") {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const use = document.createElementNS(svg.namespaceURI, "use");
-    const emblem = document.createElementNS(svg.namespaceURI, "use");
-    svg.setAttribute("viewBox", "0 0 160 132");
     svg.setAttribute("class", "visit-illustration");
     svg.setAttribute("aria-hidden", "true");
-    use.setAttribute("href", "#art-visit");
-    emblem.setAttribute("href", category === "general" ? "#i-plus" : `#i-visit-${category}`);
-    emblem.setAttribute("x", "117");
-    emblem.setAttribute("y", "88");
-    emblem.setAttribute("width", "22");
-    emblem.setAttribute("height", "22");
-    emblem.setAttribute("stroke", "#324a31");
-    emblem.setAttribute("stroke-width", "2");
-    svg.append(use, emblem);
+    const specialty = category !== "general";
+    svg.setAttribute("viewBox", specialty ? "0 0 48 48" : "0 0 160 132");
+    if (specialty) svg.classList.add("visit-specialty");
+    const use = document.createElementNS(svg.namespaceURI, "use");
+    use.setAttribute("href", `#art-visit-${category}`);
+    svg.append(use);
     return svg;
   }
 
@@ -479,7 +473,10 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     hour.dir = "ltr";
     const body = element("div", "", "visit-card-body");
     body.append(title, hour);
-    if (category !== "general") body.append(element("span", visitCategories[category], "visit-category"));
+    if (category !== "general") {
+      const label = category === "custom" && visit.categoryName ? visit.categoryName : visitCategories.get(category);
+      body.append(element("bdi", label, "visit-category"));
+    }
     const header = element("div", "", "visit-card-header");
     header.append(day, body);
     const details = variant === "compact" ? card : element("div", "", "visit-shelf-details");

@@ -31,7 +31,7 @@ export function localizeMarkup() {
   document.documentElement.dir = language === "en" ? "ltr" : "rtl";
   if (language === "fa") return;
   document.querySelector('link[rel="manifest"]').href = "/manifest.en.webmanifest";
-  const attributes = ["aria-label", "placeholder", "title", "alt", "value"];
+  const attributes = ["aria-label", "placeholder", "title", "alt", "value", "label"];
   function translate(node) {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.data.trim();

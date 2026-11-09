@@ -304,10 +304,13 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 }
 .visit-category {
   display: inline-block;
+  max-inline-size: 100%;
+  box-sizing: border-box;
   margin-inline-start: .28rem;
   padding: .08rem .4rem;
   border-radius: .6rem;
   font-size: .79rem;
+  overflow-wrap: anywhere;
 }
 .visit-banner {
   --banner-tint: var(--pill-base, #b9a8ec);
@@ -317,6 +320,19 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
   overflow: hidden;
 }
 .visit-art-accent { fill: var(--pill-base, #b9a8ec); }
+.visit-art-light { fill: color-mix(in srgb, var(--pill-base, #b9a8ec) 26%, #fff); }
+.visit-banner:has(.visit-specialty)::before {
+  content: "";
+  position: absolute;
+  inline-size: min(76%, 10.2rem);
+  aspect-ratio: 1.3;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 35% 20%, #fff8, transparent 72%),
+    color-mix(in srgb, var(--banner-tint) 46%, #f9f6ff);
+  box-shadow: inset 0 0 0 1px #fff5, 0 .45rem 1.25rem #1d16321a;
+  opacity: .75;
+  transform: rotate(-12deg);
+}
 .medora #visit-appearance > summary {
   display: flex;
   align-items: center;
@@ -382,6 +398,17 @@ html[dir="rtl"] .today-story img { transform: scaleX(-1); }
 .visit-shelf-details .badge { align-self: start; }
 .medora .visit-shelf-card .buttons { margin-block-start: auto; padding-block-start: .3rem; }
 .medora svg.visit-illustration { inline-size: 8rem; max-inline-size: 48%; block-size: auto; aspect-ratio: 160 / 132; }
+.medora svg.visit-illustration.visit-specialty {
+  position: relative;
+  inline-size: 7.3rem;
+  max-inline-size: 64%;
+  aspect-ratio: 1;
+  stroke: color-mix(in srgb, var(--banner-tint) 24%, #29233f);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 .25rem .24rem #2b1e4733);
+}
+.medora #visit-appearance-preview svg.visit-specialty { inline-size: 5.65rem; }
+.medora #visit-appearance-preview:has(.visit-specialty)::before { inline-size: min(72%, 8.1rem); }
 .medora .visit-empty {
   display: flex;
   align-items: center;
