@@ -306,6 +306,11 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       quickWaterButton.disabled = false;
     }
   });
+  $("today-water-dismiss").addEventListener("click", () => {
+    quickWaterEntry = null;
+    renderQuickWaterFeedback(getState(), selectedDay());
+    quickWaterButton.focus({ preventScroll: true });
+  });
   $("today-water-undo").addEventListener("click", async () => {
     const entry = quickWaterEntry;
     if (!entry) return;

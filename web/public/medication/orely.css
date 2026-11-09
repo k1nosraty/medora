@@ -198,16 +198,26 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   color: var(--water-ink);
 }
 .today-water-actions small { display: block; font-size: .61rem; font-weight: 500; }
-.today-water-feedback {
+.medora .today-water-feedback {
+  position: fixed;
+  z-index: 3;
+  inset-inline: max(.75rem, env(safe-area-inset-left), env(safe-area-inset-right));
+  inset-block-end: calc(4.6rem + max(.45rem, env(safe-area-inset-bottom)));
+  max-inline-size: 25rem;
+  margin-inline: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: .35rem;
-  margin-block-start: .3rem;
-  border-block-start: 1px solid color-mix(in srgb, var(--water-ink) 17%, var(--water));
-  font-size: .81rem;
+  padding: .25rem .6rem;
+  border: 1px solid color-mix(in srgb, var(--water-ink) 22%, var(--water));
+  border-radius: 1rem;
+  background: var(--water);
+  box-shadow: 0 .3rem 1rem var(--glass-shadow);
+  font-size: .85rem;
 }
-.medora #today-water-undo { min-block-size: 2.75rem; color: var(--water-ink); font-size: .8rem; }
+.today-water-feedback > span { flex: 1; }
+.medora .today-water-feedback button { min-block-size: 2.75rem; padding: .2rem .5rem; color: inherit; font-size: .8rem; }
+.medora #today-water-dismiss { min-inline-size: 2.75rem; border: 0; background: transparent; }
 .medora #water-dialog .sheet-header { background: var(--water); color: var(--water-ink); }
 .medora #water-dialog .sheet-header > svg { color: inherit; }
 .medora #water-dialog .water-amount-field {
