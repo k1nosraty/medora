@@ -756,7 +756,9 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     hour.dateTime = new Date(local.instant).toISOString();
     hour.dir = "ltr";
     const body = element("div", "", "visit-card-body");
-    body.append(title, hour);
+    body.append(title);
+    if (variant === "day") body.append(element("span", t("قرار"), "visit-kind"));
+    body.append(hour);
     if (category !== "general") {
       const label = category === "custom" && visit.categoryName ? visit.categoryName : visitCategories.get(category);
       body.append(element("bdi", label, "visit-category"));

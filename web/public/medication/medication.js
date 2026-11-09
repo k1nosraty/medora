@@ -707,7 +707,9 @@ function renderDose(medicine, dose, featured = false) {
   const card = element("article");
   card.className = featured ? "medicine dose-card studio-hero" : "medicine dose-card";
   const unit = dose.unit ?? medicine?.unit ?? "";
-  card.dataset.color = medicine?.color ?? dose.color ?? "gold";
+  const color = medicine?.color ?? dose.color ?? "gold";
+  card.dataset.color = color;
+  card.dataset.ink = color;
   const heading = element("h3", dose.name || medicine?.name || t("دارو"));
   heading.dir = "auto";
   const instructions = dose.instructions ?? medicine?.instructions;
@@ -728,11 +730,11 @@ function renderDose(medicine, dose, featured = false) {
     meta.className = "dose-meta";
     meta.append(eyebrow, element("p", time));
     info.append(meta, heading);
-    card.append(medicationBanner(medicine?.icon ?? dose.icon, medicine?.color ?? dose.color));
+    card.append(medicationBanner(medicine?.icon ?? dose.icon, color));
   } else info.append(heading, element("p", t("ساعت {0}", localDigits(timeText(dose.minute)))));
   const header = element("div");
   header.className = "dose-header";
-  if (!featured) header.append(medicationBadge(medicine?.icon ?? dose.icon, medicine?.color ?? dose.color));
+  if (!featured) header.append(medicationBadge(medicine?.icon ?? dose.icon, color));
   header.append(info);
   card.append(header);
   const result = element("div");

@@ -422,7 +422,6 @@
 .medora .day-week button { min-block-size: 2.7rem; }
 .medora .day-week button[aria-current="date"] { background: var(--dock-active); color: var(--action); }
 .medora #day-title, .medora #med-day-title { margin-block: .5rem .7rem; font-weight: 800; }
-.medora .timeline .dose-card:not(.studio-hero) { background: var(--panel); color: var(--ink); }
 .medora .dock { max-inline-size: 44rem; border-radius: 2.4rem; padding: .2rem; border-color: var(--glass); background: color-mix(in srgb, var(--glass) 82%, transparent); -webkit-backdrop-filter: blur(20px) saturate(145%); backdrop-filter: blur(20px) saturate(145%); box-shadow: 0 .35rem 1.2rem var(--cast), inset 0 0 .5rem var(--glass); }
 .medora .dock button { border-radius: 2.05rem; padding-inline: .08rem; }
 .medora .dock button[aria-current="page"] { background: var(--dock-active); box-shadow: inset 0 1px 0 var(--glass), 0 .1rem .38rem var(--cast); }
