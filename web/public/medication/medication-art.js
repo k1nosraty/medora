@@ -3,7 +3,10 @@ const $ = id => document.getElementById(id);
 const shapes = {
   tablet: language === "en" ? "Tablet" : "قرص", capsule: t("کپسول"), syrup: t("شربت"), injection: t("آمپول"), ointment: t("پماد"), drops: t("قطره"), spray: t("اسپری")
 };
-export const appearanceColors = { gold: t("طلایی"), green: t("سبزآبی"), blue: t("آبی"), purple: t("یاسی"), rose: t("صورتی"), slate: t("خاکستری") };
+export const appearanceColors = {
+  gold: t("طلایی"), peach: t("هلویی"), coral: t("مرجانی"), rose: t("صورتی"), purple: t("یاسی"),
+  indigo: t("نیلی"), blue: t("آبی"), green: t("سبزآبی"), pistachio: t("پسته‌ای"), slate: t("خاکستری")
+};
 const knownShape = shape => Object.hasOwn(shapes, shape) ? shape : "capsule";
 const knownColor = color => Object.hasOwn(appearanceColors, color) ? color : "gold";
 
@@ -44,7 +47,7 @@ export function installAppearance() {
     const type = $("medicine-icon").value;
     const selectedColor = $("medicine-color").value;
     const tile = $("medicine-appearance");
-    tile.dataset.color = knownColor(selectedColor);
+    tile.dataset.color = tile.dataset.ink = knownColor(selectedColor);
     $("medicine-appearance-icon").replaceChildren(medicationBadge(type, selectedColor));
     $("editor-banner").replaceChildren(medicationBanner(type, selectedColor));
     tile.setAttribute("aria-label", t("ظاهر دارو (اختیاری)، {0}، {1}", shapes[knownShape(type)], appearanceColors[knownColor(selectedColor)]));
@@ -83,7 +86,8 @@ export function installAppearance() {
       option.prepend(swatch);
       return option;
     }));
-    $("appearance-preview").dataset.color = color;
+    const preview = $("appearance-preview");
+    preview.dataset.color = preview.dataset.ink = color;
     $("appearance-preview-icon").replaceChildren(medicationBanner(shape, color));
   }
 

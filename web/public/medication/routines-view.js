@@ -16,7 +16,9 @@ const changed = () => new Error(t("روتین تغییر کرده است. دوب
 function glyph(category) {
   const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const use = document.createElementNS(icon.namespaceURI, "use");
-  use.setAttribute("href", "/medication/routine-icons.svg#" + (Object.hasOwn(routineLabels, category) ? category : "custom"));
+  const symbol = category !== "custom" && Object.hasOwn(routineLabels, category) ? category : "custom-art";
+  use.setAttribute("href", "/medication/routine-icons.svg#" + symbol);
+  icon.classList.add("routine-illustration");
   icon.setAttribute("viewBox", "0 0 24 24");
   icon.setAttribute("aria-hidden", "true");
   icon.append(use);

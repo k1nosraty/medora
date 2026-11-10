@@ -584,7 +584,7 @@ function nextAmount(medicine) {
 function renderMedicine(medicine) {
   const card = element("article");
   card.className = "medicine treatment";
-  card.dataset.color = medicine.color ?? "gold";
+  card.dataset.color = card.dataset.ink = medicine.color ?? "gold";
   card.dataset.search = medicine.name;
   const heading = action(medicine.name, () => openMedicine(medicine));
   heading.dir = "auto";

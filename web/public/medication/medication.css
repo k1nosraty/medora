@@ -391,6 +391,14 @@
 .medora [data-ink="purple"] { --pill-base: #b8a4e8; }
 .medora [data-ink="rose"] { --pill-base: #f472b6; }
 .medora [data-ink="slate"] { --pill-base: #94a3b8; }
+.medora [data-ink="peach"] { --pill-base: #f6a776; }
+.medora [data-ink="coral"] { --pill-base: #ee7a80; }
+.medora [data-ink="indigo"] { --pill-base: #8391ed; }
+.medora [data-ink="pistachio"] { --pill-base: #abd280; }
+.medora :is([data-color="peach"], [data-color="coral"], [data-color="indigo"], [data-color="pistachio"]) {
+  background: color-mix(in srgb, var(--pill-base) 20%, var(--panel));
+  color: var(--ink);
+}
 .medora svg.medication-badge { inline-size: 2.75rem; block-size: 2.75rem; stroke-width: 3; --pill-edge: color-mix(in srgb, var(--pill-base), black); }
 .pill-body { fill: var(--pill-base); stroke: var(--pill-edge); }
 .pill-light { fill: color-mix(in srgb, var(--pill-base) 45%, white); stroke: var(--pill-edge); }
@@ -408,6 +416,8 @@
 .medora .appearance-grid button { display: grid; justify-items: center; align-content: start; gap: .2rem; padding: .35rem .12rem; font-size: .85rem; }
 .medora .appearance-grid button[aria-pressed="true"] { outline: 2px solid var(--action); outline-offset: -2px; }
 .appearance-swatch { inline-size: 2rem; block-size: 2rem; border-radius: 50%; background: var(--pill-base); }
+.medora #medicine-colors button { align-content: center; font-size: .74rem; }
+.medora #medicine-colors .appearance-swatch { inline-size: 1.3rem; block-size: 1.3rem; }
 .medora #appearance-preview { display: flex; gap: .65rem; align-items: center; }
 
 /* Studio */
