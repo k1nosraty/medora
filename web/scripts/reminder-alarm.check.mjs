@@ -6,7 +6,7 @@ const require = createRequire(process.cwd() + "/package.json");
 const { Miniflare, Response, convertV4MiniflareOptions } = require("miniflare");
 const { build } = require("esbuild");
 const { outputFiles } = await build({ entryPoints: ["src/worker.mjs"], bundle: true, platform: "browser",
-  format: "esm", external: ["cloudflare:workers"], write: false });
+  format: "esm", external: ["cloudflare:workers", "node:crypto"], write: false });
 const server = createECDH("prime256v1");
 const client = createECDH("prime256v1");
 const signingKey = randomBytes(32).toString("hex");
@@ -16,6 +16,7 @@ server.getPrivateKey().copy(privateKey, 32-server.getPrivateKey().length);
 const outbound = [];
 const mf = new Miniflare(convertV4MiniflareOptions({
   modules: true, script: outputFiles[0].text, compatibilityDate: "2026-10-29",
+  compatibilityFlags: ["nodejs_compat"],
   bindings: { REMINDER_SIGNING_KEY: signingKey, VAPID_PUBLIC_KEY: publicKey,
     VAPID_PRIVATE_KEY: privateKey.toString("base64url"), VAPID_SUBJECT: "https://github.com/k1nosraty/medora" },
   ratelimits: {

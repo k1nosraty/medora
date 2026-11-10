@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { scryptSync } from "node:crypto";
 import { smallJson } from "./validation.mjs";
 
 const cookieName = "__Host-medora_session";
@@ -9,6 +10,9 @@ const encoder = new TextEncoder();
 const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
 const sessionPattern = /^([a-f0-9]{64})\.([a-f0-9]{64})\.([a-f0-9]{64})$/;
 const challengePattern = /^([a-f0-9-]{36})\.([a-f0-9]{64})$/;
+const grantPattern = /^(\d{13})\.([a-f0-9]{64})$/;
+const usernamePattern = /^[a-z0-9_]{3,32}$/;
+const authRoutes = ["register-code", "confirm-email", "register", "login", "logout"];
 
 function hex(bytes) {
   return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, "0")).join("");
@@ -27,8 +31,29 @@ function randomCode() {
   return String(value[0] % 1_000_000).padStart(6, "0");
 }
 function configured(env) {
-  return Boolean(env.EMAIL_ACCOUNTS && env.EMAIL_AUTH_LIMIT && env.RESEND_API_KEY && env.EMAIL_FROM &&
+  return Boolean(env.EMAIL_ACCOUNTS && env.CREDENTIALS && env.EMAIL_AUTH_LIMIT &&
     /^[a-f0-9]{64}$/i.test(env.EMAIL_AUTH_SECRET ?? ""));
+}
+function canSendCode(env) {
+  return Boolean(configured(env) && env.RESEND_API_KEY && env.EMAIL_FROM);
+}
+function normalizeEmail(email) {
+  if (typeof email !== "string") return "";
+  email = email.trim().toLowerCase();
+  return email.length <= 254 && email.split("@")[0].length <= 64 && emailPattern.test(email) ? email : "";
+}
+function usernameOf(username) {
+  const normalized = typeof username === "string" ? username.trim().toLowerCase() : "";
+  return usernamePattern.test(normalized) ? normalized : "";
+}
+function validPassword(password) {
+  return typeof password === "string" && password.length <= 128 && [...password].length >= 15;
+}
+const accountId = (env, email) => hmac(env.EMAIL_AUTH_SECRET, "account-v1", email);
+const credentials = env => env.CREDENTIALS.getByName("medora-credentials-v1");
+async function passwordProof(secret, password, salt) {
+  const peppered = await hmac(secret, "password-v1", password);
+  return hex(scryptSync(peppered, salt, 32, { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }));
 }
 function cookie(value, maxAge) {
   return `${cookieName}=${value}; Path=/; Max-Age=${maxAge}; Secure; HttpOnly; SameSite=Lax`;
@@ -49,8 +74,8 @@ export async function signedInEmail(request, env) {
 export function isAdminEmail(email, env) {
   return Boolean(email && email === env.ADMIN_EMAIL?.trim().toLowerCase());
 }
-function account(email, env) {
-  return isAdminEmail(email, env) ? { email, admin: true } : { email };
+function account(email, env, username = null) {
+  return { email, username, ...(isAdminEmail(email, env) ? { admin: true } : {}) };
 }
 function reply(data, status = 200, setCookie) {
   const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
@@ -61,9 +86,11 @@ function reply(data, status = 200, setCookie) {
 export async function handleEmailAuth(request, env, url) {
   const route = url.pathname.slice("/api/auth/".length);
   if (route === "session" && request.method === "GET") {
-    return reply({ available: configured(env), ...account(await signedInEmail(request, env), env) });
+    const email = await signedInEmail(request, env);
+    const username = email ? await credentials(env).usernameFor(await accountId(env, email)) : null;
+    return reply({ available: configured(env), registrationAvailable: canSendCode(env), ...account(email, env, username) });
   }
-  if (request.method !== "POST" || !["start", "verify", "logout"].includes(route)) return reply({ error: "not_found" }, 404);
+  if (request.method !== "POST" || !authRoutes.includes(route)) return reply({ error: "not_found" }, 404);
   if (request.headers.get("Origin") !== url.origin) return reply({ error: "forbidden" }, 403);
   if (route === "logout") {
     const session = await readSession(request, env.EMAIL_AUTH_SECRET);
@@ -74,13 +101,40 @@ export async function handleEmailAuth(request, env, url) {
   const ip = request.headers.get("CF-Connecting-IP") ?? "local";
   if (!(await env.EMAIL_AUTH_LIMIT.limit({ key: `${route}:${ip}` })).success) return reply({ error: "rate_limit" }, 429);
 
-  const body = await smallJson(request, 1024);
-  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-  if (email.length > 254 || email.split("@")[0].length > 64 || !emailPattern.test(email)) return reply({ error: "email" }, 400);
+  const body = await smallJson(request, 4096);
+  const index = credentials(env);
+  if (route === "login") {
+    const username = usernameOf(body?.username);
+    if (!username || !validPassword(body?.password)) return reply({ error: "credentials" }, 401);
+    const record = await index.find(username);
+    if (!record) return reply({ error: "credentials" }, 401);
+    const client = env.EMAIL_ACCOUNTS.getByName(record.email_id);
+    const result = await client.login(record.email, body.password, record.salt, record.proof);
+    if (!result.token) return reply({ error: result.error }, result.error === "rate_limit" ? 429 : 401);
+    return signedIn(env, record.email, username, record.email_id, result.token);
+  }
+  if (route === "register") {
+    const username = usernameOf(body?.username);
+    if (!username) return reply({ error: "username" }, 400);
+    if (!validPassword(body?.password)) return reply({ error: "password" }, 400);
+    const email = body?.grant ? normalizeEmail(body.email) : await signedInEmail(request, env);
+    if (!email) return reply({ error: "setup_expired" }, 401);
+    const id = await accountId(env, email);
+    if (body.grant && !await validGrant(env, id, body.grant)) return reply({ error: "setup_expired" }, 401);
+    if (await index.usernameFor(id)) return reply({ error: "already_registered" }, 409);
+    const client = env.EMAIL_ACCOUNTS.getByName(id);
+    const result = await client.register(username, id, email, body.password);
+    if (result.error) return reply({ error: result.error }, 409);
+    return signedIn(env, email, username, id, result.token);
+  }
+  const email = normalizeEmail(body?.email);
+  if (!email) return reply({ error: "email" }, 400);
   const secret = env.EMAIL_AUTH_SECRET;
-  const id = await hmac(secret, "account-v1", email);
-  if (route === "start") {
-    const result = await env.EMAIL_ACCOUNTS.getByName(id).start(email, body.language === "en" ? "en" : "fa");
+  const id = await accountId(env, email);
+  if (route === "register-code") {
+    if (!canSendCode(env)) return reply({ error: "unavailable" }, 503);
+    const result = await index.usernameFor(id) ? { challenge: crypto.randomUUID() } :
+      await env.EMAIL_ACCOUNTS.getByName(id).start(email, body.language === "en" ? "en" : "fa");
     if (result.error) return reply(result, result.error === "rate_limit" ? 429 : 503);
     const signature = await hmac(secret, "challenge-v1", `${id}.${result.challenge}`);
     return reply({ challenge: `${result.challenge}.${signature}` }, 202);
@@ -91,11 +145,22 @@ export async function handleEmailAuth(request, env, url) {
       !equal(match[2], await hmac(secret, "challenge-v1", `${id}.${match[1]}`))) {
     return reply({ error: "invalid_code" }, 400);
   }
-  const token = await env.EMAIL_ACCOUNTS.getByName(id).verify(email, match[1], code);
-  if (!token) return reply({ error: "invalid_code" }, 400);
+  if (!await env.EMAIL_ACCOUNTS.getByName(id).confirmCode(match[1], code)) return reply({ error: "invalid_code" }, 400);
+  const expires = Date.now() + 10 * minute;
+  const signature = await hmac(secret, "enrollment-v1", `${id}.${expires}`);
+  return reply({ grant: `${expires}.${signature}` });
+}
+
+async function validGrant(env, id, value) {
+  const match = typeof value === "string" && value.match(grantPattern);
+  if (!match || Number(match[1]) <= Date.now()) return false;
+  return equal(match[2], await hmac(env.EMAIL_AUTH_SECRET, "enrollment-v1", `${id}.${match[1]}`));
+}
+
+async function signedIn(env, email, username, id, token) {
   const value = `${id}.${token}`;
-  const signature = await hmac(secret, "session-v1", value);
-  return reply(account(email, env), 200, cookie(`${value}.${signature}`, sessionAge / 1000));
+  const signature = await hmac(env.EMAIL_AUTH_SECRET, "session-v1", value);
+  return reply(account(email, env, username), 200, cookie(`${value}.${signature}`, sessionAge / 1000));
 }
 
 export class EmailAccount extends DurableObject {
@@ -106,6 +171,7 @@ export class EmailAccount extends DurableObject {
       CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, sent INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS challenge (id TEXT PRIMARY KEY, proof TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS password_attempts (id INTEGER PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
     `);
   }
 
@@ -131,10 +197,10 @@ export class EmailAccount extends DurableObject {
         headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": id },
         body: JSON.stringify({
           from: this.env.EMAIL_FROM, to: [email],
-          subject: language === "en" ? "Your Medora sign-in code" : "کد ورود به مدورا",
+          subject: language === "en" ? "Verify your email for Medora" : "تأیید ایمیل برای مدورا",
           text: language === "en"
-            ? `Your Medora sign-in code is ${code}.\nIt expires in 10 minutes. If you didn't request a code, you can ignore this email.`
-            : `کد ورود شما به مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر شما درخواست ورود نداده‌اید، این پیام را نادیده بگیرید.`
+            ? `Your Medora email verification code is ${code}.\nIt expires in 10 minutes. If you didn't request a code, you can ignore this email.`
+            : `کد تأیید ایمیل شما در مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر شما درخواست کد نداده‌اید، این پیام را نادیده بگیرید.`
         })
       });
       if (response.ok) return { challenge: id };
@@ -146,21 +212,42 @@ export class EmailAccount extends DurableObject {
     return { error: "delivery" };
   }
 
-  async verify(email, challenge, code) {
+  async confirmCode(challenge, code) {
     const proof = await hmac(this.env.EMAIL_AUTH_SECRET, "code-v1", `${challenge}:${code}`);
-    const token = hex(crypto.getRandomValues(new Uint8Array(32)));
-    const hash = await sessionHash(token);
-    const now = Date.now();
-    const row = this.sql.exec("SELECT proof, attempts FROM challenge WHERE id = ? AND expires > ?", challenge, now).toArray()[0];
-    if (!row) return null;
+    const row = this.sql.exec("SELECT proof, attempts FROM challenge WHERE id = ? AND expires > ?", challenge, Date.now()).toArray()[0];
+    if (!row) return false;
     if (!equal(proof, row.proof)) {
       if (row.attempts >= 4) this.sql.exec("DELETE FROM challenge WHERE id = ?", challenge);
       else this.sql.exec("UPDATE challenge SET attempts = attempts + 1 WHERE id = ?", challenge);
-      return null;
+      return false;
     }
+    this.sql.exec("DELETE FROM challenge WHERE id = ?", challenge);
+    return true;
+  }
+
+  async register(username, id, email, password) {
+    const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+    const proof = await passwordProof(this.env.EMAIL_AUTH_SECRET, password, salt);
+    const error = await credentials(this.env).register(username, id, email, salt, proof);
+    return error ? { error } : { token: await this.createSession(email) };
+  }
+
+  async login(email, password, salt, proof) {
+    const now = Date.now();
+    const attempts = this.sql.exec("SELECT count, expires FROM password_attempts WHERE id = 1 AND expires > ?", now).toArray()[0];
+    if (attempts?.count >= 10) return { error: "rate_limit" };
+    this.sql.exec("INSERT OR REPLACE INTO password_attempts VALUES (1, ?, ?)",
+      (attempts?.count ?? 0) + 1, attempts?.expires ?? now + 15 * minute);
+    if (!equal(proof, await passwordProof(this.env.EMAIL_AUTH_SECRET, password, salt))) return { error: "credentials" };
+    this.sql.exec("DELETE FROM password_attempts WHERE id = 1");
+    return { token: await this.createSession(email) };
+  }
+
+  async createSession(email) {
+    const token = hex(crypto.getRandomValues(new Uint8Array(32)));
+    const hash = await sessionHash(token);
     this.ctx.storage.transactionSync(() => {
-      this.sql.exec("DELETE FROM challenge WHERE id = ?", challenge);
-      this.sql.exec("INSERT INTO sessions VALUES (?, ?, ?)", hash, email, now + sessionAge);
+      this.sql.exec("INSERT INTO sessions VALUES (?, ?, ?)", hash, email, Date.now() + sessionAge);
       this.sql.exec("DELETE FROM sessions WHERE hash IN (SELECT hash FROM sessions ORDER BY expires DESC LIMIT -1 OFFSET 20)");
     });
     await this.scheduleCleanup();

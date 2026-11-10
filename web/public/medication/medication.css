@@ -255,9 +255,6 @@
   max-block-size: min(var(--dialog-limit), calc(var(--dialog-height) - 1rem));
   border-radius: 1.5rem;
 }
-.medora #account-dialog {
-  --dialog-limit: 29rem;
-}
 .medora .settings-dialog {
   overflow: hidden;
 }
@@ -576,9 +573,6 @@
 #editor-review h4 { margin-block: 0; font-size: 1.1rem; }
 #editor-review ol { padding-inline-start: 1.25rem; }
 #editor-review li { padding-block: .3rem; }
-.medora #account-dialog form { margin-block: .65rem; }
-.medora #account-dialog input { display: block; inline-size: 100%; margin-block-start: .25rem; }
-.medora #account-status[data-error] { color: var(--error); }
 .medora #open-admin, .medora .promotion-action {
   display: inline-flex;
   align-items: center;

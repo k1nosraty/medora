@@ -3,6 +3,7 @@
   "name": "medora",
   "main": "src/worker.mjs",
   "compatibility_date": "2026-10-29",
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
   "assets": {
@@ -20,6 +21,7 @@
       { "name": "PILOT", "class_name": "PushPilot" },
       { "name": "REMINDERS", "class_name": "MedicationReminders" },
       { "name": "EMAIL_ACCOUNTS", "class_name": "EmailAccount" },
+      { "name": "CREDENTIALS", "class_name": "Credentials" },
       { "name": "PROMOTIONS", "class_name": "Promotions" }
     ]
   },
@@ -27,6 +29,7 @@
     { "tag": "v1", "new_sqlite_classes": ["PushPilot"] },
     { "tag": "v2", "new_sqlite_classes": ["MedicationReminders"] },
     { "tag": "v3", "new_sqlite_classes": ["EmailAccount"] },
-    { "tag": "v4", "new_sqlite_classes": ["Promotions"] }
+    { "tag": "v4", "new_sqlite_classes": ["Promotions"] },
+    { "tag": "v5", "new_sqlite_classes": ["Credentials"] }
   ]
 }

@@ -8,6 +8,7 @@ import { handlePromotions } from "./promotions.mjs";
 
 export { MedicationReminders } from "./medication-reminders.mjs";
 export { EmailAccount } from "./email-auth.mjs";
+export { Credentials } from "./credentials.mjs";
 export { Promotions } from "./promotions.mjs";
 
 const hour = 3_600_000;

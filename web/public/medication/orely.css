@@ -1061,3 +1061,94 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
   .medora .slot-fields { gap: .35rem; }
   .medora .slot-fields .picker-field { min-block-size: 2.75rem; }
 }
+.medora #account-dialog {
+  --dialog-limit: 39rem;
+  inline-size: min(calc(100% - 1rem), 29rem);
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--outline);
+}
+.medora #account-dialog::before { display: none; }
+.account-cover {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 1.05rem 1.2rem .9rem;
+  color: var(--cover-text);
+  background:
+    radial-gradient(ellipse at 86% -24%, #d8cdf759, transparent 68%),
+    linear-gradient(140deg, var(--cover-shade), var(--cover) 63%, var(--cover-light));
+}
+.account-cover::before, .account-cover::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-inline-end: -2rem;
+  inset-block-start: 1rem;
+  inline-size: 10rem;
+  aspect-ratio: 1;
+  border: 1px solid #fff3;
+  border-radius: 38% 62% 43% 57%;
+  transform: rotate(28deg);
+}
+.account-cover::after { inset-inline-end: -3.9rem; inset-block-start: 2.4rem; }
+.account-mark {
+  display: grid;
+  place-items: center;
+  inline-size: 2.8rem;
+  aspect-ratio: 1;
+  border: 1px solid #fff5;
+  border-radius: .9rem;
+  background: #fff2;
+  color: var(--mint);
+  box-shadow: inset 0 1px #fff3;
+}
+.account-cover h2 { margin: .55rem 0 .15rem; font-size: clamp(1.38rem, 5vw, 1.78rem); font-weight: 810; }
+.medora .account-cover p { margin: 0; font-size: .87rem; }
+.medora .account-cover .icon-button {
+  position: absolute;
+  inset-block-start: .8rem;
+  inset-inline-end: .85rem;
+  color: inherit;
+  background: #fff2;
+  border: 1px solid #fff5;
+}
+.medora .account-cover .icon-button:focus-visible { outline-color: var(--mint); }
+.account-content { padding: .9rem clamp(.85rem, 4.7vw, 1.25rem) .8rem; }
+.account-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .25rem;
+  padding: .23rem;
+  border: 1px solid var(--outline);
+  border-radius: 1rem;
+  background: var(--stage);
+}
+.medora .account-modes button { background: transparent; border-color: transparent; color: var(--muted); }
+.medora .account-modes button[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--action);
+  box-shadow: 0 .13rem .4rem var(--cast), inset 0 0 0 1px var(--outline);
+}
+.medora .account-form { margin: .6rem 0 0; padding: 0; border: 0; background: transparent; }
+.medora .account-form label { font-weight: 680; }
+.medora .account-form input { display: block; inline-size: 100%; margin-block-start: .2rem; font-weight: 450; }
+.medora .account-form .quiet { margin-block: .15rem .45rem; }
+.account-password { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .3rem; }
+.medora .account-password button { margin-block-end: .35rem; padding-inline: .45rem; font-size: .8rem; }
+.medora .account-primary { margin-block-start: .6rem; border-radius: .95rem; }
+.medora #account-code { letter-spacing: .26em; text-align: center; font-variant-numeric: tabular-nums; }
+.account-options { display: flex; flex-wrap: wrap; gap: .1rem .45rem; }
+.medora .account-options button { padding-inline: .45rem; font-size: .82rem; }
+.account-session { display: grid; gap: .25rem; overflow-wrap: anywhere; }
+.account-session > bdi { color: var(--muted); }
+.account-footer { border-block-start: 1px solid var(--outline); margin-block-start: .6rem; text-align: center; }
+.medora .account-footer p { margin: 0; font-size: .76rem; }
+.medora #account-status:empty { margin: 0; }
+.medora #account-status[data-error] { color: var(--error); }
+
+@media (max-height: 510px) {
+  .account-cover { padding-block: .65rem; }
+  .account-mark { display: none; }
+  .account-cover h2 { padding-inline-end: 3rem; }
+}
