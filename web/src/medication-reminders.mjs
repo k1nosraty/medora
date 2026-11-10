@@ -1,12 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
 import { nextCareReminder, validSchedule } from "./medication-schedule.mjs";
 import { smallJson, validSubscription, validSubscriptionKey } from "./validation.mjs";
+import { reminderCopy } from "./reminder-copy.mjs";
 import { sendPush } from "./push.mjs";
 import { matchesSubscriptionId, subscriptionId } from "../public/medication/subscription-id.js";
 
 const encoder = new TextEncoder();
 const sendWindow = 5 * 60_000;
-const kinds = { dose: "دارو", water: "آب", appointment: "قرار", routine: "روتین" };
 const reply = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 
 async function deviceSignature(secret, id) {
@@ -118,15 +118,9 @@ export class MedicationReminders extends DurableObject {
     const dueKinds = (state.next.kinds ?? ["dose"]).filter(kind => kind !== "appointment" || now < state.next.appointmentExpires);
     const tag = `${dueKinds.length === 1 ? dueKinds[0] : "care"}-${due.toString(36)}`;
     const currentIs = current => current?.revision === state.revision && current?.next?.at === due;
-    const english = state.plan.language === "en";
-    const kindsEn = { dose: "medicine", water: "water", appointment: "appointment", routine: "routine" };
-    const onlyRoutine = dueKinds.length === 1 && dueKinds[0] === "routine";
     const result = dueKinds.length && now - due < sendWindow ? await sendPush(this.env, state.plan.subscription, {
-      title: onlyRoutine ? (english ? "Time for your routine" : "وقت روتین است") : (english ? "Medora reminder" : "یادآوری مدورا"),
-      body: onlyRoutine ? (english ? "Tap to open your routines and log progress." : "برای دیدن روتین‌ها و ثبت پیشرفت، این اعلان را باز کنید.")
-        : english ? `Reminder: ${dueKinds.map(kind => kindsEn[kind]).join(", ")}. Open Medora for details.`
-        : `یادآوری ${dueKinds.map(kind => kinds[kind]).join(" و ")}. برای دیدن جزئیات مدورا را باز کنید.`,
-      kind: dueKinds[0], tag,
+      ...reminderCopy(state.next, dueKinds, state.plan.language, state.plan.zone, now),
+      kind: dueKinds.length === 1 ? dueKinds[0] : undefined, tag,
       day: new Date(state.next.day * 86_400_000).toISOString().slice(0, 10)
     }, 300, async () => currentIs(await this.ctx.storage.get("state"))) : { status: "expired" };
 

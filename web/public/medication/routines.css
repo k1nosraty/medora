@@ -22,17 +22,33 @@
   --program-visit-ink: #d7f0e8;
 }
 .medora .dock {
-  grid-template-columns: minmax(0, 1fr) clamp(5.5rem, 23%, 7.5rem) minmax(0, 1fr);
-  max-inline-size: 34rem;
+  inset-inline: 0;
+  inline-size: min(calc(100% - 2rem), 17rem);
+  grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr);
+  gap: .25rem;
+  background: color-mix(in srgb, var(--panel) 54%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  box-shadow: inset 0 1px 1px var(--glass-glint), 0 .3rem 1rem var(--glass-shadow);
 }
-.medora .dock .dock-add { grid-template-rows: 1.95rem auto; overflow: visible; }
-.medora .dock-add span {
-  inline-size: 2.62rem;
-  border-radius: 1rem;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--mint), white 38%), var(--mint) 70%);
-  box-shadow: inset 0 1px 0 #fff9, 0 .2rem .5rem var(--glass-shadow);
-  transform: translateY(-.2rem);
+.medora .dock button {
+  min-block-size: 3rem;
+  grid-template-rows: auto auto;
+  place-content: center;
+  gap: .18rem;
 }
+.medora .dock button[aria-current="page"] { background: color-mix(in srgb, var(--dock-active) 52%, transparent); }
+.medora .dock button.dock-add {
+  inline-size: 2.75rem;
+  min-block-size: 2.75rem;
+  place-self: center;
+  grid-template-rows: 1fr;
+  border-radius: 50%;
+  background: var(--action);
+  color: var(--on-action);
+  box-shadow: inset 0 1px 0 var(--glass-glint), 0 .16rem .5rem var(--glass-shadow);
+}
+.medora .dock .dock-add svg { inline-size: 1.35rem; block-size: 1.35rem; }
 .medora .program-medicine { --program-fill: var(--dock-active); --program-ink: var(--action); }
 .medora .program-visit { --program-fill: var(--program-visit-fill); --program-ink: var(--program-visit-ink); }
 .medora .program-routine { --program-fill: var(--routine-fill); --program-ink: var(--routine-ink); }
@@ -82,7 +98,12 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 .medora .routine-banner svg { inline-size: clamp(5rem, 23vw, 8rem); block-size: auto; aspect-ratio: 1.28; }
 .medora .routine-banner progress { inline-size: min(100%, 13rem); block-size: .45rem; accent-color: var(--routine-mark); }
 .medora .routine-filters { margin-block: .75rem; }
-.medora .routine-search { margin-block-end: .65rem; }
+.medora .routine-search {
+  display: grid;
+  gap: .28rem;
+  margin-block-end: .75rem;
+}
+.medora .routine-search input { inline-size: 100%; }
 .medora #routine-list { display: grid; gap: .5rem; }
 .medora .routine-row {
   display: grid;
@@ -118,9 +139,34 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 }
 .medora .routine-fields { display: grid; gap: .75rem; }
 .medora .routine-fields :is(label, input, select, textarea) { min-inline-size: 0; }
-.medora .routine-fields :is(input:not([type="checkbox"]), select, textarea) { inline-size: 100%; }
-.medora .routine-category-field { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: .55rem; }
-.medora .routine-category-field .routine-glyph { inline-size: 2.9rem; }
+.medora .routine-fields :is(input:not([type="checkbox"], [type="radio"]), select, textarea) { inline-size: 100%; }
+.medora .routine-glyph[data-ink] {
+  background: color-mix(in srgb, var(--pill-base) 22%, var(--panel));
+  color: color-mix(in srgb, var(--pill-base) 36%, var(--ink));
+}
+.medora .routine-fields label { margin-block: 0; }
+.medora #routine-colors { margin: 0; padding: 0; border: 0; background: transparent; }
+.medora #routine-colors legend { padding: 0; margin-block-end: .3rem; }
+.medora #routine-form :is(label:not(.routine-check, #routine-weekdays label, .visit-color-grid label), .routine-category-choice) {
+  display: grid;
+  gap: .25rem;
+}
+.medora #routine-form .field-error:empty { display: none; }
+.medora #routine-options > .routine-fields { margin-block-start: .7rem; }
+.medora #routine-options { margin: 0; }
+.medora #routine-options > summary { display: flex; align-items: center; justify-content: space-between; list-style: none; }
+.medora #routine-options > summary::-webkit-details-marker { display: none; }
+.medora #routine-options > summary::after {
+  content: "";
+  inline-size: .45rem;
+  block-size: .45rem;
+  margin-inline: .25rem;
+  border: solid var(--muted);
+  border-width: 0 1.5px 1.5px 0;
+  rotate: 45deg;
+}
+.medora #routine-options[open] > summary::after { rotate: 225deg; }
+.medora .visit-attended { background: var(--ok-bg); color: var(--ok); }
 .medora .routine-time-fields, .medora #routine-management { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
 .medora .routine-time-fields :is(label, .picker-control) { align-self: end; }
 .medora .routine-schedule { margin: 0; padding: .5rem; border: 1px solid var(--outline); border-radius: .9rem; }
@@ -145,10 +191,11 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 
 .medora .routine-category-choice { display: grid; }
 .medora .routine-category-choice button {
-  display: flex; align-items: center; justify-content: space-between; gap: .4rem;
-  min-block-size: 3rem; padding-inline: .7rem; text-align: start;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .55rem;
+  min-block-size: 3rem; padding: .24rem .48rem; text-align: start;
 }
-.medora .routine-category-choice svg { inline-size: 1rem; block-size: 1rem; }
+.medora #routine-preview { inline-size: 2.35rem; }
+.medora .routine-category-choice button > svg { inline-size: 1rem; block-size: 1rem; }
 .medora .routine-category-group h3 { margin: .3rem 0; font-size: .88rem; }
 .medora .routine-category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.4rem), 1fr)); gap: .4rem; }
 .medora .routine-category-grid button {

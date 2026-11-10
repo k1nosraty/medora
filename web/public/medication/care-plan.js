@@ -34,7 +34,45 @@ export function appointmentReminders(visit, settings, zone, at = visitInstant(vi
   return [...events].sort((a, b) => a - b);
 }
 
+const planBudget = 92 * 1024;
+const utf8 = new TextEncoder();
+const jsonSize = value => utf8.encode(JSON.stringify(value)).length;
+
+function fitReminderDetails(plan) {
+  if (jsonSize(plan) <= planBudget) return plan;
+  const names = [];
+  for (const rule of [...plan.rules, ...(plan.routineRules ?? [])]) {
+    const { name, unit, amounts } = rule;
+    if (name === undefined) continue;
+    names.push({ rule, details: { name, unit, amounts } });
+    delete rule.name;
+    delete rule.unit;
+    delete rule.amounts;
+  }
+  const visits = plan.appointments.sort(([a], [b]) => a - b)
+    .filter(item => item.length === 4).map(item => ({ item, details: item.pop() }));
+  let remaining = planBudget - jsonSize(plan);
+  for (const { rule, details } of names) {
+    const size = jsonSize(details);
+    if (size > remaining) continue;
+    remaining -= size;
+    Object.assign(rule, details);
+  }
+  for (const { item, details } of visits) {
+    const size = jsonSize(details) + 1;
+    if (size > remaining) continue;
+    remaining -= size;
+    item.push(details);
+  }
+  return plan;
+}
+
+function reminderLabel(text, limit) {
+  return String(text ?? "").replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, " ").trim().slice(0, limit);
+}
+
 export function scheduleForPush(state, zone, today, now = Date.now()) {
+  const details = state.reminderDetails === true;
   const excluded = new Map();
   for (const dose of Object.values(state.doses)) {
     const postponed = dose.status === "snoozed" && dose.snoozeUntil > now;
@@ -53,6 +91,10 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
           day >= today || suppressed.some(dose => dose.day === day && dose.status === "snoozed" && dose.snoozeUntil > now)
         )) } : {}),
         ...(medicine.effectiveFrom ? { notBefore: medicine.effectiveFrom } : {}),
+        ...(details ? {
+          name: reminderLabel(medicine.name, 80), unit: reminderLabel(medicine.unit, 24),
+          amounts: phase.slots.map(slot => slot.amount == null ? null : slot.amount / 1000)
+        } : {}),
         minutes: phase.slots.map(slot => slot.minute), skip: suppressed.map(dose => [dose.day, dose.minute]),
         snoozes: suppressed.filter(dose => dose.status === "snoozed" && dose.snoozeUntil > now)
           .map(dose => [dose.day, dose.minute, dose.snoozeUntil])
@@ -63,12 +105,18 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
   const displayClock = timezone(zone);
   const visitClocks = new Map();
   for (const visit of Object.values(state.visits ?? {})) {
-    if (visit.cancelled) continue;
+    if (visit.cancelled || visit.completed) continue;
     const instant = visitInstant(visit, zone, visitClocks);
     if (!(instant > now)) continue;
     const day = Math.floor(localWall(instant, displayClock) / dayMs);
     for (const at of appointmentReminders(visit, visitSettings, zone, instant)) {
-      if (at > now && instant > (appointments.get(at)?.[2] ?? 0)) appointments.set(at, [at, day, instant]);
+      if (at <= now) continue;
+      const previous = appointments.get(at);
+      const latest = instant > (previous?.[2] ?? 0);
+      if (!details && !latest) continue;
+      const names = details ? [...(previous?.[3] ?? []), [instant, reminderLabel(visit.name, 80)]]
+        .sort(([a], [b]) => a - b).slice(0, 3) : [];
+      appointments.set(at, [at, latest ? day : previous[1], latest ? instant : previous[2], ...(details ? [names] : [])]);
     }
   }
   const waterSettings = state.waterReminders ?? waterDefaults;
@@ -82,8 +130,13 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
     .map(routine => ({
       start: routine.start, end: null, interval: routine.interval, mask: routine.mask,
       minutes: [routine.minute],
+      ...(details ? {
+        name: reminderLabel(routine.name, 80), unit: reminderLabel(routine.unit, 24),
+        amounts: [routine.mode === "quantity" ? routine.target : null]
+      } : {}),
       skip: todayLogs[routine.id] && routineOccurs(routine, today) && routineComplete(todayLogs[routine.id])
         ? [[today, routine.minute]] : []
     }));
-  return { zone, rules, ...(routineRules.length ? { routineRules } : {}), appointments: [...appointments.values()], water };
+  const plan = { zone, rules, ...(routineRules.length ? { routineRules } : {}), appointments: [...appointments.values()], water };
+  return details ? fitReminderDetails(plan) : plan;
 }

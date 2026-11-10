@@ -790,4 +790,16 @@ export default {
   "اسکیت": "Skating",
   "اسکی": "Skiing",
   "قایق‌رانی": "Rowing",
+  "پیشرفت برنامهٔ روز": "Daily plan progress",
+  "{0} از {1} مورد رسیدگی شد": "{0} of {1} items handled",
+  "برنامهٔ امروز کامل شد": "Today's plan is complete",
+  "همهٔ موارد برنامهٔ امروز ثبت شدند.": "Everything on today's plan has been logged.",
+  "{0} مورد از برنامهٔ امروز هنوز باقی مانده است.": "{0} items left on today's plan.",
+  "ثبت حضور": "Mark attended",
+  "حضور ثبت شد": "Attended",
+  "برگشت ثبت حضور": "Undo attendance",
+  "رنگ روتین": "Routine color",
+  "نمایش نام و جزئیات در اعلان": "Show names and details in notifications",
+  "این جزئیات برای ارسال اعلان به سرور می‌روند و ممکن است روی صفحهٔ قفل دیده شوند.": "These details are sent to the notification server and may appear on your lock screen.",
+
 };

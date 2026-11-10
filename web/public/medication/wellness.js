@@ -702,8 +702,11 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     const saved = await mutate(state => {
       const visits = state.visits ??= {};
       if (existingId && !visits[id]) throw new Error(t("این قرار حذف شده است."));
-      const offsets = [...retainedVisitOffsets(visits[id]), ...chosenOffsets];
-      visits[id] = { id, name, day, time, place, note, contact, zone, category, color, offsets, cancelled: visits[id]?.cancelled ?? false,
+      const previous = visits[id];
+      const offsets = [...retainedVisitOffsets(previous), ...chosenOffsets];
+      const completed = previous?.completed && previous.day === day && previous.time === time && previous.zone === zone;
+      visits[id] = { id, name, day, time, place, note, contact, zone, category, color, offsets, cancelled: previous?.cancelled ?? false,
+        ...(completed ? { completed } : {}),
         ...(categoryName ? { categoryName } : {}), ...(remindersOff ? { remindersOff } : {}) };
     }, t("قرار ذخیره شد."), true);
     submit.disabled = false;
@@ -738,7 +741,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       .setAttribute("d", progress ? `M0 ${level}C30 ${level - 7} 65 ${level + 8} 100 ${level}V100H0Z` : "");
   }
 
-  function renderTodayHeader(day, index) {
+  function renderTodayHeader(day) {
     const date = day * dayMs;
     $("story-date").dateTime = iso(day);
     $("story-date").textContent = weekdayText.format(date) + listSeparator + shortDate.format(date);
@@ -750,13 +753,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       const date = day - 3 + offset;
       const control = dateButton(date, day, selected => chooseDay(selected, "day-week"));
       if (date === today()) control.classList.add("calendar-today");
-      const marks = element("span", "", "calendar-dots");
-      marks.setAttribute("aria-hidden", "true");
-      if (index.hasDoses(date)) marks.append(element("i", "", "medicine"));
-      if (index.visitsOn(date).some(({ visit }) => !visit.cancelled)) marks.append(element("i", "", "visit"));
-      if (index.waterOn(date).length) marks.append(element("i", "", "water"));
-      if (index.routinesOn(date).length) marks.append(element("i", "", "routine"));
-      control.append(element("span", shortWeek[weekIndex(date)]), marks);
+      control.append(element("span", shortWeek[weekIndex(date)]));
       return control;
     }));
     $("header-date").textContent = formatDay(day, true);
@@ -815,7 +812,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       const total = index.waterTotal(day);
       const progress = Math.min(1, total / goal);
       if (screen === "today") {
-        renderTodayHeader(day, index);
+        renderTodayHeader(day);
         renderTodayWater(state, day, total, goal, progress);
       } else renderWater(day, index, total, goal, progress);
     } else if (screen === "appointments") appointments.renderVisits(index);

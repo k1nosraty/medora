@@ -6,6 +6,9 @@ import { dayMs, timezone, localWall, instantForWall } from "../public/medication
 const minuteMs = 60_000;
 const validDay = day => Number.isInteger(day) && day >= -719162 && day <= 2932896;
 const validMinute = minute => Number.isInteger(minute) && minute >= 0 && minute < 1440;
+const validLabel = (text, limit) => typeof text === "string" && text.length <= limit &&
+  !/[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(text);
+const validAmount = value => value === null || (Number.isFinite(value) && value > 0 && value <= 1_000_000);
 const validInstant = at => Number.isSafeInteger(at) && at > 0 && at < 2932897 * dayMs;
 
 function phaseOf(rule) {
@@ -25,6 +28,11 @@ function validRules(input, limit) {
     skips += rule.skip.length;
     if (skips > 256 || !rule.skip.every(pair => Array.isArray(pair) && pair.length === 2 && validDay(pair[0]) && validMinute(pair[1]))) return null;
     const clean = { start: rule.start, end: rule.end, interval: rule.interval, mask: rule.mask, minutes: rule.minutes, skip: rule.skip };
+    if (rule.name !== undefined) {
+      if (!validLabel(rule.name, 80) || !validLabel(rule.unit, 24) || !Array.isArray(rule.amounts) ||
+          rule.amounts.length !== rule.minutes.length || !rule.amounts.every(validAmount)) return null;
+      Object.assign(clean, { name: rule.name, unit: rule.unit, amounts: rule.amounts });
+    }
     const phase = phaseOf(clean);
     if (!validMedicationPhases([phase])) return null;
     if (rule.days !== undefined) {
@@ -61,8 +69,11 @@ export function validSchedule(body) {
     rule.skip.length > 1 || rule.days !== undefined || rule.notBefore !== undefined || rule.snoozes !== undefined)) return null;
   const appointments = body.appointments === undefined ? [] : body.appointments;
   if (!Array.isArray(appointments) || appointments.length > 1200 ||
-      !appointments.every(item => Array.isArray(item) && item.length === 3 &&
-        validInstant(item[0]) && validDay(item[1]) && validInstant(item[2]) && item[2] > item[0])) return null;
+      !appointments.every(item => Array.isArray(item) && (item.length === 3 || item.length === 4) &&
+        validInstant(item[0]) && validDay(item[1]) && validInstant(item[2]) && item[2] > item[0] &&
+        (item.length === 3 || (Array.isArray(item[3]) && item[3].length <= 3 && item[3].every(entry =>
+          Array.isArray(entry) && entry.length === 2 && validInstant(entry[0]) && entry[0] > item[0] &&
+          entry[0] <= item[2] && validLabel(entry[1], 80)))))) return null;
   const water = body.water ?? null;
   if (water !== null && (!validMinute(water.start) || !validMinute(water.end) || water.end <= water.start ||
       !Number.isInteger(water.interval) || water.interval < 15 || water.interval > 240 ||
@@ -81,28 +92,37 @@ export function nextMedicationReminder(schedule, after) {
   const day = Math.floor(localWall(after, clock) / dayMs);
   const offsets = new Map();
   let earliest = null;
+  function consider(at, day, rule, minute) {
+    if (earliest && at > earliest.at) return;
+    if (!earliest || at < earliest.at) earliest = { at, day };
+    if (!rule.name) return;
+    const details = earliest.details ??= [];
+    const amount = rule.amounts[rule.minutes.indexOf(minute)];
+    if (details.length < 3 && !details.some(item => item.name === rule.name && item.amount === amount && item.unit === rule.unit)) {
+      details.push({ name: rule.name, amount, unit: rule.unit });
+    }
+  }
   for (const rule of schedule.rules) {
     const phase = phaseOf(rule);
     const skip = new Set(rule.skip.map(pair => pair.join(":")));
     for (const [day, minute, until] of rule.snoozes ?? []) {
       const at = Math.max(until, instantForWall(day * dayMs + minute * minuteMs, clock, offsets));
-      if (at > after && (!earliest || at < earliest.at)) earliest = { at, day };
+      if (at > after) consider(at, day, rule, minute);
     }
     const cutoff = Math.max(after, (rule.notBefore ?? 0) - 1);
     const fromDay = cutoff === after ? day : Math.floor(localWall(cutoff, clock) / dayMs);
     let dateIndex = rule.days?.findIndex(date => date >= fromDay);
     let candidate = rule.days ? rule.days[dateIndex] ?? null : nextMedicationPhaseDay(phase, fromDay);
     while (candidate !== null && validDay(candidate)) {
-      let at = null;
+      let found = false;
       for (const minute of rule.minutes) {
         if (skip.has(`${candidate}:${minute}`)) continue;
         const due = instantForWall(candidate * dayMs + minute * minuteMs, clock, offsets);
-        if (due > cutoff && (at === null || due < at)) at = due;
+        if (due <= cutoff) continue;
+        consider(due, candidate, rule, minute);
+        found = true;
       }
-      if (at !== null) {
-        if (!earliest || at < earliest.at) earliest = { at, day: candidate };
-        break;
-      }
+      if (found) break;
       candidate = rule.days ? rule.days[++dateIndex] ?? null : nextMedicationPhaseDay(phase, candidate + 1);
     }
   }
@@ -137,13 +157,15 @@ export function nextCareReminder(schedule, after) {
   const appointment = schedule.appointments?.find(([at]) => at > after);
   const candidates = [
     ["dose", nextMedicationReminder(schedule, after)],
-    ["appointment", appointment && { at: appointment[0], day: appointment[1], expires: appointment[2] }],
+    ["appointment", appointment && { at: appointment[0], day: appointment[1], expires: appointment[2], details: appointment[3] }],
     ["water", nextWater(schedule, after)],
     ["routine", schedule.routineRules?.length && nextMedicationReminder({ zone: schedule.zone, rules: schedule.routineRules }, after)]
   ].filter(([, next]) => next);
   if (!candidates.length) return null;
   const at = Math.min(...candidates.map(([, next]) => next.at));
   const matching = candidates.filter(([, next]) => next.at === at);
+  const details = Object.fromEntries(matching.filter(([, next]) => next.details?.length).map(([kind, next]) => [kind, next.details]));
   return { at, day: matching[0][1].day, kinds: matching.map(([kind]) => kind),
+    ...(Object.keys(details).length ? { details } : {}),
     appointmentExpires: matching.find(([kind]) => kind === "appointment")?.[1].expires };
 }

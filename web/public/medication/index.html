@@ -455,7 +455,7 @@
         <div class="daily-main">
           <div class="daily-heading">
             <h2 id="day-title">برنامهٔ روز</h2>
-            <output id="today-count" aria-label="تعداد نوبت‌های ثبت‌شده" hidden></output>
+            <output id="today-count" aria-label="پیشرفت برنامهٔ روز" hidden></output>
           </div>
           <div id="today-focus" hidden></div>
           <p id="future-schedule" class="quiet" hidden>برنامهٔ آینده. ثبت مصرف فقط از روز موعد فعال می‌شود.</p>
@@ -593,7 +593,7 @@
       <p id="status" class="app-status" role="status"></p>
       <nav class="dock" aria-label="ناوبری مدورا">
         <button type="button" data-destination="today" aria-current="page"><svg aria-hidden="true"><use href="#i-sun"/></svg>امروز</button>
-        <button type="button" class="dock-add" id="open-quick"><span><svg aria-hidden="true"><use href="#i-plus"/></svg></span>افزودن</button>
+        <button type="button" class="dock-add" id="open-quick" aria-label="افزودن"><svg aria-hidden="true"><use href="#i-plus"/></svg></button>
         <button type="button" data-destination="insights"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش</button>
       </nav>
     </div>
@@ -612,10 +612,15 @@
       <div class="sheet-header"><svg aria-hidden="true"><use href="/medication/routine-icons.svg#custom"/></svg><h2 id="routine-editor-title">روتین جدید</h2><button type="button" class="icon-button" data-close="routine-editor" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
       <div class="sheet-body routine-fields">
         <label>نام روتین<input id="routine-name" type="text" dir="auto" maxlength="80" placeholder="مثلاً تمرین کششی" required></label>
-        <div class="routine-category-field">
-          <div class="routine-glyph program-routine" id="routine-preview"></div>
-          <div class="routine-category-choice"><span>نوع روتین</span><button id="routine-category-open" type="button" class="secondary" aria-haspopup="dialog"><span></span><svg aria-hidden="true"><use href="#i-expand"/></svg></button></div>
+        <div class="routine-category-choice">
+          <span>نوع روتین</span>
+          <button id="routine-category-open" type="button" class="secondary" aria-haspopup="dialog">
+            <span class="routine-glyph" id="routine-preview"></span>
+            <span id="routine-category-label"></span>
+            <svg aria-hidden="true"><use href="#i-expand"/></svg>
+          </button>
         </div>
+        <fieldset id="routine-colors"><legend>رنگ روتین</legend><div class="visit-color-grid"></div></fieldset>
         <fieldset class="routine-schedule">
           <legend>تکرار</legend>
           <select id="routine-repeat" aria-label="تکرار"><option value="daily">هر روز</option><option value="weekly">روزهای انتخابی</option></select>
@@ -625,7 +630,7 @@
           </div>
         </fieldset>
         <details class="editor-options" id="routine-options">
-          <summary><span>هدف، ساعت و جزئیات</span><svg aria-hidden="true"><use href="#i-expand"/></svg></summary>
+          <summary>هدف، ساعت و جزئیات</summary>
           <div class="routine-fields">
             <div class="routine-time-fields">
               <label>تاریخ شروع<input id="routine-start" type="date" required></label>
@@ -1030,6 +1035,8 @@
           <button id="push-test" type="button" disabled hidden>آزمایش همین دستگاه</button>
           <button id="push-check" type="button" class="secondary" disabled hidden>بررسی وضعیت</button>
         </div>
+        <label class="routine-check"><input id="push-show-details" type="checkbox" aria-describedby="push-privacy">نمایش نام و جزئیات در اعلان</label>
+        <p id="push-privacy" class="quiet">این جزئیات برای ارسال اعلان به سرور می‌روند و ممکن است روی صفحهٔ قفل دیده شوند.</p>
         <p id="push-test-result" class="settings-message" role="status"></p>
         <details id="push-details" class="editor-options">
           <summary>جزئیات ارسال اعلان</summary>

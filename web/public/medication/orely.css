@@ -973,8 +973,6 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
   .medora #visit-add { font-size: .875rem; }
 }
 .medora #today-dates .day-week { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.medora #today-dates .day-week .calendar-dots { gap: .13rem; }
-.medora #today-dates .day-week .calendar-dots i { inline-size: .2rem; block-size: .2rem; }
 .medora .cabinet-search {
   display: flex;
   gap: .52rem;

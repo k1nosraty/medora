@@ -29,7 +29,7 @@ export function routineEntriesOn(state, day, today, plans = Object.values(state.
 
 export function routineLog(routine, result) {
   const { name, category, minute, mode } = routine;
-  const entry = { name, category, minute, mode };
+  const entry = { name, category, color: routine.color ?? "gold", minute, mode };
   if (mode === "quantity") {
     if (!Number.isInteger(result) || result < 1 || result > maxRoutineAmount) return null;
     return { ...entry, target: routine.target, unit: routine.unit, amount: result };

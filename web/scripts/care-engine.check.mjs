@@ -177,3 +177,33 @@ test("routine targets preserve logged history and only suppress the completed oc
   assert.equal(next(), null);
   assert.equal(index(start + 1).routinesOn(start)[0].name, "Stretch");
 });
+
+test("notification names stay private by default and opted-in reminders retain due details", async () => {
+  const { reminderCopy } = await import("../src/reminder-copy.mjs");
+  const start = day("2026-11-09");
+  const now = instant("2026-11-09T07:59:00Z");
+  const medicines = Object.fromEntries(["A", "B"].map((name, index) => [name, {
+    id: name, name, unit: "قرص", phases: [{ start, end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 500 + index * 1500 }] }]
+  }]));
+  const state = { medicines, doses: {},
+    routines: { reading: { name: "Read", mode: "quantity", unit: "pages", target: 15, start, interval: 1, mask: 127, reminder: true, minute: 480 } },
+    visits: { dentist: { name: "Dentist", day: start, time: "09:00", zone: "UTC" } }
+  };
+  const getPlan = () => validSchedule(scheduleForPush(state, "UTC", start, now));
+  const getNext = () => nextCareReminder(getPlan(), now);
+  const generic = getNext();
+  assert.deepEqual(generic.kinds, ["dose", "appointment", "routine"]);
+  assert.equal(generic.details, undefined);
+  assert.match(reminderCopy(generic, generic.kinds, "en", "UTC", now).body, /Take your scheduled medicine/);
+  state.reminderDetails = true;
+  const next = getNext();
+  const { body } = reminderCopy(next, next.kinds, "en", "UTC", now);
+  assert.match(body, /A \(0\.5 tablet\).*B \(2 tablets\)/);
+  assert.match(body, /Dentist \(09:00\)/);
+  assert.match(body, /Read \(15 pages\)/);
+  const plan = getPlan();
+  plan.rules[0].name = "bad\nlabel";
+  assert.equal(validSchedule(plan), null);
+  state.visits.dentist.completed = true;
+  assert.deepEqual(getNext().kinds, ["dose", "routine"]);
+});

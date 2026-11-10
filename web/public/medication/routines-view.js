@@ -1,3 +1,4 @@
+import { appearanceColors } from "./medication-art.js";
 import { language, listSeparator, localDigits, t } from "./locale.js";
 import { $, button, element, fitDialogToViewport } from "./dom.js";
 import { isoDay, timeText } from "./care-index.js";
@@ -9,6 +10,7 @@ import { maxRoutineAmount, maxRoutines, maxRoutineSteps, routineComplete, routin
 const days = [t("دوشنبه"), t("سه‌شنبه"), t("چهارشنبه"), t("پنجشنبه"), t("جمعه"), t("شنبه"), t("یکشنبه")];
 const fields = id => $("routine-" + id);
 const labelFor = category => t(Object.hasOwn(routineLabels, category) ? routineLabels[category] : routineLabels.custom);
+const colorOf = color => Object.hasOwn(appearanceColors, color) ? color : "gold";
 const changed = () => new Error(t("روتین تغییر کرده است. دوباره آن را باز کنید."));
 
 function glyph(category) {
@@ -58,7 +60,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
   function chooseCategory(key) {
     category = Object.hasOwn(routineLabels, key) ? key : "custom";
     fields("preview").replaceChildren(glyph(category));
-    categoryOpen.firstElementChild.textContent = labelFor(category);
+    fields("category-label").textContent = labelFor(category);
     categoryOpen.setAttribute("aria-label", t("نوع روتین، {0}", labelFor(category)));
     for (const control of fields("categories").querySelectorAll("button")) {
       control.setAttribute("aria-pressed", String(control.dataset.category === category));
@@ -111,6 +113,20 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     fitCategory();
   });
 
+  const colorGrid = fields("colors").querySelector(".visit-color-grid");
+  const colors = Object.entries(appearanceColors).map(([id, title]) => {
+    const option = element("label");
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "routine-color";
+    input.value = id;
+    input.dataset.ink = id;
+    option.append(input, element("span", title));
+    colorGrid.append(option);
+    return input;
+  });
+  fields("colors").addEventListener("change", event => { fields("preview").dataset.ink = event.target.value; });
+
   const weekdayFields = (language === "fa" ? [5, 6, 0, 1, 2, 3, 4] : [6, 0, 1, 2, 3, 4, 5]).map(index => {
     const field = document.createElement("label");
     const input = document.createElement("input");
@@ -135,6 +151,9 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     fields("editor-title").textContent = plan ? t("ویرایش روتین") : t("روتین جدید");
     fields("name").value = plan?.name ?? "";
     chooseCategory(plan?.category);
+    const color = colorOf(plan?.color);
+    for (const input of colors) input.checked = input.value === color;
+    fields("preview").dataset.ink = color;
     fields("repeat").value = plan && (plan.mask !== 127 || plan.interval !== 1) ? "weekly" : "daily";
     fields("interval").value = plan?.interval ?? 1;
     fields("start").value = isoDay(plan?.start ?? today());
@@ -205,7 +224,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       throw new Error(t("۱ تا ۱۲ مرحله وارد کنید. هر مرحله حداکثر ۷۰ نویسه."));
     }
     return {
-      id: editing?.id ?? crypto.randomUUID(), name, category, start, mask,
+      id: editing?.id ?? crypto.randomUUID(), name, category, color: colors.find(input => input.checked)?.value ?? "gold", start, mask,
       interval: weekly ? Number(fields("interval").value) : 1, minute, reminder, mode,
       notes: fields("notes").value.trim(), paused: editing?.paused ?? false, revision: (editing?.revision ?? 0) + 1,
       ...(mode === "quantity" ? { target, unit: fields("unit").value.trim() } : {}),
@@ -347,6 +366,8 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     const row = element("article", "", "routine-row");
     row.dataset.routineId = entry.id;
     const art = element("span", "", "routine-glyph");
+    const currentColor = !readOnly && day === today() ? getState().routines?.[entry.id]?.color : null;
+    art.dataset.ink = colorOf(currentColor ?? entry.color);
     art.append(glyph(entry.category));
     const copy = element("div", "", "routine-row-copy");
     const name = element("strong", entry.name);

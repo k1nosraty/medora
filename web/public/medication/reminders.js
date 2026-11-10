@@ -8,6 +8,7 @@ export { scheduleForPush };
 const $ = id => document.getElementById(id);
 const api = "/api/reminders";
 const dayMs = 86_400_000;
+const planVersion = 3;
 let registration;
 let subscription;
 let publicKey;
@@ -78,6 +79,7 @@ function deliveryText(result) {
 async function sync(check = false, snapshot) {
   let state = await accessCareSettings();
   let settings = state.reminders;
+  $("push-show-details").checked = state.reminderDetails === true;
   controls(settings);
   if (!settings?.token) return;
   const zone = localZone();
@@ -86,12 +88,12 @@ async function sync(check = false, snapshot) {
     subscription = await registration.pushManager.getSubscription();
     const validSubscription = subscription && Notification.permission !== "denied" &&
       await matchesSubscriptionId(settings.token.split(".")[0], subscription.toJSON());
-    if (settings.zone !== zone || settings.planVersion !== 2 || (settings.language ?? "fa") !== language || !validSubscription) {
+    if (settings.zone !== zone || settings.planVersion !== planVersion || (settings.language ?? "fa") !== language || !validSubscription) {
       state = await accessCareSettings(current => {
         const reminder = current.reminders;
         if (reminder.token !== settings.token || !reminder.enabled) return;
         reminder.zone = zone;
-        reminder.planVersion = 2;
+        reminder.planVersion = planVersion;
         reminder.language = language;
         reminder.revision += 1;
         if (!validSubscription) reminder.enabled = false;
@@ -173,7 +175,27 @@ export function syncReminders(check = false, snapshot) {
   return queued.promise;
 }
 
+$("push-show-details")?.addEventListener("change", async event => {
+  const control = event.currentTarget;
+  const showDetails = control.checked;
+  control.disabled = true;
+  try {
+    await accessCareSettings(state => {
+      state.reminderDetails = showDetails;
+      changeReminderRevision(state);
+    });
+    void syncReminders();
+  } catch {
+    control.checked = !showDetails;
+    status(t("ذخیره انجام نشد. دوباره تلاش کنید."));
+  } finally {
+    control.disabled = false;
+  }
+});
+
 export async function initializeReminders() {
+  const state = await accessCareSettings().catch(() => null);
+  if (state) $("push-show-details").checked = state.reminderDetails === true;
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (isIOS && !matchMedia("(display-mode: standalone)").matches && navigator.standalone !== true) {
     settingsBadge(t("نیاز به نصب"));
@@ -232,7 +254,7 @@ $("push-enable").addEventListener("click", () => {
       const updated = await accessCareSettings(state => {
         const previous = state.reminders;
         const revision = Math.max(previous?.token === token ? previous.revision : 0, remote.revision) + 1;
-        state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion: 2, language };
+        state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion, language };
       });
       controls(updated.reminders);
       await sync();

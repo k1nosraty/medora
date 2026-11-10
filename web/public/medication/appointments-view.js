@@ -68,15 +68,29 @@ export function appointmentView({
     }
     if (visit.place) details.append(element("p", t("مکان: {0}", visit.place), "quiet"));
     if (visit.cancelled) details.append(element("p", t("قرار لغو شده"), "badge"));
+    else if (visit.completed) details.append(element("p", t("حضور ثبت شد"), "badge visit-attended"));
     if (visit.note) details.append(element("p", visit.note));
     if (visit.contact) details.append(element("p", t("تماس: {0}", visit.contact), "quiet"));
     if (details !== card) card.append(details);
     if (actionable) {
       const controls = element("div", "", "buttons");
+      if (!visit.cancelled && local.day <= today()) {
+        const attendance = button(visit.completed ? t("برگشت ثبت حضور") : t("ثبت حضور"), () => {
+          void mutate(state => {
+            const saved = state.visits?.[visit.id];
+            if (saved && !saved.cancelled) saved.completed = !visit.completed;
+          }, t("وضعیت قرار ذخیره شد."), true);
+        });
+        attendance.setAttribute("aria-pressed", String(Boolean(visit.completed)));
+        controls.append(attendance);
+      }
       controls.append(button(t("ویرایش"), () => openVisit(visit)), button(visit.cancelled ? t("فعال‌کردن قرار") : t("لغو قرار"), () => {
         void mutate(state => {
           const saved = state.visits[visit.id];
-          if (saved) saved.cancelled = !saved.cancelled;
+          if (saved) {
+            saved.cancelled = !saved.cancelled;
+            if (saved.cancelled) delete saved.completed;
+          }
         }, t("وضعیت قرار ذخیره شد."), true);
       }));
       const remove = button(t("حذف قرار"), () => deleteVisit(visit.id));
@@ -90,14 +104,14 @@ export function appointmentView({
 
   function dayVisits(index, day) {
     return index.visitsOn(day).filter(({ visit }) => !visit.cancelled)
-      .map(local => ({ minute: clockMinute(local.time), card: visitCard(local, index.zone, day <= today(), "day") }));
+      .map(local => ({ minute: clockMinute(local.time), completed: Boolean(local.visit.completed), card: visitCard(local, index.zone, day <= today(), "day") }));
   }
 
   function renderVisits(index) {
     const now = Date.now();
     const ordered = [...index.allVisits()].sort((a, b) => a.instant - b.instant);
-    const upcoming = visitFilter !== "past" ? ordered.filter(({ visit, instant }) => !visit.cancelled && instant >= now) : [];
-    const past = visitFilter !== "upcoming" ? ordered.filter(({ visit, instant }) => visit.cancelled || instant < now).reverse() : [];
+    const upcoming = visitFilter !== "past" ? ordered.filter(({ visit, instant }) => !visit.cancelled && !visit.completed && instant >= now) : [];
+    const past = visitFilter !== "upcoming" ? ordered.filter(({ visit, instant }) => visit.cancelled || visit.completed || instant < now).reverse() : [];
     const content = [];
     if (upcoming.length) {
       const [next, ...later] = upcoming.slice(0, visitLimit);

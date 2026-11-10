@@ -1,21 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="ring" x2="1" y2="1">
-      <stop stop-color="#ffefcb"/><stop offset=".45" stop-color="#eeb47e"/><stop offset="1" stop-color="#965843"/>
+    <linearGradient id="board" x2="1" y2="1">
+      <stop stop-color="#fff6e6"/><stop offset="1" stop-color="#e3a577"/>
     </linearGradient>
-    <linearGradient id="shine" x2="1" y2="1">
-      <stop stop-color="#fffbe9"/><stop offset="1" stop-color="#ffdb99" stop-opacity=".18"/>
+    <linearGradient id="tab" x2="1" y2="1">
+      <stop stop-color="#ffcba0"/><stop offset="1" stop-color="#aa664e"/>
+    </linearGradient>
+    <linearGradient id="check" x2="1" y2="1">
+      <stop stop-color="#f8ecd4"/><stop offset="1" stop-color="#e9b783"/>
     </linearGradient>
   </defs>
   <symbol id="banner" viewBox="0 0 128 100">
-    <ellipse cx="62" cy="81" rx="38" ry="8" fill="#80503b" opacity=".17" stroke="none"/>
-    <g transform="rotate(-34 62 49)">
-      <ellipse cx="62" cy="49" rx="45" ry="32" fill="none" stroke="#995c44" stroke-opacity=".3" stroke-width="12" transform="translate(0 3)"/>
-      <ellipse cx="62" cy="49" rx="44" ry="31" fill="none" stroke="url(#ring)" stroke-width="13"/>
-      <path d="M22 43c4-13 19-23 37-24" fill="none" stroke="url(#shine)" stroke-width="3.5"/>
+    <ellipse cx="65" cy="89" rx="42" ry="7" fill="#845038" opacity=".18" stroke="none"/>
+    <g transform="rotate(16 71 54)">
+      <rect x="44" y="20" width="54" height="68" rx="13" fill="#bd827e" stroke="none"/>
+      <rect x="44" y="19" width="54" height="65" rx="13" fill="#f2d0d1" stroke="none"/>
     </g>
-    <path d="M62 32c1.5 10 6 15 16 17-10 2-14.5 7-16 17-2-10-7-15-17-17 10-2 15-7 17-17Z" fill="#ae6b4c" stroke="none"/>
-    <path d="M111 10c.6 5.4 3 7.7 8 8.3-5 .7-7.4 3-8 8.3-.8-5.3-3-7.6-8-8.3 5-.6 7.2-2.9 8-8.3ZM17 74c.5 3.6 2 5.2 5.5 5.8-3.5.5-5 2-5.5 5.8-.5-3.8-2-5.3-5.5-5.8 3.5-.6 5-2.2 5.5-5.8Z" fill="#c98661" stroke="none"/>
+    <g transform="rotate(-13 56 53)">
+      <rect x="30" y="17" width="56" height="73" rx="13" fill="#aa694e" stroke="none"/>
+      <rect x="29" y="15" width="56" height="71" rx="13" fill="url(#board)" stroke="#fff3e3" stroke-width="2"/>
+      <rect x="43" y="9" width="28" height="14" rx="6" fill="url(#tab)" stroke="none"/>
+      <path d="M43 37l3 3 6-7m-9 19 3 3 6-7m-9 19 3 3 6-7" fill="none" stroke="#9e614c" stroke-width="3"/>
+      <path d="M58 37h15M58 52h15M58 67h11" fill="none" stroke="#c58969" stroke-width="3"/>
+    </g>
+    <circle cx="93" cy="70" r="18" fill="#a46a4c" opacity=".25" stroke="none"/>
+    <circle cx="93" cy="66" r="17" fill="url(#check)" stroke="#fff4dd" stroke-width="2"/>
+    <path d="M102 62a10 10 0 1 0 0 9m0-14v6h-6" fill="none" stroke="#8c573e" stroke-width="2.5"/>
+    <path d="M103 14c1 6 3 8 9 9-6 1-8 3-9 9-1-6-3-8-9-9 6-1 8-3 9-9ZM18 56c.7 4 2 5.3 6 6-4 .7-5.3 2-6 6-.7-4-2-5.3-6-6 4-.7 5.3-2 6-6Z" fill="#d89874" stroke="none"/>
   </symbol>
   <symbol id="custom" viewBox="0 0 24 24"><path d="M20 7a8 8 0 1 0 .1 9M20 3v5h-5M12 8v8m-4-4h8"/></symbol>
   <symbol id="skincare" viewBox="0 0 24 24"><path d="M13 3h5m-3 0v3m-3 1h6l2 4v8a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-8zm-2 7h10M5 7s-3 3-3 5a3 3 0 1 0 6 0c0-2-3-5-3-5Z"/></symbol>

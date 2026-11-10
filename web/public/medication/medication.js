@@ -14,7 +14,7 @@ import { renderToday } from "./daily-view.js";
 import { installBackupRestore } from "./backup-restore-view.js";
 
 // An older cached page can still load this module from the current release.
-if (!document.getElementById("routine-editor")) {
+if (!document.getElementById("push-show-details")) {
   const url = new URL(location.href);
   const firstAttempt = !url.searchParams.has("retry");
   url.searchParams.set("retry", Date.now());
@@ -851,7 +851,7 @@ function render() {
   else if (screen === "routines") routines.renderPanel(care, index, day);
   else if (screen === "today") {
     const entries = index.routinesOn(day);
-    renderToday(care, day, today(), index.dosesOn(day), dashboard.dayVisits(index, day), entries, renderDose, routines.card);
+    renderToday(care, day, today(), index.dosesOn(day), dashboard.dayVisits(index, day), entries, index.waterTotal(day), renderDose, routines.card);
   }
 }
 
