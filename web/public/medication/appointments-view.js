@@ -37,6 +37,7 @@ export function appointmentView({
       const banner = element("div", "", "visit-banner");
       if (dayCard) banner.classList.add("day-card-art");
       banner.append(visitIllustration(category));
+      if (dayCard) banner.append(element("span", t("قرار"), "day-card-kind"));
       if (variant === "next") {
         card.classList.add("visit-featured");
         banner.append(element("span", t("نزدیک‌ترین قرار"), "visit-eyebrow"));
@@ -53,7 +54,6 @@ export function appointmentView({
     hour.dateTime = new Date(local.instant).toISOString();
     hour.dir = "ltr";
     const body = element("div", "", "visit-card-body");
-    if (dayCard) body.append(element("span", t("قرار"), "day-card-kind"));
     body.append(title, hour);
     if (category !== "general") {
       const label = category === "custom" && visit.categoryName ? visit.categoryName : categories.get(category);

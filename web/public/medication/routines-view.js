@@ -380,9 +380,9 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     const color = colorOf(currentColor ?? entry.color);
     row.dataset.ink = art.dataset.ink = color;
     art.append(glyph(entry.category));
+    if (dayCard) art.append(element("span", t("روتین"), "day-card-kind"));
     const copy = element("div", "", dayCard ? "day-card-content routine-row-copy" : "routine-row-copy");
     const name = element(dayCard ? "h3" : "strong", entry.name);
-    if (dayCard) copy.append(element("span", t("روتین"), "day-card-kind"));
     name.dir = "auto";
     const completed = routineComplete(entry);
     const detail = [labelFor(entry.category)];

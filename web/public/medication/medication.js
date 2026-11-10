@@ -729,8 +729,9 @@ function renderDose(medicine, dose, variant) {
   if (dayCard) {
     const art = medicationBanner(medicine?.icon ?? dose.icon, color);
     art.classList.add("day-card-art");
+    art.removeAttribute("aria-hidden");
+    art.append(element("span", t("دارو"), "day-card-kind"));
     card.append(art);
-    info.prepend(element("span", t("دارو"), "day-card-kind"));
   } else header.append(medicationBadge(medicine?.icon ?? dose.icon, color));
   header.append(info);
   card.append(header);

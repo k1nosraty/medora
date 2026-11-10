@@ -20,7 +20,6 @@
   --outline: #dedbef;
   --dock-active: #e8e4fc;
   --today-rail-width: min(calc(100% - 1.35rem), 40rem);
-  --today-compact-height: 7.75rem;
 }
 @media (prefers-color-scheme: dark) {
   .medora:not([data-theme="light"]) {
@@ -191,7 +190,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   gap: .65rem;
   box-sizing: border-box;
   inline-size: var(--today-rail-width);
-  min-block-size: var(--today-compact-height);
+  min-block-size: 7.75rem;
   margin: 0 auto .9rem;
   padding: .45rem;
   border: 1px solid var(--outline);
@@ -351,16 +350,17 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   content: "";
   position: absolute;
   inset-block: 1.7rem 0;
-  inset-inline-start: -.45rem;
-  border-inline-start: 1px solid var(--outline);
+  inset-inline-start: -.5rem;
+  border-inline-start: 2px solid var(--outline);
 }
 .medora #timeline-title { margin-block-end: .45rem; }
 .medora .daily-sheet .timeline article::before {
   content: "";
   position: absolute;
-  inset-inline-start: -.63rem;
-  inset-block-start: 1.25rem;
-  inline-size: .4rem;
+  inset-inline-start: -.775rem;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  inline-size: .55rem;
   aspect-ratio: 1;
   border-radius: 50%;
   background: var(--action);
@@ -529,8 +529,10 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
   display: grid;
   grid-area: 1 / 1 / 2 / -1;
   grid-template-columns: var(--day-art-width) minmax(0, 1fr);
+  align-content: center;
   align-items: center;
   justify-items: center;
+  row-gap: .15rem;
   min-block-size: 5.15rem;
   block-size: auto;
   margin: -.55rem -.65rem 0;
@@ -545,6 +547,7 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
   grid-column: 1;
   inline-size: min(94%, 5.75rem);
   block-size: auto;
+  max-block-size: 4.5rem;
   max-inline-size: none;
   opacity: .95;
   transform: rotate(-9deg);
@@ -559,23 +562,23 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
 }
 .medora .day-card-content :is(h3, p) { margin: .12rem 0; }
 .medora .day-card-content h3 { font-size: clamp(1.02rem, 3.9vw, 1.32rem); line-height: 1.35; }
-.day-card-kind {
-  display: inline-block;
-  justify-self: start;
-  margin-inline-end: .3rem;
+.medora .day-card-art > .day-card-kind {
+  position: static;
+  grid-column: 1;
   padding: .08rem .44rem;
   border-radius: .6rem;
   background: var(--dock-active);
   color: var(--ink);
   font-size: .74rem;
   font-weight: 750;
+  line-height: 1.25;
 }
 .medora .day-card .medication-banner .medication-badge {
   position: relative;
   aspect-ratio: 1;
   filter: drop-shadow(0 .2rem .3rem var(--glass-shadow));
 }
-.medora .day-card .medication-banner :is(.banner-echo, span) { display: none; }
+.medora .day-card .medication-banner :is(.banner-echo, span:not(.day-card-kind)) { display: none; }
 .medora .day-card .dose-info { min-inline-size: 0; }
 .medora .day-card .dose-meta { display: flex; flex-wrap: wrap; gap: .12rem .4rem; color: var(--muted); }
 .medora .day-card .dose-meta .hero-kicker { color: var(--muted); font-size: .75rem; }
@@ -638,15 +641,17 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
   --day-art-width: clamp(3.25rem, 22%, 5.1rem);
   grid-template-columns: var(--day-art-width) minmax(0, 1fr) clamp(4.8rem, 25%, 7rem);
   box-sizing: border-box;
-  min-block-size: var(--today-compact-height);
+  min-block-size: 6.75rem;
   padding: .45rem;
   gap: .35rem;
 }
+html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5rem, 24%, 5.1rem); }
 .medora .timeline .day-card-art {
   min-block-size: 0;
   margin: -.45rem;
   border-radius: inherit;
 }
+.medora .timeline .day-card-art > svg { max-block-size: 3.65rem; }
 .medora .timeline .day-card-content h3 { font-size: clamp(.94rem, 3.7vw, 1.08rem); }
 .medora .timeline .day-card-content .badge { font-size: .73rem; }
 .medora .timeline .day-card-kind { font-size: .68rem; }
