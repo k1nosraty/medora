@@ -302,8 +302,10 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       if (JSON.stringify(previous) !== JSON.stringify(recorded) || (!previous && !routineOccurs(plan, day))) throw changed();
       const latest = previous ?? plan;
       const updated = routineLog(latest, result);
-      if (updated) records[entry.id] = updated;
-      else delete records[entry.id];
+      if (updated) {
+        if (routineComplete(updated)) updated.resolvedAt = previous?.resolvedAt ?? Date.now();
+        records[entry.id] = updated;
+      } else delete records[entry.id];
     }, t("پیشرفت روتین ذخیره شد."), Boolean(plan?.reminder), day);
   }
 

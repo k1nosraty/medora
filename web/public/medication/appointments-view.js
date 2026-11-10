@@ -1,5 +1,4 @@
 import { localDigits, t } from "./locale.js";
-import { clockMinute } from "./care-plan.js";
 import { isoDay } from "./care-index.js";
 import { $, button, dayCardOptions, element } from "./dom.js";
 
@@ -80,7 +79,10 @@ export function appointmentView({
         const attendance = button(visit.completed ? t("برگشت ثبت حضور") : t("ثبت حضور"), () => {
           void mutate(state => {
             const saved = state.visits?.[visit.id];
-            if (saved && !saved.cancelled) saved.completed = !visit.completed;
+            if (!saved || saved.cancelled) return;
+            saved.completed = !visit.completed;
+            if (saved.completed) saved.resolvedAt ??= Date.now();
+            else delete saved.resolvedAt;
           }, t("وضعیت قرار ذخیره شد."), true);
         });
         attendance.setAttribute("aria-pressed", String(Boolean(visit.completed)));
@@ -92,7 +94,10 @@ export function appointmentView({
           const saved = state.visits[visit.id];
           if (saved) {
             saved.cancelled = !saved.cancelled;
-            if (saved.cancelled) delete saved.completed;
+            if (saved.cancelled) {
+              delete saved.completed;
+              delete saved.resolvedAt;
+            }
           }
         }, t("وضعیت قرار ذخیره شد."), true);
       });
@@ -111,7 +116,12 @@ export function appointmentView({
 
   function dayVisits(index, day) {
     return index.visitsOn(day).filter(({ visit }) => !visit.cancelled)
-      .map(local => ({ minute: clockMinute(local.time), completed: Boolean(local.visit.completed), card: visitCard(local, index.zone, day <= today(), "day") }));
+      .map(local => ({
+        time: local.instant,
+        state: local.visit.completed ? "done" : "pending",
+        resolvedAt: local.visit.resolvedAt,
+        render: () => visitCard(local, index.zone, day <= today(), "day")
+      }));
   }
 
   function renderVisits(index) {

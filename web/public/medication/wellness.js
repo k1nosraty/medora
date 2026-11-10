@@ -706,7 +706,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       const offsets = [...retainedVisitOffsets(previous), ...chosenOffsets];
       const completed = previous?.completed && previous.day === day && previous.time === time && previous.zone === zone;
       visits[id] = { id, name, day, time, place, note, contact, zone, category, color, offsets, cancelled: previous?.cancelled ?? false,
-        ...(completed ? { completed } : {}),
+        ...(completed ? { completed, resolvedAt: previous.resolvedAt } : {}),
         ...(categoryName ? { categoryName } : {}), ...(remindersOff ? { remindersOff } : {}) };
     }, t("قرار ذخیره شد."), true);
     submit.disabled = false;
