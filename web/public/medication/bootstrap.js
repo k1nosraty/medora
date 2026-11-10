@@ -1,5 +1,25 @@
 const status = document.getElementById("boot-status");
 const retry = document.getElementById("boot-retry");
+let pressedControl;
+
+function releasePress() {
+  pressedControl?.removeAttribute("data-pressing");
+  pressedControl = null;
+}
+
+// Touch browsers can delay :active while deciding whether the user is scrolling.
+document.addEventListener("pointerdown", event => {
+  if (!event.isPrimary || event.pointerType === "mouse") return;
+  releasePress();
+  pressedControl = event.target.closest('button, summary, label:has(> input:is([type="radio"], [type="checkbox"]))');
+  pressedControl?.setAttribute("data-pressing", "");
+}, { passive: true });
+for (const type of ["pointerup", "pointercancel"]) {
+  window.addEventListener(type, event => {
+    if (event.isPrimary && event.pointerType !== "mouse") releasePress();
+  }, { capture: true, passive: true });
+}
+window.addEventListener("blur", releasePress);
 
 retry.addEventListener("click", () => {
   const url = new URL(location.href);
