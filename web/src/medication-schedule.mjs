@@ -1,3 +1,4 @@
+import { maxRoutines } from "../public/medication/routine-plan.js";
 import { WebPhase, WebSlot, nextMedicationPhaseDay, validMedicationPhases } from "../public/care-engine/care-core.mjs";
 
 import { dayMs, timezone, localWall, instantForWall } from "../public/medication/wall-clock.js";
@@ -11,14 +12,12 @@ function phaseOf(rule) {
   return new WebPhase(rule.start, rule.end, rule.interval, rule.mask, rule.minutes.map(minute => new WebSlot(minute, null)));
 }
 
-export function validSchedule(body) {
-  if (typeof body?.zone !== "string" || body.zone.length > 64 || !/^[A-Za-z0-9_+/-]+$/.test(body.zone) ||
-      !Array.isArray(body.rules) || body.rules.length > 100) return null;
-  try { timezone(body.zone); } catch { return null; }
+function validRules(input, limit) {
+  if (!Array.isArray(input) || input.length > limit) return null;
   let skips = 0;
   let specificDays = 0;
   const rules = [];
-  for (const rule of body.rules) {
+  for (const rule of input) {
     if (!validDay(rule?.start) || (rule.end !== null && !validDay(rule.end)) ||
         !Number.isInteger(rule.interval) || !Number.isInteger(rule.mask) || !Array.isArray(rule.minutes) ||
         rule.minutes.length < 1 || rule.minutes.length > 12 || !rule.minutes.every(validMinute) ||
@@ -50,6 +49,16 @@ export function validSchedule(body) {
     }
     rules.push(clean);
   }
+  return rules;
+}
+
+export function validSchedule(body) {
+  if (typeof body?.zone !== "string" || body.zone.length > 64 || !/^[A-Za-z0-9_+/-]+$/.test(body.zone)) return null;
+  try { timezone(body.zone); } catch { return null; }
+  const rules = validRules(body.rules, 100);
+  const routineRules = validRules(body.routineRules === undefined ? [] : body.routineRules, maxRoutines);
+  if (!rules || !routineRules || routineRules.some(rule => rule.end !== null || rule.minutes.length !== 1 ||
+    rule.skip.length > 1 || rule.days !== undefined || rule.notBefore !== undefined || rule.snoozes !== undefined)) return null;
   const appointments = body.appointments === undefined ? [] : body.appointments;
   if (!Array.isArray(appointments) || appointments.length > 1200 ||
       !appointments.every(item => Array.isArray(item) && item.length === 3 &&
@@ -61,7 +70,7 @@ export function validSchedule(body) {
       (water.pauseUntil !== 0 && !validInstant(water.pauseUntil)) ||
       (water.goalDay !== null && !validDay(water.goalDay)))) return null;
   return {
-    zone: body.zone, rules, appointments: appointments.sort((a, b) => a[0] - b[0]),
+    zone: body.zone, rules, ...(routineRules.length ? { routineRules } : {}), appointments: appointments.sort((a, b) => a[0] - b[0]),
     water: water && { start: water.start, end: water.end, interval: water.interval, repeat: water.repeat,
       pauseUntil: water.pauseUntil, goalDay: water.goalDay }
   };
@@ -129,7 +138,8 @@ export function nextCareReminder(schedule, after) {
   const candidates = [
     ["dose", nextMedicationReminder(schedule, after)],
     ["appointment", appointment && { at: appointment[0], day: appointment[1], expires: appointment[2] }],
-    ["water", nextWater(schedule, after)]
+    ["water", nextWater(schedule, after)],
+    ["routine", schedule.routineRules?.length && nextMedicationReminder({ zone: schedule.zone, rules: schedule.routineRules }, after)]
   ].filter(([, next]) => next);
   if (!candidates.length) return null;
   const at = Math.min(...candidates.map(([, next]) => next.at));

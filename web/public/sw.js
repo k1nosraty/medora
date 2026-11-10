@@ -22,7 +22,7 @@ self.addEventListener("notificationclick", event => {
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     const { day, kind } = event.notification.data ?? {};
-    const screen = { water: "water", appointment: "appointments" }[kind];
+    const screen = { water: "water", appointment: "appointments", routine: "routines" }[kind];
     const path = /^\d{4}-\d{2}-\d{2}$/.test(day ?? "")
       ? `/medication/?day=${day}${screen ? `&view=${screen}` : ""}` : "/pilot/";
     const existing = windows.find(client => new URL(client.url).pathname === path.split("?")[0]);

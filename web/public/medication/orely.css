@@ -67,7 +67,7 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
 .medora .header-tools .language-switch svg { inline-size: 1.02rem; block-size: 1.02rem; }
 .medora .page-heading { margin-block: .4rem .65rem; }
 .medora #app:not([data-active-screen]) .page-heading,
-.medora #app:is([data-active-screen="today"], [data-active-screen="insights"]) .page-heading {
+.medora #app:is([data-active-screen="today"], [data-active-screen="insights"], [data-active-screen="routines"]) .page-heading {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;
@@ -939,11 +939,11 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
   .medora .daily-sheet {
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-    grid-template-areas: "water water" "daily reminders";
+    grid-template-areas: "programs programs" "water water" "daily reminders";
     gap: .7rem 1rem;
     align-items: start;
   }
-  .medora .daily-sheet:has(#today-water[hidden]) { grid-template-areas: "daily daily" "reminders reminders"; }
+  .medora .daily-sheet:has(#today-water[hidden]) { grid-template-areas: "programs programs" "daily daily" "reminders reminders"; }
   .daily-main { grid-area: daily; }
   .medora #today-water { grid-area: water; margin-block-end: 0; }
   .medora #today-reminders { grid-area: reminders; margin: 0; }

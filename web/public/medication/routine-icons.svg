@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ring" x2="1" y2="1">
+      <stop stop-color="#ffefcb"/><stop offset=".45" stop-color="#eeb47e"/><stop offset="1" stop-color="#965843"/>
+    </linearGradient>
+    <linearGradient id="shine" x2="1" y2="1">
+      <stop stop-color="#fffbe9"/><stop offset="1" stop-color="#ffdb99" stop-opacity=".18"/>
+    </linearGradient>
+  </defs>
+  <symbol id="banner" viewBox="0 0 128 100">
+    <ellipse cx="62" cy="81" rx="38" ry="8" fill="#80503b" opacity=".17" stroke="none"/>
+    <g transform="rotate(-34 62 49)">
+      <ellipse cx="62" cy="49" rx="45" ry="32" fill="none" stroke="#995c44" stroke-opacity=".3" stroke-width="12" transform="translate(0 3)"/>
+      <ellipse cx="62" cy="49" rx="44" ry="31" fill="none" stroke="url(#ring)" stroke-width="13"/>
+      <path d="M22 43c4-13 19-23 37-24" fill="none" stroke="url(#shine)" stroke-width="3.5"/>
+    </g>
+    <path d="M62 32c1.5 10 6 15 16 17-10 2-14.5 7-16 17-2-10-7-15-17-17 10-2 15-7 17-17Z" fill="#ae6b4c" stroke="none"/>
+    <path d="M111 10c.6 5.4 3 7.7 8 8.3-5 .7-7.4 3-8 8.3-.8-5.3-3-7.6-8-8.3 5-.6 7.2-2.9 8-8.3ZM17 74c.5 3.6 2 5.2 5.5 5.8-3.5.5-5 2-5.5 5.8-.5-3.8-2-5.3-5.5-5.8 3.5-.6 5-2.2 5.5-5.8Z" fill="#c98661" stroke="none"/>
+  </symbol>
+  <symbol id="custom" viewBox="0 0 24 24"><path d="M20 7a8 8 0 1 0 .1 9M20 3v5h-5M12 8v8m-4-4h8"/></symbol>
+  <symbol id="skincare" viewBox="0 0 24 24"><path d="M13 3h5m-3 0v3m-3 1h6l2 4v8a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-8zm-2 7h10M5 7s-3 3-3 5a3 3 0 1 0 6 0c0-2-3-5-3-5Z"/></symbol>
+  <symbol id="health" viewBox="0 0 24 24"><path d="M12 21 3 12a5 5 0 0 1 7-7l2 2 2-2a5 5 0 0 1 7 7Z"/><path d="M4 12h5l2-3 2 6 2-3h5"/></symbol>
+  <symbol id="therapy" viewBox="0 0 24 24"><path d="m4 17 4-4 3 2 3-2 2 2-5 5H7m7-7 4-4a2 2 0 0 1 3 3l-7 8-3 1H3m3-12h4m-2-2v4"/></symbol>
+  <symbol id="breath" viewBox="0 0 24 24"><path d="M3 8h12a2.5 2.5 0 1 0-2.5-2.5M2 12h17a2.5 2.5 0 1 1-2.5 2.5M4 16h6a2.5 2.5 0 1 1-2.5 2.5"/></symbol>
+  <symbol id="sleep" viewBox="0 0 24 24"><path d="M20 15A8 8 0 0 1 9 4a9 9 0 1 0 11 11ZM17 3v6m-3-3h6"/></symbol>
+  <symbol id="reading" viewBox="0 0 24 24"><path d="M12 6c-3-2-6-2-10-1v14c4-1 7-1 10 1 3-2 6-2 10-1V5c-4-1-7-1-10 1v14M5 9h4m-4 4h4m6-4h4m-4 4h4"/></symbol>
+  <symbol id="music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 9l12-2"/><ellipse cx="6" cy="18" rx="3" ry="2.5"/><ellipse cx="18" cy="16" rx="3" ry="2.5"/></symbol>
+  <symbol id="instrument" viewBox="0 0 24 24"><path d="m10 13 8-9 3 2-8 10a5 5 0 1 1-6-6l3 3Zm7-8 2 2m-1-5 4 3"/><circle cx="9" cy="16" r="1.5"/></symbol>
+  <symbol id="journaling" viewBox="0 0 24 24"><path d="M14 5H5a2 2 0 0 0-2 2v13h14v-5m-11 1 2-5 9-8 3 3-9 8-5 2Zm9-11 3 3"/></symbol>
+  <symbol id="meditation" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M8 11c2-2 6-2 8 0l3 5m-11-5-3 5m2 1c-5-2-7 3-2 4h14c5-1 3-6-2-4l-5 3-5-3Z"/></symbol>
+  <symbol id="nutrition" viewBox="0 0 24 24"><path d="M12 7c-5-4-10 0-9 6 1 4 3 8 6 8l3-1 3 1c3 0 5-4 6-8 1-6-4-10-9-6Zm0 0c0-3 2-5 5-5"/></symbol>
+  <symbol id="walking" viewBox="0 0 24 24"><circle cx="14" cy="4" r="2"/><path d="m9 21 4-7 3 7m-3-7-2-4m-5 3 4-4 4 1 3 4h3"/></symbol>
+  <symbol id="running" viewBox="0 0 24 24"><circle cx="16" cy="4" r="2"/><path d="m5 22 5-5 2-5m-8 0 5-4 5 1 3 4h4m-7-4-2 4 4 3 2 5"/></symbol>
+  <symbol id="gym" viewBox="0 0 24 24"><path d="M2 12h2m16 0h2M7 12h10"/><rect x="4" y="6" width="3" height="12" rx="1"/><rect x="17" y="6" width="3" height="12" rx="1"/></symbol>
+  <symbol id="bodybuilding" viewBox="0 0 24 24"><path d="M6 18c2-4 6-4 7-2 0-5 2-6 4-6l-1-3h-4l-1-3 5-1 4 3 1 9c0 4-4 6-8 6H5l-2-4"/></symbol>
+  <symbol id="rope" viewBox="0 0 24 24"><path d="M5 16V9a7 7 0 0 1 14 0v7"/><rect x="3" y="16" width="4" height="6" rx="1"/><rect x="17" y="16" width="4" height="6" rx="1"/></symbol>
+  <symbol id="football" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m12 8 4 3-1.5 4.5h-5L8 11Zm0 0V3m4 8 5-1m-6.5 5.5 3.5 4m-8.5-4-3.5 4M8 11l-5-1"/></symbol>
+  <symbol id="futsal" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M12 5v4.5m0 5V19M2 9h4v6H2m20-6h-4v6h4"/></symbol>
+  <symbol id="basketball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M3 12h18M12 3v18M6 5c5 5 5 9 0 14M18 5c-5 5-5 9 0 14"/></symbol>
+  <symbol id="volleyball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 12C8 10 7 6 9 3m3 9c4 0 7 3 8 6m-8-6c-1 4-4 6-8 6m13-13c-2 3-2 5 0 8m-6 7c2-2 5-2 7-2M4 8c1 3 3 5 6 5"/></symbol>
+  <symbol id="handball" viewBox="0 0 24 24"><circle cx="17" cy="5" r="3"/><path d="m3 14 3-3 2 3 3-7a1 1 0 0 1 2 1l-1 5 2-1a3 3 0 0 1 4 3c0 3-3 6-7 6-3 0-6-2-8-7Z"/></symbol>
+  <symbol id="tennis" viewBox="0 0 24 24"><ellipse cx="15" cy="8" rx="5.5" ry="6.5" transform="rotate(37 15 8)"/><path d="m11 13-7 8m8-16 7 6m-8-1 7-5"/></symbol>
+  <symbol id="table-tennis" viewBox="0 0 24 24"><path d="m10 15-5 6-2-2 5-6c-2-4 1-8 5-8 5 0 7 5 5 8-2 3-6 4-8 2Zm-2-2 4 4"/><circle cx="20" cy="4" r="2"/></symbol>
+  <symbol id="badminton" viewBox="0 0 24 24"><path d="m9 16 7-13 5 7-9 9m-3-3-4 3a2 2 0 0 0 3 3l4-3m0-7 5 4m-2-10 4 6"/></symbol>
+  <symbol id="cycling" viewBox="0 0 24 24"><circle cx="5.5" cy="16.5" r="4"/><circle cx="18.5" cy="16.5" r="4"/><path d="m5.5 16.5 4-8 4 8h-8m13 0-4-12h3M8 8h4"/></symbol>
+  <symbol id="swimming" viewBox="0 0 24 24"><circle cx="17" cy="7" r="2.5"/><path d="m5 13 6-4-4-4H4m7 4 5 5M2 17c2 2 4 2 6 0 2 2 4 2 6 0 2 2 4 2 6 0l2 1M2 21c2 2 4 2 6 0 2 2 4 2 6 0 2 2 4 2 6 0l2 1"/></symbol>
+  <symbol id="yoga" viewBox="0 0 24 24"><circle cx="12" cy="4" r="2"/><path d="M7 7c1 2 3 3 5 3s4-1 5-3l2-3M7 7 5 4m7 6v6m0 0-5 2-3-2m8 0 5 2 3-2m-15 5h14"/></symbol>
+  <symbol id="pilates" viewBox="0 0 24 24"><circle cx="5" cy="13" r="2"/><path d="M2 20h20M7 17h6l5-5h4m-9 5 4-10 3-2"/></symbol>
+  <symbol id="stretch" viewBox="0 0 24 24"><circle cx="13" cy="5" r="2"/><path d="m4 5 4 4 5 1 5-3m-5 3-2 5-5 5m5-5 4 1 4 4"/></symbol>
+  <symbol id="hiking" viewBox="0 0 24 24"><path d="m2 20 7-12 4 7 3-5 6 10H2Zm4-7 3 1 2-2m5-8v3m-1.5-1.5h3"/></symbol>
+  <symbol id="climbing" viewBox="0 0 24 24"><circle cx="11" cy="5" r="2"/><path d="M19 2l-3 6 3 5-3 9m-3-14 4-2m-4 2-3 4 5 3-3 5m-2-8-4 6M6 7l4 5"/></symbol>
+  <symbol id="boxing" viewBox="0 0 24 24"><path d="M6 15c-2-1-3-4-2-6 1-2 3-2 4-1V5c0-2 2-3 4-3h3c4 0 6 3 5 7l-2 6v6H7v-6Zm1 1h11m-8-7 2 3"/></symbol>
+  <symbol id="martial-arts" viewBox="0 0 24 24"><path d="M3 10h18v4H3z"/><rect x="10" y="8" width="4" height="8" rx="1"/><path d="m10 15-4 5m8-5 4 5"/></symbol>
+  <symbol id="dance" viewBox="0 0 24 24"><circle cx="13" cy="4" r="2"/><path d="m5 4 4 5 5 1 5-4m-5 4-2 5 4 2 3 4m-7-6-4 5H5m14-19v3m-1.5-1.5h3"/></symbol>
+  <symbol id="skating" viewBox="0 0 24 24"><path d="M4 5h7l1 6 7 2c2 1 3 3 2 5H4V5Zm0 9h5m-4 7h14m-7-11 2-1"/></symbol>
+  <symbol id="skiing" viewBox="0 0 24 24"><circle cx="15" cy="4" r="2"/><path d="m6 5 5 5 4 1 4-2m-8 1-3 5 5 2m6-8 2 7M2 17l16 5c2 .5 3 0 4-1"/></symbol>
+  <symbol id="rowing" viewBox="0 0 24 24"><path d="M2 15h20l-4 5H6Zm4 3h12m-9-3 5-10m0 0 3-3 2 2-3 4Zm-5 7-3 3"/></symbol>
+  <symbol id="workout" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 10-12h-7l1-8Z"/></symbol>
+</svg>

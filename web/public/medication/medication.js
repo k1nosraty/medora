@@ -9,11 +9,12 @@ import { installAccount } from "./account.js";
 import { showPromotion } from "./promotion.js";
 import { $, element } from "./dom.js";
 import { compilePhases, createCareIndex, doseId, doseTime, isoDay, timeText } from "./care-index.js";
+import { installRoutines } from "./routines-view.js";
 import { renderToday } from "./daily-view.js";
 import { installBackupRestore } from "./backup-restore-view.js";
 
 // An older cached page can still load this module from the current release.
-if (!document.getElementById("today-dates")) {
+if (!document.getElementById("routine-editor")) {
   const url = new URL(location.href);
   const firstAttempt = !url.searchParams.has("retry");
   url.searchParams.set("retry", Date.now());
@@ -807,14 +808,17 @@ function renderDose(medicine, dose, featured = false) {
 }
 
 let indexedState;
+let indexedDay;
 let careIndex;
 const percentFormat = new Intl.NumberFormat(locale, { style: "percent" });
 
 function currentIndex() {
   const zone = localZone();
-  if (indexedState !== care || careIndex.zone !== zone) {
+  const day = today();
+  if (indexedState !== care || indexedDay !== day || careIndex.zone !== zone) {
     indexedState = care;
-    careIndex = createCareIndex(care, engine, zone);
+    indexedDay = day;
+    careIndex = createCareIndex(care, engine, zone, day);
   }
   return careIndex;
 }
@@ -844,7 +848,11 @@ function render() {
   const screen = dashboard.screen();
   dashboard.renderWellness(care, day, index);
   if (screen === "medications") renderMedications(index.dosesOn(day));
-  else if (screen === "today") renderToday(care, day, today(), index.dosesOn(day), dashboard.dayVisits(index, day), renderDose);
+  else if (screen === "routines") routines.renderPanel(care, index, day);
+  else if (screen === "today") {
+    const entries = index.routinesOn(day);
+    renderToday(care, day, today(), index.dosesOn(day), dashboard.dayVisits(index, day), entries, renderDose, routines.card);
+  }
 }
 
 async function reload() {
@@ -930,9 +938,13 @@ window.addEventListener("focus", () => {
 const selectedDay = () => $("day").value ? dayNumber($("day").value) : today();
 const dashboard = wellness({
   getState: () => care, selectedDay, today, render, mutate, requestDeletion, renderDose,
-  refreshFields: container => pickers.refresh(container)
+  refreshFields: container => pickers.refresh(container), renderRoutine: (entry, day) => routines.card(entry, day)
 });
 const pickers = installPickers({ selectedDay, today, dashboard });
+const routines = installRoutines({
+  getState: () => care, today, mutate, render, requestDeletion, formatDay: dashboard.formatDay,
+  refreshFields: pickers.refresh
+});
 const updateAppearance = installAppearance();
 const openAccount = installAccount();
 const params = new URLSearchParams(location.search);
@@ -943,7 +955,8 @@ installBackupRestore(mutate, phases => engine.validMedicationPhases(compilePhase
 
 function showIntro() {
   const hasRecords = Object.keys(care.medicines).length || Object.keys(care.doses).length ||
-    care.water?.length || Object.keys(care.visits ?? {}).length || care.reminders ||
+    care.water?.length || Object.keys(care.visits ?? {}).length || Object.keys(care.routines ?? {}).length ||
+    Object.keys(care.routineLogs ?? {}).length || care.reminders ||
     care.theme || care.calendar || care.waterGoal;
   if (care.intro === "done" || hasRecords) return;
   function show(step) {
@@ -976,7 +989,7 @@ try {
   $("app").hidden = false;
   $("boot-status").hidden = true;
   showIntro();
-  if (!$("app").hidden && ["water", "appointments"].includes(view)) dashboard.show(view);
+  if (!$("app").hidden && ["water", "appointments", "routines"].includes(view)) dashboard.show(view);
   if (!location.search && !$("app").hidden) void showPromotion();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/medication/sw.js").catch(() => {});
   void initializeReminders();

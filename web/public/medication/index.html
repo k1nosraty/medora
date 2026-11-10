@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/medication/medication.css">
   <link rel="stylesheet" href="/medication/orely.css">
+  <link rel="stylesheet" href="/medication/routines.css">
   <link rel="modulepreload" href="/medication/medication.js">
   <link rel="modulepreload" href="/care-engine/care-core.mjs">
   <title>مدورا</title>
@@ -369,7 +370,7 @@
         <svg class="intro-mark" aria-hidden="true"><use href="#i-bell"/></svg>
       </div>
       <h1>یادآوری‌ها به اجازهٔ شما نیاز دارند</h1>
-      <p>برای دریافت یادآوری دارو، آب و قرار هنگام بسته‌بودن مدورا، اعلان‌ها را فعال کنید.</p>
+      <p>برای دریافت یادآوری دارو، آب، قرار و روتین هنگام بسته‌بودن مدورا، اعلان‌ها را فعال کنید.</p>
       <button type="button" id="intro-notifications" class="block-action">فعال‌کردن اعلان‌ها</button>
       <button type="button" id="intro-later" class="secondary block-action">فعلاً نه</button>
     </div>
@@ -411,6 +412,23 @@
         <button type="button" class="secondary day-arrow icon-button reverse" id="next-day" aria-label="روز بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
       </div>
       <div data-screen="today" class="daily-sheet">
+        <section id="today-programs" aria-labelledby="programs-title">
+          <h2 id="programs-title">برنامه‌ها</h2>
+          <div class="program-grid">
+            <button type="button" class="program-card program-medicine" data-destination="medications">
+              <svg class="medication-badge" data-ink="purple" aria-hidden="true"><use href="#art-capsule"/></svg>
+              <strong>داروها</strong><small id="program-medications"></small>
+            </button>
+            <button type="button" class="program-card program-visit" data-destination="appointments">
+              <svg aria-hidden="true"><use href="#art-visit-general"/></svg>
+              <strong>قرارها</strong><small id="program-appointments"></small>
+            </button>
+            <button type="button" class="program-card program-routine" data-destination="routines">
+              <svg aria-hidden="true"><use href="/medication/routine-icons.svg#banner"/></svg>
+              <strong>روتین‌ها</strong><small id="program-routines"></small>
+            </button>
+          </div>
+        </section>
         <section id="today-water" class="water" aria-labelledby="today-water-label">
           <span class="today-water-art">
             <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#art-today-glass"/><path class="glass-water" clip-path="url(#today-glass-clip)"/><use href="#art-today-glass-rim"/></svg>
@@ -442,7 +460,7 @@
           <div id="today-focus" hidden></div>
           <p id="future-schedule" class="quiet" hidden>برنامهٔ آینده. ثبت مصرف فقط از روز موعد فعال می‌شود.</p>
           <section class="timeline" aria-labelledby="timeline-title">
-            <h3 id="timeline-title">نوبت‌ها و قرارها</h3>
+            <h3 id="timeline-title">داروها، قرارها و روتین‌ها</h3>
             <div id="doses"></div>
           </section>
         </div>
@@ -482,6 +500,24 @@
         </div>
         <div id="visits"></div>
       </div>
+      <div data-screen="routines" hidden>
+        <section class="routine-banner program-routine" aria-labelledby="routine-banner-title">
+          <div><h2 id="routine-banner-title">روتین‌های من</h2><p id="routine-progress" aria-live="polite"></p>
+            <progress id="routine-meter" max="1" value="0" aria-label="پیشرفت روتین‌های روز" hidden></progress>
+          </div>
+          <svg aria-hidden="true"><use href="/medication/routine-icons.svg#banner"/></svg>
+        </section>
+        <div id="routine-dates"></div>
+        <div class="routine-filters segmented glass-toolbar" role="group" aria-label="نمای روتین‌ها">
+          <button type="button" data-routine-filter="today" aria-pressed="true">امروز</button>
+          <button type="button" data-routine-filter="all" aria-pressed="false">همه</button>
+          <button type="button" data-routine-filter="history" aria-pressed="false">سوابق</button>
+        </div>
+        <label class="routine-search" id="routine-search-wrap" hidden>جست‌وجوی روتین<input id="routine-search" type="search" placeholder="نام یا دستهٔ روتین"></label>
+        <div id="routine-list"></div>
+        <button type="button" class="secondary block-action" id="routine-more" hidden>سوابق بیشتر</button>
+        <button type="button" class="block-action" id="routine-first" data-open-routine hidden>روتین جدید</button>
+      </div>
       <div data-screen="water" hidden>
         <section class="feature water">
           <div id="water-summary" class="feature-head water-summary">
@@ -516,6 +552,7 @@
               <li><span class="calendar-dots" aria-hidden="true"><i class="medicine"></i></span>دارو</li>
               <li><span class="calendar-dots" aria-hidden="true"><i class="water"></i></span>آب</li>
               <li><span class="calendar-dots" aria-hidden="true"><i class="visit"></i></span>قرار</li>
+              <li><span class="calendar-dots" aria-hidden="true"><i class="routine"></i></span>روتین</li>
             </ul>
           </section>
           <section id="calendar-activity"></section>
@@ -545,16 +582,19 @@
               <progress id="report-dose-progress" class="dose-progress" max="1" value="0" aria-label="سهم مصرف از نوبت‌های ثبت‌شده" hidden></progress>
               <p id="report-doses"></p>
             </section>
+            <section class="feature program-routine report-card" aria-labelledby="report-routine-title">
+              <div class="report-card-heading"><h2 id="report-routine-title">روتین‌ها</h2><svg aria-hidden="true"><use href="/medication/routine-icons.svg#custom"/></svg></div>
+              <div id="report-routine-number" class="report-number" hidden></div>
+              <p id="report-routines"></p>
+            </section>
           </div>
         </div>
       </div>
       <p id="status" class="app-status" role="status"></p>
       <nav class="dock" aria-label="ناوبری مدورا">
         <button type="button" data-destination="today" aria-current="page"><svg aria-hidden="true"><use href="#i-sun"/></svg>امروز</button>
-        <button type="button" data-destination="medications"><svg aria-hidden="true"><use href="#i-bottle"/></svg>داروها</button>
-        <button type="button" data-destination="appointments"><svg aria-hidden="true"><use href="#i-calendar"/></svg>قرارها</button>
-        <button type="button" data-destination="insights"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش‌ها</button>
         <button type="button" class="dock-add" id="open-quick"><span><svg aria-hidden="true"><use href="#i-plus"/></svg></span>افزودن</button>
+        <button type="button" data-destination="insights"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش</button>
       </nav>
     </div>
   </main>
@@ -562,9 +602,74 @@
     <div class="sheet-header"><svg aria-hidden="true"><use href="#i-plus"/></svg><h2 id="quick-title">چه چیزی ثبت می‌کنید؟</h2><button type="button" class="icon-button" data-close="quick-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
     <div class="sheet-body quick-items">
       <button type="button" class="secondary quick-item medicine" data-from-quick data-open-medication><svg aria-hidden="true"><use href="#i-pill"/></svg>افزودن دارو</button>
-      <button type="button" class="secondary quick-item water" data-from-quick data-open-water><svg aria-hidden="true"><use href="#i-water"/></svg>ثبت آب</button>
       <button type="button" class="secondary quick-item visit" data-from-quick data-open-visit><svg aria-hidden="true"><use href="#i-calendar"/></svg>قرار جدید</button>
+      <button type="button" class="secondary quick-item program-routine" data-from-quick data-open-routine><svg aria-hidden="true"><use href="/medication/routine-icons.svg#custom"/></svg>روتین جدید</button>
+      <button type="button" class="secondary quick-item water" data-from-quick data-open-water><svg aria-hidden="true"><use href="#i-water"/></svg>ثبت آب</button>
     </div>
+  </dialog>
+  <dialog id="routine-editor" class="sheet routine-sheet" aria-labelledby="routine-editor-title">
+    <form id="routine-form" class="sheet-form" novalidate>
+      <div class="sheet-header"><svg aria-hidden="true"><use href="/medication/routine-icons.svg#custom"/></svg><h2 id="routine-editor-title">روتین جدید</h2><button type="button" class="icon-button" data-close="routine-editor" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body routine-fields">
+        <label>نام روتین<input id="routine-name" type="text" dir="auto" maxlength="80" placeholder="مثلاً تمرین کششی" required></label>
+        <div class="routine-category-field">
+          <div class="routine-glyph program-routine" id="routine-preview"></div>
+          <div class="routine-category-choice"><span>نوع روتین</span><button id="routine-category-open" type="button" class="secondary" aria-haspopup="dialog"><span></span><svg aria-hidden="true"><use href="#i-expand"/></svg></button></div>
+        </div>
+        <fieldset class="routine-schedule">
+          <legend>تکرار</legend>
+          <select id="routine-repeat" aria-label="تکرار"><option value="daily">هر روز</option><option value="weekly">روزهای انتخابی</option></select>
+          <div id="routine-weekly" class="routine-fields" hidden>
+            <div id="routine-weekdays" class="weekdays" role="group" aria-label="روزهای تکرار"></div>
+            <label>بازهٔ تکرار<select id="routine-interval"><option value="1">هر هفته</option><option value="2">هر دو هفته</option><option value="3">هر سه هفته</option><option value="4">هر چهار هفته</option></select></label>
+          </div>
+        </fieldset>
+        <details class="editor-options" id="routine-options">
+          <summary><span>هدف، ساعت و جزئیات</span><svg aria-hidden="true"><use href="#i-expand"/></svg></summary>
+          <div class="routine-fields">
+            <div class="routine-time-fields">
+              <label>تاریخ شروع<input id="routine-start" type="date" required></label>
+              <label>ساعت روتین<input id="routine-time" type="time"></label>
+            </div>
+            <label class="routine-check"><input id="routine-reminder" type="checkbox">اعلان در ساعت روتین</label>
+            <p id="routine-reminder-help" class="quiet" hidden>برای دریافت اعلان، اعلان‌های این دستگاه را در تنظیمات فعال کنید.</p>
+            <label>روش ثبت<select id="routine-mode"><option value="done">انجام شد</option><option value="quantity">هدف عددی</option><option value="steps">چک‌لیست</option></select></label>
+            <div id="routine-target-fields" class="routine-time-fields" hidden>
+              <label>مقدار هدف<input id="routine-target" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۲۰"></label>
+              <label>واحد<input id="routine-unit" type="text" dir="auto" maxlength="24" placeholder="دقیقه، صفحه یا تکرار"></label>
+            </div>
+            <label id="routine-steps-field" hidden>مراحل، هر مرحله در یک خط<textarea id="routine-steps" rows="3" dir="auto" maxlength="840" placeholder="شست‌وشو&#10;مرطوب‌کننده&#10;ضدآفتاب"></textarea></label>
+            <label>یادداشت (اختیاری)<textarea id="routine-notes" rows="2" dir="auto" maxlength="320"></textarea></label>
+          </div>
+        </details>
+        <p id="routine-editor-status" class="field-error" role="alert"></p>
+        <button id="routine-save" type="submit" class="block-action">ذخیرهٔ روتین</button>
+        <div id="routine-management" hidden>
+          <button id="routine-pause" class="secondary" type="button">توقف موقت</button>
+          <button id="routine-delete" class="secondary danger" type="button">حذف روتین</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="routine-category-dialog" class="sheet routine-sheet" aria-labelledby="routine-category-title">
+    <div class="sheet-header"><svg aria-hidden="true"><use href="/medication/routine-icons.svg#custom"/></svg><h2 id="routine-category-title">نوع روتین</h2><button type="button" class="icon-button" data-close="routine-category-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="sheet-body routine-fields">
+      <input id="routine-category-search" type="search" placeholder="جست‌وجوی نوع روتین یا ورزش" aria-label="جست‌وجوی نوع روتین یا ورزش">
+      <div id="routine-categories"></div>
+      <p id="routine-no-categories" class="empty" role="status" hidden>نوعی با این نام پیدا نشد.</p>
+    </div>
+  </dialog>
+  <dialog id="routine-log-dialog" class="sheet routine-sheet" aria-labelledby="routine-log-title">
+    <form id="routine-log-form" class="sheet-form" novalidate>
+      <div class="sheet-header"><svg aria-hidden="true"><use href="/medication/routine-icons.svg#custom"/></svg><h2 id="routine-log-title" dir="auto"></h2><button type="button" class="icon-button" data-close="routine-log-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body routine-fields">
+        <p id="routine-log-notes" class="quiet" dir="auto"></p>
+        <label id="routine-amount-field">مقدار انجام‌شده تا این لحظه<input id="routine-amount" type="text" inputmode="numeric" dir="ltr" maxlength="5"><small id="routine-log-goal"></small></label>
+        <div id="routine-log-steps" class="routine-fields"></div>
+        <p id="routine-log-status" class="field-error" role="alert"></p>
+        <button id="routine-log-save" type="submit" class="block-action">ذخیرهٔ پیشرفت</button>
+      </div>
+    </form>
   </dialog>
   <dialog id="water-dialog" class="sheet" aria-labelledby="water-dialog-title">
     <form id="water-custom" class="sheet-form" novalidate>
@@ -868,7 +973,7 @@
     <div id="settings-content" class="sheet-body">
       <div id="settings-home">
         <button type="button" class="settings-hero" data-settings-panel="notification-settings">
-          <span class="settings-hero-copy"><strong>اعلان‌های این دستگاه</strong><small>یادآوری دارو، آب و قرار</small><span id="settings-notification-state" class="settings-state">در حال بررسی…</span></span>
+          <span class="settings-hero-copy"><strong>اعلان‌های این دستگاه</strong><small>یادآوری دارو، آب، قرار و روتین</small><span id="settings-notification-state" class="settings-state">در حال بررسی…</span></span>
           <span class="settings-hero-art" aria-hidden="true"><svg><use href="#i-bell"/></svg></span>
         </button>
         <h3>یادآوری‌ها</h3>

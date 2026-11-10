@@ -1,0 +1,159 @@
+.medora {
+  --routine-fill: #f8e9da;
+  --routine-ink: #734633;
+  --routine-mark: #a56043;
+  --program-visit-fill: #dfefeb;
+  --program-visit-ink: #315951;
+}
+@media (prefers-color-scheme: dark) {
+  .medora:not([data-theme="light"]) {
+    --routine-fill: #493931;
+    --routine-ink: #ffe6cf;
+    --routine-mark: #e7ab86;
+    --program-visit-fill: #2b4548;
+    --program-visit-ink: #d7f0e8;
+  }
+}
+.medora[data-theme="dark"] {
+  --routine-fill: #493931;
+  --routine-ink: #ffe6cf;
+  --routine-mark: #e7ab86;
+  --program-visit-fill: #2b4548;
+  --program-visit-ink: #d7f0e8;
+}
+.medora .dock {
+  grid-template-columns: minmax(0, 1fr) clamp(5.5rem, 23%, 7.5rem) minmax(0, 1fr);
+  max-inline-size: 34rem;
+}
+.medora .dock .dock-add { grid-template-rows: 1.95rem auto; overflow: visible; }
+.medora .dock-add span {
+  inline-size: 2.62rem;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--mint), white 38%), var(--mint) 70%);
+  box-shadow: inset 0 1px 0 #fff9, 0 .2rem .5rem var(--glass-shadow);
+  transform: translateY(-.2rem);
+}
+.medora .program-medicine { --program-fill: var(--dock-active); --program-ink: var(--action); }
+.medora .program-visit { --program-fill: var(--program-visit-fill); --program-ink: var(--program-visit-ink); }
+.medora .program-routine { --program-fill: var(--routine-fill); --program-ink: var(--routine-ink); }
+.medora #today-programs { inline-size: var(--today-rail-width); margin-inline: auto; grid-area: programs; }
+.medora #programs-title { font-size: .98rem; margin: 0 0 .35rem; }
+.medora .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+.medora .program-card, .medora .routine-banner {
+  border: 1px solid color-mix(in srgb, var(--program-ink) 15%, transparent);
+  background: radial-gradient(ellipse at var(--art-side, 16%) 15%, var(--glass-glint), transparent 58%),
+    linear-gradient(160deg, var(--program-fill), color-mix(in srgb, var(--program-fill) 84%, var(--panel)));
+  box-shadow: inset 0 1px 0 var(--glass-glint);
+  color: var(--program-ink);
+}
+html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
+.medora .program-card {
+  position: relative;
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  min-block-size: 5.4rem;
+  border-radius: 1.04rem;
+  padding: 1.7rem .55rem .45rem;
+  text-align: start;
+  line-height: 1.35;
+}
+.medora .program-card strong { font-size: .87rem; }
+.medora .program-card small { margin-block-start: .15rem; font-size: .7rem; }
+.medora .program-card svg {
+  position: absolute;
+  inset-inline-end: .24rem;
+  inset-block-start: .12rem;
+  inline-size: 2.55rem;
+  block-size: 2.5rem;
+  filter: drop-shadow(0 .2rem .24rem var(--glass-shadow));
+}
+.medora .routine-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-block-size: 8rem;
+  gap: .5rem;
+  border-radius: 1.45rem;
+  padding: .8rem 1rem;
+}
+.medora .routine-banner h2 { margin: 0; font-size: clamp(1.35rem, 5.3vw, 1.9rem); }
+.medora .routine-banner p { margin: .18rem 0; font-size: .88rem; }
+.medora .routine-banner svg { inline-size: clamp(5rem, 23vw, 8rem); block-size: auto; aspect-ratio: 1.28; }
+.medora .routine-banner progress { inline-size: min(100%, 13rem); block-size: .45rem; accent-color: var(--routine-mark); }
+.medora .routine-filters { margin-block: .75rem; }
+.medora .routine-search { margin-block-end: .65rem; }
+.medora #routine-list { display: grid; gap: .5rem; }
+.medora .routine-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .55rem;
+  padding: .55rem;
+  margin: 0;
+  border: 1px solid var(--outline);
+  border-radius: 1.03rem;
+  background: var(--panel);
+  color: var(--ink);
+}
+.medora .routine-glyph {
+  display: grid;
+  place-items: center;
+  inline-size: 2.65rem;
+  aspect-ratio: 1;
+  border-radius: .85rem;
+  background: var(--routine-fill);
+  color: var(--routine-ink);
+}
+.medora .routine-row-copy { display: grid; gap: .1rem; overflow-wrap: anywhere; }
+.medora .routine-row-copy small { color: var(--muted); font-size: .73rem; }
+.medora .routine-row > button { font-size: .78rem; padding-inline: .55rem; min-block-size: 2.75rem; }
+.medora .routine-row-state { font-size: .75rem; font-weight: 700; color: var(--routine-ink); }
+.medora .routine-row[data-complete="true"] > button { background: var(--mint); color: var(--mint-ink); }
+.medora .routine-day-heading { font-size: .86rem; margin: .55rem .25rem .05rem; }
+.medora :is(#routine-more, #routine-first) { margin-block-start: .7rem; }
+.medora .quick-item.program-routine, .medora .report-card.program-routine {
+  background: var(--routine-fill);
+  color: var(--routine-ink);
+}
+.medora .routine-fields { display: grid; gap: .75rem; }
+.medora .routine-fields :is(label, input, select, textarea) { min-inline-size: 0; }
+.medora .routine-fields :is(input:not([type="checkbox"]), select, textarea) { inline-size: 100%; }
+.medora .routine-category-field { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: .55rem; }
+.medora .routine-category-field .routine-glyph { inline-size: 2.9rem; }
+.medora .routine-time-fields, .medora #routine-management { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.medora .routine-time-fields :is(label, .picker-control) { align-self: end; }
+.medora .routine-schedule { margin: 0; padding: .5rem; border: 1px solid var(--outline); border-radius: .9rem; }
+.medora #routine-weekly { margin-block-start: .5rem; }
+.medora #routine-weekdays { display: flex; flex-wrap: wrap; gap: .3rem; }
+.medora #routine-weekdays label { flex: 1 1 auto; }
+.medora .routine-check { display: flex; align-items: center; gap: .5rem; min-block-size: 2.5rem; }
+.medora .routine-check input[type="checkbox"] { inline-size: 1.15rem; block-size: 1.15rem; flex: none; accent-color: var(--action); }
+.medora .routine-sheet { max-block-size: calc(var(--visible-height, 100dvh) - .65rem); overflow: auto; }
+.medora .calendar-dots .routine { background: var(--routine-mark); }
+.medora #calendar-days button[aria-current="date"] .calendar-dots .routine { background: #86482e; }
+@media (min-width: 42rem) {
+  .medora .report-cards .water { grid-row: span 2; }
+  .medora .program-card { padding: 1.05rem .85rem; }
+  .medora .program-card svg { inset-block-start: .35rem; inline-size: 3.45rem; block-size: 3.45rem; }
+}
+@media (max-width: 23rem) {
+  .medora .routine-row { gap: .38rem; }
+  .medora .routine-glyph { inline-size: 2.2rem; }
+}
+
+
+.medora .routine-category-choice { display: grid; }
+.medora .routine-category-choice button {
+  display: flex; align-items: center; justify-content: space-between; gap: .4rem;
+  min-block-size: 3rem; padding-inline: .7rem; text-align: start;
+}
+.medora .routine-category-choice svg { inline-size: 1rem; block-size: 1rem; }
+.medora .routine-category-group h3 { margin: .3rem 0; font-size: .88rem; }
+.medora .routine-category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.4rem), 1fr)); gap: .4rem; }
+.medora .routine-category-grid button {
+  display: flex; align-items: center; justify-content: start; gap: .4rem;
+  padding: .35rem .5rem; text-align: start; min-block-size: 2.8rem; font-size: .82rem;
+}
+.medora .routine-category-grid svg { inline-size: 1.15rem; block-size: 1.15rem; color: var(--routine-mark); }
+.medora .routine-category-grid button[aria-pressed="true"] { background: var(--routine-fill); color: var(--routine-ink); border-color: var(--routine-mark); }

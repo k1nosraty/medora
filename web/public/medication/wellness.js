@@ -10,7 +10,7 @@ import { changeReminderRevision } from "./reminders.js";
 const dayMs = 86_400_000;
 const numbers = new Intl.NumberFormat(locale);
 const percent = new Intl.NumberFormat(locale, { style: "percent" });
-const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), insights: t("گزارش و تقویم"), water: t("آب") };
+const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), routines: t("روتین‌ها"), insights: t("گزارش و تقویم"), water: t("آب") };
 const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "purple";
 const iso = day => new Date(day * dayMs).toISOString().slice(0, 10);
 function empty(text) { return element("p", text, "empty"); }
@@ -24,9 +24,8 @@ function localClock() {
 }
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 
-export function wellness({ getState, selectedDay, today, render, mutate, requestDeletion, renderDose, refreshFields }) {
+export function wellness({ getState, selectedDay, today, render, mutate, requestDeletion, renderDose, renderRoutine, refreshFields }) {
   let screen = "today";
-  let mainScreen = "today";
   const selectedDates = new Map();
   let editingVisit = null;
   let editingWater = null;
@@ -78,7 +77,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   }
   const settingsPanels = {
     "display-settings": [t("ظاهر و زبان"), t("تم، تقویم و زبان برنامه")],
-    "notification-settings": [t("اعلان‌های این دستگاه"), t("یادآوری دارو، آب و قرار")],
+    "notification-settings": [t("اعلان‌های این دستگاه"), t("یادآوری دارو، آب، قرار و روتین")],
     "water-settings": [t("آب"), t("هدف روزانه و زمان یادآوری")],
     "snooze-settings": [t("تعویق یادآوری دارو"), t("مدت تعویق اعلان دارو")],
     "appointment-settings": [t("یادآوری قرارها"), t("زمان شروع و تکرار یادآوری")],
@@ -212,31 +211,31 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       calendarMonth = calendarSelection = today();
       openInsight("calendar");
     }
-    if (!["water", "insights"].includes(destination)) mainScreen = destination;
     screen = destination;
     const dayControls = $("day-controls");
     if (screen === "medications") $("med-day-title").after(dayControls);
+    else if (screen === "routines") $("routine-dates").append(dayControls);
     else if (screen === "water") document.querySelector('[data-screen="water"]').prepend(dayControls);
     else $("today-dates").append(dayControls);
     $("today-story").hidden = screen !== "today";
     $("app").dataset.activeScreen = screen;
     for (const view of document.querySelectorAll("[data-screen]")) view.hidden = view.dataset.screen !== screen;
     for (const item of document.querySelectorAll(".dock [data-destination]")) {
-      if (item.dataset.destination === (screen === "water" ? "today" : screen)) item.setAttribute("aria-current", "page");
+      if (item.dataset.destination === (screen === "insights" ? "insights" : "today")) item.setAttribute("aria-current", "page");
       else item.removeAttribute("aria-current");
     }
     $("screen-title").textContent = titles[screen];
     if (screen !== "today") $("header-date").textContent = "";
-    $("screen-back").hidden = !["water", "insights"].includes(screen);
-    document.querySelector(".brand-mark").hidden = !$("screen-back").hidden;
-    dayControls.hidden = !["today", "water", "medications"].includes(screen);
+    $("screen-back").hidden = screen === "today" || screen === "insights";
+    document.querySelector(".app-bar .brand-mark").hidden = !$("screen-back").hidden;
+    dayControls.hidden = !["today", "water", "medications", "routines"].includes(screen);
     dayControls.classList.toggle("single-date", screen !== "today");
-    dayControls.classList.toggle("compact-day", screen === "medications");
+    dayControls.classList.toggle("compact-day", screen === "medications" || screen === "routines");
     $("today-reset").hidden = screen !== "today" || selectedDay() === today();
     render();
     scrollTo(0, 0);
   }
-  $("screen-back").addEventListener("click", () => show(mainScreen));
+  $("screen-back").addEventListener("click", () => show("today"));
   for (const button of document.querySelectorAll("[data-destination]")) {
     button.addEventListener("click", () => show(button.dataset.destination, button.hasAttribute("data-open-notifications")));
   }
@@ -756,6 +755,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       if (index.hasDoses(date)) marks.append(element("i", "", "medicine"));
       if (index.visitsOn(date).some(({ visit }) => !visit.cancelled)) marks.append(element("i", "", "visit"));
       if (index.waterOn(date).length) marks.append(element("i", "", "water"));
+      if (index.routinesOn(date).length) marks.append(element("i", "", "routine"));
       control.append(element("span", shortWeek[weekIndex(date)]), marks);
       return control;
     }));
@@ -806,7 +806,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     document.body.dataset.theme = state.theme ?? "system";
     const dark = state.theme === "dark" || (state.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
     document.querySelector('meta[name="theme-color"]').content = dark ? "#151b20" : "#f4f3fa";
-    if (screen === "today" || screen === "medications" || screen === "water") {
+    if (["today", "medications", "water", "routines"].includes(screen)) {
       $("day-label").textContent = screen === "today" ? monthText.format(day * dayMs) : day === today() ? t("امروز") : formatDay(day);
       $("pick-day").setAttribute("aria-label", t("انتخاب تاریخ، {0}", formatDay(day, true)));
     }
@@ -824,7 +824,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
         day: calendarSelection, start: monthStart(calendarMonth), today: today(),
         formatMonth: day => monthText.format(day * dayMs), formatDay, dateButton,
         selectDay: day => { calendarSelection = day; render(); },
-        renderDose, visitCard: appointments.visitCard
+        renderDose, renderRoutine, visitCard: appointments.visitCard
       });
       else renderReports(today(), goal, index, reportSpan, day => shortDate.format(day * dayMs));
     }

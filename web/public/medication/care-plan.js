@@ -1,3 +1,4 @@
+import { routineComplete, routineOccurs } from "./routine-plan.js";
 import { dayMs, timezone, localWall, instantForWall } from "./wall-clock.js";
 
 export const minuteMs = 60_000;
@@ -75,5 +76,14 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
     start: clockMinute(waterSettings.start), end: clockMinute(waterSettings.end), interval: waterSettings.interval,
     repeat: waterSettings.repeat, pauseUntil: waterSettings.pauseUntil, goalDay: waterGoalReached(state, today) ? today : null
   } : null;
-  return { zone, rules, appointments: [...appointments.values()], water };
+  const todayLogs = state.routineLogs?.[today] ?? {};
+  const routineRules = Object.values(state.routines ?? {})
+    .filter(routine => routine.reminder && !routine.paused && routine.minute !== null)
+    .map(routine => ({
+      start: routine.start, end: null, interval: routine.interval, mask: routine.mask,
+      minutes: [routine.minute],
+      skip: todayLogs[routine.id] && routineOccurs(routine, today) && routineComplete(todayLogs[routine.id])
+        ? [[today, routine.minute]] : []
+    }));
+  return { zone, rules, ...(routineRules.length ? { routineRules } : {}), appointments: [...appointments.values()], water };
 }

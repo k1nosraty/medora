@@ -2,7 +2,7 @@ const databaseName = "medora-medication-prototype";
 const snapshots = new WeakMap();
 
 function blankDay(day) {
-  return { day, doses: {}, water: [] };
+  return { day, doses: {}, water: [], routines: {} };
 }
 
 function historyDays(state) {
@@ -13,27 +13,33 @@ function historyDays(state) {
   }
   for (const [id, dose] of Object.entries(state.doses ?? {})) bucket(dose.day).doses[id] = dose;
   for (const entry of state.water ?? []) bucket(entry.day).water.push(entry);
+  for (const [day, logs] of Object.entries(state.routineLogs ?? {})) {
+    if (Object.keys(logs).length) bucket(Number(day)).routines = logs;
+  }
   return days;
 }
 
 function metadata(state) {
-  const { doses, water, ...settings } = state;
+  const { doses, water, routineLogs, ...settings } = state;
   return settings;
 }
 
 function assemble(settings, days) {
-  const state = { ...settings, doses: {}, water: [] };
+  const state = { ...settings, doses: {}, water: [], routineLogs: {} };
   for (const bucket of days.values()) {
     Object.assign(state.doses, bucket.doses);
     for (const entry of bucket.water) state.water.push(entry);
+    if (bucket.routines && Object.keys(bucket.routines).length) state.routineLogs[bucket.day] = bucket.routines;
   }
   return state;
 }
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(databaseName, 2);
-    request.onupgradeneeded = () => {
+    const request = indexedDB.open(databaseName, 3);
+    request.onupgradeneeded = event => {
+      // Older shells rewrite day records without routine history.
+      if (event.oldVersion >= 2) return;
       const db = request.result;
       const care = db.objectStoreNames.contains("care") ? request.transaction.objectStore("care") : db.createObjectStore("care");
       const history = db.createObjectStore("days", { keyPath: "day" });
@@ -89,7 +95,7 @@ async function transact(change, { snapshot, day, settingsOnly } = {}) {
             if (matching && JSON.stringify(settings) === matching.settingsKey) {
               result = snapshot;
             } else {
-              result = matching ? { ...settings, doses: snapshot.doses, water: snapshot.water } : assemble(settings, days);
+              result = matching ? { ...settings, doses: snapshot.doses, water: snapshot.water, routineLogs: snapshot.routineLogs } : assemble(settings, days);
               snapshots.set(result, { revision, days, settingsKey: JSON.stringify(settings) });
             }
             return;
@@ -99,14 +105,14 @@ async function transact(change, { snapshot, day, settingsOnly } = {}) {
           let changed = false;
           if (Number.isInteger(day)) {
             const bucket = days.get(day) ?? blankDay(day);
-            const { doses, water } = structuredClone(bucket);
-            const scoped = { ...settings, doses, water };
+            const { doses, water, routines = {} } = structuredClone(bucket);
+            const scoped = { ...settings, doses, water, routineLogs: { [day]: routines } };
             change(scoped);
             nextDays = new Map(days);
-            const updated = { day, doses: scoped.doses, water: scoped.water };
-            if (JSON.stringify(updated) !== JSON.stringify(bucket)) {
+            const updated = { day, doses: scoped.doses, water: scoped.water, routines: scoped.routineLogs[day] ?? {} };
+            if (JSON.stringify(updated) !== JSON.stringify({ ...bucket, routines: bucket.routines ?? {} })) {
               changed = true;
-              if (updated.water.length || Object.keys(updated.doses).length) {
+              if (updated.water.length || Object.keys(updated.doses).length || Object.keys(updated.routines).length) {
                 nextDays.set(day, updated);
                 history.put(updated);
               } else {
@@ -116,9 +122,9 @@ async function transact(change, { snapshot, day, settingsOnly } = {}) {
             }
             const nextSettings = metadata(scoped);
             result = changed ? assemble(nextSettings, nextDays) :
-              matching ? { ...nextSettings, doses: snapshot.doses, water: snapshot.water } : assemble(nextSettings, nextDays);
+              matching ? { ...nextSettings, doses: snapshot.doses, water: snapshot.water, routineLogs: snapshot.routineLogs } : assemble(nextSettings, nextDays);
           } else {
-            const before = new Map([...days].map(([key, bucket]) => [key, JSON.stringify(bucket)]));
+            const before = new Map([...days].map(([key, bucket]) => [key, JSON.stringify({ ...bucket, routines: bucket.routines ?? {} })]));
             result = assemble(settings, days);
             change(result);
             nextDays = historyDays(result);

@@ -8,6 +8,7 @@ import {
 } from "../public/care-engine/care-core.mjs";
 import { nextMedicationReminder, nextCareReminder, validSchedule } from "../src/medication-schedule.mjs";
 import { scheduleForPush } from "../public/medication/care-plan.js";
+import { routineComplete, routineLog } from "../public/medication/routine-plan.js";
 import { createCareIndex } from "../public/medication/care-index.js";
 
 const day = iso => Date.parse(`${iso}T00:00:00Z`) / 86_400_000;
@@ -147,4 +148,32 @@ test("an Android-exported encrypted backup restores and rejects incorrect or dam
   const altered = bytes.slice();
   altered[altered.length - 1] ^= 1;
   await assert.rejects(restore(altered));
+});
+
+
+test("routine targets preserve logged history and only suppress the completed occurrence", () => {
+  const start = day("2026-11-09");
+  const now = instant("2026-11-09T07:00:00Z");
+  const plan = { id: "stretch", name: "Stretch", category: "stretch", start, mask: 5, interval: 2, minute: 480,
+    reminder: true, paused: false, mode: "steps", steps: ["Warm up", "Stretch"] };
+  const state = { medicines: {}, doses: {}, routines: { stretch: plan }, routineLogs: { [start]: {} } };
+  const index = (today = start) => createCareIndex(state, {}, "UTC", today);
+  const next = () => nextCareReminder(validSchedule(scheduleForPush(state, "UTC", start, now)), now);
+
+  state.routineLogs[start].stretch = routineLog(plan, [1, 1, 2]);
+  assert.equal(routineComplete(index().routinesOn(start)[0]), false);
+  assert.deepEqual(next().kinds, ["routine"]);
+  assert.equal(next().at, instant("2026-11-09T08:00:00Z"));
+  assert.equal(index().routinesOn(start + 7).length, 0);
+  assert.equal(index().routinesOn(start + 14).length, 1);
+
+  state.routineLogs[start].stretch = routineLog(plan, [0, 1]);
+  assert.equal(next().at, instant("2026-11-11T08:00:00Z"));
+  assert.equal(index().routineTotals(start - 1, start).completed, 1);
+  assert.equal(routineComplete(routineLog({ ...plan, mode: "quantity", target: 10, unit: "minutes" }, 9)), false);
+  assert.equal(routineLog({ ...plan, mode: "quantity", target: 10 }, 0), null);
+
+  delete state.routines.stretch;
+  assert.equal(next(), null);
+  assert.equal(index(start + 1).routinesOn(start)[0].name, "Stretch");
 });

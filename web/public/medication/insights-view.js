@@ -3,7 +3,7 @@ import { $, element } from "./dom.js";
 
 const numbers = new Intl.NumberFormat(locale);
 
-export function renderCalendar(state, index, { day, start, today, formatMonth, formatDay, dateButton, selectDay, renderDose, visitCard }) {
+export function renderCalendar(state, index, { day, start, today, formatMonth, formatDay, dateButton, selectDay, renderDose, renderRoutine, visitCard }) {
   const month = formatMonth(start);
   const slots = shortWeek.map(label => element("span", label, "quiet"));
   for (let offset = 0; offset < weekIndex(start); offset++) slots.push(element("span"));
@@ -17,7 +17,8 @@ export function renderCalendar(state, index, { day, start, today, formatMonth, f
     dots.setAttribute("aria-hidden", "true");
     for (const [exists, kind, label] of [
       [index.waterOn(date).length, "water", t("ثبت آب")], [index.hasDoses(date), "medicine", t("نوبت دارو")],
-      [index.visitsOn(date).some(({ visit }) => !visit.cancelled), "visit", t("قرار پزشکی")]
+      [index.visitsOn(date).some(({ visit }) => !visit.cancelled), "visit", t("قرار پزشکی")],
+      [index.routinesOn(date).length, "routine", t("روتین")]
     ]) if (exists) {
       dots.append(element("i", "", kind));
       control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + label);
@@ -30,7 +31,8 @@ export function renderCalendar(state, index, { day, start, today, formatMonth, f
   const entries = [
     ...(index.waterOn(day).length ? [element("article", t("{0} میلی‌لیتر آب", numbers.format(index.waterTotal(day))), "water")] : []),
     ...index.dosesOn(day).map(dose => renderDose(state.medicines[dose.medicineId], dose)),
-    ...index.visitsOn(day).map(local => visitCard(local, index.zone, true))
+    ...index.visitsOn(day).map(local => visitCard(local, index.zone, true)),
+    ...index.routinesOn(day).map(entry => renderRoutine(entry, day))
   ];
   $("calendar-activity").replaceChildren(element("h2", formatDay(day, true)),
     ...(entries.length ? entries : [element("p", t("فعالیتی ثبت نشده است."), "empty")]));
@@ -55,6 +57,12 @@ export function renderReports(last, goal, index, reportSpan, formatShortDate) {
   $("report-doses").textContent = hasDoses
     ? t("{0} از {1} نوبت ثبت‌شده، مصرف شد.", numbers.format(taken), numbers.format(recorded))
     : t("هنوز مصرفی ثبت نشده است.");
+  const { completed, activeDays } = index.routineTotals(first, last);
+  $("report-routine-number").textContent = numbers.format(completed);
+  $("report-routine-number").hidden = !activeDays;
+  $("report-routines").textContent = activeDays
+    ? t("روتین انجام‌شده در {0} روز دارای ثبت", numbers.format(activeDays))
+    : t("در این بازه پیشرفت روتینی ثبت نشده است.");
   const bucketSize = reportSpan === 365 ? 30 : 1;
   const bars = [];
   for (let i = 0; i < range.length; i += bucketSize) {

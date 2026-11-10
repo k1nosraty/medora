@@ -1,4 +1,5 @@
 import { dayMs, timezone, localWall } from "./wall-clock.js";
+import { routineComplete, routineEntriesOn } from "./routine-plan.js";
 import { visitInstant } from "./care-plan.js";
 
 export const isoDay = day => new Date(day * dayMs).toISOString().slice(0, 10);
@@ -23,7 +24,7 @@ function groupByDay(records, dayOf) {
   return days;
 }
 
-export function createCareIndex(state, engine, zone) {
+export function createCareIndex(state, engine, zone, today = Math.floor(localWall(Date.now(), timezone(zone)) / dayMs)) {
   let recorded;
   let active;
   let visits;
@@ -31,6 +32,8 @@ export function createCareIndex(state, engine, zone) {
   let waterDays;
   let waterTotals;
   const scheduled = new Map();
+  const routineDays = new Map();
+  const plans = Object.values(state.routines ?? {});
 
   function recordedOn(day) {
     recorded ??= groupByDay(Object.entries(state.doses), ([, dose]) => dose.day);
@@ -118,5 +121,24 @@ export function createCareIndex(state, engine, zone) {
     return { taken, recorded };
   }
 
-  return { zone, dosesOn, hasDoses, allVisits, visitsOn, waterOn, waterTotal, doseTotals };
+  function routinesOn(day) {
+    if (!routineDays.has(day)) {
+      routineDays.set(day, routineEntriesOn(state, day, today, plans));
+    }
+    return routineDays.get(day);
+  }
+
+  function routineTotals(first, last) {
+    let completed = 0;
+    let activeDays = 0;
+    for (let day = first; day <= last; day++) {
+      const entries = Object.values(state.routineLogs?.[day] ?? {});
+      if (!entries.length) continue;
+      activeDays++;
+      completed += entries.filter(routineComplete).length;
+    }
+    return { completed, activeDays };
+  }
+
+  return { zone, routinesOn, routineTotals, dosesOn, hasDoses, allVisits, visitsOn, waterOn, waterTotal, doseTotals };
 }

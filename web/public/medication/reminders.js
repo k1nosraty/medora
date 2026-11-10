@@ -24,7 +24,7 @@ function settingsBadge(text, enabled = false) {
   badge.textContent = text;
   badge.dataset.enabled = String(enabled);
 }
-const kindText = kinds => (kinds ?? []).map(kind => ({ dose: t("دارو"), water: t("آب"), appointment: t("قرار") })[kind]).filter(Boolean).join(t(" و "));
+const kindText = kinds => (kinds ?? []).map(kind => ({ dose: t("دارو"), water: t("آب"), appointment: t("قرار"), routine: t("روتین") })[kind]).filter(Boolean).join(t(" و "));
 
 function controls(settings) {
   const enabled = Boolean(settings?.enabled);
