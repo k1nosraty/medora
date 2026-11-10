@@ -21,7 +21,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
       state: routineComplete(entry) ? "done" : plan && !plan.paused ? "pending" : "inactive",
       time: entry.minute == null ? null : doseTime(day, entry.minute),
       resolvedAt: entry.resolvedAt,
-      render: () => renderRoutine(entry, day, { dayCard: true })
+      render: featured => renderRoutine(entry, day, { dayCard: true, featured })
     });
   }
 

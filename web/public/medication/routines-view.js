@@ -1,6 +1,6 @@
 import { appearanceColors } from "./medication-art.js";
 import { language, listSeparator, localDigits, t } from "./locale.js";
-import { $, button, element, fitDialogToViewport } from "./dom.js";
+import { $, button, dayCardOptions, element, fitDialogToViewport } from "./dom.js";
 import { isoDay, timeText } from "./care-index.js";
 import { clockMinute } from "./care-plan.js";
 import { dayMs } from "./wall-clock.js";
@@ -363,10 +363,13 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
 
   function focusLogAction(id) {
     const row = document.querySelector(`[data-screen]:not([hidden]) [data-routine-id="${CSS.escape(id)}"]`);
-    row?.querySelector(":scope > button, .day-card-actions > button")?.focus({ preventScroll: true });
+    const control = row?.querySelector(":scope > button, .day-card-actions > button") ??
+      row?.querySelector(".day-card-more > summary");
+    control?.focus({ preventScroll: true });
   }
 
-  function card(entry, day, { manage = false, readOnly = false, dayCard = false } = {}) {
+  function card(entry, day, { manage = false, readOnly = false, dayCard = false, featured = false } = {}) {
+    const compactDay = dayCard && !featured;
     const row = element("article", "", dayCard ? "day-card routine-day-card" : "routine-row");
     row.dataset.routineId = entry.id;
     const art = element("span", "", dayCard ? "day-card-art routine-day-art" : "routine-glyph");
@@ -395,6 +398,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     copy.append(name, element("small", detail.join(" · ")));
     row.append(art, copy);
     const footer = dayCard ? element("div", "", "day-card-actions") : row;
+    let logAction;
     if (dayCard && completed) copy.append(element("small", t("انجام شد"), "routine-row-state"));
     if (manage) {
       const edit = button(t("ویرایش"), () => openEditor(entry));
@@ -402,22 +406,27 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       row.append(edit);
     } else if (!readOnly && isToday && plan) {
       const activity = { entry, day, plan, recorded: state.routineLogs[day]?.[entry.id] };
-      const action = entry.mode === "done" ?
-        button(completed ? t(dayCard ? "برگشت ثبت" : "انجام شد") : t("ثبت انجام"), async () => {
+      logAction = entry.mode === "done" ?
+        button(completed ? t(dayCard ? "برگشت ثبت" : "انجام شد") : t(dayCard ? "انجام دادم" : "ثبت انجام"), async () => {
           if (await saveLog(activity, !completed)) focusLogAction(entry.id);
         }) :
         button(completed ? t("ویرایش ثبت") : t("ثبت پیشرفت"), () => openLog(activity));
       if (entry.mode === "done") {
-        action.setAttribute("aria-pressed", String(completed));
-        action.setAttribute("aria-label", t(completed ? "برگشت ثبت {0}" : "ثبت انجام {0}", entry.name));
-      } else action.setAttribute("aria-label", t("ثبت پیشرفت {0}", entry.name));
+        logAction.setAttribute("aria-pressed", String(completed));
+        const label = completed ? "برگشت ثبت {0}" : dayCard ? "انجام دادم، {0}" : "ثبت انجام {0}";
+        logAction.setAttribute("aria-label", t(label, entry.name));
+      } else logAction.setAttribute("aria-label", t("ثبت پیشرفت {0}", entry.name));
       row.dataset.complete = String(completed);
-      footer.append(action);
+      if (!compactDay) footer.append(logAction);
     } else if (completed && !dayCard) row.append(element("span", t("انجام شد"), "routine-row-state"));
     if (dayCard && plan) {
       const edit = button(t("ویرایش"), () => openEditor(plan));
       edit.setAttribute("aria-label", t("ویرایش روتین {0}", entry.name));
-      footer.append(edit);
+      if (compactDay) {
+        const options = completed && logAction ? [logAction, edit] : [edit];
+        footer.append(dayCardOptions(t("گزینه‌های روتین"), ...options));
+        if (logAction && !completed) footer.append(logAction);
+      } else footer.append(edit);
     }
     if (dayCard && footer.childElementCount) row.append(footer);
     return row;

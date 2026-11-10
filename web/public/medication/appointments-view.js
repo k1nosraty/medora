@@ -27,7 +27,8 @@ export function appointmentView({
 
   function visitCard(local, zone, actionable, variant = "compact") {
     const { visit } = local;
-    const dayCard = variant === "day";
+    const compactDay = variant === "day";
+    const dayCard = compactDay || variant === "day-featured";
     const card = element("article", "", "visit visit-card");
     const category = categoryOf(visit.category);
     card.dataset.ink = colorOf(visit.color);
@@ -59,7 +60,7 @@ export function appointmentView({
       body.append(element("bdi", label, "visit-category"));
     }
     const header = element("div", "", "visit-card-header");
-    if (variant !== "day") header.append(day);
+    if (!dayCard) header.append(day);
     header.append(body);
     const details = variant === "compact" ? card : element("div", "", "visit-shelf-details");
     if (dayCard) details.classList.add("day-card-content");
@@ -75,8 +76,9 @@ export function appointmentView({
     if (details !== card) card.append(details);
     if (actionable) {
       const controls = element("div", "", dayCard ? "day-card-actions" : "buttons");
+      let attendance;
       if (!visit.cancelled && local.day <= today()) {
-        const attendance = button(visit.completed ? t("برگشت ثبت حضور") : t("ثبت حضور"), () => {
+        attendance = button(visit.completed ? t("برگشت ثبت حضور") : t(dayCard ? "حضور یافتم" : "ثبت حضور"), () => {
           void mutate(state => {
             const saved = state.visits?.[visit.id];
             if (!saved || saved.cancelled) return;
@@ -86,7 +88,6 @@ export function appointmentView({
           }, t("وضعیت قرار ذخیره شد."), true);
         });
         attendance.setAttribute("aria-pressed", String(Boolean(visit.completed)));
-        controls.append(attendance);
       }
       const edit = button(t("ویرایش"), () => openVisit(visit));
       const cancel = button(visit.cancelled ? t("فعال‌کردن قرار") : t("لغو قرار"), () => {
@@ -103,10 +104,17 @@ export function appointmentView({
       });
       const remove = button(t("حذف قرار"), () => deleteVisit(visit.id));
       remove.className = "text-button danger-link";
-      if (dayCard) {
+      if (compactDay) {
+        const actions = attendance && visit.completed ? [attendance, edit, cancel, remove] : [edit, cancel, remove];
+        controls.append(dayCardOptions(t("گزینه‌های قرار"), ...actions));
+        if (attendance && !visit.completed) controls.append(attendance);
+        card.append(controls);
+      } else if (dayCard) {
+        if (attendance) controls.append(attendance);
         controls.append(edit, dayCardOptions(t("گزینه‌های قرار"), cancel, remove));
         card.append(controls);
       } else {
+        if (attendance) controls.append(attendance);
         controls.append(edit, cancel, remove);
         details.append(controls);
       }
@@ -120,7 +128,7 @@ export function appointmentView({
         time: local.instant,
         state: local.visit.completed ? "done" : "pending",
         resolvedAt: local.visit.resolvedAt,
-        render: () => visitCard(local, index.zone, day <= today(), "day")
+        render: featured => visitCard(local, index.zone, day <= today(), featured ? "day-featured" : "day")
       }));
   }
 

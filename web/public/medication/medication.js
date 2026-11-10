@@ -697,6 +697,7 @@ function openMedicine(medicine) {
 function renderDose(medicine, dose, variant) {
   const dayCard = Boolean(variant);
   const featured = variant === "featured";
+  const compactDay = dayCard && !featured;
   const card = element("article", "", dayCard ? "medicine dose-card day-card" : "medicine dose-card");
   const unit = dose.unit ?? medicine?.unit ?? "";
   const color = medicine?.color ?? dose.color ?? "gold";
@@ -786,14 +787,21 @@ function renderDose(medicine, dose, variant) {
   const snooze = () => action(t("{0} دقیقه بعد", localDigits(care.medicationSnoozeMinutes ?? 10)), () => record("snoozed"), true);
   const skipped = action(t("مصرف نکردم"), () => record("skipped"), true);
   controls.append(...(pending || dayCard ? [skipped] : [taken, skipped]));
-  if (!pending && canSnooze) controls.append(snooze());
+  if ((!pending || compactDay) && canSnooze) controls.append(snooze());
   if (dose.status) controls.append(action(t("برگشت ثبت"), () => record(null), true));
   if (dayCard) {
     const footer = element("div", "", "day-card-actions");
     taken.className = "secondary";
-    footer.append(taken);
-    if (pending && canSnooze) footer.append(snooze());
-    footer.append(dayCardOptions(t("گزینه‌های نوبت"), label, controls));
+    const options = dayCardOptions(t("گزینه‌های نوبت"), label, controls);
+    if (compactDay) {
+      if (!pending) controls.prepend(taken);
+      footer.append(options);
+      if (pending) footer.append(taken);
+    } else {
+      footer.append(taken);
+      if (pending && canSnooze) footer.append(snooze());
+      footer.append(options);
+    }
     card.append(footer);
   } else {
     const actual = element("details", "", "dose-options");
@@ -813,7 +821,7 @@ function renderDose(medicine, dose, variant) {
       dateStyle: "medium", timeStyle: "short"
     }).format(dose.snoozeUntil)));
     reminder.className = "dose-snoozed";
-    card.append(reminder);
+    (compactDay ? info : card).append(reminder);
   }
   return card;
 }
