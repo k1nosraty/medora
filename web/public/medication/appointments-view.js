@@ -53,9 +53,8 @@ export function appointmentView({
     hour.dateTime = new Date(local.instant).toISOString();
     hour.dir = "ltr";
     const body = element("div", "", "visit-card-body");
-    body.append(title);
     if (dayCard) body.append(element("span", t("قرار"), "day-card-kind"));
-    body.append(hour);
+    body.append(title, hour);
     if (category !== "general") {
       const label = category === "custom" && visit.categoryName ? visit.categoryName : categories.get(category);
       body.append(element("bdi", label, "visit-category"));

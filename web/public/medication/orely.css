@@ -548,27 +548,13 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
 .medora .day-card .dose-meta { display: flex; flex-wrap: wrap; gap: .12rem .4rem; color: var(--muted); }
 .medora .day-card .dose-meta .hero-kicker { color: var(--muted); font-size: .75rem; }
 .medora .day-card .dose-snoozed { grid-column: 1 / -1; margin: 0; font-size: .75rem; }
-.medora .routine-day-art > .routine-day-illustration {
-  grid-row: 1;
-  aspect-ratio: 128 / 100;
-}
-.medora .routine-day-art .routine-day-symbol {
-  grid-area: 1 / 1;
-  align-self: end;
-  justify-self: end;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  inline-size: 1.9rem;
+.medora .day-card .routine-day-art > svg {
+  inline-size: min(76%, 3.8rem);
   aspect-ratio: 1;
-  margin: 0 .1rem .32rem;
-  border: 1px solid var(--glass-rim);
-  border-radius: .72rem;
-  background: color-mix(in srgb, var(--pill-base) 52%, var(--panel));
-  color: var(--ink);
-  box-shadow: 0 .2rem .45rem var(--glass-shadow);
+  stroke-width: 1.55;
+  color: color-mix(in srgb, var(--ink) 74%, var(--pill-base));
+  filter: drop-shadow(0 .16rem .22rem var(--glass-shadow));
 }
-.medora .routine-day-symbol svg { inline-size: 1.12rem; block-size: 1.12rem; }
 .medora .day-card > .day-card-actions {
   position: relative;
   display: flex;

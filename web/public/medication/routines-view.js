@@ -17,6 +17,7 @@ function glyph(category) {
   const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const use = document.createElementNS(icon.namespaceURI, "use");
   use.setAttribute("href", "/medication/routine-icons.svg#" + (Object.hasOwn(routineLabels, category) ? category : "custom"));
+  icon.setAttribute("viewBox", "0 0 24 24");
   icon.setAttribute("aria-hidden", "true");
   icon.append(use);
   return icon;
@@ -373,14 +374,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     const currentColor = !readOnly && isToday ? plan?.color : null;
     const color = colorOf(currentColor ?? entry.color);
     row.dataset.ink = art.dataset.ink = color;
-    if (dayCard) {
-      const illustration = glyph("custom");
-      illustration.classList.add("routine-day-illustration");
-      illustration.firstElementChild.setAttribute("href", "/medication/routine-icons.svg#banner");
-      const category = element("span", "", "routine-day-symbol");
-      category.append(glyph(entry.category));
-      art.append(illustration, category);
-    } else art.append(glyph(entry.category));
+    art.append(glyph(entry.category));
     const copy = element("div", "", dayCard ? "day-card-content routine-row-copy" : "routine-row-copy");
     const name = element(dayCard ? "h3" : "strong", entry.name);
     if (dayCard) copy.append(element("span", t("روتین"), "day-card-kind"));
