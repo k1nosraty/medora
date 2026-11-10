@@ -8,7 +8,7 @@ export { scheduleForPush };
 const $ = id => document.getElementById(id);
 const api = "/api/reminders";
 const dayMs = 86_400_000;
-const planVersion = 3;
+const planVersion = 4;
 let registration;
 let subscription;
 let publicKey;

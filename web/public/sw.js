@@ -13,7 +13,7 @@ self.addEventListener("push", event => {
     tag: data?.tag,
     icon: "/icon-192.png"
   };
-  if (scheduled) options.data = { day: data.day, kind: data.kind };
+  if (scheduled) options.data = { day: data.day, kind: data.kind, routineId: data.routineId };
   event.waitUntil(self.registration.showNotification(data?.title ?? "آزمایش اعلان مدورا", options));
 });
 
@@ -21,10 +21,12 @@ self.addEventListener("notificationclick", event => {
   event.notification.close();
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    const { day, kind } = event.notification.data ?? {};
+    const { day, kind, routineId } = event.notification.data ?? {};
     const screen = { water: "water", appointment: "appointments", routine: "routines" }[kind];
+    const routine = kind === "routine" && typeof routineId === "string" &&
+      /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(routineId) ? "&routine=" + routineId : "";
     const path = /^\d{4}-\d{2}-\d{2}$/.test(day ?? "")
-      ? `/medication/?day=${day}${screen ? `&view=${screen}` : ""}` : "/pilot/";
+      ? `/medication/?day=${day}${screen ? `&view=${screen}` : ""}${routine}` : "/pilot/";
     const existing = windows.find(client => new URL(client.url).pathname === path.split("?")[0]);
     if (existing) {
       if (new URL(existing.url).search !== new URL(path, self.location.origin).search) await existing.navigate(path);

@@ -84,12 +84,24 @@ test("the service worker displays a notification without an open client", async 
   });
   await completion;
   assert.equal(notifications[2].data.day, "2026-11-09");
-  for (const [kind, view] of [["water", "water"], ["appointment", "appointments"]]) {
+  const id = "12345678-1234-1234-1234-123456789abc";
+  listeners.get("push")({
+    data: { json: () => ({ title: "Routine", kind: "routine", day: "2026-11-09", routineId: id }) },
+    waitUntil: promise => { completion = promise; }
+  });
+  await completion;
+  assert.equal(notifications[3].data.routineId, id);
+  for (const [data, destination] of [
+    [{ kind: "water" }, "water"],
+    [{ kind: "appointment" }, "appointments"],
+    [notifications[3].data, "routines&routine=" + id],
+    [{ kind: "routine", routineId: "invalid&view=account" }, "routines"]
+  ]) {
     listeners.get("notificationclick")({
-      notification: { data: { day: "2026-11-09", kind }, close() {} },
+      notification: { data: { day: "2026-11-09", ...data }, close() {} },
       waitUntil: promise => { completion = promise; }
     });
     await completion;
-    assert.equal(paths.at(-1), `/medication/?day=2026-11-09&view=${view}`);
+    assert.equal(paths.at(-1), `/medication/?day=2026-11-09&view=${destination}`);
   }
 });

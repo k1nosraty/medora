@@ -10,6 +10,7 @@ import { showPromotion } from "./promotion.js";
 import { $, dayCardOptions, element } from "./dom.js";
 import { compilePhases, createCareIndex, doseId, doseTime, isoDay, timeText } from "./care-index.js";
 import { installRoutines } from "./routines-view.js";
+import { validRoutineId } from "./routine-plan.js";
 import { renderToday } from "./daily-view.js";
 import { installBackupRestore } from "./backup-restore-view.js";
 
@@ -1010,6 +1011,13 @@ try {
   $("boot-status").hidden = true;
   showIntro();
   if (!$("app").hidden && ["water", "appointments", "routines"].includes(view)) dashboard.show(view);
+  const routineId = params.get("routine");
+  if (!$("app").hidden && view === "routines" && validRoutineId(routineId) && day === $("day").value) {
+    const date = selectedDay();
+    routines.openReminder(currentIndex().routinesOn(date).find(entry => entry.id === routineId), date);
+    params.delete("routine");
+    history.replaceState(history.state, "", `?${params}`);
+  }
   if (!location.search && !$("app").hidden) void showPromotion();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/medication/sw.js").catch(() => {});
   void initializeReminders();

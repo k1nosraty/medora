@@ -116,11 +116,13 @@ export class MedicationReminders extends DurableObject {
       return;
     }
     const dueKinds = (state.next.kinds ?? ["dose"]).filter(kind => kind !== "appointment" || now < state.next.appointmentExpires);
+    const singleRoutine = dueKinds.length === 1 && dueKinds[0] === "routine";
     const tag = `${dueKinds.length === 1 ? dueKinds[0] : "care"}-${due.toString(36)}`;
     const currentIs = current => current?.revision === state.revision && current?.next?.at === due;
     const result = dueKinds.length && now - due < sendWindow ? await sendPush(this.env, state.plan.subscription, {
       ...reminderCopy(state.next, dueKinds, state.plan.language, state.plan.zone, now),
       kind: dueKinds.length === 1 ? dueKinds[0] : undefined, tag,
+      ...(singleRoutine && state.next.routineId ? { routineId: state.next.routineId } : {}),
       day: new Date(state.next.day * 86_400_000).toISOString().slice(0, 10)
     }, 300, async () => currentIs(await this.ctx.storage.get("state"))) : { status: "expired" };
 

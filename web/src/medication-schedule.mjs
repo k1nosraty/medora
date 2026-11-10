@@ -1,4 +1,4 @@
-import { maxRoutines } from "../public/medication/routine-plan.js";
+import { maxRoutines, validRoutineId } from "../public/medication/routine-plan.js";
 import { WebPhase, WebSlot, nextMedicationPhaseDay, validMedicationPhases } from "../public/care-engine/care-core.mjs";
 
 import { dayMs, timezone, localWall, instantForWall } from "../public/medication/wall-clock.js";
@@ -15,7 +15,7 @@ function phaseOf(rule) {
   return new WebPhase(rule.start, rule.end, rule.interval, rule.mask, rule.minutes.map(minute => new WebSlot(minute, null)));
 }
 
-function validRules(input, limit) {
+function validRules(input, limit, routine = false) {
   if (!Array.isArray(input) || input.length > limit) return null;
   let skips = 0;
   let specificDays = 0;
@@ -28,6 +28,10 @@ function validRules(input, limit) {
     skips += rule.skip.length;
     if (skips > 256 || !rule.skip.every(pair => Array.isArray(pair) && pair.length === 2 && validDay(pair[0]) && validMinute(pair[1]))) return null;
     const clean = { start: rule.start, end: rule.end, interval: rule.interval, mask: rule.mask, minutes: rule.minutes, skip: rule.skip };
+    if (routine && rule.routineId !== undefined) {
+      if (!validRoutineId(rule.routineId)) return null;
+      clean.routineId = rule.routineId;
+    }
     if (rule.name !== undefined) {
       if (!validLabel(rule.name, 80) || !validLabel(rule.unit, 24) || !Array.isArray(rule.amounts) ||
           rule.amounts.length !== rule.minutes.length || !rule.amounts.every(validAmount)) return null;
@@ -64,7 +68,7 @@ export function validSchedule(body) {
   if (typeof body?.zone !== "string" || body.zone.length > 64 || !/^[A-Za-z0-9_+/-]+$/.test(body.zone)) return null;
   try { timezone(body.zone); } catch { return null; }
   const rules = validRules(body.rules, 100);
-  const routineRules = validRules(body.routineRules === undefined ? [] : body.routineRules, maxRoutines);
+  const routineRules = validRules(body.routineRules === undefined ? [] : body.routineRules, maxRoutines, true);
   if (!rules || !routineRules || routineRules.some(rule => rule.end !== null || rule.minutes.length !== 1 ||
     rule.skip.length > 1 || rule.days !== undefined || rule.notBefore !== undefined || rule.snoozes !== undefined)) return null;
   const appointments = body.appointments === undefined ? [] : body.appointments;
@@ -94,7 +98,12 @@ export function nextMedicationReminder(schedule, after) {
   let earliest = null;
   function consider(at, day, rule, minute) {
     if (earliest && at > earliest.at) return;
-    if (!earliest || at < earliest.at) earliest = { at, day };
+    if (!earliest || at < earliest.at) {
+      earliest = { at, day, ...(rule.routineId ? { routineId: rule.routineId } : {}) };
+    } else if (earliest.routineId !== rule.routineId) {
+      // A grouped reminder cannot point at a single routine.
+      delete earliest.routineId;
+    }
     if (!rule.name) return;
     const details = earliest.details ??= [];
     const amount = rule.amounts[rule.minutes.indexOf(minute)];
@@ -165,7 +174,9 @@ export function nextCareReminder(schedule, after) {
   const at = Math.min(...candidates.map(([, next]) => next.at));
   const matching = candidates.filter(([, next]) => next.at === at);
   const details = Object.fromEntries(matching.filter(([, next]) => next.details?.length).map(([kind, next]) => [kind, next.details]));
+  const routineId = matching.find(([kind]) => kind === "routine")?.[1].routineId;
   return { at, day: matching[0][1].day, kinds: matching.map(([kind]) => kind),
     ...(Object.keys(details).length ? { details } : {}),
+    ...(routineId ? { routineId } : {}),
     appointmentExpires: matching.find(([kind]) => kind === "appointment")?.[1].expires };
 }

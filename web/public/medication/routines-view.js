@@ -313,17 +313,21 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
 
   function openLog(activity) {
     logging = activity;
-    const { entry, plan } = activity;
+    const { entry, plan, readOnly } = activity;
     fields("log-title").textContent = entry.name;
-    const notes = plan.notes;
+    const notes = plan?.notes;
     fields("log-notes").textContent = notes;
     fields("log-notes").hidden = !notes;
     fields("log-status").textContent = "";
     const quantity = entry.mode === "quantity";
-    fields("amount-field").hidden = !quantity;
+    fields("amount-field").hidden = !quantity || readOnly === true;
     fields("amount").value = entry.amount ?? "";
     fields("log-goal").textContent = quantity ? t("هدف: {0}", displayAmount(entry, entry.target)) : "";
-    fields("log-steps").replaceChildren(...(quantity ? [] : entry.steps.map((step, index) => {
+    const save = fields("log-save");
+    save.hidden = readOnly === true;
+    save.textContent = t(entry.mode === "done" ? "انجام دادم" : "ذخیرهٔ پیشرفت");
+    const steps = !readOnly && entry.mode === "steps" ? entry.steps : [];
+    fields("log-steps").replaceChildren(...steps.map((step, index) => {
       const label = element("label", "", "routine-check");
       const control = document.createElement("input");
       control.type = "checkbox";
@@ -333,18 +337,34 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       text.dir = "auto";
       label.append(control, text);
       return label;
-    })));
+    }));
+    if (readOnly) {
+      const summary = [routineComplete(entry) ? t("انجام شد") : t("ثبت این نوبت بسته است."), entryText(entry)].filter(Boolean);
+      fields("log-steps").append(element("p", summary.join(" · "), "quiet"));
+    }
     logDialog.showModal();
     fitLog();
-    if (quantity) fields("amount").focus();
+    if (!readOnly && quantity) fields("amount").focus();
+    else if (!readOnly && entry.mode === "done") save.focus();
+  }
+
+  function openReminder(entry, day) {
+    if (!entry) {
+      $("status").textContent = t("این نوبت روتین دیگر در دسترس نیست.");
+      return;
+    }
+    const state = getState();
+    const plan = state.routines?.[entry.id];
+    const recorded = state.routineLogs[day]?.[entry.id];
+    openLog({ entry, day, plan, recorded, readOnly: day !== today() || !plan || routineComplete(entry) });
   }
 
   fields("log-form").addEventListener("submit", async event => {
     event.preventDefault();
     const save = fields("log-save");
-    if (save.disabled) return;
+    if (!logging || logging.readOnly || save.disabled) return;
     const quantity = logging.entry.mode === "quantity";
-    const result = quantity ? readAmount(fields("amount").value) :
+    const result = logging.entry.mode === "done" ? true : quantity ? readAmount(fields("amount").value) :
       [...fields("log-steps").querySelectorAll("input:checked")].map(input => Number(input.value));
     if (quantity && !Number.isInteger(result)) {
       fields("log-status").textContent = t("مقدار را از ۰ تا ۹۹٬۹۹۹ وارد کنید. صفر، ثبت را پاک می‌کند.");
@@ -482,5 +502,5 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
   });
   fields("search").addEventListener("input", () => { historyLimit = 14; render(); });
   fields("more").addEventListener("click", () => { historyLimit += 14; render(); });
-  return { card, renderPanel };
+  return { card, renderPanel, openReminder };
 }

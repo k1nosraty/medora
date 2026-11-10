@@ -154,26 +154,37 @@ test("an Android-exported encrypted backup restores and rejects incorrect or dam
 test("routine targets preserve logged history and only suppress the completed occurrence", () => {
   const start = day("2026-11-09");
   const now = instant("2026-11-09T07:00:00Z");
-  const plan = { id: "stretch", name: "Stretch", category: "stretch", start, mask: 5, interval: 2, minute: 480,
+  const id = "12345678-1234-1234-1234-123456789abc";
+  const plan = { id, name: "Stretch", category: "stretch", start, mask: 5, interval: 2, minute: 480,
     reminder: true, paused: false, mode: "steps", steps: ["Warm up", "Stretch"] };
-  const state = { medicines: {}, doses: {}, routines: { stretch: plan }, routineLogs: { [start]: {} } };
+  const state = { medicines: {}, doses: {}, routines: { [id]: plan }, routineLogs: { [start]: {} } };
   const index = (today = start) => createCareIndex(state, {}, "UTC", today);
   const next = () => nextCareReminder(validSchedule(scheduleForPush(state, "UTC", start, now)), now);
 
-  state.routineLogs[start].stretch = routineLog(plan, [1, 1, 2]);
+  state.routineLogs[start][id] = routineLog(plan, [1, 1, 2]);
   assert.equal(routineComplete(index().routinesOn(start)[0]), false);
   assert.deepEqual(next().kinds, ["routine"]);
+  assert.equal(next().routineId, id);
+  assert.equal(next().details, undefined);
   assert.equal(next().at, instant("2026-11-09T08:00:00Z"));
   assert.equal(index().routinesOn(start + 7).length, 0);
   assert.equal(index().routinesOn(start + 14).length, 1);
 
-  state.routineLogs[start].stretch = routineLog(plan, [0, 1]);
+  const secondId = "12345678-1234-1234-1234-123456789abd";
+  state.routines[secondId] = { ...plan, id: secondId };
+  assert.equal(next().routineId, undefined);
+  delete state.routines[secondId];
+  const invalid = scheduleForPush(state, "UTC", start, now);
+  invalid.routineRules[0].routineId = "invalid&view=account";
+  assert.equal(validSchedule(invalid), null);
+
+  state.routineLogs[start][id] = routineLog(plan, [0, 1]);
   assert.equal(next().at, instant("2026-11-11T08:00:00Z"));
   assert.equal(index().routineTotals(start - 1, start).completed, 1);
   assert.equal(routineComplete(routineLog({ ...plan, mode: "quantity", target: 10, unit: "minutes" }, 9)), false);
   assert.equal(routineLog({ ...plan, mode: "quantity", target: 10 }, 0), null);
 
-  delete state.routines.stretch;
+  delete state.routines[id];
   assert.equal(next(), null);
   assert.equal(index(start + 1).routinesOn(start)[0].name, "Stretch");
 });

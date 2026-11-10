@@ -712,6 +712,8 @@ export default {
   "حذف روتین": "Delete routine",
   "مقدار انجام‌شده تا این لحظه": "Amount done so far",
   "ذخیرهٔ پیشرفت": "Save progress",
+  "ثبت این نوبت بسته است.": "This occurrence can no longer be logged.",
+  "این نوبت روتین دیگر در دسترس نیست.": "This routine occurrence is no longer available.",
   "برای دریافت یادآوری دارو، آب، قرار و روتین هنگام بسته‌بودن مدورا، اعلان‌ها را فعال کنید.": "Enable notifications to get medicine, water, appointment and routine reminders when Medora is closed.",
   "یادآوری دارو، آب، قرار و روتین": "Medicine, water, appointment and routine reminders",
   "روتین تغییر کرده است. دوباره آن را باز کنید.": "This routine changed. Open it again.",

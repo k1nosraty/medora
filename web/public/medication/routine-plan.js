@@ -1,6 +1,7 @@
 export const maxRoutines = 64;
 export const maxRoutineAmount = 99999;
 export const maxRoutineSteps = 12;
+export const validRoutineId = id => typeof id === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(id);
 
 export const routineWeekday = day => ((day + 3) % 7 + 7) % 7;
 
