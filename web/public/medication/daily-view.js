@@ -4,7 +4,7 @@ import { doseTime } from "./care-index.js";
 import { $, element } from "./dom.js";
 
 export function renderToday(care, day, today, daily, visits, routines, waterTotal, renderDose, renderRoutine) {
-  const doseCard = dose => renderDose(care.medicines[dose.medicineId], dose);
+  const doseCard = dose => renderDose(care.medicines[dose.medicineId], dose, "day");
   const reviewed = daily.filter(dose => dose.status === "taken" || dose.status === "skipped").length;
   let doneRoutines = 0;
   let pendingRoutines = 0;
@@ -14,11 +14,12 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     else if (plan && !plan.paused) pendingRoutines++;
   }
   const scheduled = daily.length + visits.length + doneRoutines + pendingRoutines;
-  const trackWater = day <= today && Boolean(waterTotal > 0 || care.waterGoal != null || care.waterReminders?.enabled ||
-    (day === today && scheduled));
-  const waterDone = trackWater && waterTotal >= (care.waterGoal ?? 2000);
-  const resolved = reviewed + visits.filter(visit => visit.completed).length + doneRoutines + Number(waterDone);
-  const total = scheduled + Number(trackWater);
+  const includeWater = day <= today && (waterTotal > 0 || care.waterGoal != null ||
+    care.waterReminders?.enabled === true || (day === today && scheduled > 0));
+  const waterItems = includeWater ? 1 : 0;
+  const waterResolved = includeWater && waterTotal >= (care.waterGoal ?? 2000) ? 1 : 0;
+  const resolved = reviewed + visits.filter(visit => visit.completed).length + doneRoutines + waterResolved;
+  const total = scheduled + waterItems;
   $("today-count").hidden = !total || day > today;
   $("today-count").textContent = t("{0} از {1} مورد رسیدگی شد", localDigits(resolved), localDigits(total));
   const now = Date.now();
@@ -38,7 +39,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     : t("برای این روز برنامه‌ای ثبت نشده است.");
   const focus = $("today-focus");
   focus.replaceChildren();
-  if (focused) focus.append(renderDose(care.medicines[focused.medicineId], focused, true));
+  if (focused) focus.append(renderDose(care.medicines[focused.medicineId], focused, "featured"));
   else if (day === today) {
     const completed = total > 0 && resolved === total;
     const hero = element("div");
@@ -63,7 +64,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
   }
   focus.hidden = day !== today;
   const events = daily.filter(dose => dose !== focused).map(dose => ({ minute: dose.minute, card: doseCard(dose) }));
-  events.push(...visits, ...routines.map(entry => ({ minute: entry.minute ?? 1440, card: renderRoutine(entry, day) })));
+  events.push(...visits, ...routines.map(entry => ({ minute: entry.minute ?? 1440, card: renderRoutine(entry, day, { dayCard: true }) })));
   events.sort((a, b) => a.minute - b.minute);
   $("timeline-title").textContent = focused ? t("بقیهٔ برنامه‌های روز") : t("داروها، قرارها و روتین‌ها");
   $("doses").closest(".timeline").hidden = day === today && events.length === 0;

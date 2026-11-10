@@ -24,7 +24,6 @@
   --visit-ink: #763858;
   --hero-deep: #28173c;
   --hero-light: #694283;
-  --hero-edge: #8a679d;
   --glass: #fff9ff;
   --dock-active: #e9dff5;
   --lime: #e1f5a1;
@@ -57,7 +56,6 @@
     --visit-ink: #f3d3d9;
     --hero-deep: #172228;
     --hero-light: #334b4d;
-    --hero-edge: #536766;
     --glass: #253036;
     --dock-active: #35463e;
     --lime: #d8ec9f;
@@ -134,7 +132,6 @@
   --visit-ink: #f3d3d9;
   --hero-deep: #172228;
   --hero-light: #334b4d;
-  --hero-edge: #536766;
   --glass: #253036;
   --dock-active: #35463e;
   --lime: #d8ec9f;
@@ -486,43 +483,6 @@
 .medication-banner[data-shape="ointment"] { --art-tilt: -17deg; --art-shift: -8%; }
 .medication-banner[data-shape="drops"] { --art-tilt: 21deg; }
 .medication-banner[data-shape="spray"] { --art-tilt: -8deg; --art-shift: 9%; }
-
-.medora .studio-hero {
-  isolation: isolate;
-  position: relative;
-  overflow: hidden;
-  padding: clamp(.95rem, 3.5vw, 1.35rem);
-  border: 1px solid var(--hero-edge);
-  border-radius: 1.55rem;
-  background: radial-gradient(ellipse at 10% 96%, var(--hero-light), transparent 60%), linear-gradient(120deg, var(--hero-deep), var(--hero-light));
-  color: #fff9ff;
-  box-shadow: 0 .45rem 1rem var(--cast);
-}
-.studio-hero > :not(.medication-banner) { position: relative; z-index: 1; }
-.medora .studio-hero .medication-banner {
-  position: absolute;
-  inset-inline-end: -.2rem;
-  inset-block-start: 0;
-  inline-size: min(48%, 14rem);
-  block-size: min(100%, 10.4rem);
-  background: radial-gradient(ellipse at 58% 48%, color-mix(in srgb, var(--pill-base) 23%, transparent), transparent 70%);
-  border-radius: 0;
-}
-.medora .studio-hero .medication-banner span { display: none; }
-.medora .studio-hero .medication-badge { inline-size: min(87%, 9rem); block-size: auto; aspect-ratio: 1; }
-.medora .studio-hero .dose-header { inline-size: 60%; min-block-size: 5rem; padding: 0; }
-.medora .studio-hero h3 { font-size: clamp(1.2rem, 5.6vw, 1.95rem); line-height: 1.35; overflow-wrap: anywhere; }
-.medora .studio-hero .dose-header p { color: #f4eaf7; margin-block: 0 .35rem; }
-.medora .studio-hero .dose-header p:not(.hero-kicker) { display: inline-block; background: #ffffff20; color: #fff; border-radius: .6rem; padding-inline: .45rem; font-weight: 750; }
-.medora .studio-hero .dose-result { inline-size: 69%; }
-.medora .studio-hero .badge { background: #ffffff1f; color: #fff; }
-.medora .studio-hero button:not(.secondary) { background: var(--lime); color: var(--lime-ink); border-color: var(--lime); }
-.medora .studio-hero button.secondary { background: var(--hero-deep); color: #fff; border-color: var(--hero-edge); }
-.medora .studio-hero .dose-quick { grid-template-columns: 1fr auto; margin-block-start: .7rem; }
-.medora .studio-hero .dose-options { position: static; }
-.medora .studio-hero .dose-options summary { inset-inline-end: .5rem; inset-block-start: .4rem; background: var(--hero-deep); border-radius: .65rem; }
-.medora .studio-hero .dose-options[open] > summary { color: #fff; }
-.medora .studio-hero :focus-visible { outline-color: var(--lime); }
 
 #plans { display: grid; gap: .65rem; }
 #plans > * { margin-block: 0; }

@@ -14,6 +14,22 @@ export function button(text, click) {
   return node;
 }
 
+export function dayCardOptions(label, ...content) {
+  const details = element("details", "", "day-card-more");
+  details.name = "day-card-options";
+  const trigger = element("summary", "⋯");
+  trigger.setAttribute("aria-label", label);
+  const menu = element("div", "", "day-card-menu");
+  menu.append(...content);
+  details.append(trigger, menu);
+  details.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || !details.open) return;
+    details.open = false;
+    trigger.focus();
+  });
+  return details;
+}
+
 export function fitDialogToViewport(dialog) {
   const viewport = window.visualViewport;
   function fit() {

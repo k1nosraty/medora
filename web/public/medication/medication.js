@@ -7,7 +7,7 @@ import { clockMinute, localZone, minuteMs } from "./care-plan.js";
 import { installAppearance, medicationBadge, medicationBanner } from "./medication-art.js";
 import { installAccount } from "./account.js";
 import { showPromotion } from "./promotion.js";
-import { $, element } from "./dom.js";
+import { $, dayCardOptions, element } from "./dom.js";
 import { compilePhases, createCareIndex, doseId, doseTime, isoDay, timeText } from "./care-index.js";
 import { installRoutines } from "./routines-view.js";
 import { renderToday } from "./daily-view.js";
@@ -694,9 +694,10 @@ function openMedicine(medicine) {
   $("medicine-details").showModal();
 }
 
-function renderDose(medicine, dose, featured = false) {
-  const card = element("article");
-  card.className = featured ? "medicine dose-card studio-hero" : "medicine dose-card";
+function renderDose(medicine, dose, variant) {
+  const dayCard = Boolean(variant);
+  const featured = variant === "featured";
+  const card = element("article", "", dayCard ? "medicine dose-card day-card" : "medicine dose-card");
   const unit = dose.unit ?? medicine?.unit ?? "";
   const color = medicine?.color ?? dose.color ?? "gold";
   card.dataset.color = color;
@@ -721,11 +722,15 @@ function renderDose(medicine, dose, featured = false) {
     meta.className = "dose-meta";
     meta.append(eyebrow, element("p", time));
     info.append(meta, heading);
-    card.append(medicationBanner(medicine?.icon ?? dose.icon, color));
   } else info.append(heading, element("p", t("ساعت {0}", localDigits(timeText(dose.minute)))));
   const header = element("div");
-  header.className = "dose-header";
-  if (!featured) header.append(medicationBadge(medicine?.icon ?? dose.icon, color));
+  header.className = dayCard ? "dose-header day-card-content" : "dose-header";
+  if (dayCard) {
+    const art = medicationBanner(medicine?.icon ?? dose.icon, color);
+    art.classList.add("day-card-art");
+    card.append(art);
+    info.prepend(element("span", t("دارو"), "day-card-kind"));
+  } else header.append(medicationBadge(medicine?.icon ?? dose.icon, color));
   header.append(info);
   card.append(header);
   const result = element("div");
@@ -744,13 +749,6 @@ function renderDose(medicine, dose, featured = false) {
   if (dose.actual != null) amount.value = amountText(dose.actual);
   if (dose.planned != null) amount.placeholder = amountText(dose.planned);
   label.append(amount);
-  const actual = element("details");
-  const more = element("summary", "⋮");
-  more.setAttribute("aria-label", t("گزینه‌های نوبت"));
-  actual.className = "dose-options";
-  actual.append(more, label);
-  card.append(actual);
-
   async function record(status) {
     try {
       const entered = status === "taken" ? quantity(amount, true) : null;
@@ -786,16 +784,28 @@ function renderDose(medicine, dose, featured = false) {
   const taken = action(dose.status === "taken" ? t("اصلاح ثبت مصرف") : t("مصرف کردم"), () => record("taken"), !pending);
   const snooze = () => action(t("{0} دقیقه بعد", localDigits(care.medicationSnoozeMinutes ?? 10)), () => record("snoozed"), true);
   const skipped = action(t("مصرف نکردم"), () => record("skipped"), true);
-  controls.append(...(pending ? [skipped] : [taken, skipped]));
+  controls.append(...(pending || dayCard ? [skipped] : [taken, skipped]));
   if (!pending && canSnooze) controls.append(snooze());
   if (dose.status) controls.append(action(t("برگشت ثبت"), () => record(null), true));
-  actual.append(controls);
-  if (pending) {
-    const quick = element("div");
-    quick.className = "action-pair dose-quick";
-    quick.append(taken);
-    if (canSnooze) quick.append(snooze());
-    card.append(quick);
+  if (dayCard) {
+    const footer = element("div", "", "day-card-actions");
+    taken.className = "secondary";
+    footer.append(taken);
+    if (pending && canSnooze) footer.append(snooze());
+    footer.append(dayCardOptions(t("گزینه‌های نوبت"), label, controls));
+    card.append(footer);
+  } else {
+    const actual = element("details", "", "dose-options");
+    const more = element("summary", "⋮");
+    more.setAttribute("aria-label", t("گزینه‌های نوبت"));
+    actual.append(more, label, controls);
+    card.append(actual);
+    if (pending) {
+      const quick = element("div", "", "action-pair dose-quick");
+      quick.append(taken);
+      if (canSnooze) quick.append(snooze());
+      card.append(quick);
+    }
   }
   if (dose.status === "snoozed") {
     const reminder = element("p", t("یادآوری بعدی {0}", new Intl.DateTimeFormat(locale, {

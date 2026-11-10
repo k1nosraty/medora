@@ -359,18 +359,31 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
   });
 
   function focusLogAction(id) {
-    document.querySelector(`[data-screen]:not([hidden]) [data-routine-id="${CSS.escape(id)}"] > button`)?.focus({ preventScroll: true });
+    const row = document.querySelector(`[data-screen]:not([hidden]) [data-routine-id="${CSS.escape(id)}"]`);
+    row?.querySelector(":scope > button, .day-card-actions > button")?.focus({ preventScroll: true });
   }
 
-  function card(entry, day, { manage = false, readOnly = false } = {}) {
-    const row = element("article", "", "routine-row");
+  function card(entry, day, { manage = false, readOnly = false, dayCard = false } = {}) {
+    const row = element("article", "", dayCard ? "day-card routine-day-card" : "routine-row");
     row.dataset.routineId = entry.id;
-    const art = element("span", "", "routine-glyph");
-    const currentColor = !readOnly && day === today() ? getState().routines?.[entry.id]?.color : null;
-    art.dataset.ink = colorOf(currentColor ?? entry.color);
-    art.append(glyph(entry.category));
-    const copy = element("div", "", "routine-row-copy");
-    const name = element("strong", entry.name);
+    const art = element("span", "", dayCard ? "day-card-art routine-day-art" : "routine-glyph");
+    const state = getState();
+    const plan = state.routines?.[entry.id];
+    const isToday = day === today();
+    const currentColor = !readOnly && isToday ? plan?.color : null;
+    const color = colorOf(currentColor ?? entry.color);
+    row.dataset.ink = art.dataset.ink = color;
+    if (dayCard) {
+      const illustration = glyph("custom");
+      illustration.classList.add("routine-day-illustration");
+      illustration.firstElementChild.setAttribute("href", "/medication/routine-icons.svg#banner");
+      const category = element("span", "", "routine-day-symbol");
+      category.append(glyph(entry.category));
+      art.append(illustration, category);
+    } else art.append(glyph(entry.category));
+    const copy = element("div", "", dayCard ? "day-card-content routine-row-copy" : "routine-row-copy");
+    const name = element(dayCard ? "h3" : "strong", entry.name);
+    if (dayCard) copy.append(element("span", t("روتین"), "day-card-kind"));
     name.dir = "auto";
     const completed = routineComplete(entry);
     const detail = [labelFor(entry.category)];
@@ -385,15 +398,16 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     if (entry.minute !== null) detail.push(localDigits(timeText(entry.minute)));
     copy.append(name, element("small", detail.join(" · ")));
     row.append(art, copy);
+    const footer = dayCard ? element("div", "", "day-card-actions") : row;
+    if (dayCard && completed) copy.append(element("small", t("انجام شد"), "routine-row-state"));
     if (manage) {
       const edit = button(t("ویرایش"), () => openEditor(entry));
       edit.setAttribute("aria-label", t("ویرایش روتین {0}", entry.name));
       row.append(edit);
-    } else if (!readOnly && day === today() && getState().routines?.[entry.id]) {
-      const state = getState();
-      const activity = { entry, day, plan: state.routines[entry.id], recorded: state.routineLogs[day]?.[entry.id] };
+    } else if (!readOnly && isToday && plan) {
+      const activity = { entry, day, plan, recorded: state.routineLogs[day]?.[entry.id] };
       const action = entry.mode === "done" ?
-        button(completed ? t("انجام شد") : t("ثبت انجام"), async () => {
+        button(completed ? t(dayCard ? "برگشت ثبت" : "انجام شد") : t("ثبت انجام"), async () => {
           if (await saveLog(activity, !completed)) focusLogAction(entry.id);
         }) :
         button(completed ? t("ویرایش ثبت") : t("ثبت پیشرفت"), () => openLog(activity));
@@ -402,8 +416,14 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
         action.setAttribute("aria-label", t(completed ? "برگشت ثبت {0}" : "ثبت انجام {0}", entry.name));
       } else action.setAttribute("aria-label", t("ثبت پیشرفت {0}", entry.name));
       row.dataset.complete = String(completed);
-      row.append(action);
-    } else if (completed) row.append(element("span", t("انجام شد"), "routine-row-state"));
+      footer.append(action);
+    } else if (completed && !dayCard) row.append(element("span", t("انجام شد"), "routine-row-state"));
+    if (dayCard && plan) {
+      const edit = button(t("ویرایش"), () => openEditor(plan));
+      edit.setAttribute("aria-label", t("ویرایش روتین {0}", entry.name));
+      footer.append(edit);
+    }
+    if (dayCard && footer.childElementCount) row.append(footer);
     return row;
   }
 

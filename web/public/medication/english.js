@@ -464,6 +464,7 @@ export default {
   "نوبت ثبت‌نشده": "Unlogged dose",
   "ساعت {0}": "At {0}",
   "مقدار مصرف واقعی": "Actual dose taken",
+  "گزینه‌های قرار": "Appointment options",
   "گزینه‌های نوبت": "Dose options",
   "مقدار مصرف باید بیشتر از صفر باشد.": "Enter an amount greater than zero.",
   "برنامهٔ این دارو متوقف شده است.": "This schedule is paused.",

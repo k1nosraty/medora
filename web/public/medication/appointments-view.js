@@ -1,7 +1,7 @@
 import { localDigits, t } from "./locale.js";
 import { clockMinute } from "./care-plan.js";
 import { isoDay } from "./care-index.js";
-import { $, button, element } from "./dom.js";
+import { $, button, dayCardOptions, element } from "./dom.js";
 
 const clockText = value => localDigits(value);
 const pageSize = 20;
@@ -28,12 +28,14 @@ export function appointmentView({
 
   function visitCard(local, zone, actionable, variant = "compact") {
     const { visit } = local;
+    const dayCard = variant === "day";
     const card = element("article", "", "visit visit-card");
     const category = categoryOf(visit.category);
     card.dataset.ink = colorOf(visit.color);
     if (variant !== "compact") {
-      card.classList.add(variant === "day" ? "visit-day-card" : "visit-shelf-card");
+      card.classList.add(...(dayCard ? ["day-card", "visit-day-card"] : ["visit-shelf-card"]));
       const banner = element("div", "", "visit-banner");
+      if (dayCard) banner.classList.add("day-card-art");
       banner.append(visitIllustration(category));
       if (variant === "next") {
         card.classList.add("visit-featured");
@@ -52,7 +54,7 @@ export function appointmentView({
     hour.dir = "ltr";
     const body = element("div", "", "visit-card-body");
     body.append(title);
-    if (variant === "day") body.append(element("span", t("قرار"), "visit-kind"));
+    if (dayCard) body.append(element("span", t("قرار"), "day-card-kind"));
     body.append(hour);
     if (category !== "general") {
       const label = category === "custom" && visit.categoryName ? visit.categoryName : categories.get(category);
@@ -62,6 +64,7 @@ export function appointmentView({
     if (variant !== "day") header.append(day);
     header.append(body);
     const details = variant === "compact" ? card : element("div", "", "visit-shelf-details");
+    if (dayCard) details.classList.add("day-card-content");
     details.append(header);
     if (visit.zone && visit.zone !== zone) {
       details.append(element("p", t("ساعت مطب {0}، {1} ({2})", formatDay(visit.day), clockText(visit.time), visit.zone), "quiet"));
@@ -73,7 +76,7 @@ export function appointmentView({
     if (visit.contact) details.append(element("p", t("تماس: {0}", visit.contact), "quiet"));
     if (details !== card) card.append(details);
     if (actionable) {
-      const controls = element("div", "", "buttons");
+      const controls = element("div", "", dayCard ? "day-card-actions" : "buttons");
       if (!visit.cancelled && local.day <= today()) {
         const attendance = button(visit.completed ? t("برگشت ثبت حضور") : t("ثبت حضور"), () => {
           void mutate(state => {
@@ -84,7 +87,8 @@ export function appointmentView({
         attendance.setAttribute("aria-pressed", String(Boolean(visit.completed)));
         controls.append(attendance);
       }
-      controls.append(button(t("ویرایش"), () => openVisit(visit)), button(visit.cancelled ? t("فعال‌کردن قرار") : t("لغو قرار"), () => {
+      const edit = button(t("ویرایش"), () => openVisit(visit));
+      const cancel = button(visit.cancelled ? t("فعال‌کردن قرار") : t("لغو قرار"), () => {
         void mutate(state => {
           const saved = state.visits[visit.id];
           if (saved) {
@@ -92,12 +96,16 @@ export function appointmentView({
             if (saved.cancelled) delete saved.completed;
           }
         }, t("وضعیت قرار ذخیره شد."), true);
-      }));
+      });
       const remove = button(t("حذف قرار"), () => deleteVisit(visit.id));
       remove.className = "text-button danger-link";
-      controls.append(remove);
-      if (variant === "day") card.append(controls);
-      else details.append(controls);
+      if (dayCard) {
+        controls.append(edit, dayCardOptions(t("گزینه‌های قرار"), cancel, remove));
+        card.append(controls);
+      } else {
+        controls.append(edit, cancel, remove);
+        details.append(controls);
+      }
     }
     return card;
   }
