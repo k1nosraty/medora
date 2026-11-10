@@ -183,6 +183,20 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 .medora .routine-check { display: flex; align-items: center; gap: .5rem; min-block-size: 2.5rem; }
 .medora .routine-check input[type="checkbox"] { inline-size: 1.15rem; block-size: 1.15rem; flex: none; accent-color: var(--action); }
 .medora .routine-sheet { max-block-size: calc(var(--visible-height, 100dvh) - .65rem); overflow: auto; }
+.medora .routine-log-header { position: relative; }
+.medora .routine-log-header .day-card {
+  min-block-size: 7rem;
+  border: 1px solid color-mix(in srgb, var(--pill-base) 22%, var(--outline));
+  border-radius: 1.15rem;
+}
+.medora .routine-log-header .day-card-content { padding-inline-end: 2.35rem; }
+.medora .routine-log-header > .icon-button {
+  position: absolute;
+  inset-block-start: .25rem;
+  inset-inline-end: .25rem;
+}
+.medora #routine-log-dialog :is(#routine-log-status, #routine-log-steps):empty { display: none; }
+.medora #routine-log-dialog .sheet-body:not(:has(> :not([hidden], :empty))) { display: none; }
 .medora .calendar-dots .routine { background: var(--routine-mark); }
 .medora #calendar-days button[aria-current="date"] .calendar-dots .routine { background: #86482e; }
 @media (min-width: 42rem) {

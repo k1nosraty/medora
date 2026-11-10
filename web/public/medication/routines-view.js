@@ -313,8 +313,10 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
 
   function openLog(activity) {
     logging = activity;
-    const { entry, plan, readOnly } = activity;
-    fields("log-title").textContent = entry.name;
+    const { entry, day, plan, readOnly } = activity;
+    const banner = card(entry, day, { dayCard: true, readOnly, summaryOnly: true });
+    banner.querySelector("h3").id = "routine-log-title";
+    fields("log-banner").replaceChildren(banner);
     const notes = plan?.notes;
     fields("log-notes").textContent = notes;
     fields("log-notes").hidden = !notes;
@@ -338,10 +340,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       label.append(control, text);
       return label;
     }));
-    if (readOnly) {
-      const summary = [routineComplete(entry) ? t("انجام شد") : t("ثبت این نوبت بسته است."), entryText(entry)].filter(Boolean);
-      fields("log-steps").append(element("p", summary.join(" · "), "quiet"));
-    }
+    if (readOnly && !routineComplete(entry)) fields("log-steps").append(element("p", t("ثبت این نوبت بسته است."), "quiet"));
     logDialog.showModal();
     fitLog();
     if (!readOnly && quantity) fields("amount").focus();
@@ -390,10 +389,10 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     control?.focus({ preventScroll: true });
   }
 
-  function card(entry, day, { manage = false, readOnly = false, dayCard = false, featured = false } = {}) {
+  function card(entry, day, { manage = false, readOnly = false, dayCard = false, featured = false, summaryOnly = false } = {}) {
     const compactDay = dayCard && !featured;
     const row = element("article", "", dayCard ? "day-card routine-day-card" : "routine-row");
-    row.dataset.routineId = entry.id;
+    if (!summaryOnly) row.dataset.routineId = entry.id;
     const art = element("span", "", dayCard ? "day-card-art routine-day-art" : "routine-glyph");
     const state = getState();
     const plan = state.routines?.[entry.id];
@@ -418,10 +417,11 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     }
     if (entry.minute !== null) detail.push(localDigits(timeText(entry.minute)));
     copy.append(name, element("small", detail.join(" · ")));
+    if (dayCard && completed) copy.append(element("small", t("انجام شد"), "routine-row-state"));
     row.append(art, copy);
+    if (summaryOnly) return row;
     const footer = dayCard ? element("div", "", "day-card-actions") : row;
     let logAction;
-    if (dayCard && completed) copy.append(element("small", t("انجام شد"), "routine-row-state"));
     if (manage) {
       const edit = button(t("ویرایش"), () => openEditor(entry));
       edit.setAttribute("aria-label", t("ویرایش روتین {0}", entry.name));
