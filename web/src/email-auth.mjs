@@ -41,6 +41,17 @@ async function readSession(request, secret) {
   const [, id, token, signature] = match;
   return equal(signature, await hmac(secret, "session-v1", `${id}.${token}`)) ? { id, token } : null;
 }
+export async function signedInEmail(request, env) {
+  if (!configured(env)) return null;
+  const session = await readSession(request, env.EMAIL_AUTH_SECRET);
+  return session ? env.EMAIL_ACCOUNTS.getByName(session.id).session(session.token) : null;
+}
+export function isAdminEmail(email, env) {
+  return Boolean(email && email === env.ADMIN_EMAIL?.trim().toLowerCase());
+}
+function account(email, env) {
+  return isAdminEmail(email, env) ? { email, admin: true } : { email };
+}
 function reply(data, status = 200, setCookie) {
   const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
   if (setCookie) headers["Set-Cookie"] = setCookie;
@@ -50,10 +61,7 @@ function reply(data, status = 200, setCookie) {
 export async function handleEmailAuth(request, env, url) {
   const route = url.pathname.slice("/api/auth/".length);
   if (route === "session" && request.method === "GET") {
-    const available = configured(env);
-    const session = available ? await readSession(request, env.EMAIL_AUTH_SECRET) : null;
-    const email = session ? await env.EMAIL_ACCOUNTS.getByName(session.id).session(session.token) : null;
-    return reply({ available, email });
+    return reply({ available: configured(env), ...account(await signedInEmail(request, env), env) });
   }
   if (request.method !== "POST" || !["start", "verify", "logout"].includes(route)) return reply({ error: "not_found" }, 404);
   if (request.headers.get("Origin") !== url.origin) return reply({ error: "forbidden" }, 403);
@@ -87,7 +95,7 @@ export async function handleEmailAuth(request, env, url) {
   if (!token) return reply({ error: "invalid_code" }, 400);
   const value = `${id}.${token}`;
   const signature = await hmac(secret, "session-v1", value);
-  return reply({ email }, 200, cookie(`${value}.${signature}`, sessionAge / 1000));
+  return reply(account(email, env), 200, cookie(`${value}.${signature}`, sessionAge / 1000));
 }
 
 export class EmailAccount extends DurableObject {

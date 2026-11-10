@@ -4,9 +4,11 @@ import { pilotConfig, smallJson, validSubscription } from "./validation.mjs";
 import { handleMedicationReminders } from "./medication-reminders.mjs";
 import { sendPush } from "./push.mjs";
 import { handleEmailAuth } from "./email-auth.mjs";
+import { handlePromotions } from "./promotions.mjs";
 
 export { MedicationReminders } from "./medication-reminders.mjs";
 export { EmailAccount } from "./email-auth.mjs";
+export { Promotions } from "./promotions.mjs";
 
 const hour = 3_600_000;
 const expiry = 180_000;
@@ -17,10 +19,13 @@ function reply(data, status = 200) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url);
+    if (url.pathname === "/api/promotion" || url.pathname === "/api/admin/promotion") {
+      return handlePromotions(request, env, ctx, url);
+    }
 
     const vapid = pilotConfig(env);
     if (!vapid) return reply({ error: "unconfigured" }, 503);

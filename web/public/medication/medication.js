@@ -6,6 +6,7 @@ import { installPickers } from "./pickers.js";
 import { clockMinute, localZone, minuteMs } from "./care-plan.js";
 import { installAppearance, medicationBadge, medicationBanner } from "./medication-art.js";
 import { installAccount } from "./account.js";
+import { showPromotion } from "./promotion.js";
 import { $, element } from "./dom.js";
 import { compilePhases, createCareIndex, doseId, doseTime, isoDay, timeText } from "./care-index.js";
 import { renderToday } from "./daily-view.js";
@@ -933,7 +934,10 @@ const dashboard = wellness({
 });
 const pickers = installPickers({ selectedDay, today, dashboard });
 const updateAppearance = installAppearance();
-installAccount();
+const openAccount = installAccount();
+const params = new URLSearchParams(location.search);
+const view = params.get("view");
+if (view === "account") void openAccount();
 
 installBackupRestore(mutate, phases => engine.validMedicationPhases(compilePhases(engine, phases)));
 
@@ -965,7 +969,6 @@ function showIntro() {
 
 try {
   [engine, care] = await Promise.all([import("/care-engine/care-core.mjs"), accessCare()]);
-  const params = new URLSearchParams(location.search);
   const day = params.get("day");
   $("day").value = /^\d{4}-\d{2}-\d{2}$/.test(day ?? "") ? day : isoDay(today());
   if (!$("day").value) $("day").value = isoDay(today());
@@ -973,8 +976,8 @@ try {
   $("app").hidden = false;
   $("boot-status").hidden = true;
   showIntro();
-  const view = params.get("view");
   if (!$("app").hidden && ["water", "appointments"].includes(view)) dashboard.show(view);
+  if (!location.search && !$("app").hidden) void showPromotion();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/medication/sw.js").catch(() => {});
   void initializeReminders();
 } catch {

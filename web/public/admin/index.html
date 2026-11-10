@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>پنل مدیریت مدورا</title>
+  <link rel="icon" href="/icon-192.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/medication/medication.css">
+  <link rel="stylesheet" href="/medication/orely.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script type="module" src="/admin/admin.js"></script>
+</head>
+<body class="medora">
+  <main class="admin">
+    <header class="admin-header">
+      <div class="admin-brand"><img src="/icon-192.png" width="40" height="40" alt="">مدورا</div>
+      <a href="/medication/">بازگشت به مدورا</a>
+    </header>
+    <h1>پنل مدیریت مدورا</h1>
+    <p class="quiet">پیام تبلیغاتی صفحهٔ امروز را ویرایش و منتشر کنید.</p>
+    <p id="admin-status" role="status">در حال ارتباط…</p>
+    <a id="admin-sign-in" href="/medication/?view=account" hidden>ورود به حساب مدورا</a>
+    <div class="admin-grid" id="admin-workspace" hidden>
+      <form id="promotion-form">
+        <fieldset id="promotion-fields">
+          <legend>محتوای پیام</legend>
+          <label>عنوان پیام<input name="title" dir="auto" maxlength="80" required></label>
+          <label>توضیحات<textarea name="description" dir="auto" maxlength="240" rows="3"></textarea></label>
+          <label>نشانی HTTPS (اختیاری)<input name="url" dir="ltr" type="url" placeholder="https://" maxlength="512"></label>
+          <label class="admin-toggle"><input name="enabled" type="checkbox">نمایش در صفحهٔ امروز</label>
+          <button type="submit" class="block-action">ذخیرهٔ پیام</button>
+        </fieldset>
+      </form>
+      <div class="admin-preview">
+        <p class="quiet">پیش‌نمایش پیام تبلیغاتی</p>
+        <h2 id="preview-title" dir="auto">عنوان پیام</h2>
+        <p id="preview-description" dir="auto"></p>
+        <div class="buttons">
+          <span class="admin-preview-skip">رد کردن</span>
+          <span id="preview-link" class="admin-preview-action" hidden>مشاهدهٔ جزئیات</span>
+        </div>
+        <p class="quiet">برای هر مرورگر، حداکثر یک پیام در روز نمایش داده می‌شود.</p>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -46,5 +46,7 @@ test("the installed shell serves a coherent offline page and does not intercept 
   assert.equal(await (await fetchThroughWorker("/medication/?day=2026-11-09&view=water")).text(), "installed");
   assert.equal(await (await fetchThroughWorker("/medication/english.js")).text(), "installed");
   assert.equal(fetchThroughWorker("/api/reminders"), undefined);
+  assert.equal(fetchThroughWorker("/api/promotion"), undefined);
+  assert.equal(fetchThroughWorker("/admin/"), undefined);
   assert.deepEqual(network, []);
 });

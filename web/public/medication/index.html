@@ -798,9 +798,26 @@
         <label>کد ۶ رقمی<input id="account-code" dir="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9۰-۹٠-٩]{6}" required></label>
         <div class="buttons"><button type="submit">تأیید و ورود</button><button type="button" id="email-change" class="secondary">تغییر ایمیل یا ارسال دوباره</button></div>
       </form>
-      <div id="account-session" class="feature" hidden><p>وارد شده‌اید <bdi id="account-address"></bdi></p><button id="email-logout" type="button" class="secondary">خروج از حساب</button></div>
+      <div id="account-session" class="feature" hidden>
+        <p>وارد شده‌اید <bdi id="account-address"></bdi></p>
+        <div class="buttons">
+          <a id="open-admin" href="/admin/" hidden>پنل مدیریت</a>
+          <button id="email-logout" type="button" class="secondary">خروج از حساب</button>
+        </div>
+      </div>
       <p id="account-status" class="quiet" role="status"></p>
       <button type="button" id="account-dismiss" class="text-button" data-close="account-dialog">ادامه بدون ورود</button>
+    </div>
+  </dialog>
+  <dialog id="promotion-dialog" class="sheet" aria-labelledby="promotion-title">
+    <div class="sheet-header"><p class="quiet">پیام تبلیغاتی</p></div>
+    <div class="sheet-body">
+      <h2 id="promotion-title" dir="auto"></h2>
+      <p id="promotion-description" dir="auto"></p>
+      <div class="buttons">
+        <button type="button" class="secondary" data-close="promotion-dialog" autofocus>رد کردن</button>
+        <a id="promotion-link" class="promotion-action" rel="noreferrer" target="_blank" hidden>مشاهدهٔ جزئیات</a>
+      </div>
     </div>
   </dialog>
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">

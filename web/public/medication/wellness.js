@@ -2,7 +2,7 @@ import { defaultCalendar, language, listSeparator, localDigits, locale, selectLa
 import { appointmentDefaults, appointmentOffsets, appointmentReminders, localZone, visitInstant, waterDefaults, waterGoalReached } from "./care-plan.js";
 import { localWall, timezone } from "./wall-clock.js";
 import { appearanceColors } from "./medication-art.js";
-import { $, button, element } from "./dom.js";
+import { $, button, element, fitDialogToViewport } from "./dom.js";
 import { appointmentView, visitIllustration } from "./appointments-view.js";
 import { renderCalendar, renderReports } from "./insights-view.js";
 import { changeReminderRevision } from "./reminders.js";
@@ -89,15 +89,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   const loadedSettings = new Set();
   let settingsSession = 0;
   let settingsHomeScroll = 0;
-  function fitSettings() {
-    const viewport = window.visualViewport;
-    if (!settings.open || !viewport) return;
-    const zoomed = viewport.scale !== 1;
-    settings.style.setProperty("--settings-visible-height", `${zoomed ? window.innerHeight : viewport.height}px`);
-    settings.style.setProperty("--settings-visible-top", `${zoomed ? 0 : viewport.offsetTop}px`);
-  }
-  window.visualViewport?.addEventListener("resize", fitSettings);
-  window.visualViewport?.addEventListener("scroll", fitSettings);
+  const fitSettings = fitDialogToViewport(settings);
   const snoozePresets = [...document.querySelectorAll('[name="snooze-preset"]')];
   const visitOffsetFields = [...document.querySelectorAll('[name="visit-offset"]')];
   function setOption(id, value) {

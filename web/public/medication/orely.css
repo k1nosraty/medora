@@ -921,7 +921,8 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 
 .medora .welcome {
   background: radial-gradient(ellipse at 68% 24%, #eab5f748, transparent 60%), linear-gradient(147deg, var(--cover-shade), var(--cover-light));
-  padding-inline: max(1.25rem, env(safe-area-inset-right)) max(1.25rem, env(safe-area-inset-left));
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
 }
 .medora .welcome .intro-landscape { display: none; }
 .welcome-top { display: flex; align-items: center; justify-content: space-between; }
@@ -961,7 +962,10 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
   .medora #calendar-panel > section { margin-block: 0; }
 }
 @media (max-width: 360px) {
-  .medora .app-content { padding-inline: .7rem; }
+  .medora .app-content {
+    padding-left: max(.7rem, env(safe-area-inset-left));
+    padding-right: max(.7rem, env(safe-area-inset-right));
+  }
   .medora .today-story { padding-inline: .85rem; }
   .medora .story-copy h2 { font-size: 1.64rem; }
   .medora .dock button { font-size: .68rem; }

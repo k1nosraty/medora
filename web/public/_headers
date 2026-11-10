@@ -6,3 +6,5 @@
   Cache-Control: no-cache
 /medication/*
   Cache-Control: no-store
+/admin/*
+  Cache-Control: no-store

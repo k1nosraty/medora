@@ -19,12 +19,14 @@
     "bindings": [
       { "name": "PILOT", "class_name": "PushPilot" },
       { "name": "REMINDERS", "class_name": "MedicationReminders" },
-      { "name": "EMAIL_ACCOUNTS", "class_name": "EmailAccount" }
+      { "name": "EMAIL_ACCOUNTS", "class_name": "EmailAccount" },
+      { "name": "PROMOTIONS", "class_name": "Promotions" }
     ]
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["PushPilot"] },
     { "tag": "v2", "new_sqlite_classes": ["MedicationReminders"] },
-    { "tag": "v3", "new_sqlite_classes": ["EmailAccount"] }
+    { "tag": "v3", "new_sqlite_classes": ["EmailAccount"] },
+    { "tag": "v4", "new_sqlite_classes": ["Promotions"] }
   ]
 }

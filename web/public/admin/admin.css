@@ -1,0 +1,23 @@
+.admin { max-inline-size: 56rem; padding-block: clamp(1.25rem, 5vw, 3rem); }
+.admin-header, .admin-brand { display: flex; align-items: center; gap: .7rem; }
+.admin-header { justify-content: space-between; flex-wrap: wrap; border-block-end: 1px solid var(--outline); padding-block-end: .85rem; margin-block-end: 1.25rem; }
+.admin-brand { font-weight: 750; }
+.admin-brand img { border-radius: .75rem; }
+.admin a { color: var(--action); font-weight: 650; }
+.admin-grid { display: grid; gap: 1rem; align-items: start; }
+.medora .admin form { margin: 0; }
+.medora .admin fieldset { border: 0; padding: 0; margin: 0; }
+.admin legend { font-weight: 750; }
+.admin input:not([type="checkbox"]) { inline-size: 100%; }
+.medora .admin-toggle { display: flex; align-items: center; gap: .5rem; min-block-size: 2.75rem; }
+.admin-toggle input { inline-size: 1.15rem; min-block-size: 1.15rem; accent-color: var(--action); }
+.admin-preview { min-inline-size: 0; padding: 1rem; border: 1px solid var(--outline); border-radius: 1.2rem 1.2rem 1.2rem .45rem; background: var(--water); }
+.admin-preview h2 { overflow-wrap: anywhere; }
+.admin-preview .buttons { margin-block: .8rem; }
+.admin-preview-skip, .admin-preview-action { display: inline-block; padding: .45rem .8rem; border: 1px solid var(--outline); border-radius: .85rem; background: var(--field); }
+.admin-preview-action { border-color: var(--action); background: var(--action); color: var(--on-action); }
+#admin-status[data-error] { color: var(--error); }
+
+@media (min-width: 42rem) {
+  .admin-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+}

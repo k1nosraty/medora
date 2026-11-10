@@ -1,5 +1,5 @@
 import { language, t } from "./locale.js";
-const $ = id => document.getElementById(id);
+import { $, fitDialogToViewport } from "./dom.js";
 const errors = {
   email: t("نشانی ایمیل را بررسی کنید."),
   rate_limit: t("درخواست‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید."),
@@ -9,16 +9,20 @@ const errors = {
 };
 
 export function installAccount() {
+  const dialog = $("account-dialog");
+  const adminLink = $("open-admin");
+  const fit = fitDialogToViewport(dialog);
   let email = "";
   let challenge = "";
   let busy = false;
   const controls = [...$("account-dialog").querySelectorAll('button[type="submit"]'), $("email-change"), $("email-logout")];
 
-  function view(state, address = "") {
+  function view(state, account) {
     $("email-start").hidden = state !== "email";
     $("email-verify").hidden = state !== "code";
     $("account-session").hidden = state !== "signed-in";
-    $("account-address").textContent = address;
+    $("account-address").textContent = account?.email ?? "";
+    if (adminLink) adminLink.hidden = !account?.admin;
     $("account-dismiss").textContent = state === "signed-in" ? t("بازگشت به مدورا") : t("ادامه بدون ورود");
   }
   function status(text = "", error = false) {
@@ -53,12 +57,16 @@ export function installAccount() {
   }
 
   async function open() {
-    if (busy) return;
+    if (busy || dialog.open) return;
     view("loading");
-    $("account-dialog").showModal();
+    dialog.showModal();
+    fit();
     const data = await request("session");
-    if (data?.email) view("signed-in", data.email);
-    else if (data?.available) view(challenge ? "code" : "email");
+    if (data?.email) view("signed-in", data);
+    else if (data?.available) {
+      view(challenge ? "code" : "email");
+      if (dialog.open) $(challenge ? "account-code" : "account-email").focus();
+    }
     else if (data) status(errors.unavailable);
   }
   for (const button of document.querySelectorAll("[data-open-account]")) button.addEventListener("click", open);
@@ -83,7 +91,7 @@ export function installAccount() {
     $("email-verify").reset();
     $("email-start").reset();
     $("account-recipient").textContent = "";
-    view("signed-in", data.email);
+    view("signed-in", data);
     if ($("account-dialog").open) $("account-dismiss").focus();
   });
   $("email-change").addEventListener("click", () => {
@@ -98,4 +106,5 @@ export function installAccount() {
     status(t("از حساب خارج شدید."));
     if ($("account-dialog").open) $("account-email").focus();
   });
+  return open;
 }

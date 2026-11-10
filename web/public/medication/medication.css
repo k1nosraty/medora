@@ -103,7 +103,7 @@
 .medora .badge[data-status="skipped"] { color: var(--error); background: var(--error-bg); }
 .medora [data-warning="true"] { color: var(--warn); font-weight: 700; }
 .medora .app-status { min-block-size: 1.2rem; color: var(--muted); }
-.medora .dock { position: fixed; z-index: 2; inset-inline: max(.55rem, env(safe-area-inset-right)) max(.55rem, env(safe-area-inset-left)); inset-block-end: max(.45rem, env(safe-area-inset-bottom)); max-inline-size: 41rem; margin-inline: auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--outline); border-radius: 1.55rem; padding: .25rem; box-shadow: 0 .38rem 1.4rem var(--cast); }
+.medora .dock { position: fixed; z-index: 2; left: max(.55rem, env(safe-area-inset-left)); right: max(.55rem, env(safe-area-inset-right)); inset-block-end: max(.45rem, env(safe-area-inset-bottom)); max-inline-size: 41rem; margin-inline: auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--outline); border-radius: 1.55rem; padding: .25rem; box-shadow: 0 .38rem 1.4rem var(--cast); }
 .medora .dock button { background: transparent; border: 0; color: var(--ink); padding: .27rem .1rem; font-size: .8rem; line-height: 1.3; display: grid; place-items: center; gap: .2rem; overflow-wrap: anywhere; }
 .medora .fields, .medora .weekdays { display: flex; flex-wrap: wrap; align-items: end; gap: .55rem; margin-block: .6rem; }
 .medora .fields label { flex: 1 1 9rem; min-inline-size: 0; }
@@ -243,15 +243,22 @@
 .medora dialog { box-sizing: border-box; color: var(--ink); background: var(--page); padding: 0; max-inline-size: min(calc(100% - 1rem), 36rem); border: 0; border-radius: 1.5rem; }
 .medora dialog::backdrop { background: #131720ae; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .medora:has(dialog[open]) { overflow: hidden; }
-.medora dialog.sheet { inset-block: auto 0; margin: 0 auto; inline-size: min(100%, 36rem); max-inline-size: 100%; max-block-size: 93vh; max-block-size: 93dvh; border-radius: 1.65rem 1.65rem 0 0; padding-block: 1.55rem env(safe-area-inset-bottom); padding-inline: 1rem; }
+.medora dialog.sheet { inset-block: auto 0; margin: 0 auto; inline-size: min(100%, 36rem); max-inline-size: 100%; max-block-size: 93vh; max-block-size: 93dvh; border-radius: 1.65rem 1.65rem 0 0; padding-block: 1.55rem env(safe-area-inset-bottom); padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); overscroll-behavior: contain; }
 .sheet::before { content: ""; display: block; inline-size: 2rem; block-size: .2rem; border-radius: 1rem; margin: -.5rem auto .95rem; background: var(--muted); }
-.medora .settings-dialog {
+.medora .settings-dialog, .medora #account-dialog {
   position: fixed;
-  --settings-height: var(--settings-visible-height, 100dvh);
-  inset-block: calc(var(--settings-visible-top, 0px) + max(.5rem, (var(--settings-height) - 42rem) / 2)) auto;
+  --dialog-height: var(--visible-height, 100dvh);
+  --dialog-limit: 42rem;
+  inset-block: calc(var(--visible-top, 0px) + max(.5rem, (var(--dialog-height) - var(--dialog-limit)) / 2)) auto;
   margin: 0 auto;
   inline-size: min(calc(100% - 1rem), 31rem);
-  max-block-size: min(42rem, calc(var(--settings-height) - 1rem));
+  max-block-size: min(var(--dialog-limit), calc(var(--dialog-height) - 1rem));
+  border-radius: 1.5rem;
+}
+.medora #account-dialog {
+  --dialog-limit: 29rem;
+}
+.medora .settings-dialog {
   overflow: hidden;
 }
 .medora .settings-dialog[open] { display: flex; flex-direction: column; }
@@ -572,6 +579,18 @@
 .medora #account-dialog form { margin-block: .65rem; }
 .medora #account-dialog input { display: block; inline-size: 100%; margin-block-start: .25rem; }
 .medora #account-status[data-error] { color: var(--error); }
+.medora #open-admin, .medora .promotion-action {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 3rem;
+  border-radius: .9rem;
+  padding-inline: .8rem;
+  background: var(--action);
+  color: var(--on-action);
+  font-weight: 650;
+}
+.medora #promotion-title { overflow-wrap: anywhere; }
+.medora #promotion-description { white-space: pre-wrap; }
 .medora .intro-mark { color: var(--lime); }
 .medora .intro-landscape { opacity: .56; mix-blend-mode: luminosity; }
 
