@@ -1,7 +1,8 @@
 import { dayMs, localWall, timezone } from "./wall-clock.js";
 
-export const maxBackupBytes = 16 * 1024 * 1024;
-const headerSize = 36;
+import { decryptBackup } from "./backup-crypto.js";
+
+export { maxBackupBytes } from "./backup-crypto.js";
 const magic = new Uint8Array([77, 69, 68, 79, 82, 65, 0, 1]);
 const maxQuantity = 1_000_000_000;
 const clockPattern = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?$/;
@@ -151,24 +152,5 @@ function convertBackup(data, validatePhases, zone) {
 }
 
 export async function readAndroidBackup(bytes, password, validatePhases, zone) {
-  requireValue(bytes.length >= headerSize + 16 && bytes.length <= maxBackupBytes &&
-    magic.every((byte, index) => bytes[index] === byte) && password.length > 0 && password.length <= 128);
-  const encoded = new TextEncoder().encode(password);
-  let passwordKey;
-  try {
-    passwordKey = await crypto.subtle.importKey("raw", encoded, "PBKDF2", false, ["deriveKey"]);
-  } finally {
-    encoded.fill(0);
-  }
-  const key = await crypto.subtle.deriveKey({
-    name: "PBKDF2", salt: bytes.subarray(8, 24), iterations: 600_000, hash: "SHA-256"
-  }, passwordKey, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-  const plain = new Uint8Array(await crypto.subtle.decrypt({
-    name: "AES-GCM", iv: bytes.subarray(24, headerSize), additionalData: bytes.subarray(0, headerSize), tagLength: 128
-  }, key, bytes.subarray(headerSize)));
-  try {
-    return convertBackup(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(plain)), validatePhases, zone);
-  } finally {
-    plain.fill(0);
-  }
+  return convertBackup(await decryptBackup(bytes, password, magic), validatePhases, zone);
 }

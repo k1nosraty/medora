@@ -8,13 +8,14 @@ const require = createRequire(import.meta.url);
 const { Miniflare, Response, convertV4MiniflareOptions } = require("miniflare");
 const { build } = require("esbuild");
 
-test("registration consumes a single code and password login preserves admin authorization", async () => {
+test("registration, password recovery and account deletion preserve authorization", { timeout: 20_000 }, async () => {
   const { outputFiles } = await build({
     absWorkingDir: fileURLToPath(new URL("..", import.meta.url)),
     entryPoints: ["src/worker.mjs"], bundle: true, platform: "browser",
     format: "esm", external: ["cloudflare:workers", "node:crypto"], write: false
   });
   const deliveries = [];
+  let delivered;
   const mf = new Miniflare(convertV4MiniflareOptions({
     modules: true, script: outputFiles[0].text, compatibilityDate: "2026-10-29",
     compatibilityFlags: ["nodejs_compat"],
@@ -31,6 +32,7 @@ test("registration consumes a single code and password login preserves admin aut
     outboundService: async request => {
       assert.equal(request.url, "https://api.resend.com/emails");
       deliveries.push(await request.json());
+      delivered?.(deliveries.at(-1));
       return new Response(null, { status: 200 });
     }
   }));
@@ -195,6 +197,30 @@ test("registration consumes a single code and password login preserves admin aut
     const freshGrant = (await (await auth("confirm-email", freshProof)).json()).grant;
     assert.equal((await auth("register", { ...repeatedSignup, grant: freshGrant }, null, "192.0.2.31")).status, 200);
     assert.equal((await accounts(adminCookie, { body: deleted })).status, 409);
+
+    const legacyLogin = await login("legacy", password, "192.0.2.40");
+    const unknownReset = await auth("reset-code", { email: "unknown@example.com" }, null, "192.0.2.40");
+    assert.equal(unknownReset.status, 202);
+    const unknownChallenge = (await unknownReset.json()).challenge;
+    assert.equal((await auth("reset-password", { email: "unknown@example.com", challenge: unknownChallenge,
+      code: "000000", password }, null, "192.0.2.40")).status, 400);
+    const nextDelivery = new Promise(resolve => { delivered = resolve; });
+    const reset = await auth("reset-code", { email: legacyEmail, language: "en" }, null, "192.0.2.40");
+    assert.equal(reset.status, 202);
+    const { challenge: resetChallenge } = await reset.json();
+    const message = await nextDelivery;
+    assert.deepEqual(message.to, [legacyEmail]);
+    assert.equal(message.subject, "Reset your Medora password");
+    const nextPassword = "long new purple password";
+    const resetInput = { email: legacyEmail, challenge: resetChallenge, code: message.text.match(/\b\d{6}\b/)[0], password: nextPassword };
+    assert.equal((await auth("confirm-email", resetInput, null, "192.0.2.40")).status, 400);
+    assert.equal((await auth("reset-password", resetInput, null, "192.0.2.40", "https://other.test")).status, 403);
+    const resets = await Promise.all([auth("reset-password", resetInput, null, "192.0.2.40"),
+      auth("reset-password", resetInput, null, "192.0.2.40")]);
+    assert.deepEqual(resets.map(result => result.status).sort(), [200, 400]);
+    assert.equal((await (await auth("session", null, cookieOf(legacyLogin))).json()).email, null);
+    assert.equal((await login("legacy", password, "192.0.2.40")).status, 401);
+    assert.equal((await login("legacy", nextPassword, "192.0.2.40")).status, 200);
   } finally {
     await mf.dispose();
   }

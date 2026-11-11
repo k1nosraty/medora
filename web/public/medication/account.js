@@ -19,6 +19,8 @@ const screens = {
   email: ["email-start", "ساخت حساب مدورا", "مرحلهٔ ۱ از ۳ · نشانی ایمیل", "account-email"],
   code: ["email-verify", "تأیید ایمیل", "مرحلهٔ ۲ از ۳ · کد تأیید", "account-code"],
   setup: ["password-register", "نام کاربری و رمز", "مرحلهٔ ۳ از ۳ · مشخصات ورود", "register-username"],
+  resetEmail: ["reset-email-form", "بازیابی رمز عبور", "ایمیلی رو وارد کن که باهاش ثبت‌نام کردی.", "reset-email"],
+  resetCode: ["reset-password-form", "انتخاب رمز تازه", "کد ایمیل و رمز تازه‌ات رو وارد کن.", "reset-code"],
   session: ["account-session", "حساب مدورا", "به حساب مدورا وارد شده‌ای."],
   loading: [null, "حساب مدورا", ""]
 };
@@ -31,6 +33,9 @@ export function installAccount() {
   let email = "";
   let challenge = "";
   let grant = "";
+  let resetAddress = "";
+  let resetChallenge = "";
+  let resetSentAt = 0;
   let account;
   let registrationAvailable = false;
   let busy = false;
@@ -52,7 +57,7 @@ export function installAccount() {
     $("legacy-setup").hidden = !account || Boolean(account.username);
     $("open-admin").hidden = !account?.admin;
     $("account-dismiss").textContent = t(account ? "بازگشت به مدورا" : "ادامه بدون ورود");
-    $("account-local-note").hidden = Boolean(account) || next === "code" || next === "setup";
+    $("account-local-note").hidden = Boolean(account) || ["code", "setup", "resetEmail", "resetCode"].includes(next);
     if (dialog.open && focus) $(field ?? "account-dismiss").focus({ preventScroll: true });
   }
   function status(message = "", error = false) {
@@ -72,7 +77,7 @@ export function installAccount() {
       } : {});
       const data = await response.json();
       if (!response.ok) {
-        const message = data.error === "unavailable" && route === "register-code" ?
+        const message = data.error === "unavailable" && ["register-code", "reset-code"].includes(route) ?
           "ارسال کد تأیید فعلاً در دسترس نیست." : errors[data.error];
         status(message ?? "ارتباط برقرار نشد. دوباره تلاش کنید.", true);
         if (data.error === "setup_expired" && !account) {
@@ -118,7 +123,8 @@ export function installAccount() {
     else if (data?.available) {
       account = undefined;
       const pending = grant ? "setup" : challenge ? "code" : null;
-      view(pending ?? (registrationAvailable && previous === "email" ? "email" : "login"), false);
+      const reset = previous === "resetCode" && resetChallenge ? "resetCode" : previous === "resetEmail" ? "resetEmail" : null;
+      view(reset ?? pending ?? (registrationAvailable && previous === "email" ? "email" : "login"), false);
     } else {
       account = undefined;
       view("login", false);
@@ -152,6 +158,53 @@ export function installAccount() {
     view("email");
   });
   $("email-resend").addEventListener("click", () => void sendCode(email));
+  $("forgot-password").addEventListener("click", () => {
+    clearPasswords();
+    status();
+    view("resetEmail");
+  });
+  for (const button of dialog.querySelectorAll("[data-reset-back]")) button.addEventListener("click", () => {
+    clearPasswords();
+    $("reset-code").value = "";
+    status();
+    view("login");
+  });
+  $("reset-change-email").addEventListener("click", () => {
+    clearPasswords();
+    status();
+    view("resetEmail");
+  });
+
+  async function sendResetCode(address) {
+    if (address === resetAddress && Date.now() - resetSentAt < 60_000) {
+      view("resetCode");
+      status("برای ارسال دوباره یک دقیقه صبر کن.", true);
+      return;
+    }
+    const data = await request("reset-code", { email: address, language });
+    if (!data) return;
+    resetAddress = address;
+    resetChallenge = data.challenge;
+    resetSentAt = Date.now();
+    $("reset-code").value = "";
+    view("resetCode");
+  }
+  $("reset-email-form").addEventListener("submit", event => {
+    event.preventDefault();
+    void sendResetCode($("reset-email").value.trim().toLowerCase());
+  });
+  $("reset-resend").addEventListener("click", () => void sendResetCode(resetAddress));
+  $("reset-password-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const code = $("reset-code").value.replace(/[۰-۹٠-٩]/g, digit => String(digit.charCodeAt(0) & 15));
+    const data = await request("reset-password", { email: resetAddress, challenge: resetChallenge, code, password: $("reset-password").value });
+    if (!data) return;
+    clearPasswords();
+    resetAddress = resetChallenge = $("reset-code").value = $("reset-email").value = "";
+    resetSentAt = 0;
+    view("login");
+    status("رمز تازه ذخیره شد. حالا با نام کاربری و رمز تازه وارد شو.");
+  });
   $("email-verify").addEventListener("submit", async event => {
     event.preventDefault();
     const code = $("account-code").value.replace(/[۰-۹٠-٩]/g, digit => String(digit.charCodeAt(0) & 15));

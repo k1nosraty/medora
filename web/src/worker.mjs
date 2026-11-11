@@ -23,7 +23,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
-    if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url);
+    if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url, ctx);
     if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url);
     if (url.pathname === "/api/promotion" || url.pathname === "/api/admin/promotion") {
       return handlePromotions(request, env, ctx, url);

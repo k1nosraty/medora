@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { readAndroidBackup } from "../public/medication/android-backup.js";
+import { isWebBackup, readWebBackup, writeWebBackup } from "../public/medication/web-backup.js";
 import {
   WebPhase, WebSlot, validMedicationPhases, medicationSlots,
   quantityFromText, updateStock, isLowStock
@@ -130,7 +131,7 @@ test("appointment uses clinic timezone, combines offsets, and omits disabled or 
   assert.deepEqual(plan().appointments, []);
 });
 
-test("an Android-exported encrypted backup restores and rejects incorrect or damaged input", async () => {
+test("Android backups restore and web backups round-trip without account or device credentials", async () => {
   // Synthetic data exported by the app's Backups screen on the Android emulator.
   const file = new URL("../test/fixtures/android-medora-v1.medora", import.meta.url);
   const bytes = new Uint8Array(await readFile(file));
@@ -148,6 +149,23 @@ test("an Android-exported encrypted backup restores and rejects incorrect or dam
   const altered = bytes.slice();
   altered[altered.length - 1] ^= 1;
   await assert.rejects(restore(altered));
+
+  const date = day("2026-11-09");
+  const routine = { id: "reading", name: "Reading", category: "reading", start: date, mask: 127,
+    interval: 1, minute: 480, mode: "done", paused: false, reminder: true };
+  Object.assign(state, {
+    routines: { reading: routine },
+    routineLogs: { [date]: { reading: routineLog(routine, true) } },
+    accent: "lilac"
+  });
+  const password = "A separate backup passphrase";
+  const web = await writeWebBackup({ ...state, reminders: { token: "device-only" }, account: { email: "private@example.test" } }, password, validate);
+  assert.equal(isWebBackup(web), true);
+  assert.equal(isWebBackup(bytes), false);
+  assert.deepEqual(await readWebBackup(web, password, validate), state);
+  await assert.rejects(readWebBackup(web, "wrong password", validate));
+  web[web.length - 1] ^= 1;
+  await assert.rejects(readWebBackup(web, password, validate));
 });
 
 

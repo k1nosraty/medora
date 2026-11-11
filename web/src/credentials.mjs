@@ -29,6 +29,11 @@ export class Credentials extends DurableObject {
       username, emailId, salt).toArray().length > 0;
   }
 
+  replacePassword(emailId, salt, proof) {
+    return this.sql.exec("UPDATE credentials_v1 SET salt = ?, proof = ? WHERE email_id = ? RETURNING username",
+      salt, proof, emailId).toArray().length > 0;
+  }
+
   register(username, emailId, email, salt, proof) {
     const inserted = this.sql.exec(
       "INSERT OR IGNORE INTO credentials_v1 VALUES (?, ?, ?, ?, ?) RETURNING username",

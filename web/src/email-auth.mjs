@@ -12,7 +12,7 @@ const sessionPattern = /^([a-f0-9]{64})\.([a-f0-9]{64})\.([a-f0-9]{64})$/;
 const challengePattern = /^([a-f0-9-]{36})\.([a-f0-9]{64})$/;
 const grantPattern = /^(\d{13})(?:\.([a-f0-9]{32}))?\.([a-f0-9]{64})$/;
 const usernamePattern = /^[a-z0-9_]{3,32}$/;
-const authRoutes = ["register-code", "confirm-email", "register", "login", "logout"];
+const authRoutes = ["register-code", "confirm-email", "register", "login", "logout", "reset-code", "reset-password"];
 
 function hex(bytes) {
   return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, "0")).join("");
@@ -115,7 +115,7 @@ export async function handleAdminAccounts(request, env, url) {
   return removed ? reply({}) : reply({ error: "account_changed" }, 409);
 }
 
-export async function handleEmailAuth(request, env, url) {
+export async function handleEmailAuth(request, env, url, ctx) {
   const route = url.pathname.slice("/api/auth/".length);
   if (route === "session" && request.method === "GET") {
     const email = await signedInEmail(request, env);
@@ -165,6 +165,17 @@ export async function handleEmailAuth(request, env, url) {
   if (!email) return reply({ error: "email" }, 400);
   const secret = env.EMAIL_AUTH_SECRET;
   const id = await accountId(env, email);
+  const client = env.EMAIL_ACCOUNTS.getByName(id);
+  if (route === "reset-code") {
+    if (!canSendCode(env)) return reply({ error: "unavailable" }, 503);
+    const challenge = crypto.randomUUID();
+    // Return the same response before lookup and delivery for every address.
+    ctx.waitUntil((async () => {
+      if (await index.usernameFor(id)) await client.start(email, body.language === "en" ? "en" : "fa", challenge, true);
+    })());
+    const signature = await hmac(secret, "reset-challenge-v1", `${id}.${challenge}`);
+    return reply({ challenge: `${challenge}.${signature}` }, 202);
+  }
   if (route === "register-code") {
     if (!canSendCode(env)) return reply({ error: "unavailable" }, 503);
     const result = await index.usernameFor(id) ? { challenge: crypto.randomUUID() } :
@@ -175,11 +186,18 @@ export async function handleEmailAuth(request, env, url) {
   }
   const { code } = body;
   const match = typeof body.challenge === "string" && body.challenge.match(challengePattern);
+  const reset = route === "reset-password";
+  const purpose = reset ? "reset-challenge-v1" : "challenge-v1";
   if (typeof code !== "string" || !/^\d{6}$/.test(code) || !match ||
-      !equal(match[2], await hmac(secret, "challenge-v1", `${id}.${match[1]}`))) {
+      !equal(match[2], await hmac(secret, purpose, `${id}.${match[1]}`))) {
     return reply({ error: "invalid_code" }, 400);
   }
-  const grant = await env.EMAIL_ACCOUNTS.getByName(id).confirmCode(match[1], code);
+  if (reset) {
+    if (!validPassword(body.password)) return reply({ error: "password" }, 400);
+    if (!await client.resetPassword(id, match[1], code, body.password)) return reply({ error: "invalid_code" }, 400);
+    return reply({}, 200, cookie("", 0));
+  }
+  const grant = await client.confirmCode(match[1], code);
   if (!grant) return reply({ error: "invalid_code" }, 400);
   const value = grant.epoch ? `${grant.expires}.${grant.epoch}` : String(grant.expires);
   const signature = await hmac(secret, "enrollment-v1", `${id}.${value}`);
@@ -207,24 +225,25 @@ export class EmailAccount extends DurableObject {
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, sent INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS challenge (id TEXT PRIMARY KEY, proof TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS reset_challenge (id TEXT PRIMARY KEY, proof TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS password_attempts (id INTEGER PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS account_reset (id INTEGER PRIMARY KEY, epoch TEXT NOT NULL);
     `);
   }
 
-  async start(email, language) {
-    const id = crypto.randomUUID();
+  async start(email, language, id = crypto.randomUUID(), reset = false) {
+    const table = reset ? "reset_challenge" : "challenge";
     const code = randomCode();
-    const proof = await hmac(this.env.EMAIL_AUTH_SECRET, "code-v1", `${id}:${code}`);
+    const proof = await hmac(this.env.EMAIL_AUTH_SECRET, reset ? "reset-code-v1" : "code-v1", `${id}:${code}`);
     const now = Date.now();
     this.prune(now);
     const recent = this.sql.exec("SELECT sent FROM deliveries ORDER BY sent DESC").toArray();
     if (recent.length >= 5 || now - (recent[0]?.sent ?? 0) < minute) return { error: "rate_limit" };
     this.ctx.storage.transactionSync(() => {
       this.sql.exec("INSERT INTO deliveries VALUES (?, ?)", id, now);
-      this.sql.exec("DELETE FROM challenge");
-      this.sql.exec("INSERT INTO challenge (id, proof, expires) VALUES (?, ?, ?)", id, proof, now + 10 * minute);
+      this.sql.exec(`DELETE FROM ${table}`);
+      this.sql.exec(`INSERT INTO ${table} (id, proof, expires) VALUES (?, ?, ?)`, id, proof, now + 10 * minute);
     });
     await this.scheduleCleanup();
     try {
@@ -235,8 +254,11 @@ export class EmailAccount extends DurableObject {
         headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": id },
         body: JSON.stringify({
           from: this.env.EMAIL_FROM, to: [email],
-          subject: language === "en" ? "Verify your email for Medora" : "تأیید ایمیل برای مدورا",
-          text: language === "en"
+          subject: reset ? language === "en" ? "Reset your Medora password" : "بازیابی رمز مدورا" :
+            language === "en" ? "Verify your email for Medora" : "تأیید ایمیل برای مدورا",
+          text: reset ? (language === "en"
+            ? `Your Medora password reset code is ${code}.\nIt expires in 10 minutes. If you didn't request a password reset, ignore this email.`
+            : `کد بازیابی رمز مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر درخواست بازیابی نداده‌اید، این پیام را نادیده بگیرید.`) : language === "en"
             ? `Your Medora email verification code is ${code}.\nIt expires in 10 minutes. If you didn't request a code, you can ignore this email.`
             : `کد تأیید ایمیل شما در مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر شما درخواست کد نداده‌اید، این پیام را نادیده بگیرید.`
         })
@@ -246,21 +268,36 @@ export class EmailAccount extends DurableObject {
     } catch {
       // Treat delivery failures the same as a provider error.
     }
-    this.sql.exec("DELETE FROM challenge WHERE id = ?", id);
+    this.sql.exec(`DELETE FROM ${table} WHERE id = ?`, id);
     return { error: "delivery" };
   }
 
-  async confirmCode(challenge, code) {
-    const proof = await hmac(this.env.EMAIL_AUTH_SECRET, "code-v1", `${challenge}:${code}`);
-    const row = this.sql.exec("SELECT proof, attempts FROM challenge WHERE id = ? AND expires > ?", challenge, Date.now()).toArray()[0];
+  async takeCode(challenge, code, reset = false) {
+    const table = reset ? "reset_challenge" : "challenge";
+    const proof = await hmac(this.env.EMAIL_AUTH_SECRET, reset ? "reset-code-v1" : "code-v1", `${challenge}:${code}`);
+    const row = this.sql.exec(`SELECT proof, attempts FROM ${table} WHERE id = ? AND expires > ?`, challenge, Date.now()).toArray()[0];
     if (!row) return false;
     if (!equal(proof, row.proof)) {
-      if (row.attempts >= 4) this.sql.exec("DELETE FROM challenge WHERE id = ?", challenge);
-      else this.sql.exec("UPDATE challenge SET attempts = attempts + 1 WHERE id = ?", challenge);
+      if (row.attempts >= 4) this.sql.exec(`DELETE FROM ${table} WHERE id = ?`, challenge);
+      else this.sql.exec(`UPDATE ${table} SET attempts = attempts + 1 WHERE id = ?`, challenge);
       return false;
     }
-    this.sql.exec("DELETE FROM challenge WHERE id = ?", challenge);
-    return { expires: Date.now() + 10 * minute, epoch: this.epoch() };
+    this.sql.exec(`DELETE FROM ${table} WHERE id = ?`, challenge);
+    return reset || { expires: Date.now() + 10 * minute, epoch: this.epoch() };
+  }
+
+  confirmCode(challenge, code) {
+    return this.takeCode(challenge, code);
+  }
+
+  async resetPassword(id, challenge, code, password) {
+    return this.ctx.blockConcurrencyWhile(async () => {
+      if (!await this.takeCode(challenge, code, true)) return false;
+      const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+      const proof = await passwordProof(this.env.EMAIL_AUTH_SECRET, password, salt);
+      this.sql.exec("DELETE FROM sessions; DELETE FROM password_attempts; DELETE FROM reset_challenge;");
+      return credentials(this.env).replacePassword(id, salt, proof);
+    });
   }
 
   epoch() {
@@ -300,7 +337,7 @@ export class EmailAccount extends DurableObject {
       const record = await index.find(username);
       if (record?.email_id !== emailId || record.salt !== salt || isAdminEmail(record.email, this.env)) return false;
       this.ctx.storage.transactionSync(() => {
-        this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM deliveries; DELETE FROM password_attempts;");
+        this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM reset_challenge; DELETE FROM deliveries; DELETE FROM password_attempts;");
         this.sql.exec("INSERT OR REPLACE INTO account_reset VALUES (1, ?)", hex(crypto.getRandomValues(new Uint8Array(16))));
       });
       await this.ctx.storage.deleteAlarm();
@@ -332,11 +369,12 @@ export class EmailAccount extends DurableObject {
   prune(now) {
     this.sql.exec("DELETE FROM deliveries WHERE sent <= ?", now - day);
     this.sql.exec("DELETE FROM challenge WHERE expires <= ?", now);
+    this.sql.exec("DELETE FROM reset_challenge WHERE expires <= ?", now);
     this.sql.exec("DELETE FROM sessions WHERE expires <= ?", now);
   }
 
   async scheduleCleanup() {
-    const { next } = this.sql.exec("SELECT MIN(value) AS next FROM (SELECT sent + ? AS value FROM deliveries UNION ALL SELECT expires FROM challenge UNION ALL SELECT expires FROM sessions)", day).one();
+    const { next } = this.sql.exec("SELECT MIN(value) AS next FROM (SELECT sent + ? AS value FROM deliveries UNION ALL SELECT expires FROM challenge UNION ALL SELECT expires FROM reset_challenge UNION ALL SELECT expires FROM sessions)", day).one();
     if (next !== null) await this.ctx.storage.setAlarm(next);
   }
 

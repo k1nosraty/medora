@@ -930,6 +930,27 @@
           <button type="button" class="text-button" data-reveal-password="login-password">نمایش</button>
         </div>
         <button type="submit" class="block-action account-primary">ورود به مدورا</button>
+        <button type="button" class="text-button" id="forgot-password">رمز عبور را فراموش کرده‌ام</button>
+      </form>
+      <form id="reset-email-form" class="account-form" method="post" hidden>
+        <label>نشانی ایمیل<input id="reset-email" type="email" dir="ltr" autocomplete="email" maxlength="254" required></label>
+        <button type="submit" class="block-action account-primary">ارسال کد بازیابی</button>
+        <button type="button" class="text-button" data-reset-back>بازگشت به ورود</button>
+      </form>
+      <form id="reset-password-form" class="account-form" method="post" hidden>
+        <p class="quiet">اگر با این ایمیل حسابی داشته باشی، کد بازیابی به آن فرستاده می‌شود.</p>
+        <label>کد ۶ رقمی<input id="reset-code" dir="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9۰-۹٠-٩]{6}" required></label>
+        <div class="account-password">
+          <label>رمز عبور تازه<input id="reset-password" type="password" dir="auto" autocomplete="new-password" minlength="15" maxlength="128" required></label>
+          <button type="button" class="text-button" data-reveal-password="reset-password">نمایش</button>
+        </div>
+        <p class="quiet">حداقل ۱۵ نویسه. می‌تونی از یک عبارت طولانی استفاده کنی.</p>
+        <button type="submit" class="block-action account-primary">ذخیرهٔ رمز تازه</button>
+        <div class="account-options">
+          <button type="button" class="text-button" id="reset-change-email">تغییر ایمیل</button>
+          <button type="button" class="text-button" id="reset-resend">ارسال دوبارهٔ کد</button>
+        </div>
+        <button type="button" class="text-button" data-reset-back>بازگشت به ورود</button>
       </form>
       <form id="email-start" class="account-form" hidden>
         <label>نشانی ایمیل<input id="account-email" type="email" dir="ltr" autocomplete="email" maxlength="254" required></label>
@@ -1019,7 +1040,7 @@
           </button>
           <button type="button" class="settings-row" data-settings-panel="backup-settings">
             <span class="settings-icon"><svg aria-hidden="true"><use href="#i-lock"/></svg></span>
-            <span>بازیابی پشتیبان<small>فایل رمزدار اندروید</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+            <span>پشتیبان‌گیری<small>ساخت و بازیابی فایل رمزدار</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
           <button type="button" class="settings-row" data-open-account>
             <span class="settings-icon"><svg aria-hidden="true"><use href="#i-user"/></svg></span>
@@ -1111,7 +1132,18 @@
         </form>
       </section>
       <section id="backup-settings" class="settings-panel" hidden>
+        <form id="web-backup-export">
+          <h3>ساخت پشتیبان رمزدار</h3>
+          <p class="quiet">داروها، قرارها، روتین‌ها، آب و سوابق در یک فایل روی همین دستگاه رمزگذاری می‌شوند. رمز فایل را نگه دار تا بتوانی آن را بازیابی کنی.</p>
+          <label>رمز فایل<input id="web-backup-password" type="password" minlength="15" maxlength="128" autocomplete="new-password" spellcheck="false" required></label>
+          <label>تکرار رمز فایل<input id="web-backup-confirm" type="password" minlength="15" maxlength="128" autocomplete="new-password" spellcheck="false" required></label>
+          <p class="quiet">برای رمز فایل حداقل ۱۵ نویسه وارد کن.</p>
+          <button type="submit" class="block-action">ساخت فایل پشتیبان</button>
+          <p id="web-backup-status" class="settings-message" role="status"></p>
+          <a id="web-backup-download" class="block-action" hidden>دانلود فایل رمزدار</a>
+        </form>
         <form id="android-restore">
+          <h3>بازیابی از وب یا اندروید</h3>
           <p>فایل پشتیبان مدورا با پسوند <bdi>.medora</bdi> روی همین دستگاه باز می‌شود.</p>
           <label class="backup-file-picker">
             <span>انتخاب فایل پشتیبان</span>

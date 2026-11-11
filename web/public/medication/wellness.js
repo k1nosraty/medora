@@ -83,7 +83,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     "water-settings": [t("آب"), t("هدف روزانه و زمان یادآوری")],
     "snooze-settings": [t("تعویق یادآوری دارو"), t("مدت تعویق اعلان دارو")],
     "appointment-settings": [t("یادآوری قرارها"), t("زمان شروع و تکرار یادآوری")],
-    "backup-settings": [t("بازیابی پشتیبان"), t("فایل رمزدار اندروید")]
+    "backup-settings": [t("پشتیبان‌گیری"), t("ساخت و بازیابی فایل رمزدار")]
   };
   const settings = $("settings-dialog");
   const settingsLinks = [...settings.querySelectorAll("[data-settings-panel]")];
@@ -154,7 +154,10 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     }
   }
   function selectSettings(panel = "") {
-    if (settings.dataset.panel === "backup-settings" && panel !== "backup-settings") $("android-restore").reset();
+    if (settings.dataset.panel === "backup-settings" && panel !== "backup-settings") {
+      $("android-restore").reset();
+      $("web-backup-export").reset();
+    }
     settings.dataset.panel = panel;
     $("settings-mark").toggleAttribute("hidden", Boolean(panel));
     $("settings-back").hidden = !panel;
@@ -193,6 +196,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   });
   settings.addEventListener("close", () => {
     $("android-restore").reset();
+    $("web-backup-export").reset();
     clearTimeout(waterPauseTimer);
   });
   settings.addEventListener("input", () => settingsFeedback());

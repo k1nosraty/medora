@@ -377,6 +377,19 @@
   accent-color: var(--action);
 }
 #android-restore-status:empty { margin: 0; }
+.medora #backup-settings { display: grid; gap: .65rem; }
+.medora #backup-settings form { margin: 0; }
+.medora #backup-settings h3 { margin-block: 0 .3rem; }
+.medora #web-backup-download {
+  box-sizing: border-box;
+  padding: .55rem .75rem;
+  border: 1px solid var(--action);
+  border-radius: .9rem;
+  color: var(--action);
+  background: var(--dock-active);
+  text-align: center;
+  font-weight: 700;
+}
 .medora #android-restore-status[data-state="error"] { color: var(--error); }
 .medora #android-restore-status[data-state="success"] { color: var(--ok); }
 .medora [data-ink="gold"] { --pill-base: #f3c56a; }
