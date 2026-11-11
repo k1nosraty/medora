@@ -38,6 +38,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   let calendarSelection = today();
   let calendarMonth = calendarSelection;
   let reportSpan = 30;
+  let reportTimer;
   let calendar;
   let weekdayText;
   let shortDate;
@@ -807,6 +808,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   }
 
   function renderWellness(state, day, index) {
+    clearTimeout(reportTimer);
     setCalendar(state.calendar ?? defaultCalendar);
     applyDisplay(state);
     if (["today", "medications", "water", "routines"].includes(screen)) {
@@ -829,7 +831,10 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
         selectDay: day => { calendarSelection = day; render(); },
         renderDose, renderRoutine, visitCard: appointments.visitCard
       });
-      else renderReports(today(), goal, index, reportSpan, day => shortDate.format(day * dayMs));
+      else {
+        renderReports(today(), goal, index, reportSpan, day => shortDate.format(day * dayMs));
+        reportTimer = setTimeout(render, 60_000 - Date.now() % 60_000);
+      }
     }
   }
 

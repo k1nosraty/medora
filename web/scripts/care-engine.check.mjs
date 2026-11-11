@@ -10,7 +10,7 @@ import {
 import { nextMedicationReminder, nextCareReminder, validSchedule } from "../src/medication-schedule.mjs";
 import { scheduleForPush } from "../public/medication/care-plan.js";
 import { routineComplete, routineLog } from "../public/medication/routine-plan.js";
-import { createCareIndex } from "../public/medication/care-index.js";
+import { createCareIndex, doseTime } from "../public/medication/care-index.js";
 
 const day = iso => Date.parse(`${iso}T00:00:00Z`) / 86_400_000;
 const instant = iso => Date.parse(iso);
@@ -36,9 +36,30 @@ test("calendar index keeps exact-date plans and historical or removed doses visi
   assert.equal(index.dosesOn(start + 1)[0].imported, true);
   assert.equal(index.dosesOn(start + 2)[0].planned, 500);
   assert.deepEqual(index.dosesOn(start + 3), []);
-  assert.deepEqual(index.doseTotals(start, start + 3), { taken: 1, recorded: 1 });
+  assert.deepEqual(index.doseTotals(start, start + 3, doseTime(start + 3, 0)), { taken: 1, skipped: 0, unrecorded: 2 });
   assert.equal(index.waterTotal(start), 400);
   assert.equal(index.visitsOn(start + 1)[0].time, "08:00");
+});
+
+test("medication reports count due and resolved doses, excluding future and postponed doses", () => {
+  const date = day("2026-11-11");
+  const state = {
+    medicines: {
+      regular: { id: "regular", phases: [{ start: date, end: null, interval: 1, mask: 127,
+        slots: [480, 510, 540, 570, 660].map(minute => ({ minute, amount: 1000 })) }] }
+    },
+    doses: {
+      [`regular|${date}|480`]: { medicineId: "regular", day: date, minute: 480, status: "taken" },
+      [`regular|${date}|510`]: { medicineId: "regular", day: date, minute: 510, status: "skipped" },
+      [`regular|${date}|570`]: { medicineId: "regular", day: date, minute: 570, status: "snoozed", snoozeUntil: doseTime(date, 615) },
+      [`removed|${date - 1}|720`]: { medicineId: "removed", day: date - 1, minute: 720, status: "taken" }
+    }
+  };
+  const index = createCareIndex(state, { WebPhase, WebSlot, medicationSlots }, "Asia/Tehran");
+  assert.deepEqual(index.doseTotals(date - 1, date, doseTime(date, 600)), { taken: 2, skipped: 1, unrecorded: 1 });
+  assert.deepEqual(index.doseTotals(date, date, doseTime(date, 615)), { taken: 1, skipped: 1, unrecorded: 2 });
+  assert.deepEqual(index.doseTotals(date, date, doseTime(date, 660)), { taken: 1, skipped: 1, unrecorded: 3 });
+  assert.deepEqual(index.doseTotals(date + 1, date + 1, doseTime(date, 660)), { taken: 0, skipped: 0, unrecorded: 0 });
 });
 
 test("browser exports use the shared phase and stock rules", () => {

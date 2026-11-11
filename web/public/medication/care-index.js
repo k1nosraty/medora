@@ -57,8 +57,7 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
     return dose.imported || dose.status || !state.medicines[dose.medicineId];
   }
 
-  function dosesOn(day) {
-    if (scheduled.has(day)) return scheduled.get(day);
+  function collectDoses(day) {
     const doses = new Map();
     for (const plan of activePlans()) {
       const { medicine } = plan;
@@ -70,9 +69,12 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
     for (const [id, dose] of recordedOn(day)) {
       if (isRecorded(dose) || doses.has(id)) doses.set(id, dose);
     }
-    const ordered = [...doses.values()].sort((a, b) => a.minute - b.minute);
-    scheduled.set(day, ordered);
-    return ordered;
+    return [...doses.values()];
+  }
+
+  function dosesOn(day) {
+    if (!scheduled.has(day)) scheduled.set(day, collectDoses(day).sort((a, b) => a.minute - b.minute));
+    return scheduled.get(day);
   }
 
   function hasDoses(day) {
@@ -109,16 +111,21 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
     return waterTotals.get(day);
   }
 
-  function doseTotals(first, last) {
+  function doseTotals(first, last, now = Date.now()) {
     let taken = 0;
-    let recorded = 0;
+    let skipped = 0;
+    let unrecorded = 0;
     for (let day = first; day <= last; day++) {
-      for (const [, dose] of recordedOn(day)) {
+      for (const dose of scheduled.get(day) ?? collectDoses(day)) {
         if (dose.status === "taken") taken++;
-        if (dose.status === "taken" || dose.status === "skipped") recorded++;
+        else if (dose.status === "skipped") skipped++;
+        else {
+          const due = dose.status === "snoozed" && dose.snoozeUntil ? dose.snoozeUntil : doseTime(day, dose.minute);
+          if (due <= now) unrecorded++;
+        }
       }
     }
-    return { taken, recorded };
+    return { taken, skipped, unrecorded };
   }
 
   function routinesOn(day) {

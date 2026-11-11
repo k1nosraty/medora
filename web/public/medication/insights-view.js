@@ -2,6 +2,7 @@ import { listSeparator, locale, shortWeek, t, weekIndex } from "./locale.js";
 import { $, element } from "./dom.js";
 
 const numbers = new Intl.NumberFormat(locale);
+const percent = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 });
 
 export function renderCalendar(state, index, { day, start, today, formatMonth, formatDay, dateButton, selectDay, renderDose, renderRoutine, visitCard }) {
   const month = formatMonth(start);
@@ -42,21 +43,27 @@ export function renderReports(last, goal, index, reportSpan, formatShortDate) {
   const first = last - reportSpan + 1;
   const range = Array.from({ length: reportSpan }, (_, i) => index.waterTotal(first + i));
   const average = range.reduce((sum, amount) => sum + amount, 0) / reportSpan;
-  const { taken, recorded } = index.doseTotals(first, last);
+  const { taken, skipped, unrecorded } = index.doseTotals(first, last);
   $("report-dates").textContent = t("از {0} تا {1}", formatShortDate(first), formatShortDate(last));
   const formattedAverage = numbers.format(Math.round(average));
   $("report-water-number").textContent = formattedAverage;
   $("report-goal-label").textContent = t("هدف روزانهٔ آب، {0} میلی‌لیتر", numbers.format(goal));
   $("report-water-empty").hidden = range.some(amount => amount > 0);
-  const hasDoses = recorded > 0;
-  const ratio = hasDoses ? taken / recorded : 0;
-  $("report-dose-number").textContent = ratio.toLocaleString(locale, { style: "percent" });
+  const doses = taken + skipped + unrecorded;
+  const hasDoses = doses > 0;
+  const ratio = hasDoses ? taken / doses : 0;
+  $("report-dose-number").textContent = percent.format(Math.floor(taken * 1000 / (doses || 1)) / 1000);
   $("report-dose-number").hidden = !hasDoses;
   $("report-dose-progress").value = ratio;
   $("report-dose-progress").hidden = !hasDoses;
   $("report-doses").textContent = hasDoses
-    ? t("{0} از {1} نوبت ثبت‌شده، مصرف شد.", numbers.format(taken), numbers.format(recorded))
-    : t("هنوز مصرفی ثبت نشده است.");
+    ? t("{0} از {1} نوبت مصرف شد.", numbers.format(taken), numbers.format(doses))
+    : t("در این بازه نوبت موعدرسیده یا ثبت‌شده‌ای نیست.");
+  $("report-dose-breakdown").hidden = !hasDoses;
+  $("report-dose-breakdown").textContent = [
+    t("{0} مصرف‌نشده", numbers.format(skipped)),
+    t("{0} بدون ثبت", numbers.format(unrecorded))
+  ].join(" · ");
   const { completed, activeDays } = index.routineTotals(first, last);
   $("report-routine-number").textContent = numbers.format(completed);
   $("report-routine-number").hidden = !activeDays;
