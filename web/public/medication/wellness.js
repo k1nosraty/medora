@@ -36,7 +36,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   let weekSlide;
   let insight = "calendar";
   let calendarSelection = today();
-  let calendarMonth = calendarSelection;
+  let waterBack = "today";
   let reportSpan = 30;
   let reportTimer;
   let calendar;
@@ -47,6 +47,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   let dayText;
   let dayIndex;
   let fullDate;
+  const actionDay = () => screen === "insights" ? (insight === "calendar" ? calendarSelection : today()) : selectedDay();
 
   function setCalendar(next) {
     if (next === calendar) return;
@@ -213,12 +214,11 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       return;
     }
     if (!Object.hasOwn(titles, destination)) return;
-    if (destination === "water") $("day").value = iso(Math.min(selectedDay(), today()));
-    if (destination === "today" || destination === "medications") $("day").value = iso(selectedDates.get(destination) ?? today());
-    if (destination === "insights") {
-      calendarMonth = calendarSelection = today();
-      openInsight("calendar");
+    if (destination === "water") {
+      waterBack = screen === "insights" ? "insights" : "today";
+      $("day").value = iso(Math.min(actionDay(), today()));
     }
+    if (destination === "today" || destination === "medications") $("day").value = iso(selectedDates.get(destination) ?? today());
     screen = destination;
     const dayControls = $("day-controls");
     if (screen === "medications") $("med-day-title").after(dayControls);
@@ -243,7 +243,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     render();
     scrollTo(0, 0);
   }
-  $("screen-back").addEventListener("click", () => show("today"));
+  $("screen-back").addEventListener("click", () => show(screen === "water" ? waterBack : "today"));
   for (const button of document.querySelectorAll("[data-destination]")) {
     button.addEventListener("click", () => show(button.dataset.destination, button.hasAttribute("data-open-notifications")));
   }
@@ -349,7 +349,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     editingWater = entry?.id ?? null;
     $("water-dialog-title").textContent = entry ? t("ویرایش ثبت آب") : t("ثبت آب");
     $("water-amount").value = localDigits(entry?.amount ?? 250);
-    $("water-log-day").value = iso(entry?.day ?? selectedDay());
+    $("water-log-day").value = iso(entry?.day ?? actionDay());
     $("water-log-day").max = iso(today());
     $("water-log-time").value = entry?.time ?? localClock();
     $("water-error").textContent = "";
@@ -638,7 +638,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("delete-edited-visit").hidden = !visit;
     $("visit-form-title").textContent = visit ? t("ویرایش قرار") : t("قرار جدید");
     $("visit-name").value = visit?.name ?? "";
-    $("visit-day").value = iso(visit?.day ?? today());
+    $("visit-day").value = iso(visit?.day ?? (screen === "insights" ? actionDay() : today()));
     $("visit-time").value = visit?.time ?? localClock();
     $("visit-place").value = visit?.place ?? "";
     $("visit-note").value = visit?.note ?? "";
@@ -825,14 +825,16 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       } else renderWater(day, index, total, goal, progress);
     } else if (screen === "appointments") appointments.renderVisits(index);
     else if (screen === "insights") {
-      if (insight === "calendar") renderCalendar(state, index, {
-        day: calendarSelection, start: monthStart(calendarMonth), today: today(),
-        formatMonth: day => monthText.format(day * dayMs), formatDay, dateButton,
-        selectDay: day => { calendarSelection = day; render(); },
-        renderDose, renderRoutine, visitCard: appointments.visitCard
-      });
-      else {
-        renderReports(today(), goal, index, reportSpan, day => shortDate.format(day * dayMs));
+      if (insight === "calendar") {
+        const start = monthStart(calendarSelection);
+        renderCalendar(state, index, {
+          day: calendarSelection, start, end: monthStart(start + 32) - 1, today: today(),
+          formatMonth: day => monthText.format(day * dayMs), formatDay, dateButton, selectDay: selectCalendarDay,
+          renderDose, renderRoutine, visitCard: appointments.visitCard,
+          openWaterHistory: () => show("water"), addWater: () => openWater(null)
+        });
+      } else {
+        renderReports(today(), goal, index, reportSpan, day => shortDate.format(day * dayMs), formatDay, monthStart);
         reportTimer = setTimeout(render, 60_000 - Date.now() % 60_000);
       }
     }
@@ -857,14 +859,22 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   }
   chooseOption("insight", openInsight);
   chooseOption("report-range", value => { reportSpan = Number(value); });
+  function selectCalendarDay(day, focus = false) {
+    calendarSelection = day;
+    render();
+    if (focus) $("calendar-days").querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+  }
+  $("calendar-today").addEventListener("click", () => selectCalendarDay(today(), true));
   for (const [id, delta] of [["previous-month", -1], ["next-month", 32]]) {
     $(id).addEventListener("click", () => {
-      calendarMonth = monthStart(monthStart(calendarMonth) + delta);
-      render();
+      const oldStart = monthStart(calendarSelection);
+      const nextStart = monthStart(oldStart + delta);
+      const nextEnd = monthStart(nextStart + 32) - 1;
+      selectCalendarDay(Math.min(nextEnd, nextStart + calendarSelection - oldStart));
     });
   }
   return {
-    dayVisits: appointments.dayVisits, renderWellness, monthStart, chooseDay, show,
+    dayVisits: appointments.dayVisits, renderWellness, monthStart, chooseDay, show, actionDay,
     screen: () => screen,
     formatDay,
     formatMonth: day => monthText.format(day * dayMs),

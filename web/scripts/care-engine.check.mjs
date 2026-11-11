@@ -10,7 +10,7 @@ import {
 import { nextMedicationReminder, nextCareReminder, validSchedule } from "../src/medication-schedule.mjs";
 import { scheduleForPush } from "../public/medication/care-plan.js";
 import { routineComplete, routineLog } from "../public/medication/routine-plan.js";
-import { createCareIndex, doseTime } from "../public/medication/care-index.js";
+import { createCareIndex, doseTime, trackSchedule } from "../public/medication/care-index.js";
 
 const day = iso => Date.parse(`${iso}T00:00:00Z`) / 86_400_000;
 const instant = iso => Date.parse(iso);
@@ -60,6 +60,48 @@ test("medication reports count due and resolved doses, excluding future and post
   assert.deepEqual(index.doseTotals(date, date, doseTime(date, 615)), { taken: 1, skipped: 1, unrecorded: 2 });
   assert.deepEqual(index.doseTotals(date, date, doseTime(date, 660)), { taken: 1, skipped: 1, unrecorded: 3 });
   assert.deepEqual(index.doseTotals(date + 1, date + 1, doseTime(date, 660)), { taken: 0, skipped: 0, unrecorded: 0 });
+});
+
+test("schedule edits, pauses and deletion preserve due occurrences without inventing entries during pauses", async () => {
+  const first = day("2026-11-09");
+  const medicine = { id: "m", name: "Sample", unit: "tablet", stock: null,
+    phases: [{ start: first, end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 1000 }] }] };
+  const routine = { id: "r", name: "Walk", category: "walking", mode: "quantity", unit: "min",
+    target: 30, start: first, mask: 127, interval: 1, minute: 540 };
+  const state = {
+    medicines: { m: medicine }, doses: {}, water: [], visits: {
+      missed: { id: "missed", name: "Unlogged visit", day: first, time: "10:00" },
+      cancelled: { id: "cancelled", name: "Cancelled visit", day: first, time: "11:00", cancelled: true },
+      attended: { id: "attended", name: "Attended visit", day: first + 1, time: "08:00", completed: true },
+      later: { id: "later", name: "Upcoming visit", day: first + 3, time: "18:00" }
+    }, routines: { r: routine }, routineLogs: { [first]: { r: routineLog(routine, 10) } }
+  };
+  const set = (kind, plan, next, at) => {
+    trackSchedule(state, kind, plan, next, at);
+    if (next) state[kind][plan.id] = next;
+    else delete state[kind][plan.id];
+  };
+  const pause = { ...medicine, paused: true };
+  set("medicines", medicine, pause, doseTime(first + 1, 600));
+  const resumed = { ...medicine, phases: [{ ...medicine.phases[0], slots: [{ minute: 660, amount: 2000 }] }] };
+  set("medicines", pause, resumed, doseTime(first + 3, 600));
+  set("medicines", resumed, null, doseTime(first + 3, 720));
+  set("routines", routine, null, doseTime(first + 1, 600));
+  const index = createCareIndex(state, { WebPhase, WebSlot, medicationSlots }, "UTC", first + 3);
+  assert.deepEqual([0, 1, 2, 3, 4].map(offset => index.dosesOn(first + offset).map(dose => [dose.minute, dose.planned])),
+    [[[480, 1000]], [[480, 1000]], [], [[660, 2000]], []]);
+  assert.deepEqual(index.doseTotals(first, first + 3, doseTime(first + 3, 720)), { taken: 0, skipped: 0, unrecorded: 3 });
+  assert.deepEqual(index.routineTotals(first, first + 3), { completed: 0, partial: 1, unrecorded: 1, activeDays: 1 });
+  assert.equal(index.calendarRoutinesOn(first + 1)[0].historical, true);
+  assert.deepEqual(index.calendarRoutinesOn(first + 2), []);
+  const visitNow = new Date((first + 3) * 86_400_000 + 12 * 3_600_000).getTime();
+  assert.deepEqual(index.visitTotals(first, first + 3, visitNow), { attended: 1, unrecorded: 1, upcoming: 1, cancelled: 1 });
+  const password = "Schedule history backup password";
+  const validatePhases = phases => validMedicationPhases(phases.map(phase =>
+    new WebPhase(phase.start, phase.end, phase.interval, phase.mask, phase.slots.map(slot => new WebSlot(slot.minute, slot.amount)))));
+  const backup = await writeWebBackup(state, password, validatePhases);
+  const restored = await readWebBackup(backup, password, validatePhases);
+  assert.deepEqual(restored.scheduleHistory, state.scheduleHistory);
 });
 
 test("browser exports use the shared phase and stock rules", () => {

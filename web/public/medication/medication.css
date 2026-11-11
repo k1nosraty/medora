@@ -227,10 +227,8 @@
 .medora .calendar-dots .water { background: var(--water-ink); }
 .medora .calendar-dots .medicine { background: var(--medicine-ink); }
 .medora .calendar-dots .visit { background: var(--visit-ink); }
-.medora .report-chart { position: relative; display: flex; gap: .14rem; align-items: end; block-size: 10rem; margin-block: .65rem .25rem; border-block-end: 1px solid var(--water-ink); direction: ltr; }
+.medora .report-chart { position: relative; display: flex; gap: .14rem; align-items: end; border-block-end: 1px solid var(--water-ink); }
 .report-chart::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: var(--goal); border-block-start: 1px dashed currentColor; opacity: .4; }
-.report-chart > div { flex: 1; block-size: var(--bar); border-radius: .22rem .22rem 0 0; background: var(--water-ink); }
-.medora #report-chart-dates { direction: ltr; }
 .medora dialog { box-sizing: border-box; color: var(--ink); background: var(--page); padding: 0; max-inline-size: min(calc(100% - 1rem), 36rem); border: 0; border-radius: 1.5rem; }
 .medora dialog::backdrop { background: #131720ae; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .medora:has(dialog[open]) { overflow: hidden; }

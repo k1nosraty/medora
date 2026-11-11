@@ -43,6 +43,7 @@ function portable(state) {
   return {
     medicines: state.medicines, doses: state.doses, water: state.water ?? [], visits: state.visits ?? {},
     routines: state.routines ?? {}, routineLogs: state.routineLogs ?? {},
+    ...(Object.keys(state.scheduleHistory ?? {}).length ? { scheduleHistory: state.scheduleHistory } : {}),
     settings: Object.fromEntries(webBackupSettings.filter(key => state[key] !== undefined).map(key => [key, state[key]]))
   };
 }
@@ -53,7 +54,8 @@ function validMedicine(row, validatePhases) {
       phase.slots.every(slot => object(slot) && minute(slot.minute) && quantity(slot.amount))) &&
     validatePhases(row.phases) && optional(row.dates, dates => Array.isArray(dates) && dates.every(day)) &&
     (row.stock == null || Number.isSafeInteger(row.stock)) && optional(row.threshold, whole) &&
-    optional(row.effectiveFrom, instant) && optional(row.stockTrackedFrom, instant) && optional(row.revision, whole);
+    optional(row.effectiveFrom, instant) && optional(row.stockTrackedFrom, instant) && optional(row.revision, whole) &&
+    optional(row.scheduleFrom, instant);
 }
 
 function validRoutine(row) {
@@ -69,6 +71,21 @@ function validRoutine(row) {
   return row.mode === "done" && optional(row.done, flag);
 }
 
+function validRoutinePlan(row) {
+  return day(row.start) && integer(row.interval, 1, 4) && integer(row.mask, 1, 127) &&
+    optional(row.scheduleFrom, instant) && validRoutine(row);
+}
+
+function validHistory(history, validatePhases) {
+  return object(history) && Object.entries(history).every(([kind, versions]) =>
+    ["medicines", "routines"].includes(kind) && Array.isArray(versions) && versions.every(version => {
+      if (!object(version) || !object(version.plan) || !safeId(version.plan.id)) return false;
+      const medicine = kind === "medicines";
+      return instant(version.until) && (medicine ? validMedicine(version.plan, validatePhases) : validRoutinePlan(version.plan)) &&
+        (version.plan.scheduleFrom === undefined || version.plan.scheduleFrom < version.until);
+    }));
+}
+
 function validate(data, validatePhases) {
   if (!object(data) || !object(data.settings) || !Object.entries(data.settings).every(([key, value]) =>
     Object.hasOwn(settings, key) && settings[key](value)) ||
@@ -81,8 +98,8 @@ function validate(data, validatePhases) {
     !record(data.visits, (row, id) => row.id === id && text(row.name) && day(row.day) && clock(row.time) &&
       optional(row.zone, zone) && optional(row.offsets, offsets => Array.isArray(offsets) &&
         offsets.every(offset => integer(offset, 0, 43200)))) ||
-    !record(data.routines, (row, id) => row.id === id && day(row.start) && integer(row.interval, 1, 4) &&
-      integer(row.mask, 1, 127) && validRoutine(row)) ||
+    !record(data.routines, (row, id) => row.id === id && validRoutinePlan(row)) ||
+    !optional(data.scheduleHistory, history => validHistory(history, validatePhases)) ||
     !record(data.routineLogs, (rows, key) => String(Number(key)) === key && day(Number(key)) &&
       record(rows, validRoutine))) throw new Error("invalid_backup");
   const { settings: preferences, ...records } = portable({ ...data, ...data.settings });

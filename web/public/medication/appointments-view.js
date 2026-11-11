@@ -1,4 +1,4 @@
-import { localDigits, t } from "./locale.js";
+import { language, localDigits, t } from "./locale.js";
 import { isoDay } from "./care-index.js";
 import { $, button, dayCardOptions, element } from "./dom.js";
 
@@ -27,7 +27,8 @@ export function appointmentView({
 
   function visitCard(local, zone, actionable, variant = "compact") {
     const { visit } = local;
-    const compactDay = variant === "day";
+    const calendar = variant === "calendar";
+    const compactDay = variant === "day" || calendar;
     const dayCard = compactDay || variant === "day-featured";
     const card = element("article", "", "visit visit-card");
     const category = categoryOf(visit.category);
@@ -37,7 +38,7 @@ export function appointmentView({
       const banner = element("div", "", "visit-banner");
       if (dayCard) banner.classList.add("day-card-art");
       banner.append(visitIllustration(category));
-      if (dayCard) banner.append(element("span", t("قرار"), "day-card-kind"));
+      if (dayCard) banner.append(element("span", calendar && language === "en" ? "Visit" : t("قرار"), "day-card-kind"));
       if (variant === "next") {
         card.classList.add("visit-featured");
         banner.append(element("span", t("نزدیک‌ترین قرار"), "visit-eyebrow"));
@@ -71,8 +72,12 @@ export function appointmentView({
     if (visit.place) details.append(element("p", t("مکان: {0}", visit.place), "quiet"));
     if (visit.cancelled) details.append(element("p", t("قرار لغو شده"), "badge"));
     else if (visit.completed) details.append(element("p", t("حضور ثبت شد"), "badge visit-attended"));
-    if (visit.note) details.append(element("p", visit.note));
-    if (visit.contact) details.append(element("p", t("تماس: {0}", visit.contact), "quiet"));
+    else if (calendar) details.append(element("p", t(local.instant > Date.now() ? "برنامه‌ریزی‌شده" : "بدون ثبت حضور"), "badge"));
+    const notes = [
+      ...(visit.note ? [element("p", visit.note)] : []),
+      ...(visit.contact ? [element("p", t("تماس: {0}", visit.contact), "quiet")] : [])
+    ];
+    if (!calendar) details.append(...notes);
     if (details !== card) card.append(details);
     if (actionable) {
       const controls = element("div", "", dayCard ? "day-card-actions" : "buttons");
@@ -107,7 +112,7 @@ export function appointmentView({
       remove.className = "text-button danger-link";
       if (compactDay) {
         const actions = attendance && visit.completed ? [attendance, edit, cancel, remove] : [edit, cancel, remove];
-        controls.append(dayCardOptions(t("گزینه‌های قرار"), ...actions));
+        controls.append(dayCardOptions(t("گزینه‌های قرار"), ...(calendar ? notes : []), ...actions));
         if (attendance && !visit.completed) controls.append(attendance);
         card.append(controls);
       } else if (dayCard) {

@@ -549,17 +549,17 @@
       </div>
       <div data-screen="insights" hidden>
         <div class="insights-tabs glass-toolbar" role="group" aria-label="نمای گزارش و تقویم">
-          <button type="button" data-insight="calendar" aria-pressed="true"><svg aria-hidden="true"><use href="#i-calendar"/></svg>تقویم</button>
-          <button type="button" data-insight="reports" aria-pressed="false"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش‌ها</button>
+          <button type="button" data-insight="calendar" aria-controls="calendar-panel" aria-pressed="true"><svg aria-hidden="true"><use href="#i-calendar"/></svg>تقویم</button>
+          <button type="button" data-insight="reports" aria-controls="reports-panel" aria-pressed="false"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش‌ها</button>
         </div>
         <div id="calendar-panel">
           <section class="feature calendar-card" aria-labelledby="calendar-month">
             <div class="feature-head calendar-head">
               <button type="button" id="previous-month" class="icon-button" aria-label="ماه قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
-              <h2 id="calendar-month"></h2>
+              <h2 id="calendar-month" aria-live="polite"></h2>
               <button type="button" id="next-month" class="icon-button reverse" aria-label="ماه بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
             </div>
-            <div id="calendar-days" class="calendar-grid"></div>
+            <div id="calendar-days" class="calendar-grid" role="group" aria-labelledby="calendar-month"></div>
             <ul class="calendar-key" aria-label="راهنمای تقویم">
               <li><span class="calendar-dots" aria-hidden="true"><i class="medicine"></i></span>دارو</li>
               <li><span class="calendar-dots" aria-hidden="true"><i class="water"></i></span>آب</li>
@@ -567,26 +567,38 @@
               <li><span class="calendar-dots" aria-hidden="true"><i class="routine"></i></span>روتین</li>
             </ul>
           </section>
-          <section id="calendar-activity"></section>
+          <section id="calendar-activity" aria-labelledby="calendar-date">
+            <header class="calendar-agenda-head">
+              <div><h2 id="calendar-date" aria-live="polite"></h2><p id="calendar-agenda-label"></p></div>
+              <button type="button" id="calendar-today" class="secondary" hidden>بازگشت به امروز</button>
+            </header>
+            <div id="calendar-entries"></div>
+          </section>
         </div>
         <div id="reports-panel" hidden>
           <div id="report-range" class="segmented glass-toolbar" role="group" aria-label="بازهٔ گزارش">
-            <button type="button" data-report-range="7" aria-pressed="false">هفته</button>
-            <button type="button" data-report-range="30" aria-pressed="true">ماه</button>
-            <button type="button" data-report-range="365" aria-pressed="false">سال</button>
+            <button type="button" data-report-range="7" aria-pressed="false">۷ روز</button>
+            <button type="button" data-report-range="30" aria-pressed="true">۳۰ روز</button>
+            <button type="button" data-report-range="365" aria-pressed="false">۳۶۵ روز</button>
           </div>
           <p id="report-dates" class="quiet"></p>
           <div class="report-cards">
             <section class="feature water report-card" aria-labelledby="report-water-title">
               <div class="report-card-heading"><h2 id="report-water-title">مصرف آب</h2><svg aria-hidden="true"><use href="#i-water"/></svg></div>
-              <p id="report-average">میانگین روزانه</p>
-              <div class="report-number"><strong id="report-water-number"></strong> <span>میلی‌لیتر</span></div>
-              <div class="report-plot">
-                <div id="report-chart" class="report-chart" role="img"></div>
-                <p id="report-water-empty" class="report-empty" hidden>در این بازه آبی ثبت نشده است.</p>
+              <p id="report-average">میانگین در روزهای دارای ثبت</p>
+              <div class="report-number" id="report-water-value"><strong id="report-water-number"></strong> <span>میلی‌لیتر</span></div>
+              <p id="report-water-coverage" class="quiet"></p>
+              <p id="report-water-empty" hidden>در این بازه آبی ثبت نشده است.</p>
+              <div id="report-water-trend">
+                <div id="report-chart" class="report-chart" role="group" aria-label="نمودار مصرف آب"></div>
+                <div id="report-chart-dates" class="feature-head quiet"></div>
+                <p class="report-goal"><span aria-hidden="true"></span><span id="report-goal-label"></span></p>
+                <div class="report-chart-controls">
+                  <button type="button" id="report-chart-previous" class="secondary icon-button" aria-label="بازهٔ قبلی نمودار"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+                  <p id="report-chart-selection" class="quiet" aria-live="polite"></p>
+                  <button type="button" id="report-chart-next" class="secondary icon-button reverse" aria-label="بازهٔ بعدی نمودار"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+                </div>
               </div>
-              <div id="report-chart-dates" class="feature-head quiet"></div>
-              <p class="report-goal"><span aria-hidden="true"></span><span id="report-goal-label"></span></p>
             </section>
             <section class="feature medicine report-card" aria-labelledby="report-dose-title">
               <div class="report-card-heading"><h2 id="report-dose-title">مصرف دارو</h2><svg aria-hidden="true"><use href="#i-pill"/></svg></div>
@@ -599,6 +611,13 @@
               <div class="report-card-heading"><h2 id="report-routine-title">روتین‌ها</h2><svg aria-hidden="true"><use href="/medication/routine-icons.svg#custom"/></svg></div>
               <div id="report-routine-number" class="report-number" hidden></div>
               <p id="report-routines"></p>
+              <p id="report-routine-breakdown" class="quiet" hidden></p>
+            </section>
+            <section class="feature visit report-card" aria-labelledby="report-visit-title">
+              <div class="report-card-heading"><h2 id="report-visit-title">قرارها</h2><svg aria-hidden="true"><use href="#i-calendar"/></svg></div>
+              <div id="report-visit-number" class="report-number" hidden></div>
+              <p id="report-visits"></p>
+              <p id="report-visit-breakdown" class="quiet" hidden></p>
             </section>
           </div>
         </div>

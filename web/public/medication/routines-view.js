@@ -1,7 +1,7 @@
 import { appearanceColors } from "./medication-art.js";
 import { language, listSeparator, localDigits, t } from "./locale.js";
 import { $, button, dayCardOptions, element, fitDialogToViewport } from "./dom.js";
-import { isoDay, timeText } from "./care-index.js";
+import { doseTime, isoDay, timeText, trackSchedule } from "./care-index.js";
 import { clockMinute } from "./care-plan.js";
 import { dayMs } from "./wall-clock.js";
 import { routineCategories, routineLabels } from "./routine-catalog.js";
@@ -257,6 +257,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
         const routines = state.routines ??= {};
         if (previous) ensureCurrent(state, previous);
         else if (Object.keys(routines).length >= maxRoutines) throw new Error(t("حداکثر {0} روتین می‌توانید داشته باشید.", localDigits(maxRoutines)));
+        trackSchedule(state, "routines", routines[plan.id], plan, Date.now());
         routines[plan.id] = plan;
       }, t("روتین ذخیره شد."), plan.reminder || Boolean(previous?.reminder), today());
       if (ok) editor.close();
@@ -275,8 +276,9 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       const ok = await mutate(state => {
         ensureCurrent(state, plan);
         const current = state.routines[plan.id];
-        current.paused = !current.paused;
-        current.revision += 1;
+        const next = { ...current, paused: !current.paused, revision: current.revision + 1 };
+        trackSchedule(state, "routines", current, next, Date.now());
+        state.routines[plan.id] = next;
       }, plan.paused ? t("روتین از سر گرفته شد.") : t("روتین موقتاً متوقف شد."), plan.reminder, today());
       if (ok) editor.close();
       else fields("editor-status").textContent = $("status").textContent;
@@ -290,7 +292,11 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     if (!plan) return;
     requestDeletion({
       title: t("حذف روتین"), message: t("روتین «{0}» حذف شود؟ سوابق آن حفظ می‌شوند.", plan.name),
-      change: state => { ensureCurrent(state, plan); delete state.routines[plan.id]; },
+      change: state => {
+        ensureCurrent(state, plan);
+        trackSchedule(state, "routines", state.routines[plan.id], null, Date.now());
+        delete state.routines[plan.id];
+      },
       success: t("روتین حذف شد."), parent: editor.id
     });
   });
@@ -389,7 +395,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     control?.focus({ preventScroll: true });
   }
 
-  function card(entry, day, { manage = false, readOnly = false, dayCard = false, featured = false, summaryOnly = false } = {}) {
+  function card(entry, day, { manage = false, readOnly = false, dayCard = false, featured = false, summaryOnly = false, calendar = false } = {}) {
     const compactDay = dayCard && !featured;
     const row = element("article", "", dayCard ? "day-card routine-day-card" : "routine-row");
     if (!summaryOnly) row.dataset.routineId = entry.id;
@@ -418,6 +424,12 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     if (entry.minute !== null) detail.push(localDigits(timeText(entry.minute)));
     copy.append(name, element("small", detail.join(" · ")));
     if (dayCard && completed) copy.append(element("small", t("انجام شد"), "routine-row-state"));
+    else if (calendar) {
+      const hasLog = Object.hasOwn(state.routineLogs[day] ?? {}, entry.id);
+      const status = hasLog ? "نیمه‌تمام" : day < today() ||
+        (isToday && entry.minute != null && doseTime(day, entry.minute) <= Date.now()) ? "بدون ثبت" : "برنامه‌ریزی‌شده";
+      copy.append(element("p", t(status), "badge"));
+    }
     row.append(art, copy);
     if (summaryOnly) return row;
     const footer = dayCard ? element("div", "", "day-card-actions") : row;

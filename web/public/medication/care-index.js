@@ -1,11 +1,27 @@
 import { dayMs, timezone, localWall } from "./wall-clock.js";
-import { routineComplete, routineEntriesOn } from "./routine-plan.js";
+import { routineComplete, routineEntriesOn, routineOccurs } from "./routine-plan.js";
 import { visitInstant } from "./care-plan.js";
 
 export const isoDay = day => new Date(day * dayMs).toISOString().slice(0, 10);
 export const timeText = minute => [Math.floor(minute / 60), minute % 60].map(part => String(part).padStart(2, "0")).join(":");
 export const doseId = (medicine, day, minute) => `${medicine.id}|${day}|${minute}`;
 export const doseTime = (day, minute) => new Date(`${isoDay(day)}T${timeText(minute)}:00`).getTime();
+
+export function trackSchedule(state, kind, previous, next, at) {
+  if (!previous) return;
+  const fields = kind === "medicines" ? ["phases", "dates", "paused"] :
+    ["start", "mask", "interval", "minute", "mode", "target", "unit", "steps", "paused"];
+  if (next && fields.every(field => JSON.stringify(previous[field]) === JSON.stringify(next[field]))) {
+    if (previous.scheduleFrom !== undefined) next.scheduleFrom = previous.scheduleFrom;
+    return;
+  }
+  if (!previous.paused && (previous.scheduleFrom ?? -Infinity) < at) {
+    const history = (state.scheduleHistory ??= {});
+    const versions = (history[kind] ??= []);
+    versions.push({ until: at, plan: { ...previous } });
+  }
+  if (next) next.scheduleFrom = at;
+}
 
 export function compilePhases(engine, phases) {
   return phases.map(phase => new engine.WebPhase(
@@ -33,7 +49,9 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
   let waterTotals;
   const scheduled = new Map();
   const routineDays = new Map();
+  const routineCalendar = new Map();
   const plans = Object.values(state.routines ?? {});
+  let previousMedicines;
 
   function recordedOn(day) {
     recorded ??= groupByDay(Object.entries(state.doses), ([, dose]) => dose.day);
@@ -41,16 +59,23 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
   }
 
   function activePlans() {
-    return active ??= Object.values(state.medicines).filter(medicine => !medicine.paused).map(medicine => ({
-      medicine, phases: compilePhases(engine, medicine.phases),
-      dates: medicine.dates?.length ? new Set(medicine.dates) : null
-    }));
+    return active ??= Object.values(state.medicines).filter(medicine => !medicine.paused).map(medicine => compilePlan(medicine));
   }
 
-  function slotsOn({ medicine, phases, dates }, day) {
+  function compilePlan(medicine, until) {
+    return { medicine, until, phases: compilePhases(engine, medicine.phases),
+      dates: medicine.dates?.length ? new Set(medicine.dates) : null };
+  }
+
+  function slotsOn({ medicine, phases, dates, until }, day) {
     if (dates && !dates.has(day)) return [];
+    const from = Math.max(medicine.effectiveFrom ?? 0, medicine.scheduleFrom ?? 0);
+    if ((until !== undefined && doseTime(day, 0) >= until) || (from && doseTime(day, 1439) < from)) return [];
     const slots = engine.medicationSlots(phases, day);
-    return medicine.effectiveFrom ? slots.filter(slot => doseTime(day, slot.minuteOfDay) >= medicine.effectiveFrom) : slots;
+    return from || until !== undefined ? slots.filter(slot => {
+      const at = doseTime(day, slot.minuteOfDay);
+      return (!from || at >= from) && (until === undefined || at < until);
+    }) : slots;
   }
 
   function isRecorded(dose) {
@@ -59,15 +84,22 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
 
   function collectDoses(day) {
     const doses = new Map();
-    for (const plan of activePlans()) {
-      const { medicine } = plan;
+    function addSlots(plan) {
+      const { medicine, until } = plan;
       for (const slot of slotsOn(plan, day)) {
         doses.set(doseId(medicine, day, slot.minuteOfDay),
-          { medicineId: medicine.id, day, minute: slot.minuteOfDay, planned: slot.milliUnits });
+          { medicineId: medicine.id, day, minute: slot.minuteOfDay, planned: slot.milliUnits,
+            ...(until === undefined ? {} : { historyPlan: medicine }) });
       }
     }
+    previousMedicines ??= (state.scheduleHistory?.medicines ?? []).map(({ plan, until }) => compilePlan(plan, until));
+    for (const plan of previousMedicines) addSlots(plan);
+    for (const plan of activePlans()) addSlots(plan);
     for (const [id, dose] of recordedOn(day)) {
-      if (isRecorded(dose) || doses.has(id)) doses.set(id, dose);
+      if (isRecorded(dose) || doses.has(id)) {
+        const historyPlan = doses.get(id)?.historyPlan;
+        doses.set(id, historyPlan ? { ...dose, historyPlan } : dose);
+      }
     }
     return [...doses.values()];
   }
@@ -78,9 +110,7 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
   }
 
   function hasDoses(day) {
-    if (scheduled.has(day)) return scheduled.get(day).length > 0;
-    return recordedOn(day).some(([, dose]) => isRecorded(dose)) ||
-      activePlans().some(plan => slotsOn(plan, day).length > 0);
+    return (scheduled.get(day)?.length ?? collectDoses(day).length) > 0;
   }
 
   function allVisits() {
@@ -135,17 +165,49 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
     return routineDays.get(day);
   }
 
-  function routineTotals(first, last) {
-    let completed = 0;
-    let activeDays = 0;
-    for (let day = first; day <= last; day++) {
-      const entries = Object.values(state.routineLogs?.[day] ?? {});
-      if (!entries.length) continue;
-      activeDays++;
-      completed += entries.filter(routineComplete).length;
+  function calendarRoutinesOn(day) {
+    if (routineCalendar.has(day)) return routineCalendar.get(day);
+    const entries = new Map();
+    const scheduledAt = plan => doseTime(day, plan.minute ?? 1439);
+    for (const { plan, until } of state.scheduleHistory?.routines ?? []) {
+      if (routineOccurs(plan, day) && scheduledAt(plan) < until && scheduledAt(plan) >= (plan.scheduleFrom ?? -Infinity)) {
+        entries.set(plan.id, { ...plan, historical: true });
+      }
     }
-    return { completed, activeDays };
+    for (const plan of plans) {
+      if (routineOccurs(plan, day) && (!plan.scheduleFrom || scheduledAt(plan) >= plan.scheduleFrom)) entries.set(plan.id, plan);
+    }
+    for (const [id, entry] of Object.entries(state.routineLogs?.[day] ?? {})) entries.set(id, { ...entry, id });
+    const result = [...entries.values()];
+    routineCalendar.set(day, result);
+    return result;
   }
 
-  return { zone, routinesOn, routineTotals, dosesOn, hasDoses, allVisits, visitsOn, waterOn, waterTotal, doseTotals };
+  function routineTotals(first, last, now = Date.now()) {
+    let completed = 0;
+    let partial = 0;
+    let scheduled = 0;
+    let activeDays = 0;
+    for (let day = first; day <= last; day++) {
+      const logs = state.routineLogs?.[day] ?? {};
+      if (Object.keys(logs).length) activeDays++;
+      for (const entry of calendarRoutinesOn(day)) {
+        if (routineComplete(entry)) completed++;
+        else if (Object.hasOwn(logs, entry.id)) partial++;
+        else if (day < today || (entry.minute != null && doseTime(day, entry.minute) <= now)) scheduled++;
+      }
+    }
+    return { completed, partial, unrecorded: scheduled, activeDays };
+  }
+
+  function visitTotals(first, last, now = Date.now()) {
+    const totals = { attended: 0, unrecorded: 0, upcoming: 0, cancelled: 0 };
+    for (const { visit, day, instant } of allVisits()) {
+      if (day < first || day > last) continue;
+      totals[visit.cancelled ? "cancelled" : visit.completed ? "attended" : instant <= now ? "unrecorded" : "upcoming"]++;
+    }
+    return totals;
+  }
+
+  return { zone, routinesOn, calendarRoutinesOn, routineTotals, dosesOn, hasDoses, allVisits, visitsOn, visitTotals, waterOn, waterTotal, doseTotals };
 }

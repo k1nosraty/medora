@@ -123,6 +123,7 @@ export function installBackupRestore(mutate, validatePhases) {
         changeReminderRevision(state);
         if (state.reminders) state.reminders.enabled = false;
         if (web) for (const key of webBackupSettings) delete state[key];
+        delete state.scheduleHistory;
         Object.assign(state, backup);
       }, t("سوابق بازیابی شدند."), true);
       if (!isCurrent()) return;

@@ -196,7 +196,6 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 .medora #routine-log-dialog .sheet-body:not(:has(> :not([hidden], :empty))) { display: none; }
 .medora .calendar-dots .routine { background: var(--routine-mark); }
 @media (min-width: 42rem) {
-  .medora .report-cards .water { grid-row: span 2; }
   .medora .program-card { padding: 1.05rem .85rem; }
   .medora .program-card svg { inset-block-start: .35rem; inline-size: 3.45rem; block-size: 3.45rem; }
 }
