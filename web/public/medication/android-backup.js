@@ -5,7 +5,8 @@ const headerSize = 36;
 const magic = new Uint8Array([77, 69, 68, 79, 82, 65, 0, 1]);
 const maxQuantity = 1_000_000_000;
 const clockPattern = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?$/;
-const icons = { TABLET: "tablet", CAPSULE: "capsule", SYRUP: "syrup", AMPOULE: "injection", OINTMENT: "ointment", DROPS: "drops", SPRAY: "spray" };
+const icons = { TABLET: "tablet", CAPSULE: "capsule", SYRUP: "syrup", AMPOULE: "injection",
+  OINTMENT: "ointment", DROPS: "drops", SPRAY: "spray", SACHET: "sachet", POWDER: "powder" };
 const colors = { ORANGE: "gold", TEAL: "green", BLUE: "blue", LAVENDER: "purple", ROSE: "rose", SLATE: "slate" };
 const statuses = { PENDING: null, TAKEN: "taken", SNOOZED: null, SKIPPED: "skipped" };
 const medicineLook = row => ({

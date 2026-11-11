@@ -966,7 +966,12 @@ const routines = installRoutines({
   getState: () => care, today, mutate, render, requestDeletion, formatDay: dashboard.formatDay,
   refreshFields: pickers.refresh
 });
-const updateAppearance = installAppearance();
+const defaultUnit = shape => shape === "sachet" ? t("ساشه") : shape === "powder" ? "" : t("قرص");
+const updateAppearance = installAppearance((previous, shape) => {
+  if (editing || $("unit").value !== defaultUnit(previous)) return;
+  $("unit").value = defaultUnit(shape);
+  updateDoseUnits();
+});
 const openAccount = installAccount();
 const params = new URLSearchParams(location.search);
 const view = params.get("view");

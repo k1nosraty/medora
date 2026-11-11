@@ -53,6 +53,15 @@ test("registration consumes a single code and password login preserves admin aut
     },
     body: body ? JSON.stringify(body) : undefined
   });
+  const accounts = (cookie, { query = "", body, requestOrigin = origin } = {}) =>
+    mf.dispatchFetch(`${origin}/api/admin/accounts?${query}`, {
+      method: body ? "DELETE" : "GET",
+      headers: {
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...(body ? { Origin: requestOrigin, "Content-Type": "application/json" } : {})
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
   const publicPromotion = async () => (await (await mf.dispatchFetch(`${origin}/api/promotion`)).json()).promotion;
   const cookieOf = response => response.headers.get("Set-Cookie").split(";")[0];
   const password = "river globe purple coat";
@@ -159,6 +168,33 @@ test("registration consumes a single code and password login preserves admin aut
     }
     assert.equal((await login("second_user", password, "192.0.2.30")).status, 429);
     assert.equal(deliveries.length, 2);
+
+    const adminCookie = cookieOf(loggedIn);
+    const userCookie = cookieOf(nonAdmin);
+    assert.equal((await accounts()).status, 401);
+    assert.equal((await accounts(userCookie)).status, 403);
+    const listed = await accounts(adminCookie);
+    assert.equal(listed.headers.get("Cache-Control"), "no-store");
+    const { users } = await listed.json();
+    assert.deepEqual(users.map(user => Object.keys(user)), users.map(() => ["username", "email", "admin", "tag"]));
+    const administrator = users.find(user => user.admin);
+    assert.equal((await accounts(adminCookie, { body: administrator })).status, 409);
+    const filtered = (await (await accounts(adminCookie, { query: "q=english%40example.com" })).json()).users;
+    assert.equal(filtered.length, 1);
+    const deleted = filtered[0];
+    assert.equal(deleted.username, "second_user");
+    assert.equal((await accounts(adminCookie, { body: deleted, requestOrigin: "https://other.test" })).status, 403);
+    assert.equal((await accounts(adminCookie, { body: deleted })).status, 200);
+    assert.equal((await (await auth("session", null, userCookie)).json()).email, null);
+    assert.equal((await login(deleted.username, password, "192.0.2.31")).status, 401);
+    const repeatedSignup = { email: other, grant: secondGrant, username: deleted.username, password };
+    assert.equal((await auth("register", repeatedSignup, null, "192.0.2.31")).status, 401);
+    const newCode = await auth("register-code", { email: other });
+    assert.equal(newCode.status, 202);
+    const freshProof = { email: other, challenge: (await newCode.json()).challenge, code: readCode(2) };
+    const freshGrant = (await (await auth("confirm-email", freshProof)).json()).grant;
+    assert.equal((await auth("register", { ...repeatedSignup, grant: freshGrant }, null, "192.0.2.31")).status, 200);
+    assert.equal((await accounts(adminCookie, { body: deleted })).status, 409);
   } finally {
     await mf.dispose();
   }

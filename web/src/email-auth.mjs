@@ -10,7 +10,7 @@ const encoder = new TextEncoder();
 const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
 const sessionPattern = /^([a-f0-9]{64})\.([a-f0-9]{64})\.([a-f0-9]{64})$/;
 const challengePattern = /^([a-f0-9-]{36})\.([a-f0-9]{64})$/;
-const grantPattern = /^(\d{13})\.([a-f0-9]{64})$/;
+const grantPattern = /^(\d{13})(?:\.([a-f0-9]{32}))?\.([a-f0-9]{64})$/;
 const usernamePattern = /^[a-z0-9_]{3,32}$/;
 const authRoutes = ["register-code", "confirm-email", "register", "login", "logout"];
 
@@ -83,6 +83,38 @@ function reply(data, status = 200, setCookie) {
   return Response.json(data, { status, headers });
 }
 
+const deletionTag = (env, record) => hmac(env.EMAIL_AUTH_SECRET, "delete-account-v1", `${record.email_id}:${record.salt}`);
+
+export async function handleAdminAccounts(request, env, url) {
+  if (!["GET", "DELETE"].includes(request.method)) return reply({ error: "method" }, 405);
+  const actor = await signedInEmail(request, env);
+  if (!actor) return reply({ error: "sign_in" }, 401);
+  if (!isAdminEmail(actor, env)) return reply({ error: "forbidden" }, 403);
+  const index = credentials(env);
+  if (request.method === "GET") {
+    const after = url.searchParams.get("after") ?? "";
+    const query = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+    if ((after && !usernamePattern.test(after)) || query.length > 254) return reply({ error: "bad_request" }, 400);
+    const records = await index.list(after, query);
+    const users = await Promise.all(records.slice(0, 25).map(async record => ({
+      username: record.username, email: record.email, admin: isAdminEmail(record.email, env),
+      tag: await deletionTag(env, record)
+    })));
+    return reply({ users, next: records.length > 25 ? users.at(-1).username : null });
+  }
+  if (request.headers.get("Origin") !== url.origin) return reply({ error: "forbidden" }, 403);
+  const body = await smallJson(request, 4096);
+  const username = usernameOf(body?.username);
+  if (!username || typeof body.tag !== "string" || !/^[a-f0-9]{64}$/.test(body.tag)) {
+    return reply({ error: "bad_request" }, 400);
+  }
+  const record = await index.find(username);
+  if (!record || !equal(body.tag, await deletionTag(env, record))) return reply({ error: "account_changed" }, 409);
+  if (isAdminEmail(record.email, env)) return reply({ error: "protected_account" }, 409);
+  const removed = await env.EMAIL_ACCOUNTS.getByName(record.email_id).remove(username, record.email_id, record.salt);
+  return removed ? reply({}) : reply({ error: "account_changed" }, 409);
+}
+
 export async function handleEmailAuth(request, env, url) {
   const route = url.pathname.slice("/api/auth/".length);
   if (route === "session" && request.method === "GET") {
@@ -109,7 +141,7 @@ export async function handleEmailAuth(request, env, url) {
     const record = await index.find(username);
     if (!record) return reply({ error: "credentials" }, 401);
     const client = env.EMAIL_ACCOUNTS.getByName(record.email_id);
-    const result = await client.login(record.email, body.password, record.salt, record.proof);
+    const result = await client.login(username, record.email_id, body.password);
     if (!result.token) return reply({ error: result.error }, result.error === "rate_limit" ? 429 : 401);
     return signedIn(env, record.email, username, record.email_id, result.token);
   }
@@ -117,14 +149,16 @@ export async function handleEmailAuth(request, env, url) {
     const username = usernameOf(body?.username);
     if (!username) return reply({ error: "username" }, 400);
     if (!validPassword(body?.password)) return reply({ error: "password" }, 400);
-    const email = body?.grant ? normalizeEmail(body.email) : await signedInEmail(request, env);
+    const session = body?.grant ? null : await readSession(request, env.EMAIL_AUTH_SECRET);
+    const email = body?.grant ? normalizeEmail(body.email) :
+      session && await env.EMAIL_ACCOUNTS.getByName(session.id).session(session.token);
     if (!email) return reply({ error: "setup_expired" }, 401);
     const id = await accountId(env, email);
-    if (body.grant && !await validGrant(env, id, body.grant)) return reply({ error: "setup_expired" }, 401);
-    if (await index.usernameFor(id)) return reply({ error: "already_registered" }, 409);
+    const grant = body.grant ? await readGrant(env, id, body.grant) : null;
+    if (body.grant && !grant) return reply({ error: "setup_expired" }, 401);
     const client = env.EMAIL_ACCOUNTS.getByName(id);
-    const result = await client.register(username, id, email, body.password);
-    if (result.error) return reply({ error: result.error }, 409);
+    const result = await client.register(username, id, email, body.password, grant, session?.token);
+    if (result.error) return reply({ error: result.error }, result.error === "setup_expired" ? 401 : 409);
     return signedIn(env, email, username, id, result.token);
   }
   const email = normalizeEmail(body?.email);
@@ -145,16 +179,19 @@ export async function handleEmailAuth(request, env, url) {
       !equal(match[2], await hmac(secret, "challenge-v1", `${id}.${match[1]}`))) {
     return reply({ error: "invalid_code" }, 400);
   }
-  if (!await env.EMAIL_ACCOUNTS.getByName(id).confirmCode(match[1], code)) return reply({ error: "invalid_code" }, 400);
-  const expires = Date.now() + 10 * minute;
-  const signature = await hmac(secret, "enrollment-v1", `${id}.${expires}`);
-  return reply({ grant: `${expires}.${signature}` });
+  const grant = await env.EMAIL_ACCOUNTS.getByName(id).confirmCode(match[1], code);
+  if (!grant) return reply({ error: "invalid_code" }, 400);
+  const value = grant.epoch ? `${grant.expires}.${grant.epoch}` : String(grant.expires);
+  const signature = await hmac(secret, "enrollment-v1", `${id}.${value}`);
+  return reply({ grant: `${value}.${signature}` });
 }
 
-async function validGrant(env, id, value) {
+async function readGrant(env, id, value) {
   const match = typeof value === "string" && value.match(grantPattern);
-  if (!match || Number(match[1]) <= Date.now()) return false;
-  return equal(match[2], await hmac(env.EMAIL_AUTH_SECRET, "enrollment-v1", `${id}.${match[1]}`));
+  if (!match || Number(match[1]) <= Date.now()) return null;
+  const proof = value.slice(0, value.lastIndexOf("."));
+  if (!equal(match[3], await hmac(env.EMAIL_AUTH_SECRET, "enrollment-v1", `${id}.${proof}`))) return null;
+  return { expires: Number(match[1]), epoch: match[2] ?? "" };
 }
 
 async function signedIn(env, email, username, id, token) {
@@ -172,6 +209,7 @@ export class EmailAccount extends DurableObject {
       CREATE TABLE IF NOT EXISTS challenge (id TEXT PRIMARY KEY, proof TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS password_attempts (id INTEGER PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS account_reset (id INTEGER PRIMARY KEY, epoch TEXT NOT NULL);
     `);
   }
 
@@ -222,25 +260,52 @@ export class EmailAccount extends DurableObject {
       return false;
     }
     this.sql.exec("DELETE FROM challenge WHERE id = ?", challenge);
-    return true;
+    return { expires: Date.now() + 10 * minute, epoch: this.epoch() };
   }
 
-  async register(username, id, email, password) {
-    const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-    const proof = await passwordProof(this.env.EMAIL_AUTH_SECRET, password, salt);
-    const error = await credentials(this.env).register(username, id, email, salt, proof);
-    return error ? { error } : { token: await this.createSession(email) };
+  epoch() {
+    return this.sql.exec("SELECT epoch FROM account_reset WHERE id = 1").toArray()[0]?.epoch ?? "";
   }
 
-  async login(email, password, salt, proof) {
-    const now = Date.now();
-    const attempts = this.sql.exec("SELECT count, expires FROM password_attempts WHERE id = 1 AND expires > ?", now).toArray()[0];
-    if (attempts?.count >= 10) return { error: "rate_limit" };
-    this.sql.exec("INSERT OR REPLACE INTO password_attempts VALUES (1, ?, ?)",
-      (attempts?.count ?? 0) + 1, attempts?.expires ?? now + 15 * minute);
-    if (!equal(proof, await passwordProof(this.env.EMAIL_AUTH_SECRET, password, salt))) return { error: "credentials" };
-    this.sql.exec("DELETE FROM password_attempts WHERE id = 1");
-    return { token: await this.createSession(email) };
+  async register(username, id, email, password, grant, sessionToken) {
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const verified = grant ? grant.epoch === this.epoch() && grant.expires > Date.now() :
+        sessionToken && await this.session(sessionToken) === email;
+      if (!verified) return { error: "setup_expired" };
+      const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+      const proof = await passwordProof(this.env.EMAIL_AUTH_SECRET, password, salt);
+      const error = await credentials(this.env).register(username, id, email, salt, proof);
+      return error ? { error } : { token: await this.createSession(email) };
+    });
+  }
+
+  async login(username, emailId, password) {
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const record = await credentials(this.env).find(username);
+      if (record?.email_id !== emailId) return { error: "credentials" };
+      const now = Date.now();
+      const attempts = this.sql.exec("SELECT count, expires FROM password_attempts WHERE id = 1 AND expires > ?", now).toArray()[0];
+      if (attempts?.count >= 10) return { error: "rate_limit" };
+      this.sql.exec("INSERT OR REPLACE INTO password_attempts VALUES (1, ?, ?)",
+        (attempts?.count ?? 0) + 1, attempts?.expires ?? now + 15 * minute);
+      if (!equal(record.proof, await passwordProof(this.env.EMAIL_AUTH_SECRET, password, record.salt))) return { error: "credentials" };
+      this.sql.exec("DELETE FROM password_attempts WHERE id = 1");
+      return { token: await this.createSession(record.email) };
+    });
+  }
+
+  async remove(username, emailId, salt) {
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const index = credentials(this.env);
+      const record = await index.find(username);
+      if (record?.email_id !== emailId || record.salt !== salt || isAdminEmail(record.email, this.env)) return false;
+      this.ctx.storage.transactionSync(() => {
+        this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM deliveries; DELETE FROM password_attempts;");
+        this.sql.exec("INSERT OR REPLACE INTO account_reset VALUES (1, ?)", hex(crypto.getRandomValues(new Uint8Array(16))));
+      });
+      await this.ctx.storage.deleteAlarm();
+      return index.remove(username, emailId, salt);
+    });
   }
 
   async createSession(email) {

@@ -5,6 +5,19 @@
 .admin-brand img { border-radius: .75rem; }
 .admin a { color: var(--action); font-weight: 650; }
 .admin-grid { display: grid; gap: 1rem; align-items: start; }
+.medora .admin-tabs { display: flex; gap: .35rem; padding: .3rem; border-radius: 1rem; margin-block: .9rem; }
+.medora .admin-tabs button[aria-pressed="true"] { background: var(--dock-active); color: var(--action); }
+.medora #admin-account-search { display: flex; gap: .55rem; align-items: end; }
+.medora #admin-account-search label { flex: 1; min-inline-size: 0; margin: 0; }
+.medora #admin-account-list { display: grid; gap: .55rem; list-style: none; padding: 0; }
+.medora .admin-account {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .65rem;
+  padding: .65rem .85rem; border: 1px solid var(--outline); border-radius: .95rem; background: var(--panel);
+}
+.admin-account-identity { display: grid; justify-items: start; min-inline-size: 0; overflow-wrap: anywhere; }
+.medora .admin-account button { color: var(--error); }
+.admin :is(#admin-status, #admin-account-status, #admin-delete-status, #promotion-status):empty { display: none; }
+.admin :is(#admin-status, #admin-account-status, #admin-delete-status, #promotion-status)[data-error] { color: var(--error); }
 .medora .admin form { margin: 0; }
 .medora .admin fieldset { border: 0; padding: 0; margin: 0; }
 .admin legend { font-weight: 750; }
@@ -16,7 +29,6 @@
 .admin-preview .buttons { margin-block: .8rem; }
 .admin-preview-skip, .admin-preview-action { display: inline-block; padding: .45rem .8rem; border: 1px solid var(--outline); border-radius: .85rem; background: var(--field); }
 .admin-preview-action { border-color: var(--action); background: var(--action); color: var(--on-action); }
-#admin-status[data-error] { color: var(--error); }
 
 @media (min-width: 42rem) {
   .admin-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }

@@ -18,6 +18,17 @@ export class Credentials extends DurableObject {
     return this.sql.exec("SELECT email_id, email, salt, proof FROM credentials_v1 WHERE username = ?", username).toArray()[0] ?? null;
   }
 
+  list(after, query) {
+    return this.sql.exec(`SELECT username, email, email_id, salt FROM credentials_v1
+      WHERE username > ? AND (instr(username, ?) > 0 OR instr(email, ?) > 0)
+      ORDER BY username LIMIT 26`, after, query, query).toArray();
+  }
+
+  remove(username, emailId, salt) {
+    return this.sql.exec("DELETE FROM credentials_v1 WHERE username = ? AND email_id = ? AND salt = ? RETURNING username",
+      username, emailId, salt).toArray().length > 0;
+  }
+
   register(username, emailId, email, salt, proof) {
     const inserted = this.sql.exec(
       "INSERT OR IGNORE INTO credentials_v1 VALUES (?, ?, ?, ?, ?) RETURNING username",

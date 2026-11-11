@@ -1,10 +1,38 @@
 /* The illustrated cover overlaps the calendar; translucent surfaces sit above the color field. */
+.medora, .accent-sample[data-accent-sample="blue"] {
+  --accent-light: #423997;
+  --accent-dark: #bacaff;
+  --accent-cover: #4c47bb;
+  --accent-dark-cover: #2d416b;
+  --accent-glow: #eab5f7;
+}
+.medora[data-accent="green"], .accent-sample[data-accent-sample="green"] {
+  --accent-light: #236b43;
+  --accent-dark: #d0e99d;
+  --accent-cover: #246b51;
+  --accent-dark-cover: #2b404a;
+  --accent-glow: #a5e0a7;
+}
+.medora[data-accent="lilac"], .accent-sample[data-accent-sample="lilac"] {
+  --accent-light: #734092;
+  --accent-dark: #e6b9ff;
+  --accent-cover: #70459e;
+  --accent-dark-cover: #4b345b;
+  --accent-glow: #e9b5ff;
+}
+.medora[data-accent="coral"], .accent-sample[data-accent-sample="coral"] {
+  --accent-light: #9a4136;
+  --accent-dark: #ffb9ac;
+  --accent-cover: #a54f51;
+  --accent-dark-cover: #5b363a;
+  --accent-glow: #ffc2aa;
+}
 .medora {
-  --cover: #4c47bb;
-  --cover-light: #7560d5;
-  --cover-shade: #383189;
+  --cover: var(--accent-cover);
+  --cover-light: color-mix(in srgb, var(--cover) 77%, var(--accent-glow));
+  --cover-shade: color-mix(in srgb, var(--cover) 75%, #130e28);
   --cover-text: #faf7ff;
-  --stage: #eeeefa;
+  --stage: color-mix(in srgb, var(--action) 7%, var(--panel));
   --glass-rim: #fffc;
   --glass-glint: #fff9;
   --glass-shadow: #423b7c24;
@@ -14,40 +42,38 @@
   --page: #f4f3fa;
   --panel: #fcfbff;
   --field: #fff;
-  --action: #423997;
+  --action: var(--accent-light);
   --ink: #211d3a;
   --muted: #5f5974;
   --outline: #dedbef;
-  --dock-active: #e8e4fc;
+  --dock-active: color-mix(in srgb, var(--action) 13%, var(--panel));
   --today-rail-width: min(calc(100% - 1.35rem), 40rem);
 }
 @media (prefers-color-scheme: dark) {
   .medora:not([data-theme="light"]) {
-    --cover: #2b404a;
-    --cover-light: #426061;
-    --cover-shade: #202e36;
+    --cover: var(--accent-dark-cover);
+    --action: var(--accent-dark);
+    --on-action: #151b20;
     --cover-text: #f6f9fa;
-    --stage: #273339;
     --glass-rim: #9cbdb446;
     --glass-glint: #b7d4c622;
     --glass-shadow: #0006;
     --mint: #d0e8b2;
     --mint-ink: #243b29;
-    background: radial-gradient(ellipse at 12% 12%, #5a7a6a36, transparent 34rem), var(--page);
+    background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--cover) 40%, transparent), transparent 34rem), var(--page);
   }
 }
 .medora[data-theme="dark"] {
-  --cover: #2b404a;
-  --cover-light: #426061;
-  --cover-shade: #202e36;
+  --cover: var(--accent-dark-cover);
+  --action: var(--accent-dark);
+  --on-action: #151b20;
   --cover-text: #f6f9fa;
-  --stage: #273339;
   --glass-rim: #9cbdb446;
   --glass-glint: #b7d4c622;
   --glass-shadow: #0006;
   --mint: #d0e8b2;
   --mint-ink: #243b29;
-  background: radial-gradient(ellipse at 12% 12%, #5a7a6a36, transparent 34rem), var(--page);
+  background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--cover) 40%, transparent), transparent 34rem), var(--page);
 }
 html[dir="ltr"] .medora { font-family: system-ui, -apple-system, sans-serif; }
 html[dir="ltr"] .medora h1, html[dir="ltr"] .medora .story-copy h2 { letter-spacing: -.045em; }
@@ -89,7 +115,7 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
   overflow: hidden;
   color: var(--cover-text);
   background:
-    radial-gradient(ellipse at 83% 15%, #eab5f762, transparent 56%),
+    radial-gradient(ellipse at 83% 15%, color-mix(in srgb, var(--accent-glow) 38%, transparent), transparent 56%),
     linear-gradient(150deg, var(--cover-shade), var(--cover) 55%, var(--cover-light));
   border-radius: 2.1rem 2.1rem 1.3rem 1.3rem;
 }
@@ -1007,10 +1033,18 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 .medora :is(.settings-themes, .settings-choices) label:has(:checked) { border-color: var(--action); background: var(--dock-active); color: var(--action); }
 .medora :is(.settings-themes, .settings-choices) label:has(:focus-visible) { outline: .15rem solid var(--action); outline-offset: .12rem; }
 .theme-sample { display: grid; place-items: center; inline-size: 100%; block-size: 2.4rem; border-radius: .55rem; background: #e9e4f7; }
-.theme-sample::before { content: ""; inline-size: 59%; block-size: .75rem; border-radius: .25rem; background: #fefcff; box-shadow: 0 .45rem 0 -.22rem #9482cc; }
-.theme-sample[data-theme-sample="system"] { background: linear-gradient(135deg, #e9e4f7 50%, #304342 50%); }
-.theme-sample[data-theme-sample="dark"] { background: #263735; }
-.theme-sample[data-theme-sample="dark"]::before { background: #455b54; box-shadow: 0 .45rem 0 -.22rem #c0d89f; }
+.theme-sample::before { content: ""; inline-size: 59%; block-size: .75rem; border-radius: .25rem; background: #fefcff; box-shadow: 0 .45rem 0 -.22rem var(--accent-light); }
+.theme-sample[data-theme-sample="system"] { background: linear-gradient(135deg, #e9e4f7 50%, #283544 50%); }
+.theme-sample[data-theme-sample="dark"] { background: #283544; }
+.theme-sample[data-theme-sample="dark"]::before { background: #465466; box-shadow: 0 .45rem 0 -.22rem var(--accent-dark); }
+.medora .settings-accents { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.accent-sample {
+  inline-size: 2rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-light) 50%, var(--accent-dark) 50%);
+  box-shadow: inset 0 0 0 1px var(--glass-rim);
+}
 
 .medora .welcome {
   background: radial-gradient(ellipse at 68% 24%, #eab5f748, transparent 60%), linear-gradient(147deg, var(--cover-shade), var(--cover-light));

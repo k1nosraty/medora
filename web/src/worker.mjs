@@ -3,7 +3,7 @@ import { vapidHeaders } from "@block65/webcrypto-web-push";
 import { pilotConfig, smallJson, validSubscription } from "./validation.mjs";
 import { handleMedicationReminders } from "./medication-reminders.mjs";
 import { sendPush } from "./push.mjs";
-import { handleEmailAuth } from "./email-auth.mjs";
+import { handleAdminAccounts, handleEmailAuth } from "./email-auth.mjs";
 import { handlePromotions } from "./promotions.mjs";
 
 export { MedicationReminders } from "./medication-reminders.mjs";
@@ -24,6 +24,7 @@ export default {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url);
+    if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url);
     if (url.pathname === "/api/promotion" || url.pathname === "/api/admin/promotion") {
       return handlePromotions(request, env, ctx, url);
     }

@@ -19,31 +19,58 @@
       <a href="/medication/">بازگشت به مدورا</a>
     </header>
     <h1>پنل مدیریت مدورا</h1>
-    <p class="quiet">پیام تبلیغاتی صفحهٔ امروز را ویرایش و منتشر کنید.</p>
     <p id="admin-status" role="status">در حال ارتباط…</p>
     <a id="admin-sign-in" href="/medication/?view=account" hidden>ورود به حساب مدورا</a>
-    <div class="admin-grid" id="admin-workspace" hidden>
-      <form id="promotion-form">
-        <fieldset id="promotion-fields">
-          <legend>محتوای پیام</legend>
-          <label>عنوان پیام<input name="title" dir="auto" maxlength="80" required></label>
-          <label>توضیحات<textarea name="description" dir="auto" maxlength="240" rows="3"></textarea></label>
-          <label>نشانی HTTPS (اختیاری)<input name="url" dir="ltr" type="url" placeholder="https://" maxlength="512"></label>
-          <label class="admin-toggle"><input name="enabled" type="checkbox">نمایش در صفحهٔ امروز</label>
-          <button type="submit" class="block-action">ذخیرهٔ پیام</button>
-        </fieldset>
-      </form>
-      <div class="admin-preview">
-        <p class="quiet">پیش‌نمایش پیام تبلیغاتی</p>
-        <h2 id="preview-title" dir="auto">عنوان پیام</h2>
-        <p id="preview-description" dir="auto"></p>
-        <div class="buttons">
-          <span class="admin-preview-skip">رد کردن</span>
-          <span id="preview-link" class="admin-preview-action" hidden>مشاهدهٔ جزئیات</span>
+    <div id="admin-workspace" hidden>
+      <nav class="admin-tabs segmented glass-toolbar" aria-label="بخش‌های مدیریت">
+        <button type="button" data-admin-tab="accounts" aria-controls="admin-accounts" aria-pressed="true">حساب‌های کاربری</button>
+        <button type="button" data-admin-tab="promotion" aria-controls="admin-promotion" aria-pressed="false">تبلیغات</button>
+      </nav>
+      <section class="admin-accounts" id="admin-accounts">
+        <form id="admin-account-search" role="search">
+          <label>ایمیل یا نام کاربری<input type="search" name="query" dir="auto" maxlength="254" autocomplete="off"></label>
+          <button type="submit" class="secondary">جست‌وجو</button>
+        </form>
+        <p id="admin-account-status" role="status"></p>
+        <ul id="admin-account-list"></ul>
+        <button type="button" class="secondary" id="admin-account-more" hidden>حساب‌های بیشتر</button>
+      </section>
+      <section class="admin-grid" id="admin-promotion" hidden>
+        <form id="promotion-form">
+          <fieldset id="promotion-fields">
+            <legend>محتوای پیام</legend>
+            <label>عنوان پیام<input name="title" dir="auto" maxlength="80" required></label>
+            <label>توضیحات<textarea name="description" dir="auto" maxlength="240" rows="3"></textarea></label>
+            <label>نشانی HTTPS (اختیاری)<input name="url" dir="ltr" type="url" placeholder="https://" maxlength="512"></label>
+            <label class="admin-toggle"><input name="enabled" type="checkbox">نمایش در صفحهٔ امروز</label>
+            <button type="submit" class="block-action">ذخیرهٔ پیام</button>
+            <p id="promotion-status" role="status"></p>
+          </fieldset>
+        </form>
+        <div class="admin-preview">
+          <p class="quiet">پیش‌نمایش پیام تبلیغاتی</p>
+          <h2 id="preview-title" dir="auto">عنوان پیام</h2>
+          <p id="preview-description" dir="auto"></p>
+          <div class="buttons">
+            <span class="admin-preview-skip">رد کردن</span>
+            <span id="preview-link" class="admin-preview-action" hidden>مشاهدهٔ جزئیات</span>
+          </div>
+          <p class="quiet">برای هر مرورگر، حداکثر یک پیام در روز نمایش داده می‌شود.</p>
         </div>
-        <p class="quiet">برای هر مرورگر، حداکثر یک پیام در روز نمایش داده می‌شود.</p>
-      </div>
+      </section>
     </div>
+    <dialog class="sheet" id="admin-account-delete" aria-labelledby="admin-account-delete-title">
+      <div class="sheet-header"><h2 id="admin-account-delete-title">حذف حساب</h2></div>
+      <div class="sheet-body">
+        <p id="admin-account-delete-email" dir="ltr"></p>
+        <p>ورودهای فعال این حساب باطل می‌شوند. کاربر می‌تواند پس از تأیید دوبارهٔ ایمیل، حساب تازه بسازد. سوابق روی دستگاه کاربر باقی می‌مانند.</p>
+        <p id="admin-delete-status" role="status"></p>
+        <div class="buttons">
+          <button type="button" class="secondary" id="admin-delete-cancel">انصراف</button>
+          <button type="button" class="danger-button" id="admin-delete-confirm">حذف حساب</button>
+        </div>
+      </div>
+    </dialog>
   </main>
 </body>
 </html>

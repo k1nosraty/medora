@@ -1,7 +1,8 @@
 import { language, t } from "./locale.js";
 const $ = id => document.getElementById(id);
 const shapes = {
-  tablet: language === "en" ? "Tablet" : "قرص", capsule: t("کپسول"), syrup: t("شربت"), injection: t("آمپول"), ointment: t("پماد"), drops: t("قطره"), spray: t("اسپری")
+  tablet: language === "en" ? "Tablet" : "قرص", capsule: t("کپسول"), syrup: t("شربت"), injection: t("آمپول"),
+  ointment: t("پماد"), drops: t("قطره"), spray: t("اسپری"), sachet: t("ساشه"), powder: t("پودر")
 };
 export const appearanceColors = {
   gold: t("طلایی"), peach: t("هلویی"), coral: t("مرجانی"), rose: t("صورتی"), purple: t("یاسی"),
@@ -38,7 +39,7 @@ export function medicationBanner(shape, color) {
   return banner;
 }
 
-export function installAppearance() {
+export function installAppearance(onShapeChange) {
   const dialog = $("appearance-dialog");
   let shape;
   let color;
@@ -98,8 +99,10 @@ export function installAppearance() {
     dialog.showModal();
   });
   $("appearance-confirm").addEventListener("click", () => {
+    const previous = $("medicine-icon").value;
     $("medicine-icon").value = shape;
     $("medicine-color").value = color;
+    if (previous !== shape) onShapeChange(previous, shape);
     updateTile();
     dialog.close();
   });

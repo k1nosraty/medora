@@ -11,6 +11,8 @@ const dayMs = 86_400_000;
 const numbers = new Intl.NumberFormat(locale);
 const percent = new Intl.NumberFormat(locale, { style: "percent" });
 const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), routines: t("روتین‌ها"), insights: t("گزارش و تقویم"), water: t("آب") };
+const accents = { blue: t("آبی"), green: t("سبز"), lilac: t("یاسی"), coral: t("مرجانی") };
+const accentOf = value => Object.hasOwn(accents, value) ? value : "blue";
 const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "purple";
 const iso = day => new Date(day * dayMs).toISOString().slice(0, 10);
 function empty(text) { return element("p", text, "empty"); }
@@ -116,7 +118,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
       appointment.interval === 60 ? t("هر ساعت") : t("هر دو ساعت"));
     const theme = { system: t("مطابق گوشی"), light: t("روشن"), dark: t("تیره") }[data.theme] ?? t("مطابق گوشی");
     const calendar = (data.calendar ?? defaultCalendar) === "persian" ? t("شمسی") : t("میلادی");
-    $("settings-display-summary").textContent = [theme, calendar, language === "fa" ? "فارسی" : "English"].join(" · ");
+    $("settings-display-summary").textContent = [theme, accents[accentOf(data.accent)], calendar, language === "fa" ? "فارسی" : "English"].join(" · ");
   }
   function loadWaterSettings(data) {
     const water = data.waterReminders ?? waterDefaults;
@@ -133,6 +135,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     if (panel === "display-settings") {
       $("calendar-setting").value = data.calendar ?? defaultCalendar;
       $("display-form").elements.theme.value = data.theme ?? "system";
+      $("display-form").elements.accent.value = accentOf(data.accent);
       $("app-language").value = language;
     }
     if (panel === "water-settings") loadWaterSettings(data);
@@ -502,10 +505,11 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   $("display-form").addEventListener("submit", async event => {
     event.preventDefault();
     const theme = event.currentTarget.elements.theme.value;
+    const accent = accentOf(event.currentTarget.elements.accent.value);
     const selectedCalendar = $("calendar-setting").value;
     const nextLanguage = $("app-language").value;
     if (await saveSettings(event.submitter ?? $("display-form").querySelector('[type="submit"]'),
-      state => { state.theme = theme; state.calendar = selectedCalendar; }, t("تنظیمات نمایش ذخیره شد."))) selectLanguage(nextLanguage);
+      state => { state.theme = theme; state.accent = accent; state.calendar = selectedCalendar; }, t("تنظیمات نمایش ذخیره شد."))) selectLanguage(nextLanguage);
   });
 
   const visitCategory = $("visit-category");
@@ -801,6 +805,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   function renderWellness(state, day, index) {
     setCalendar(state.calendar ?? defaultCalendar);
     document.body.dataset.theme = state.theme ?? "system";
+    document.body.dataset.accent = accentOf(state.accent);
     const dark = state.theme === "dark" || (state.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
     document.querySelector('meta[name="theme-color"]').content = dark ? "#151b20" : "#f4f3fa";
     if (["today", "medications", "water", "routines"].includes(screen)) {
