@@ -101,12 +101,12 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
   }
 }
 
-function reportChart(range, first, goal, formatShortDate, formatDay, monthStart) {
+function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDay, monthStart) {
   const last = first + range.length - 1;
   const bars = [];
   for (let start = first; start <= last;) {
     let end = start;
-    if (range.length === 365) {
+    if (groupByMonth) {
       const month = monthStart(start);
       end = Math.min(last, monthStart(month + 32) - 1);
     }
@@ -158,7 +158,7 @@ function reportChart(range, first, goal, formatShortDate, formatDay, monthStart)
       control.tabIndex = i === selected ? 0 : -1;
     });
     const bar = bars[selected];
-    const copy = label(bar, range.length === 365);
+    const copy = label(bar, groupByMonth);
     selection.textContent = bar.end > bar.start && bar.count ?
       t("{0} میانگین روزهای ثبت‌شده ({1} روز)", copy, number(bar.count)) : copy;
     previous.setAttribute("aria-disabled", String(selected === 0));
@@ -181,9 +181,8 @@ function reportStats(id, stats) {
   }));
 }
 
-export function renderReports(last, goal, index, reportSpan, formatShortDate, formatDay, monthStart) {
-  const first = last - reportSpan + 1;
-  const range = Array.from({ length: reportSpan }, (_, i) => index.waterTotal(first + i));
+export function renderReports({ first, last, period }, goal, index, formatShortDate, formatDay, monthStart) {
+  const range = Array.from({ length: last - first + 1 }, (_, i) => index.waterTotal(first + i));
   const waterDays = range.filter(Boolean).length;
   const totalWater = sum(range);
   const { taken, skipped, unrecorded } = index.doseTotals(first, last);
@@ -195,7 +194,7 @@ export function renderReports(last, goal, index, reportSpan, formatShortDate, fo
   if (waterDays) {
     reportStats("report-water-coverage", [
       ["کل آب (میلی‌لیتر)", number(totalWater)],
-      ["روزهای دارای ثبت", t("{0} از {1}", number(waterDays), number(reportSpan))],
+      ["روزهای دارای ثبت", t("{0} از {1}", number(waterDays), number(range.length))],
       ["روزهای رسیدن به هدف", number(range.filter(amount => amount >= goal).length), "done"]
     ]);
   }
@@ -247,5 +246,5 @@ export function renderReports(last, goal, index, reportSpan, formatShortDate, fo
     ["لغوشده", number(visits.cancelled), "partial"]
   ]);
 
-  if (waterDays) reportChart(range, first, goal, formatShortDate, formatDay, monthStart);
+  if (waterDays) reportChart(range, first, goal, period === "year", formatShortDate, formatDay, monthStart);
 }

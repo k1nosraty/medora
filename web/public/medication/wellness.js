@@ -37,7 +37,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   let insight = "calendar";
   let calendarSelection = today();
   let waterBack = "today";
-  let reportSpan = 30;
+  let reportPeriod = "month";
   let reportTimer;
   let calendar;
   let weekdayText;
@@ -46,6 +46,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
   let monthText;
   let dayText;
   let dayIndex;
+  let yearText;
   let fullDate;
   const actionDay = () => screen === "insights" ? (insight === "calendar" ? calendarSelection : today()) : selectedDay();
 
@@ -60,6 +61,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     dayText = format({ day: "numeric" });
     fullDate = format({ dateStyle: "long" });
     dayIndex = new Intl.DateTimeFormat(`en-u-ca-${calendar}-nu-latn`, { day: "numeric", timeZone: "UTC" });
+    yearText = format({ year: "numeric" });
   }
   function formatDay(day, includeWeekday = false) {
     const date = day * dayMs;
@@ -744,6 +746,16 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     return day - Number(dayIndex.formatToParts(day * dayMs).find(part => part.type === "day").value) + 1;
   }
 
+  function reportStart(day) {
+    if (reportPeriod === "week") return day - weekIndex(day);
+    let start = monthStart(day);
+    if (reportPeriod === "year") {
+      const year = yearText.format(day * dayMs);
+      while (yearText.format((start - 1) * dayMs) === year) start = monthStart(start - 1);
+    }
+    return start;
+  }
+
   function fillGlass(container, progress) {
     const level = 90 - 78 * progress;
     $(container).querySelector(".glass-water")
@@ -834,7 +846,9 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
           openWaterHistory: () => show("water"), addWater: () => openWater(null)
         });
       } else {
-        renderReports(today(), goal, index, reportSpan, day => shortDate.format(day * dayMs), formatDay, monthStart);
+        const last = today();
+        renderReports({ first: reportStart(last), last, period: reportPeriod }, goal, index,
+          day => shortDate.format(day * dayMs), formatDay, monthStart);
         reportTimer = setTimeout(render, 60_000 - Date.now() % 60_000);
       }
     }
@@ -858,7 +872,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("reports-panel").hidden = value !== "reports";
   }
   chooseOption("insight", openInsight);
-  chooseOption("report-range", value => { reportSpan = Number(value); });
+  chooseOption("report-range", value => { reportPeriod = value; });
   function selectCalendarDay(day, focus = false) {
     calendarSelection = day;
     render();
