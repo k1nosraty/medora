@@ -786,6 +786,7 @@ function renderDose(medicine, dose, variant) {
   controls.className = "buttons";
   const pending = !dose.status || dose.status === "snoozed";
   const taken = action(dose.status === "taken" ? t("اصلاح ثبت مصرف") : t("مصرف کردم"), () => record("taken"), !pending);
+  if (pending) taken.classList.add("care-record-action");
   const snooze = () => action(t("{0} دقیقه بعد", localDigits(care.medicationSnoozeMinutes ?? 10)), () => record("snoozed"), true);
   const skipped = action(t("مصرف نکردم"), () => record("skipped"), true);
   controls.append(...(pending || dayCard ? [skipped] : [taken, skipped]));

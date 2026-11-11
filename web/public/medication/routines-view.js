@@ -438,6 +438,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
         const label = completed ? "برگشت ثبت {0}" : dayCard ? "انجام دادم، {0}" : "ثبت انجام {0}";
         logAction.setAttribute("aria-label", t(label, entry.name));
       } else logAction.setAttribute("aria-label", t("ثبت پیشرفت {0}", entry.name));
+      if (!completed) logAction.classList.add("care-record-action");
       row.dataset.complete = String(completed);
       if (!compactDay) footer.append(logAction);
     } else if (completed && !dayCard) row.append(element("span", t("انجام شد"), "routine-row-state"));

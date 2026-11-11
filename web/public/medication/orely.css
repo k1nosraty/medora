@@ -39,6 +39,8 @@
   --glass-rim: #fffc;
   --glass-glint: #fff9;
   --glass-shadow: color-mix(in srgb, var(--action) 14%, transparent);
+  --accent-glass-fill: color-mix(in srgb, var(--action) 92%, transparent);
+  --accent-glass-rim: color-mix(in srgb, var(--action) 58%, white);
   --mint: #dcf0bf;
   --mint-ink: #233d2c;
   background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--action) 10%, transparent), transparent 34rem), var(--page);
@@ -220,7 +222,15 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .day-week-ghost[data-edge="end"] { inset-inline-start: 100%; }
 .medora #today-dates .day-week .calendar-today:not([aria-current="date"]) { box-shadow: inset 0 0 0 1px var(--action); }
 .medora #today-dates .day-week button span { color: var(--muted); font-size: .68rem; }
-.medora #today-dates .day-week button[aria-current="date"] { background: var(--action); color: var(--on-action); }
+.medora :is(#open-quick, .today-water-actions [data-open-water], #today-dates .day-week button[aria-current="date"]) {
+  border: 1px solid var(--accent-glass-rim);
+  color: var(--on-action);
+  background: radial-gradient(ellipse 105% 82% at 34% 0%, #fff2, transparent 65%),
+    linear-gradient(180deg, transparent 56%, #0001), var(--accent-glass-fill);
+  box-shadow: var(--pressed-shadow, inset 0 1px 1px #fff6, inset 0 -1px 1px #0002, 0 .18rem .46rem var(--glass-shadow));
+  -webkit-backdrop-filter: blur(8px) saturate(125%);
+  backdrop-filter: blur(8px) saturate(125%);
+}
 .medora #today-dates .day-week button[aria-current="date"]:focus-visible { outline-color: var(--on-action); }
 .medora #today-dates .day-week button[aria-current="date"] span { color: inherit; }
 .medora .daily-sheet { margin-block-start: .75rem; }
@@ -284,7 +294,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   font-size: .75rem;
   line-height: 1.2;
 }
-.medora .today-water-actions [data-open-water] { flex: 1.32; padding-inline: .13rem; border-color: transparent; background: var(--action); color: var(--on-action); }
+.medora .today-water-actions [data-open-water] { flex: 1.32; padding-inline: .13rem; }
 .medora .today-water-actions .secondary {
   border-color: color-mix(in srgb, var(--water-accent) 55%, var(--outline));
   background: color-mix(in srgb, var(--panel) 58%, var(--water));
@@ -698,6 +708,11 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
   overflow-wrap: anywhere;
 }
 .medora .day-card-more { flex: 0 0 2.75rem; }
+.medora :is(.dose-card, .visit-card, .routine-row):not(.day-card) .care-record-action {
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--dock-active) 52%, transparent);
+  color: var(--action);
+}
 .medora .day-card-more > summary { list-style: none; background: transparent; font-size: 1.24rem; cursor: pointer; }
 .medora .day-card-more > summary::-webkit-details-marker { display: none; }
 .medora .day-card-more[open] > summary { background: var(--dock-active); }
@@ -1368,7 +1383,8 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
   scale: var(--press-scale);
   translate: 0 var(--press-travel);
   filter: brightness(.92) saturate(1.06);
-  box-shadow: inset 0 2px 5px var(--glass-shadow), inset 0 -1px 0 var(--glass-glint);
+  --pressed-shadow: inset 0 2px 5px var(--glass-shadow), inset 0 -1px 0 var(--glass-glint);
+  box-shadow: var(--pressed-shadow);
   transition-duration: var(--press-in-duration);
 }
 @media (prefers-reduced-motion: reduce) {

@@ -88,6 +88,7 @@ export function appointmentView({
           }, t("وضعیت قرار ذخیره شد."), true);
         });
         attendance.setAttribute("aria-pressed", String(Boolean(visit.completed)));
+        if (!visit.completed) attendance.classList.add("care-record-action");
       }
       const edit = button(t("ویرایش"), () => openVisit(visit));
       const cancel = button(visit.cancelled ? t("فعال‌کردن قرار") : t("لغو قرار"), () => {

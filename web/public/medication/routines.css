@@ -45,9 +45,6 @@
   place-self: center;
   grid-template-rows: 1fr;
   border-radius: 50%;
-  background: var(--action);
-  color: var(--on-action);
-  box-shadow: inset 0 1px 0 var(--glass-glint), 0 .16rem .5rem var(--glass-shadow);
 }
 .medora .dock .dock-add svg { inline-size: 1.35rem; block-size: 1.35rem; }
 .medora .program-medicine { --program-fill: var(--dock-active); --program-ink: var(--action); }
