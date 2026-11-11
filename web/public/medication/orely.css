@@ -404,6 +404,47 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   font-size: .82rem;
   font-weight: 750;
 }
+.day-focus-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .15rem .6rem;
+  margin-block-end: .35rem;
+}
+.medora .day-focus-header .day-queue-heading { margin: 0; }
+.day-focus-controls {
+  display: flex;
+  align-items: center;
+  gap: .1rem;
+  margin-inline-start: auto;
+}
+.day-focus-position {
+  min-inline-size: 3.25rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: .78rem;
+  white-space: nowrap;
+}
+.medora .day-focus-controls .icon-button {
+  border: 1px solid var(--outline);
+  border-radius: .8rem;
+  background: var(--field);
+  color: var(--action);
+}
+.medora .day-focus-controls .icon-button[aria-disabled="true"] { opacity: .45; cursor: default; }
+.medora .day-focus-controls svg { inline-size: 1.1rem; block-size: 1.1rem; }
+html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { scale: -1 1; }
+.day-focus-swipe { touch-action: pan-y pinch-zoom; }
+.day-focus-dragging { overflow: clip; }
+.day-focus-dragging > article { translate: var(--day-focus-drag); animation: none; }
+.day-focus-enter { animation: day-focus-enter 180ms ease-out; }
+@keyframes day-focus-enter {
+  from { translate: var(--day-focus-entry); opacity: .8; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .day-focus-enter { animation: none; }
+}
 .medora .day-queue-done {
   margin-block-start: .85rem;
   padding-block-start: .55rem;

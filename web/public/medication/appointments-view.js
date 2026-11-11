@@ -125,6 +125,7 @@ export function appointmentView({
   function dayVisits(index, day) {
     return index.visitsOn(day).filter(({ visit }) => !visit.cancelled)
       .map(local => ({
+        key: `visit:${local.visit.id}`,
         time: local.instant,
         state: local.visit.completed ? "done" : "pending",
         resolvedAt: local.visit.resolvedAt,
