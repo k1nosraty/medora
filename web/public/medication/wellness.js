@@ -13,7 +13,7 @@ const numbers = new Intl.NumberFormat(locale);
 const percent = new Intl.NumberFormat(locale, { style: "percent" });
 const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), routines: t("روتین‌ها"), insights: t("گزارش و تقویم"), water: t("آب") };
 const accents = { blue: t("آبی"), green: t("سبز"), lilac: t("یاسی"), coral: t("مرجانی") };
-const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "purple";
+const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "green";
 const iso = day => new Date(day * dayMs).toISOString().slice(0, 10);
 function empty(text) { return element("p", text, "empty"); }
 function integer(input) {
@@ -793,7 +793,9 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
     $("today-water").toggleAttribute("data-goal-reached", total >= goal);
     quickWaterButton.hidden = day !== today();
     renderQuickWaterFeedback(state, day);
-    fillGlass("today-water", progress);
+    const waterline = 85 - 55 * progress;
+    $("today-water").querySelector(".glass-water").setAttribute("d",
+      progress ? `M24 ${waterline}C44 ${waterline - 7} 63 ${waterline + 6} 88 ${waterline - 2}V92H24Z` : "");
   }
 
   function renderWater(day, index, total, goal, progress) {

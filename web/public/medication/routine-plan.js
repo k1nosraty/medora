@@ -1,6 +1,7 @@
 export const maxRoutines = 64;
 export const maxRoutineAmount = 99999;
 export const maxRoutineSteps = 12;
+export const defaultRoutineColor = "coral";
 export const validRoutineId = id => typeof id === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(id);
 
 export const routineWeekday = day => ((day + 3) % 7 + 7) % 7;
@@ -30,7 +31,7 @@ export function routineEntriesOn(state, day, today, plans = Object.values(state.
 
 export function routineLog(routine, result) {
   const { name, category, minute, mode } = routine;
-  const entry = { name, category, color: routine.color ?? "gold", minute, mode };
+  const entry = { name, category, color: routine.color ?? defaultRoutineColor, minute, mode };
   if (mode === "quantity") {
     if (!Number.isInteger(result) || result < 1 || result > maxRoutineAmount) return null;
     return { ...entry, target: routine.target, unit: routine.unit, amount: result };

@@ -4,7 +4,7 @@ import { changeReminderRevision, initializeReminders, syncReminders } from "./re
 import { wellness } from "./wellness.js";
 import { installPickers } from "./pickers.js";
 import { clockMinute, localZone, minuteMs } from "./care-plan.js";
-import { installAppearance, medicationBadge, medicationBanner } from "./medication-art.js";
+import { defaultMedicineIcon, installAppearance, medicationBadge, medicationBanner, medicineColorOf } from "./medication-art.js";
 import { installAccount } from "./account.js";
 import { showPromotion } from "./promotion.js";
 import { $, dayCardOptions, element } from "./dom.js";
@@ -178,8 +178,8 @@ function openEditor(medicine) {
   $("editor-title").textContent = medicine ? t("ویرایش دارو") : t("داروی جدید");
   $("name").value = medicine?.name ?? "";
   $("instructions").value = medicine?.instructions ?? "";
-  $("medicine-icon").value = medicine?.icon ?? "capsule";
-  $("medicine-color").value = medicine?.color ?? "gold";
+  $("medicine-icon").value = medicine?.icon ?? defaultMedicineIcon;
+  $("medicine-color").value = medicineColorOf(medicine?.color);
   updateAppearance();
   $("unit").value = medicine?.unit ?? t("قرص");
   $("unit").readOnly = medicine?.stock != null;
@@ -587,7 +587,7 @@ function nextAmount(medicine) {
 function renderMedicine(medicine) {
   const card = element("article");
   card.className = "medicine treatment";
-  card.dataset.color = card.dataset.ink = medicine.color ?? "gold";
+  card.dataset.color = card.dataset.ink = medicineColorOf(medicine.color);
   card.dataset.search = medicine.name;
   const heading = action(medicine.name, () => openMedicine(medicine));
   heading.dir = "auto";
@@ -706,7 +706,7 @@ function renderDose(medicine, dose, variant) {
   const card = element("article", "", dayCard ? "medicine dose-card day-card" : "medicine dose-card");
   const plan = dose.historyPlan ?? medicine;
   const unit = dose.unit ?? plan?.unit ?? "";
-  const color = plan?.color ?? dose.color ?? "gold";
+  const color = medicineColorOf(plan?.color ?? dose.color);
   card.dataset.color = color;
   card.dataset.ink = color;
   const heading = element("h3", dose.name || plan?.name || t("دارو"));

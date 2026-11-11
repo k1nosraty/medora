@@ -1,15 +1,17 @@
 import { language, t } from "./locale.js";
 const $ = id => document.getElementById(id);
+export const defaultMedicineIcon = "bottle";
+const defaultMedicineColor = "purple";
 const shapes = {
-  tablet: language === "en" ? "Tablet" : "قرص", capsule: t("کپسول"), syrup: t("شربت"), injection: t("آمپول"),
+  bottle: t("بطری دارو"), tablet: language === "en" ? "Tablet" : "قرص", capsule: t("کپسول"), syrup: t("شربت"), injection: t("آمپول"),
   ointment: t("پماد"), drops: t("قطره"), spray: t("اسپری"), sachet: t("ساشه"), powder: t("پودر")
 };
 export const appearanceColors = {
   gold: t("طلایی"), peach: t("هلویی"), coral: t("مرجانی"), rose: t("صورتی"), purple: t("یاسی"),
   indigo: t("نیلی"), blue: t("آبی"), green: t("سبزآبی"), pistachio: t("پسته‌ای"), slate: t("خاکستری")
 };
-const knownShape = shape => Object.hasOwn(shapes, shape) ? shape : "capsule";
-const knownColor = color => Object.hasOwn(appearanceColors, color) ? color : "gold";
+const knownShape = shape => Object.hasOwn(shapes, shape) ? shape : defaultMedicineIcon;
+export const medicineColorOf = color => Object.hasOwn(appearanceColors, color) ? color : defaultMedicineColor;
 
 export function medicationBadge(shape, color) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -17,7 +19,7 @@ export function medicationBadge(shape, color) {
   use.setAttribute("href", `#art-${knownShape(shape)}`);
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("class", "medication-badge");
-  svg.dataset.ink = knownColor(color);
+  svg.dataset.ink = medicineColorOf(color);
   svg.append(use);
   return svg;
 }
@@ -27,7 +29,7 @@ export function medicationBanner(shape, color) {
   const banner = document.createElement("div");
   banner.className = "medication-banner";
   banner.dataset.shape = type;
-  banner.dataset.ink = knownColor(color);
+  banner.dataset.ink = medicineColorOf(color);
   banner.setAttribute("aria-hidden", "true");
   const art = medicationBadge(type, color);
   if (type === "tablet") art.firstElementChild.setAttribute("href", "#art-blister");
@@ -48,10 +50,10 @@ export function installAppearance(onShapeChange) {
     const type = $("medicine-icon").value;
     const selectedColor = $("medicine-color").value;
     const tile = $("medicine-appearance");
-    tile.dataset.color = tile.dataset.ink = knownColor(selectedColor);
+    tile.dataset.color = tile.dataset.ink = medicineColorOf(selectedColor);
     $("medicine-appearance-icon").replaceChildren(medicationBadge(type, selectedColor));
     $("editor-banner").replaceChildren(medicationBanner(type, selectedColor));
-    tile.setAttribute("aria-label", t("ظاهر دارو (اختیاری)، {0}، {1}", shapes[knownShape(type)], appearanceColors[knownColor(selectedColor)]));
+    tile.setAttribute("aria-label", t("ظاهر دارو (اختیاری)، {0}، {1}", shapes[knownShape(type)], appearanceColors[medicineColorOf(selectedColor)]));
   }
   function choice(id, title, pressed, click) {
     const option = document.createElement("button");
@@ -94,7 +96,7 @@ export function installAppearance(onShapeChange) {
 
   $("medicine-appearance").addEventListener("click", () => {
     shape = knownShape($("medicine-icon").value);
-    color = knownColor($("medicine-color").value);
+    color = medicineColorOf($("medicine-color").value);
     render();
     dialog.showModal();
   });

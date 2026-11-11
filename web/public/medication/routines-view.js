@@ -5,21 +5,22 @@ import { doseTime, isoDay, timeText, trackSchedule } from "./care-index.js";
 import { clockMinute } from "./care-plan.js";
 import { dayMs } from "./wall-clock.js";
 import { routineCategories, routineLabels } from "./routine-catalog.js";
-import { maxRoutineAmount, maxRoutines, maxRoutineSteps, routineComplete, routineLog, routineOccurs, routineWeekday } from "./routine-plan.js";
+import { defaultRoutineColor, maxRoutineAmount, maxRoutines, maxRoutineSteps, routineComplete, routineLog, routineOccurs, routineWeekday } from "./routine-plan.js";
 
 const days = [t("دوشنبه"), t("سه‌شنبه"), t("چهارشنبه"), t("پنجشنبه"), t("جمعه"), t("شنبه"), t("یکشنبه")];
 const fields = id => $("routine-" + id);
 const labelFor = category => t(Object.hasOwn(routineLabels, category) ? routineLabels[category] : routineLabels.custom);
-const colorOf = color => Object.hasOwn(appearanceColors, color) ? color : "gold";
+const colorOf = color => Object.hasOwn(appearanceColors, color) ? color : defaultRoutineColor;
 const changed = () => new Error(t("روتین تغییر کرده است. دوباره آن را باز کنید."));
 
 function glyph(category) {
   const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const use = document.createElementNS(icon.namespaceURI, "use");
-  const symbol = category !== "custom" && Object.hasOwn(routineLabels, category) ? category : "custom-art";
+  const symbol = category !== "custom" && Object.hasOwn(routineLabels, category) ? category : "banner";
   use.setAttribute("href", "/medication/routine-icons.svg#" + symbol);
   icon.classList.add("routine-illustration");
-  icon.setAttribute("viewBox", "0 0 24 24");
+  if (symbol === "banner") icon.classList.add("routine-category-art");
+  icon.setAttribute("viewBox", symbol === "banner" ? "0 0 128 100" : "0 0 24 24");
   icon.setAttribute("aria-hidden", "true");
   icon.append(use);
   return icon;
@@ -227,7 +228,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       throw new Error(t("۱ تا ۱۲ مرحله وارد کنید. هر مرحله حداکثر ۷۰ نویسه."));
     }
     return {
-      id: editing?.id ?? crypto.randomUUID(), name, category, color: colors.find(input => input.checked)?.value ?? "gold", start, mask,
+      id: editing?.id ?? crypto.randomUUID(), name, category, color: colorOf(colors.find(input => input.checked)?.value), start, mask,
       interval: weekly ? Number(fields("interval").value) : 1, minute, reminder, mode,
       notes: fields("notes").value.trim(), paused: editing?.paused ?? false, revision: (editing?.revision ?? 0) + 1,
       ...(mode === "quantity" ? { target, unit: fields("unit").value.trim() } : {}),

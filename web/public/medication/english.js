@@ -731,6 +731,7 @@ export default {
   "ارتباط برقرار نشد. اتصال اینترنت را بررسی کنید.": "Could not connect. Check your internet connection.",
   "از حساب خارج شدید.": "You’re signed out.",
   "کپسول": "Capsule",
+  "بطری دارو": "Medicine bottle",
   "شربت": "Syrup",
   "آمپول": "Ampoule",
   "پماد": "Ointment",

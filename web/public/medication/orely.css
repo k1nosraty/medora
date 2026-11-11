@@ -46,6 +46,7 @@
   background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--action) 10%, transparent), transparent 34rem), var(--page);
   --page: #f4f3fa;
   --panel: #fcfbff;
+  --calendar-neutral: #eeedf0;
   --field: #fff;
   --action: var(--accent-light);
   accent-color: var(--action);
@@ -58,6 +59,7 @@
 @media (prefers-color-scheme: dark) {
   .medora:not([data-theme="light"]) {
     --cover: var(--accent-dark-cover);
+    --calendar-neutral: #34373b;
     --action: var(--accent-dark);
     --on-action: var(--cover-button-text);
     --cover-text: #f6f9fa;
@@ -71,6 +73,7 @@
 }
 .medora[data-theme="dark"] {
   --cover: var(--accent-dark-cover);
+  --calendar-neutral: #34373b;
   --action: var(--accent-dark);
   --on-action: var(--cover-button-text);
   --cover-text: #f6f9fa;
@@ -150,9 +153,9 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 #today-dates { position: relative; z-index: 1; inline-size: var(--today-rail-width); margin: -1.35rem auto 0; }
 #today-dates:empty { display: none; }
 .medora :is(.day-controls, .calendar-card, #date-picker) {
-  --calendar-surface: color-mix(in srgb, var(--action) 12%, var(--panel));
-  --calendar-header: color-mix(in srgb, var(--action) 19%, var(--panel));
-  --calendar-rim: color-mix(in srgb, var(--action) 34%, var(--outline));
+  --calendar-surface: color-mix(in srgb, var(--action) 3%, var(--calendar-neutral));
+  --calendar-header: color-mix(in srgb, var(--action) 6%, var(--calendar-neutral));
+  --calendar-rim: color-mix(in srgb, var(--action) 10%, var(--outline));
 }
 .medora #today-dates .day-controls, .medora .dock, .medora .settings-dialog .sheet-header, .medora .glass-toolbar {
   border: 1px solid var(--glass-rim);
@@ -235,9 +238,10 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora #today-dates .day-week button[aria-current="date"] span { color: inherit; }
 .medora .daily-sheet { margin-block-start: .75rem; }
 .medora #today-water {
-  --water: color-mix(in srgb, var(--cover) 11%, var(--panel));
-  --water-ink: var(--ink);
-  --water-accent: #8cb1e2;
+  --water: var(--program-fill);
+  --water-ink: var(--program-ink);
+  --water-accent: var(--category-water-bar);
+  color: var(--water-ink);
   display: grid;
   grid-template-columns: clamp(3.6rem, 22%, 5.3rem) minmax(0, 1fr);
   gap: .65rem;
@@ -262,7 +266,7 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   inline-size: 100%;
   block-size: 100%;
 }
-.medora #today-water .glass-water { fill: url(#today-glass-water-fill); }
+.medora #today-water .glass-water { fill: #86b3e4; stroke: none; }
 .today-water-body { min-inline-size: 0; padding: .16rem .13rem .08rem; }
 .medora #today-water .water-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .4rem; align-items: center; }
 .medora #today-water-label { margin: 0; color: inherit; font-size: .98rem; }
@@ -487,10 +491,18 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
 .medora .dock button { grid-template-rows: 1.85rem auto; min-block-size: 3.65rem; font-size: .74rem; }
 .medora .dock button[aria-current="page"] { background: color-mix(in srgb, var(--dock-active) 74%, transparent); box-shadow: inset 0 1px var(--glass-glint), 0 .14rem .42rem var(--glass-shadow); }
 .medora .quick-items { display: grid; gap: .55rem; }
-.medora .quick-item { display: flex; align-items: center; justify-content: flex-start; gap: .65rem; padding-inline: .85rem; min-block-size: 3.65rem; }
-.medora .quick-item.medicine { background: var(--stage); }
-.medora .quick-item.water { background: var(--water); color: var(--water-ink); }
-.medora .quick-item.visit { background: var(--visit); color: var(--visit-ink); }
+.medora button.quick-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .65rem;
+  padding-inline: .85rem;
+  min-block-size: 3.65rem;
+  border-color: color-mix(in srgb, var(--program-ink) 18%, var(--outline));
+  background: var(--program-fill);
+  color: var(--program-ink);
+}
+.medora .quick-item svg.category-art { inline-size: 2.6rem; block-size: 2.25rem; }
 
 .medora #plans-heading { background: var(--stage); border: 0; padding: .8rem .95rem; }
 .medora #plans-heading .quiet { margin: 0; font-size: .78rem; }
@@ -1022,28 +1034,15 @@ html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5re
   color: var(--ink);
   box-shadow: inset 0 1px var(--glass-glint), 0 .24rem .75rem var(--glass-shadow);
 }
+.medora .report-card {
+  --report-color: var(--program-ink);
+  --report-wash: var(--program-fill);
+}
 .medora .report-card.water {
-  --water: #d8eaff;
-  --water-ink: #164f90;
-  --report-color: var(--water-ink);
-  --report-wash: var(--water);
-  --report-blue-bar: #568ed1;
+  --water: var(--program-fill);
+  --water-ink: var(--program-ink);
+  --report-blue-bar: var(--category-water-bar);
 }
-.medora[data-theme="dark"] .report-card.water {
-  --water: #223b59;
-  --water-ink: #b6d9ff;
-  --report-blue-bar: #679be5;
-}
-@media (prefers-color-scheme: dark) {
-  .medora:not([data-theme="light"]) .report-card.water {
-    --water: #223b59;
-    --water-ink: #b6d9ff;
-    --report-blue-bar: #679be5;
-  }
-}
-.medora .report-card.medicine { --report-color: var(--medicine-ink); --report-wash: var(--medicine); }
-.medora .report-card.program-routine { --report-color: var(--routine-ink); --report-wash: var(--routine-fill); }
-.medora .report-card.visit { --report-color: var(--visit-ink); --report-wash: var(--visit); }
 .report-hero {
   position: relative;
   isolation: isolate;

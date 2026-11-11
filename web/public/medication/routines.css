@@ -1,25 +1,49 @@
 .medora {
-  --routine-fill: #f8e9da;
-  --routine-ink: #734633;
-  --routine-mark: #a56043;
-  --program-visit-fill: #dfefeb;
-  --program-visit-ink: #315951;
+  --category-medicine-fill: #e8e0ef;
+  --category-medicine-ink: #6c3d8a;
+  --category-medicine-art: #b19bd0;
+  --program-visit-fill: #dde6e4;
+  --program-visit-ink: #236442;
+  --category-visit-art: #79ac96;
+  --routine-fill: #eee0e2;
+  --routine-ink: #8f3e36;
+  --routine-mark: #a85e56;
+  --category-routine-art: #dd9994;
+  --category-water-fill: #e0e6ff;
+  --category-water-ink: #2c3e67;
+  --category-water-bar: #568ed1;
 }
 @media (prefers-color-scheme: dark) {
   .medora:not([data-theme="light"]) {
-    --routine-fill: #493931;
-    --routine-ink: #ffe6cf;
-    --routine-mark: #e7ab86;
-    --program-visit-fill: #2b4548;
-    --program-visit-ink: #d7f0e8;
+    --category-medicine-fill: #3b2d4a;
+    --category-medicine-ink: #ebc7ff;
+    --category-medicine-art: #bc9bdc;
+    --program-visit-fill: #22463c;
+    --program-visit-ink: #c7ebd6;
+    --category-visit-art: #8fc3a9;
+    --routine-fill: #472e33;
+    --routine-ink: #ffc7bd;
+    --routine-mark: #ed9d91;
+    --category-routine-art: #ef9c92;
+    --category-water-fill: #263655;
+    --category-water-ink: #c8d5ff;
+    --category-water-bar: #679be5;
   }
 }
 .medora[data-theme="dark"] {
-  --routine-fill: #493931;
-  --routine-ink: #ffe6cf;
-  --routine-mark: #e7ab86;
-  --program-visit-fill: #2b4548;
-  --program-visit-ink: #d7f0e8;
+  --category-medicine-fill: #3b2d4a;
+  --category-medicine-ink: #ebc7ff;
+  --category-medicine-art: #bc9bdc;
+  --program-visit-fill: #22463c;
+  --program-visit-ink: #c7ebd6;
+  --category-visit-art: #8fc3a9;
+  --routine-fill: #472e33;
+  --routine-ink: #ffc7bd;
+  --routine-mark: #ed9d91;
+  --category-routine-art: #ef9c92;
+  --category-water-fill: #263655;
+  --category-water-ink: #c8d5ff;
+  --category-water-bar: #679be5;
 }
 .medora .dock {
   inset-inline: 0;
@@ -47,9 +71,28 @@
   border-radius: 50%;
 }
 .medora .dock .dock-add svg { inline-size: 1.35rem; block-size: 1.35rem; }
-.medora .program-medicine { --program-fill: var(--dock-active); --program-ink: var(--action); }
-.medora .program-visit { --program-fill: var(--program-visit-fill); --program-ink: var(--program-visit-ink); }
+.medora .program-medicine { --program-fill: var(--category-medicine-fill); --program-ink: var(--category-medicine-ink); --pill-base: var(--category-medicine-art); }
+.medora .program-visit { --program-fill: var(--program-visit-fill); --program-ink: var(--program-visit-ink); --pill-base: var(--category-visit-art); }
 .medora .program-routine { --program-fill: var(--routine-fill); --program-ink: var(--routine-ink); }
+.medora .program-water { --program-fill: var(--category-water-fill); --program-ink: var(--category-water-ink); }
+.medora :is(.medicine, #medicine-appearance, #appearance-preview, .medication-banner, .medication-badge)[data-ink="purple"] {
+  --pill-base: var(--category-medicine-art);
+}
+.medora :is(.dose-card, .treatment, #medicine-appearance, #appearance-preview)[data-ink="purple"] {
+  background: var(--category-medicine-fill);
+  color: var(--category-medicine-ink);
+}
+.medora :is(.visit-card, #visit-appearance)[data-ink="green"] { --pill-base: var(--category-visit-art); }
+.medora .visit-card[data-ink="green"] { background: var(--program-visit-fill); color: var(--program-visit-ink); }
+.medora :is(.routine-glyph, .routine-row, .routine-day-card, .routine-day-art)[data-ink="coral"] { --pill-base: var(--category-routine-art); }
+.medora :is(.routine-row, .routine-day-card)[data-ink="coral"] { background: var(--routine-fill); color: var(--routine-ink); }
+.medora :is(.program-routine, [data-ink="coral"]) .routine-category-art { filter: hue-rotate(-12deg); }
+.medora svg:has(> use[href="#art-bottle"]) {
+  --bottle-cap: color-mix(in srgb, var(--pill-base, var(--category-medicine-art)) 64%, #37255e);
+  --bottle-body: color-mix(in srgb, var(--pill-base, var(--category-medicine-art)) 52%, #fff6ff);
+  --bottle-mark: color-mix(in srgb, var(--pill-base, var(--category-medicine-art)) 78%, #4b2b6a);
+}
+
 .medora #today-programs { inline-size: var(--today-rail-width); margin-inline: auto; grid-area: programs; }
 .medora #programs-title { font-size: .98rem; margin: 0 0 .35rem; }
 .medora .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
@@ -131,16 +174,13 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 .medora .routine-row[data-complete="true"] > button { background: var(--mint); color: var(--mint-ink); }
 .medora .routine-day-heading { font-size: .86rem; margin: .55rem .25rem .05rem; }
 .medora :is(#routine-more, #routine-first) { margin-block-start: .7rem; }
-.medora .quick-item.program-routine, .medora .report-card.program-routine {
-  background: var(--routine-fill);
-  color: var(--routine-ink);
-}
 .medora .routine-fields { display: grid; gap: .75rem; }
 .medora .routine-fields :is(label, input, select, textarea) { min-inline-size: 0; }
 .medora .routine-fields :is(input:not([type="checkbox"], [type="radio"]), select, textarea) { inline-size: 100%; }
 .medora .routine-glyph[data-ink] {
   background: color-mix(in srgb, var(--pill-base) 22%, var(--panel));
 }
+.medora .routine-glyph[data-ink="coral"] { background: var(--routine-fill); color: var(--routine-ink); }
 .medora svg.routine-illustration {
   --routine-accent: var(--pill-base, #b8a4e8);
   --routine-light: color-mix(in srgb, var(--routine-accent) 32%, white);
