@@ -8,14 +8,14 @@ const number = value => numbers.format(value);
 const sum = values => values.reduce((total, value) => total + value, 0);
 
 function waterCard(entries, total, openHistory, addWater) {
-  const card = element("article", "", "water day-card calendar-water");
+  const card = element("article", "", "water day-card calendar-water program-water");
   card.dataset.calendarState = "done";
   const art = element("div", "", "day-card-art");
   const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const use = document.createElementNS(icon.namespaceURI, "use");
-  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("viewBox", "0 0 128 100");
   icon.setAttribute("aria-hidden", "true");
-  use.setAttribute("href", "#i-water");
+  use.setAttribute("href", "#art-report-water");
   icon.append(use);
   art.append(icon, element("span", t("آب"), "day-card-kind"));
   const copy = element("div", "", "day-card-content");

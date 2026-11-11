@@ -994,7 +994,13 @@ html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5re
   border-radius: .75rem;
   background: color-mix(in srgb, var(--pill-base) 19%, transparent);
 }
-.medora #calendar-entries .day-card-art > svg { inline-size: 2.15rem; block-size: 2.15rem; transform: none; }
+.medora #calendar-entries .day-card-art > svg {
+  inline-size: 2.65rem;
+  block-size: 2.45rem;
+  max-inline-size: 100%;
+  transform: none;
+}
+.medora #calendar-entries .visit-banner::before { content: none; }
 .medora #calendar-entries .day-card-kind { padding-inline: 0; background: transparent; font-size: .68rem; }
 .medora #calendar-entries .day-card-content h3 { font-size: 1rem; }
 .medora #calendar-entries .day-card-content :is(p, small) { font-size: .77rem; }
@@ -1019,7 +1025,11 @@ html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5re
   inline-size: min(calc(100% - .8rem), 18rem);
 }
 .medora #calendar-entries .day-card-menu p { margin: .18rem .35rem; overflow-wrap: anywhere; }
-.medora #calendar-entries .calendar-water { --pill-base: #80bfbf; }
+.medora #calendar-entries .calendar-water {
+  --pill-base: var(--category-water-bar);
+  background: var(--program-fill);
+  color: var(--program-ink);
+}
 .medora #calendar-entries .dose-snoozed { padding-inline-start: .45rem; }
 .medora .report-period { margin-block-end: .85rem; }
 .medora #report-range { background: transparent; padding: 0; }
