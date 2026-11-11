@@ -171,6 +171,16 @@ function reportChart(range, first, goal, formatShortDate, formatDay, monthStart)
   select(initial);
 }
 
+function reportStats(id, stats) {
+  const list = $(id);
+  list.replaceChildren(...stats.map(([label, value, tone]) => {
+    const tile = element("div");
+    if (tone) tile.dataset.tone = tone;
+    tile.append(element("dt", t(label)), element("dd", value));
+    return tile;
+  }));
+}
+
 export function renderReports(last, goal, index, reportSpan, formatShortDate, formatDay, monthStart) {
   const first = last - reportSpan + 1;
   const range = Array.from({ length: reportSpan }, (_, i) => index.waterTotal(first + i));
@@ -182,47 +192,60 @@ export function renderReports(last, goal, index, reportSpan, formatShortDate, fo
   $("report-average").hidden = $("report-water-value").hidden = $("report-water-coverage").hidden =
     $("report-water-trend").hidden = !waterDays;
   $("report-water-empty").hidden = Boolean(waterDays);
-  $("report-water-coverage").textContent = t("{0} میلی‌لیتر در {1} روز از {2} روز", number(totalWater), number(waterDays), number(reportSpan));
-  $("report-goal-label").textContent = t("هدف روزانهٔ آب، {0} میلی‌لیتر", number(goal));
+  if (waterDays) {
+    reportStats("report-water-coverage", [
+      ["کل آب (میلی‌لیتر)", number(totalWater)],
+      ["روزهای دارای ثبت", t("{0} از {1}", number(waterDays), number(reportSpan))],
+      ["روزهای رسیدن به هدف", number(range.filter(amount => amount >= goal).length), "done"]
+    ]);
+  }
+  $("report-goal-label").textContent = t("هدف روزانهٔ فعلی، {0} میلی‌لیتر", number(goal));
   const doses = taken + skipped + unrecorded;
   const hasDoses = doses > 0;
   const ratio = hasDoses ? taken / doses : 0;
   $("report-dose-number").textContent = percent.format(Math.floor(ratio * 1000) / 1000);
-  $("report-dose-number").hidden = !hasDoses;
+  $("report-dose-value").hidden = !hasDoses;
   $("report-dose-progress").value = ratio;
   $("report-dose-progress").hidden = !hasDoses;
   $("report-doses").textContent = hasDoses
     ? t("{0} از {1} نوبت مصرف شد.", number(taken), number(doses))
     : t("در این بازه نوبت موعدرسیده یا ثبت‌شده‌ای نیست.");
   $("report-dose-breakdown").hidden = !hasDoses;
-  $("report-dose-breakdown").textContent = [
-    t("{0} مصرف‌نشده", number(skipped)),
-    t("{0} بدون ثبت", number(unrecorded))
-  ].join(" · ");
+  if (hasDoses) reportStats("report-dose-breakdown", [
+    ["مصرف‌شده", number(taken), "done"],
+    ["مصرف‌نشده", number(skipped), "partial"],
+    ["بدون ثبت", number(unrecorded)]
+  ]);
 
   const routines = index.routineTotals(first, last);
-  const hasRoutines = routines.completed + routines.partial + routines.unrecorded > 0;
-  $("report-routine-number").textContent = number(routines.completed);
-  $("report-routine-number").hidden = !hasRoutines;
-  $("report-routines").textContent = t(hasRoutines ? "نوبت روتین انجام شد" : "در این بازه نوبت روتین موعدرسیده یا ثبت‌شده‌ای نیست.");
+  const routineCount = routines.completed + routines.partial + routines.unrecorded;
+  const hasRoutines = routineCount > 0;
+  const routineRatio = hasRoutines ? routines.completed / routineCount : 0;
+  $("report-routine-number").textContent = percent.format(Math.floor(routineRatio * 1000) / 1000);
+  $("report-routine-value").hidden = !hasRoutines;
+  $("report-routine-progress").value = routineRatio;
+  $("report-routine-progress").hidden = !hasRoutines;
+  $("report-routines").textContent = hasRoutines
+    ? t("{0} از {1} نوبت روتین انجام شد.", number(routines.completed), number(routineCount))
+    : t("در این بازه نوبت روتین موعدرسیده یا ثبت‌شده‌ای نیست.");
   $("report-routine-breakdown").hidden = !hasRoutines;
-  $("report-routine-breakdown").textContent = [
-    t("{0} نیمه‌تمام", number(routines.partial)),
-    t("{0} بدون ثبت", number(routines.unrecorded)),
-    t("{0} روز دارای ثبت", number(routines.activeDays))
-  ].join(" · ");
+  if (hasRoutines) reportStats("report-routine-breakdown", [
+    ["انجام‌شده", number(routines.completed), "done"],
+    ["نیمه‌تمام", number(routines.partial), "partial"],
+    ["بدون ثبت", number(routines.unrecorded)]
+  ]);
 
   const visits = index.visitTotals(first, last);
   const hasVisits = Object.values(visits).some(Boolean);
   $("report-visit-number").textContent = number(visits.attended);
-  $("report-visit-number").hidden = !hasVisits;
+  $("report-visit-value").hidden = !hasVisits;
   $("report-visits").textContent = t(hasVisits ? "قرار با حضور ثبت‌شده" : "در این بازه قراری ندارید.");
   $("report-visit-breakdown").hidden = !hasVisits;
-  $("report-visit-breakdown").textContent = [
-    t("{0} بدون ثبت حضور", number(visits.unrecorded)),
-    t("{0} پیش رو", number(visits.upcoming)),
-    t("{0} لغوشده", number(visits.cancelled))
-  ].join(" · ");
+  if (hasVisits) reportStats("report-visit-breakdown", [
+    ["بدون ثبت حضور", number(visits.unrecorded)],
+    ["پیش رو", number(visits.upcoming)],
+    ["لغوشده", number(visits.cancelled), "partial"]
+  ]);
 
   if (waterDays) reportChart(range, first, goal, formatShortDate, formatDay, monthStart);
 }
