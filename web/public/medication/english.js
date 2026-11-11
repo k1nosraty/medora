@@ -184,6 +184,8 @@ export default {
   "کل آب (میلی‌لیتر)": "Total water (mL)",
   "روزهای دارای ثبت": "Days logged",
   "روزهای رسیدن به هدف": "Days at goal",
+  "جزئیات مصرف آب": "Water intake details",
+  "میانگین در {0} روز دارای ثبت": "Average across {0} logged days",
   "هدف روزانهٔ فعلی، {0} میلی‌لیتر": "Current daily goal: {0} mL",
   "روند مصرف آب": "Water intake trend",
   "مصرف‌شده": "Taken",

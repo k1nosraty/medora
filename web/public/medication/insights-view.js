@@ -116,13 +116,14 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
   }
 
   const chart = $("report-chart");
-  const label = (bar, long = false) => {
+  const direction = document.documentElement.dir;
+  $("report-water-trend").dir = direction;
+  const dateLabel = (bar, long = false) => {
     const format = long ? formatDay : formatShortDate;
-    const dates = bar.start === bar.end ? format(bar.start) : t("از {0} تا {1}", format(bar.start), format(bar.end));
-    const value = bar.count ? t("{0} میلی‌لیتر", number(Math.round(bar.value))) : t("بدون ثبت");
-    return t("{0}؛ {1}", dates, value);
+    return bar.start === bar.end ? format(bar.start) : t("از {0} تا {1}", format(bar.start), format(bar.end));
   };
-  const key = JSON.stringify([goal, bars.map(bar => [label(bar, true), bar.start, bar.end, bar.value])]);
+  const valueLabel = bar => bar.count ? t("{0} میلی‌لیتر", number(Math.round(bar.value))) : t("بدون ثبت");
+  const key = JSON.stringify([goal, groupByMonth, direction, bars.map(bar => [dateLabel(bar, true), bar.value, bar.count])]);
   if (chart.dataset.chartKey === key) return;
   chart.dataset.chartKey = key;
   const max = Math.max(goal, ...bars.map(bar => bar.value));
@@ -134,12 +135,12 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
   let selected = initial;
   const controls = bars.map((bar, i) => {
     const control = button("", () => select(i));
-    control.setAttribute("aria-label", label(bar, true));
+    control.setAttribute("aria-label", t("{0}؛ {1}", dateLabel(bar, true), valueLabel(bar)));
     control.style.setProperty("--bar", `${bar.value / max * 100}%`);
     control.style.setProperty("--days", bar.end - bar.start + 1);
     control.dataset.logged = String(Boolean(bar.count));
     control.addEventListener("keydown", event => {
-      const rtl = document.documentElement.dir === "rtl";
+      const rtl = direction === "rtl";
       const target = { ArrowLeft: i + (rtl ? 1 : -1), ArrowRight: i + (rtl ? -1 : 1),
         Home: 0, End: bars.length - 1 }[event.key];
       if (target === undefined) return;
@@ -158,9 +159,9 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
       control.tabIndex = i === selected ? 0 : -1;
     });
     const bar = bars[selected];
-    const copy = label(bar, groupByMonth);
-    selection.textContent = bar.end > bar.start && bar.count ?
-      t("{0} میانگین روزهای ثبت‌شده ({1} روز)", copy, number(bar.count)) : copy;
+    selection.replaceChildren(element("span", dateLabel(bar)),
+      element("strong", valueLabel(bar)),
+      ...(bar.end > bar.start && bar.count ? [element("small", t("میانگین در {0} روز دارای ثبت", number(bar.count)))] : []));
     previous.setAttribute("aria-disabled", String(selected === 0));
     next.setAttribute("aria-disabled", String(selected === bars.length - 1));
   }
@@ -188,7 +189,7 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
   const { taken, skipped, unrecorded } = index.doseTotals(first, last);
   $("report-dates").textContent = t("از {0} تا {1}", formatDay(first), formatDay(last));
   $("report-water-number").textContent = waterDays ? number(Math.round(totalWater / waterDays)) : "";
-  $("report-average").hidden = $("report-water-value").hidden = $("report-water-coverage").hidden =
+  $("report-average").hidden = $("report-water-value").hidden = $("report-water-details").hidden =
     $("report-water-trend").hidden = !waterDays;
   $("report-water-empty").hidden = Boolean(waterDays);
   if (waterDays) {
