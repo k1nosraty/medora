@@ -1,7 +1,12 @@
 import { $, button, element } from "/medication/dom.js";
 import { localizeMarkup, t } from "/medication/locale.js";
+import { applyDisplay } from "/medication/display.js";
+import { accessCareSettings } from "/medication/storage.js";
 
 localizeMarkup();
+const refreshDisplay = () => accessCareSettings().then(applyDisplay).catch(() => {});
+void refreshDisplay();
+window.addEventListener("focus", refreshDisplay);
 const form = $("promotion-form");
 const fields = form.elements;
 const panel = $("admin-workspace");

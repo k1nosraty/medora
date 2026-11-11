@@ -453,7 +453,6 @@
 .medora .dock button[aria-current="page"] { background: var(--dock-active); box-shadow: inset 0 1px 0 var(--glass), 0 .1rem .38rem var(--cast); }
 .medora .dock [aria-current="page"] .dock-mark { background: transparent; color: var(--action); }
 .medora .dock .dock-add { color: var(--ink); }
-.dock-add span { display: grid; place-items: center; inline-size: 1.75rem; aspect-ratio: 1; border-radius: 50%; color: var(--lime-ink); background: var(--lime); box-shadow: 0 0 .65rem color-mix(in srgb, var(--lime) 48%, transparent); }
 
 .medication-banner {
   --art-tilt: -12deg;
@@ -545,7 +544,7 @@
 .medora [data-editor-step] h3 { font-size: 1.15rem; font-weight: 800; margin-block-end: .55rem; }
 .wizard-actions { display: flex; gap: .5rem; }
 .medora .wizard-actions button { border-radius: 3rem; }
-.medora #editor-next { flex: 1; background: var(--lime); border-color: var(--lime); color: var(--lime-ink); }
+.medora #editor-next { flex: 1; }
 #editor-review { padding: .7rem .9rem; background: var(--panel); border: 1px solid var(--outline); border-radius: 1rem; overflow-wrap: anywhere; }
 #editor-review h4 { margin-block: 0; font-size: 1.1rem; }
 #editor-review ol { padding-inline-start: 1.25rem; }

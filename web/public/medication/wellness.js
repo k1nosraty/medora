@@ -6,13 +6,13 @@ import { $, button, element, fitDialogToViewport } from "./dom.js";
 import { appointmentView, visitIllustration } from "./appointments-view.js";
 import { renderCalendar, renderReports } from "./insights-view.js";
 import { changeReminderRevision } from "./reminders.js";
+import { accentOf, applyDisplay } from "./display.js";
 
 const dayMs = 86_400_000;
 const numbers = new Intl.NumberFormat(locale);
 const percent = new Intl.NumberFormat(locale, { style: "percent" });
 const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), routines: t("روتین‌ها"), insights: t("گزارش و تقویم"), water: t("آب") };
 const accents = { blue: t("آبی"), green: t("سبز"), lilac: t("یاسی"), coral: t("مرجانی") };
-const accentOf = value => Object.hasOwn(accents, value) ? value : "blue";
 const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "purple";
 const iso = day => new Date(day * dayMs).toISOString().slice(0, 10);
 function empty(text) { return element("p", text, "empty"); }
@@ -808,10 +808,7 @@ export function wellness({ getState, selectedDay, today, render, mutate, request
 
   function renderWellness(state, day, index) {
     setCalendar(state.calendar ?? defaultCalendar);
-    document.body.dataset.theme = state.theme ?? "system";
-    document.body.dataset.accent = accentOf(state.accent);
-    const dark = state.theme === "dark" || (state.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-    document.querySelector('meta[name="theme-color"]').content = dark ? "#151b20" : "#f4f3fa";
+    applyDisplay(state);
     if (["today", "medications", "water", "routines"].includes(screen)) {
       $("day-label").textContent = screen === "today" ? monthText.format(day * dayMs) : day === today() ? t("امروز") : formatDay(day);
       $("pick-day").setAttribute("aria-label", t("انتخاب تاریخ، {0}", formatDay(day, true)));

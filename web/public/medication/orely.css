@@ -29,20 +29,24 @@
 }
 .medora {
   --cover: var(--accent-cover);
-  --cover-light: color-mix(in srgb, var(--cover) 77%, var(--accent-glow));
+  --cover-light: color-mix(in srgb, var(--cover) 94%, var(--accent-glow));
   --cover-shade: color-mix(in srgb, var(--cover) 75%, #130e28);
+  --cover-haze: color-mix(in srgb, var(--cover-light) 64%, transparent);
   --cover-text: #faf7ff;
+  --cover-badge: color-mix(in srgb, var(--cover-shade) 70%, transparent);
+  --cover-button-text: #151b20;
   --stage: color-mix(in srgb, var(--action) 7%, var(--panel));
   --glass-rim: #fffc;
   --glass-glint: #fff9;
-  --glass-shadow: #423b7c24;
+  --glass-shadow: color-mix(in srgb, var(--action) 14%, transparent);
   --mint: #dcf0bf;
   --mint-ink: #233d2c;
-  background: radial-gradient(ellipse at 12% 12%, #dbd8f94f, transparent 34rem), var(--page);
+  background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--action) 10%, transparent), transparent 34rem), var(--page);
   --page: #f4f3fa;
   --panel: #fcfbff;
   --field: #fff;
   --action: var(--accent-light);
+  accent-color: var(--action);
   --ink: #211d3a;
   --muted: #5f5974;
   --outline: #dedbef;
@@ -53,10 +57,10 @@
   .medora:not([data-theme="light"]) {
     --cover: var(--accent-dark-cover);
     --action: var(--accent-dark);
-    --on-action: #151b20;
+    --on-action: var(--cover-button-text);
     --cover-text: #f6f9fa;
-    --glass-rim: #9cbdb446;
-    --glass-glint: #b7d4c622;
+    --glass-rim: color-mix(in srgb, var(--action) 24%, transparent);
+    --glass-glint: color-mix(in srgb, var(--action) 13%, transparent);
     --glass-shadow: #0006;
     --mint: #d0e8b2;
     --mint-ink: #243b29;
@@ -66,10 +70,10 @@
 .medora[data-theme="dark"] {
   --cover: var(--accent-dark-cover);
   --action: var(--accent-dark);
-  --on-action: #151b20;
+  --on-action: var(--cover-button-text);
   --cover-text: #f6f9fa;
-  --glass-rim: #9cbdb446;
-  --glass-glint: #b7d4c622;
+  --glass-rim: color-mix(in srgb, var(--action) 24%, transparent);
+  --glass-glint: color-mix(in srgb, var(--action) 13%, transparent);
   --glass-shadow: #0006;
   --mint: #d0e8b2;
   --mint-ink: #243b29;
@@ -115,7 +119,7 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
   overflow: hidden;
   color: var(--cover-text);
   background:
-    radial-gradient(ellipse at 83% 15%, color-mix(in srgb, var(--accent-glow) 38%, transparent), transparent 56%),
+    radial-gradient(ellipse at 83% 15%, var(--cover-haze), transparent 56%),
     linear-gradient(150deg, var(--cover-shade), var(--cover) 55%, var(--cover-light));
   border-radius: 2.1rem 2.1rem 1.3rem 1.3rem;
 }
@@ -138,7 +142,7 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
 }
 html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .story-copy { min-inline-size: 0; }
-.medora .story-label { display: inline-block; padding: .12rem .45rem; border: 1px solid #fff5; background: #fff2; border-radius: .7rem; font-size: .72rem; }
+.medora .story-label { display: inline-block; padding: .12rem .45rem; border: 1px solid #fff5; background: var(--cover-badge); border-radius: .7rem; font-size: .72rem; }
 .medora .story-copy h2 { margin: .35rem 0 .15rem; font-weight: 850; font-size: clamp(1.55rem, 6.5vw, 2.85rem); line-height: 1.18; text-wrap: balance; }
 .medora #story-summary { margin-block: .3rem 0; color: var(--cover-text); font-size: clamp(.75rem, 2.8vw, .95rem); }
 #today-dates { position: relative; z-index: 1; inline-size: var(--today-rail-width); margin: -1.35rem auto 0; }
@@ -204,8 +208,9 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .day-week-ghost[data-edge="end"] { inset-inline-start: 100%; }
 .medora #today-dates .day-week .calendar-today:not([aria-current="date"]) { box-shadow: inset 0 0 0 1px var(--action); }
 .medora #today-dates .day-week button span { color: var(--muted); font-size: .68rem; }
-.medora #today-dates .day-week button[aria-current="date"] { background: var(--mint); color: var(--mint-ink); box-shadow: inset 0 1px #fff8; }
-.medora #today-dates .day-week button[aria-current="date"] span { color: var(--mint-ink); }
+.medora #today-dates .day-week button[aria-current="date"] { background: var(--action); color: var(--on-action); }
+.medora #today-dates .day-week button[aria-current="date"]:focus-visible { outline-color: var(--on-action); }
+.medora #today-dates .day-week button[aria-current="date"] span { color: inherit; }
 .medora .daily-sheet { margin-block-start: .75rem; }
 .medora #today-water {
   --water: color-mix(in srgb, var(--cover) 11%, var(--panel));
@@ -415,7 +420,6 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora .dock { max-inline-size: 46rem; padding: .25rem; border-radius: 2.3rem; }
 .medora .dock button { grid-template-rows: 1.85rem auto; min-block-size: 3.65rem; font-size: .74rem; }
 .medora .dock button[aria-current="page"] { background: color-mix(in srgb, var(--dock-active) 74%, transparent); box-shadow: inset 0 1px var(--glass-glint), 0 .14rem .42rem var(--glass-shadow); }
-.medora .dock .dock-add span { background: var(--mint); color: var(--mint-ink); }
 .medora .quick-items { display: grid; gap: .55rem; }
 .medora .quick-item { display: flex; align-items: center; justify-content: flex-start; gap: .65rem; padding-inline: .85rem; min-block-size: 3.65rem; }
 .medora .quick-item.medicine { background: var(--stage); }
@@ -871,10 +875,11 @@ html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5re
 .medora #calendar-days { gap: .13rem; }
 .medora #calendar-days button { min-block-size: 2.8rem; border-radius: .8rem; }
 .medora #calendar-days button.calendar-today:not([aria-current="date"]) { box-shadow: inset 0 0 0 1px var(--action); }
-.medora #calendar-days button[aria-current="date"] { background: var(--mint); color: var(--mint-ink); }
-.medora #calendar-days button[aria-current="date"] .calendar-dots .medicine { background: #623d23; }
-.medora #calendar-days button[aria-current="date"] .calendar-dots .water { background: #24584e; }
-.medora #calendar-days button[aria-current="date"] .calendar-dots .visit { background: #763858; }
+.medora #calendar-days button[aria-current="date"] {
+  background: var(--dock-active);
+  color: var(--action);
+  box-shadow: inset 0 0 0 1px var(--action);
+}
 .calendar-key { display: flex; flex-wrap: wrap; gap: .2rem .9rem; margin: .55rem .12rem 0; padding: .55rem .2rem .05rem; border-block-start: 1px solid var(--outline); list-style: none; }
 .calendar-key li { display: flex; align-items: center; gap: .3rem; color: var(--muted); font-size: .74rem; }
 .medora #calendar-activity > h2 { background: var(--stage); padding: .5rem .72rem; border-radius: .85rem; }
@@ -920,7 +925,7 @@ html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5re
   align-items: flex-start;
   border-radius: 1.35rem;
   overflow: hidden;
-  background: radial-gradient(ellipse at 70% 0, #e2a1e76b, transparent 66%), linear-gradient(135deg, var(--cover-shade), var(--cover-light));
+  background: radial-gradient(ellipse at 70% 0, var(--cover-haze), transparent 66%), linear-gradient(135deg, var(--cover-shade), var(--cover-light));
   color: var(--cover-text);
 }
 .medora .wizard-visual > p { max-inline-size: 47%; margin: .5rem .3rem; font-size: clamp(.96rem, 3.7vw, 1.35rem); line-height: 1.3; font-weight: 800; }
@@ -935,7 +940,6 @@ html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem au
 .medora #editor .wizard-steps li { border: 0; }
 .medora #editor .wizard-steps li[aria-current="step"] { background: var(--panel); color: var(--action); box-shadow: 0 .12rem .35rem var(--glass-shadow); }
 .medora #editor .wizard-steps li[data-complete="true"] { background: transparent; color: var(--ok); }
-.medora #editor-next { background: var(--mint); color: var(--mint-ink); border-color: var(--mint); }
 .medora .settings-dialog .sheet-header { border-radius: 0 0 1.25rem 1.25rem; padding: .48rem .75rem; }
 .medora #settings-subtitle { margin-block: .14rem 0; color: var(--muted); }
 .medora #settings-home h3 { margin: .9rem .25rem .35rem; color: var(--muted); font-size: .85rem; }
@@ -955,8 +959,8 @@ html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem au
 }
 .settings-hero-copy { display: grid; justify-items: start; gap: .26rem; }
 .settings-hero-copy strong { font-size: 1.18rem; line-height: 1.3; }
-.settings-hero-copy small { font-weight: 400; opacity: .9; }
-.settings-state { border-radius: 100vw; background: #fff2; padding: .1rem .55rem; font-size: .78rem; }
+.settings-hero-copy small { font-weight: 400; }
+.settings-state { border-radius: 100vw; background: var(--cover-badge); padding: .1rem .55rem; font-size: .78rem; }
 .settings-state[data-enabled="true"] { background: var(--mint); color: var(--mint-ink); }
 .settings-hero-art {
   display: grid;
@@ -1035,6 +1039,11 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 .theme-sample { display: grid; place-items: center; inline-size: 100%; block-size: 2.4rem; border-radius: .55rem; background: #e9e4f7; }
 .theme-sample::before { content: ""; inline-size: 59%; block-size: .75rem; border-radius: .25rem; background: #fefcff; box-shadow: 0 .45rem 0 -.22rem var(--accent-light); }
 .theme-sample[data-theme-sample="system"] { background: linear-gradient(135deg, #e9e4f7 50%, #283544 50%); }
+.theme-sample[data-theme-sample="system"]::before {
+  background: linear-gradient(90deg, var(--accent-light) 50%, var(--accent-dark) 50%) center bottom / 80% .18rem no-repeat,
+    linear-gradient(90deg, #fefcff 50%, #465466 50%);
+  box-shadow: none;
+}
 .theme-sample[data-theme-sample="dark"] { background: #283544; }
 .theme-sample[data-theme-sample="dark"]::before { background: #465466; box-shadow: 0 .45rem 0 -.22rem var(--accent-dark); }
 .medora .settings-accents { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -1047,7 +1056,7 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 }
 
 .medora .welcome {
-  background: radial-gradient(ellipse at 68% 24%, #eab5f748, transparent 60%), linear-gradient(147deg, var(--cover-shade), var(--cover-light));
+  background: radial-gradient(ellipse at 68% 24%, var(--cover-haze), transparent 60%), linear-gradient(147deg, var(--cover-shade), var(--cover-light));
   padding-left: max(1.25rem, env(safe-area-inset-left));
   padding-right: max(1.25rem, env(safe-area-inset-right));
 }
@@ -1058,7 +1067,13 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 .medora .welcome-art { display: block; inline-size: min(100%, 30rem); block-size: min(37dvh, 18rem); margin: .45rem auto 0; object-fit: contain; }
 .medora .welcome h1 { font-size: 2.6rem; line-height: 1.14; }
 .medora .welcome h2 { margin-block: .5rem; }
-.medora .welcome .intro-content > .block-action { margin-block-start: 1.25rem; background: var(--mint); color: var(--mint-ink); }
+.medora .welcome p { color: var(--cover-text); }
+.medora .welcome .intro-content > .block-action {
+  margin-block-start: 1.25rem;
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  color: var(--cover-button-text);
+}
 
 @media (min-width: 42rem) {
   .story-copy { align-self: center; padding-inline-start: 1rem; }
@@ -1177,7 +1192,7 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 .dose-quick-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; margin-block: .25rem; }
 .medora .dose-quick-values button { min-block-size: 2.35rem; min-inline-size: 0; padding: .1rem; border-radius: .7rem; }
 .medora .phase .buttons { margin-block-start: .45rem; }
-.medora #editor-review .review-upcoming { padding: .55rem .65rem; border-radius: .85rem; background: var(--mint); color: var(--mint-ink); }
+.medora #editor-review .review-upcoming { padding: .55rem .65rem; border-radius: .85rem; background: var(--dock-active); color: var(--action); }
 .medora #editor-review ol { display: grid; gap: .4rem; padding: 0; list-style: none; }
 .medora #editor-review li { padding: .5rem .65rem; border-radius: .85rem; background: var(--stage); }
 .medora #editor-review h5 { margin: 0 0 .25rem; font-size: .9rem; color: var(--action); }
@@ -1201,7 +1216,7 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
   padding: 1.05rem 1.2rem .9rem;
   color: var(--cover-text);
   background:
-    radial-gradient(ellipse at 86% -24%, #d8cdf759, transparent 68%),
+    radial-gradient(ellipse at 86% -24%, var(--cover-haze), transparent 68%),
     linear-gradient(140deg, var(--cover-shade), var(--cover) 63%, var(--cover-light));
 }
 .account-cover::before, .account-cover::after {
@@ -1225,7 +1240,7 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
   border: 1px solid #fff5;
   border-radius: .9rem;
   background: #fff2;
-  color: var(--mint);
+  color: var(--accent-dark);
   box-shadow: inset 0 1px #fff3;
 }
 .account-cover h2 { margin: .55rem 0 .15rem; font-size: clamp(1.38rem, 5vw, 1.78rem); font-weight: 810; }
@@ -1238,7 +1253,7 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
   background: #fff2;
   border: 1px solid #fff5;
 }
-.medora .account-cover .icon-button:focus-visible { outline-color: var(--mint); }
+.medora .account-cover .icon-button:focus-visible { outline-color: var(--cover-text); }
 .account-content { padding: .9rem clamp(.85rem, 4.7vw, 1.25rem) .8rem; }
 .account-modes {
   display: grid;
