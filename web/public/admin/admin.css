@@ -40,3 +40,11 @@
 }
 .admin-promotion-dates input { inline-size: 100%; }
 .admin-preview-action { text-decoration: none; }
+.admin-campaigns { grid-column: 1 / -1; }
+.admin-campaigns select { inline-size: 100%; }
+.medora .admin-tabs { flex-wrap: wrap; }
+.medora #admin-operations h2 { margin-block: .85rem .35rem; }
+.medora .admin-ticket { margin-block: .6rem; padding: .75rem; overflow-wrap: anywhere; }
+.medora .admin-ticket p { white-space: pre-wrap; }
+.medora .admin-ticket textarea { inline-size: 100%; }
+.medora .admin-account-actions button:first-child { color: var(--ink); }

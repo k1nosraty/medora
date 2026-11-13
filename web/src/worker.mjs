@@ -4,11 +4,13 @@ import { pilotConfig, smallJson, validSubscription } from "./http/validation.mjs
 import { handleMedicationReminders } from "./reminders/medication-reminders.mjs";
 import { sendPush } from "./reminders/push.mjs";
 import { handleAdminAccounts, handleEmailAuth } from "./accounts/email-auth.mjs";
+import { handleOperations } from "./operations/routes.mjs";
 import { handlePromotions } from "./promotions/routes.mjs";
 
 export { MedicationReminders } from "./reminders/medication-reminders.mjs";
 export { EmailAccount } from "./accounts/email-auth.mjs";
 export { Credentials } from "./accounts/credentials.mjs";
+export { Operations } from "./operations/routes.mjs";
 export { Promotions } from "./promotions/routes.mjs";
 
 const hour = 3_600_000;
@@ -24,9 +26,14 @@ export default {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url, ctx);
-    if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url);
-    if (url.pathname === "/api/promotion" || url.pathname === "/api/admin/promotion") {
+    if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url, ctx);
+    if (["/api/promotion", "/api/admin/promotion"].some(path => url.pathname === path || url.pathname.startsWith(path + "/"))) {
       return handlePromotions(request, env, ctx, url);
+    }
+
+    if (url.pathname === "/api/support" || url.pathname === "/api/operations" ||
+        ["/api/admin/operations", "/api/admin/operations/access", "/api/admin/operations/tickets"].includes(url.pathname)) {
+      return handleOperations(request, env, url, ctx);
     }
 
     const vapid = pilotConfig(env);

@@ -1,6 +1,5 @@
 import { $ } from "../../shared/ui/dom.js";
-import { t } from "../../shared/i18n/locale.js";
-import { renderCreative } from "./creative.js";
+import { presentPromotion } from "./presentation.js";
 
 export async function showPromotion() {
   const dialog = $("promotion-dialog");
@@ -23,17 +22,17 @@ export async function showPromotion() {
     const seen = localStorage.getItem(key);
     if (seen?.endsWith(" " + promotion.id) || seen?.startsWith(day + " ")) return;
 
-    $("promotion-title").textContent = promotion.title;
-    $("promotion-description").textContent = promotion.description;
-    const link = $("promotion-link");
-    link.hidden = !promotion.url;
-    if (promotion.url) link.href = promotion.url;
-    link.textContent = promotion.linkLabel || t("مشاهدهٔ جزئیات");
-    const creative = $("promotion-creative");
-    renderCreative(creative, promotion);
-    dialog.addEventListener("close", () => creative.replaceChildren(), { once: true });
+    const count = event => void fetch("/api/promotion/events", {
+      method: "POST", credentials: "omit", keepalive: true,
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: promotion.id, event })
+    }).catch(() => {});
+    let clicked = false;
+    presentPromotion(dialog, promotion, () => {
+      if (!clicked) count("click");
+      clicked = true;
+    });
     localStorage.setItem(key, `${day} ${promotion.id}`);
-    dialog.showModal();
+    count("impression");
   } catch {
     // A fetch or storage error must leave Today usable.
   } finally {

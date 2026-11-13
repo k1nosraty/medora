@@ -1,3 +1,4 @@
+import { operations } from "../operations/routes.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { nextCareReminder, validSchedule } from "./medication-schedule.mjs";
 import { smallJson, validSubscription, validSubscriptionKey } from "../http/validation.mjs";
@@ -125,6 +126,13 @@ export class MedicationReminders extends DurableObject {
       ...(singleRoutine && state.next.routineId ? { routineId: state.next.routineId } : {}),
       day: new Date(state.next.day * 86_400_000).toISOString().slice(0, 10)
     }, 300, async () => currentIs(await this.ctx.storage.get("state"))) : { status: "expired" };
+
+    if (dueKinds.length && result.status !== "superseded") {
+      const metrics = dueKinds.map(kind => `push:${kind}:${result.status}`);
+      if (Number.isInteger(result.providerStatus)) metrics.push("push-http:" + result.providerStatus);
+      const count = operations(this.env)?.count(metrics).catch(() => {});
+      if (count) this.ctx.waitUntil(count);
+    }
 
     await this.ctx.storage.transaction(async storage => {
       const current = await storage.get("state");

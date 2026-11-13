@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>پیش‌نمایش خصوصی تبلیغ مدورا</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/medication/styles/base.css">
+  <link rel="stylesheet" href="/medication/styles/app.css">
+  <script type="module" src="/admin/preview.js"></script>
+</head>
+<body class="medora">
+  <main>
+    <h1>پیش‌نمایش خصوصی تبلیغ</h1>
+    <p id="preview-status" role="status">در حال ارتباط…</p>
+    <a id="preview-login" href="/medication/?view=account" hidden>ورود به حساب مدورا</a>
+    <button id="preview-replay" type="button" hidden>نمایش دوباره</button>
+  </main>
+  <dialog id="private-ad" class="sheet" aria-labelledby="private-title">
+    <div class="sheet-header"><p class="quiet">پیام تبلیغاتی</p></div>
+    <div class="sheet-body">
+      <h2 id="private-title" data-promotion-title dir="auto"></h2>
+      <div class="promotion-creative" data-promotion-creative></div>
+      <p data-promotion-description dir="auto"></p>
+      <div class="buttons">
+        <button type="button" class="secondary" id="preview-dismiss" autofocus>رد کردن</button>
+        <a class="promotion-action" data-promotion-link target="_blank" rel="noopener noreferrer" hidden>مشاهدهٔ جزئیات</a>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>

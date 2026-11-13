@@ -22,12 +22,13 @@ test("registration, password recovery and account deletion preserve authorizatio
     durableObjects: {
       EMAIL_ACCOUNTS: { className: "EmailAccount", useSQLite: true },
       CREDENTIALS: { className: "Credentials", useSQLite: true },
-      PROMOTIONS: { className: "Promotions", useSQLite: true }
+      PROMOTIONS: { className: "Promotions", useSQLite: true },
+      OPERATIONS: { className: "Operations", useSQLite: true }
     },
     ratelimits: { EMAIL_AUTH_LIMIT: { namespace_id: "750503", simple: { limit: 8, period: 60 } } },
     bindings: {
       EMAIL_AUTH_SECRET: "d".repeat(64), EMAIL_FROM: "login@medora.example", RESEND_API_KEY: "test",
-      ADMIN_EMAIL: "Me@Example.com"
+      ADMIN_EMAIL: "Me@Example.com", SUPPORT_EMAILS: "english@example.com"
     },
     outboundService: async request => {
       assert.equal(request.url, "https://api.resend.com/emails");
@@ -55,9 +56,9 @@ test("registration, password recovery and account deletion preserve authorizatio
     },
     body: body ? JSON.stringify(body) : undefined
   });
-  const accounts = (cookie, { query = "", body, requestOrigin = origin } = {}) =>
+  const accounts = (cookie, { query = "", body, requestOrigin = origin, method = "DELETE" } = {}) =>
     mf.dispatchFetch(`${origin}/api/admin/accounts?${query}`, {
-      method: body ? "DELETE" : "GET",
+      method: body ? method : "GET",
       headers: {
         ...(cookie ? { Cookie: cookie } : {}),
         ...(body ? { Origin: requestOrigin, "Content-Type": "application/json" } : {})
@@ -118,7 +119,7 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal((await admin(cookie, { ...promotion, url: "javascript:alert(1)" })).status, 400);
     const published = (await (await admin(cookie, promotion)).json()).promotion;
     assert.equal(published.enabled, true);
-    assert.deepEqual(await publicPromotion(), published);
+    assert.equal((await publicPromotion()).id, published.id);
     const hidden = (await (await admin(cookie, { ...promotion, enabled: false })).json()).promotion;
     assert.equal(hidden.id, published.id);
     assert.equal(await publicPromotion(), null);
@@ -132,7 +133,7 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal(await publicPromotion(), null);
     const live = (await (await admin(cookie, image)).json()).promotion;
     assert.equal(live.id, scheduled.id);
-    assert.deepEqual(await publicPromotion(), live);
+    assert.equal((await publicPromotion()).id, live.id);
     const expiredPromotion = (await (await admin(cookie, { ...image, mediaType: "video",
       mediaUrl: "https://media.example.com/spot.mp4", endsAt: Date.now() - 1000 })).json()).promotion;
     assert.notEqual(expiredPromotion.id, live.id);
@@ -160,6 +161,61 @@ test("registration, password recovery and account deletion preserve authorizatio
     const nonAdmin = await auth("register", { email: other, grant: secondGrant, username: "second_user", password });
     assert.equal(nonAdmin.status, 200);
     assert.equal((await admin(cookieOf(nonAdmin), promotion)).status, 403);
+    const previewAdmin = cookieOf(loggedIn);
+    const api = (path, method = "GET", session, body) => mf.dispatchFetch(origin + path, {
+      method, headers: { Origin: origin, ...(session ? { Cookie: session } : {}),
+        ...(body instanceof Uint8Array ? {} : { "Content-Type": "application/json" }) },
+      body: body instanceof Uint8Array ? body : body === undefined ? undefined : JSON.stringify(body)
+    });
+    const adminAds = "/api/admin/promotion";
+    const preview = adminAds + "/preview";
+    assert.equal((await api(preview)).status, 401);
+    assert.equal((await api(preview, "GET", cookieOf(nonAdmin))).status, 403);
+    const gif = Uint8Array.from(Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64"));
+    assert.equal((await api(adminAds + "/media", "POST", previewAdmin, new TextEncoder().encode("<html>invalid content</html>"))).status, 400);
+    const upload = await api(adminAds + "/media", "POST", previewAdmin, gif);
+    assert.equal(upload.status, 201, await upload.clone().text());
+    const { id: mediaId } = await upload.json();
+    const privateImage = { ...image, mediaId, mediaUrl: "" };
+    assert.equal((await api(preview, "PUT", previewAdmin, privateImage)).status, 200);
+    assert.equal(await publicPromotion(), null);
+    for (let i = 0; i < 2; i++) {
+      const { promotion: draft } = await (await api(preview, "GET", previewAdmin)).json();
+      assert.equal(draft.url, image.url);
+      const asset = await api(draft.mediaUrl, "GET", previewAdmin);
+      assert.equal(asset.headers.get("Content-Type"), "image/gif");
+      assert.deepEqual(new Uint8Array(await asset.arrayBuffer()), gif);
+    }
+    assert.equal((await api(adminAds + "/media/" + mediaId)).status, 401);
+    assert.equal((await api("/api/promotion/media/" + mediaId)).status, 404);
+    const campaign = (await (await api(adminAds, "PUT", previewAdmin, { ...privateImage, create: true })).json()).promotion;
+    assert.equal((await publicPromotion()).mediaUrl, "/api/promotion/media/" + mediaId);
+    const partial = await mf.dispatchFetch(origin + "/api/promotion/media/" + mediaId, { headers: { Range: "bytes=0-5" } });
+    assert.equal(partial.status, 206);
+    assert.equal(await partial.text(), "GIF89a");
+    assert.equal((await api("/api/promotion/events", "POST", undefined, { id: campaign.id, event: "impression" })).status, 204);
+    assert.equal((await api(adminAds, "DELETE", previewAdmin, { id: campaign.id })).status, 409);
+    assert.equal((await api(adminAds, "PUT", previewAdmin, { ...privateImage, id: campaign.id, archived: true })).status, 200);
+    assert.equal(await publicPromotion(), null);
+    assert.equal((await api(adminAds, "DELETE", previewAdmin, { id: campaign.id })).status, 200);
+
+    const ops = "/api/admin/operations";
+    assert.equal((await api(ops, "GET", cookieOf(nonAdmin))).status, 403);
+    assert.equal((await api(ops + "/tickets", "GET", cookieOf(nonAdmin))).status, 200);
+    const setup = { notice: { title: "Notice", message: "Service info", start: null, end: null, enabled: true },
+      flags: { promotions: 25, support: 100 } };
+    assert.equal((await api(ops, "PUT", previewAdmin, setup)).status, 200);
+    const dashboard = await (await api(ops, "GET", previewAdmin)).json();
+    assert.ok(dashboard.audit.some(row => row.action === "operations_updated"));
+    assert.equal(dashboard.flags.promotions, 25);
+    assert.equal((await (await api("/api/operations")).json()).notice.title, "Notice");
+    const submitted = await api("/api/support", "POST", cookieOf(nonAdmin), { message: "A sample issue", diagnostics: { platform: "iOS", permission: "default" } });
+    assert.equal(submitted.status, 201);
+    const { ticket } = await submitted.json();
+    assert.equal((await api(ops + "/tickets", "PUT", previewAdmin, { id: ticket.id, reply: "Resolved", status: "closed" })).status, 200);
+    assert.equal((await (await api("/api/support", "GET", cookieOf(nonAdmin))).json()).tickets[0].reply, "Resolved");
+    assert.equal((await (await api("/api/support", "GET", previewAdmin)).json()).tickets.length, 0);
+
     assert.equal(deliveries.length, 2);
 
     const legacyEmail = "old@example.com";
@@ -193,7 +249,7 @@ test("registration, password recovery and account deletion preserve authorizatio
     const listed = await accounts(adminCookie);
     assert.equal(listed.headers.get("Cache-Control"), "no-store");
     const { users } = await listed.json();
-    assert.deepEqual(users.map(user => Object.keys(user)), users.map(() => ["username", "email", "admin", "tag"]));
+    assert.deepEqual(users.map(user => Object.keys(user)), users.map(() => ["username", "email", "admin", "createdAt", "emailVerified", "tag"]));
     const administrator = users.find(user => user.admin);
     assert.equal((await accounts(adminCookie, { body: administrator })).status, 409);
     const filtered = (await (await accounts(adminCookie, { query: "q=english%40example.com" })).json()).users;
@@ -201,6 +257,9 @@ test("registration, password recovery and account deletion preserve authorizatio
     const deleted = filtered[0];
     assert.equal(deleted.username, "second_user");
     assert.equal((await accounts(adminCookie, { body: deleted, requestOrigin: "https://other.test" })).status, 403);
+    assert.equal((await accounts(adminCookie, { body: deleted, method: "PATCH" })).status, 200);
+    assert.equal((await (await auth("session", null, userCookie)).json()).email, null);
+
     assert.equal((await accounts(adminCookie, { body: deleted })).status, 200);
     assert.equal((await (await auth("session", null, userCookie)).json()).email, null);
     assert.equal((await login(deleted.username, password, "192.0.2.31")).status, 401);

@@ -1,12 +1,12 @@
   <dialog id="promotion-dialog" class="sheet" aria-labelledby="promotion-title">
     <div class="sheet-header"><p class="quiet">پیام تبلیغاتی</p></div>
     <div class="sheet-body">
-      <h2 id="promotion-title" dir="auto"></h2>
-      <div id="promotion-creative" class="promotion-creative"></div>
-      <p id="promotion-description" dir="auto"></p>
+      <h2 id="promotion-title" data-promotion-title dir="auto"></h2>
+      <div id="promotion-creative" data-promotion-creative class="promotion-creative"></div>
+      <p id="promotion-description" data-promotion-description dir="auto"></p>
       <div class="buttons">
         <button type="button" class="secondary" data-close="promotion-dialog" autofocus>رد کردن</button>
-        <a id="promotion-link" class="promotion-action" rel="noreferrer" target="_blank" hidden>مشاهدهٔ جزئیات</a>
+        <a id="promotion-link" data-promotion-link class="promotion-action" rel="noreferrer" target="_blank" hidden>مشاهدهٔ جزئیات</a>
       </div>
     </div>
   </dialog>

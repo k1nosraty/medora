@@ -12,6 +12,7 @@ import { changeReminderRevision, initializeReminders, syncReminders } from "../f
 import { installMedicineEditor } from "../features/medicines/editor.js";
 import { installMedicineView } from "../features/medicines/view.js";
 import { installAccount } from "../features/account/dialog.js";
+import { installSupport, loadOperations } from "../features/operations.js";
 import { showPromotion } from "../features/promotions/dialog.js";
 import { installRoutines } from "../features/routines/view.js";
 import { renderToday } from "../features/today/view.js";
@@ -21,7 +22,7 @@ import { showIntro } from "./onboarding.js";
 import { installSurfaceArt } from "../design/surfaces.js";
 
 // An older cached page can still load this module from the current release.
-if (!document.getElementById("profile-form")) {
+if (!document.getElementById("support-dialog")) {
   const url = new URL(location.href);
   const firstAttempt = !url.searchParams.has("retry");
   url.searchParams.set("retry", Date.now());
@@ -37,6 +38,7 @@ if (!document.getElementById("profile-form")) {
 
 localizeMarkup();
 installSurfaceArt();
+installSupport();
 let care;
 let busy = false;
 const getState = () => care;
@@ -166,6 +168,7 @@ try {
   $("boot-status").hidden = true;
   showIntro(care, mutate, dashboard.show);
   if (!$("app").hidden && ["water", "appointments", "routines"].includes(view)) dashboard.show(view);
+  if (!$("app").hidden && view === "notification-settings") dashboard.show("settings", true);
   const routineId = params.get("routine");
   if (!$("app").hidden && view === "routines" && validRoutineId(routineId) && day === $("day").value) {
     const date = selectedDay();
@@ -173,7 +176,9 @@ try {
     params.delete("routine");
     history.replaceState(history.state, "", `?${params}`);
   }
-  if (!location.search && !$("app").hidden) void showPromotion();
+  void loadOperations().then(showAds => {
+    if (showAds && !location.search && !$("app").hidden) void showPromotion();
+  });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/medication/sw.js").catch(() => {});
   void initializeReminders();
 } catch {

@@ -26,6 +26,8 @@
       <nav class="admin-tabs segmented glass-toolbar" aria-label="بخش‌های مدیریت">
         <button type="button" data-admin-tab="accounts" aria-controls="admin-accounts" aria-pressed="true">حساب‌های کاربری</button>
         <button type="button" data-admin-tab="promotion" aria-controls="admin-promotion" aria-pressed="false">تبلیغات</button>
+        <button type="button" data-admin-tab="operations" aria-controls="admin-operations" aria-pressed="false">وضعیت سرویس</button>
+        <button type="button" data-admin-tab="tickets" aria-controls="admin-support" aria-pressed="false">پشتیبانی</button>
       </nav>
       <section class="admin-accounts" id="admin-accounts">
         <form id="admin-account-search" role="search">
@@ -37,6 +39,10 @@
         <button type="button" class="secondary" id="admin-account-more" hidden>حساب‌های بیشتر</button>
       </section>
       <section class="admin-grid" id="admin-promotion" hidden>
+        <div class="admin-campaigns">
+          <label>کمپین<select id="promotion-campaign"></select></label>
+          <p id="promotion-stats" class="quiet"></p>
+        </div>
         <form id="promotion-form">
           <fieldset id="promotion-fields">
             <legend>محتوای پیام</legend>
@@ -44,6 +50,9 @@
             <label>توضیحات<textarea name="description" dir="auto" maxlength="240" rows="3"></textarea></label>
             <label>نوع تبلیغ<select name="mediaType"><option value="">متنی</option><option value="image">پوستر یا گیف</option><option value="video">ویدیو</option></select></label>
             <label id="promotion-media-field" hidden>لینک مستقیم فایل<input name="mediaUrl" dir="ltr" type="url" placeholder="https://" maxlength="512" aria-describedby="promotion-media-hint"><small id="promotion-media-hint" class="quiet"></small></label>
+            <label id="promotion-upload-field" hidden>آپلود فایل تا ۸ مگابایت<input id="promotion-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4"></label>
+            <p id="promotion-upload-status" role="status"></p>
+            <button id="promotion-remove-media" type="button" class="secondary" hidden>برداشتن فایل</button>
             <label>لینک مقصد (اینستاگرام یا سایت)<input name="url" dir="ltr" type="url" placeholder="https://" maxlength="512"></label>
             <label>متن دکمهٔ لینک (اختیاری)<input name="linkLabel" dir="auto" maxlength="40" placeholder="مشاهدهٔ جزئیات"></label>
             <div class="admin-promotion-dates">
@@ -53,6 +62,12 @@
             <small class="quiet">ساعت شروع و پایان بر اساس زمان همین دستگاه است.</small>
             <label class="admin-toggle"><input name="enabled" type="checkbox">نمایش در صفحهٔ امروز</label>
             <button type="submit" class="block-action">ذخیرهٔ پیام</button>
+            <div class="buttons">
+              <button type="button" class="secondary" id="promotion-private">ساخت لینک تست خصوصی</button>
+              <button type="button" class="secondary" id="promotion-archive" hidden>آرشیو کمپین</button>
+              <button type="button" class="secondary" id="promotion-delete" hidden>حذف کمپین آرشیوشده</button>
+            </div>
+            <p id="promotion-private-link" hidden><a href="/admin/preview/" target="_blank" rel="noopener">باز کردن پیش‌نمایش خصوصی</a><br><button type="button" class="secondary" id="promotion-copy">کپی لینک برای آیفون</button></p>
             <p id="promotion-status" role="status"></p>
           </fieldset>
         </form>
@@ -68,6 +83,38 @@
           </div>
           <p class="quiet">برای هر مرورگر، حداکثر یک پیام در روز نمایش داده می‌شود.</p>
         </div>
+      </section>
+      <section id="admin-operations" hidden>
+        <div class="buttons"><button id="operations-refresh" type="button" class="secondary">به‌روزرسانی</button><a href="/medication/?view=notification-settings">آزمایش اعلان همین دستگاه</a></div>
+        <p id="operations-status" role="status"></p>
+        <p id="operations-config"></p>
+        <h2>آمار سرویس در هفت روز اخیر</h2>
+        <p class="quiet">پذیرش توسط سرویس Push به معنی تأیید تحویل روی گوشی نیست. آمار از زمان فعال شدن این بخش جمع می‌شود.</p>
+        <ul id="operations-metrics"></ul>
+        <form id="operations-form" hidden>
+          <h2>اطلاعیهٔ مدورا</h2>
+          <label>عنوان<input name="title" maxlength="80"></label>
+          <label>متن اطلاعیه<textarea name="message" maxlength="240" rows="2"></textarea></label>
+          <div class="admin-promotion-dates">
+            <label>شروع نمایش (اختیاری)<input name="start" type="datetime-local"></label>
+            <label>پایان نمایش (اختیاری)<input name="end" type="datetime-local"></label>
+          </div>
+          <label class="admin-toggle"><input name="enabled" type="checkbox">نمایش اطلاعیه</label>
+          <h2>عرضهٔ مرحله‌ای قابلیت‌ها</h2>
+          <p class="quiet">۰ درصد یعنی خاموش. ۱۰۰ درصد یعنی نمایش برای همه. درصدها بر اساس دستگاه اعمال می‌شوند.</p>
+          <div class="admin-promotion-dates">
+            <label>تبلیغات (درصد)<input name="promotions" type="number" min="0" max="100" required></label>
+            <label>پشتیبانی (درصد)<input name="support" type="number" min="0" max="100" required></label>
+          </div>
+          <button class="block-action" type="submit">ذخیرهٔ تنظیمات سرویس</button>
+        </form>
+        <h2>تاریخچهٔ تغییرات مدیران</h2>
+        <ul id="operations-audit"></ul>
+      </section>
+      <section id="admin-support" hidden>
+        <button id="tickets-refresh" type="button" class="secondary">به‌روزرسانی گزارش‌ها</button>
+        <p id="tickets-status" role="status"></p>
+        <div id="admin-tickets"></div>
       </section>
     </div>
     <dialog class="sheet" id="admin-account-delete" aria-labelledby="admin-account-delete-title">

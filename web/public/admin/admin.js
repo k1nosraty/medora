@@ -1,3 +1,4 @@
+import { loadOperations, loadTickets } from "./operations.js";
 import { $, button, element } from "/medication/shared/ui/dom.js";
 import { localizeMarkup, t } from "/medication/shared/i18n/locale.js";
 import { applyDisplay } from "/medication/styles/display.js";
@@ -26,6 +27,9 @@ let loadingAccounts = false;
 let loadingPromotion = false;
 let promotionLoaded = false;
 let previewTimer;
+let campaigns = [];
+let currentCampaign;
+let mediaId = "";
 
 function status(id, message, error = false) {
   $(id).textContent = message ? t(message) : "";
@@ -45,8 +49,10 @@ function preview() {
   const mediaType = fields.mediaType.value;
   const mediaField = $("promotion-media-field");
   mediaField.hidden = !mediaType;
-  fields.mediaUrl.disabled = !mediaType;
-  fields.mediaUrl.required = Boolean(mediaType);
+  $("promotion-upload-field").hidden = !mediaType;
+  $("promotion-remove-media").hidden = !mediaId;
+  fields.mediaUrl.disabled = !mediaType || Boolean(mediaId);
+  fields.mediaUrl.required = Boolean(mediaType && !mediaId);
   $("promotion-media-hint").textContent = t(mediaType === "video" ? "لینک مستقیم MP4 را وارد کنید." : "لینک مستقیم JPG، PNG، WebP یا GIF را وارد کنید.");
   const url = httpsUrl(fields.url.value);
   const link = $("preview-link");
@@ -58,7 +64,7 @@ function preview() {
   mediaStatus.hidden = true;
   clearTimeout(previewTimer);
   previewTimer = setTimeout(() => renderCreative($("preview-creative"), {
-    mediaType, mediaUrl: httpsUrl(fields.mediaUrl.value), url, title: $("preview-title").textContent
+    mediaType, mediaUrl: mediaId ? promotionPath + "/media/" + mediaId : httpsUrl(fields.mediaUrl.value), url, title: $("preview-title").textContent
   }, () => {
     mediaStatus.textContent = t("فایل باز نشد. لینک مستقیم فایل را بررسی کنید.");
     mediaStatus.hidden = false;
@@ -71,20 +77,42 @@ function localDateTime(value) {
   return new Date(value - offset).toISOString().slice(0, 16);
 }
 function showPromotion(promotion) {
+  currentCampaign = promotion;
+  mediaId = promotion?.mediaId ?? "";
+  $("promotion-upload").value = "";
+  $("promotion-upload-status").textContent = mediaId ? t("فایل آپلودشده انتخاب شده است.") : "";
+  $("promotion-archive").hidden = !promotion;
+  $("promotion-delete").hidden = !promotion?.archived;
+  $("promotion-archive").textContent = t(promotion?.archived ? "بازگرداندن به پیش‌نویس" : "آرشیو کمپین");
+  fields.enabled.disabled = Boolean(promotion?.archived);
+  const stats = promotion?.stats;
+  $("promotion-stats").textContent = stats ? t("{0} نمایش · {1} کلیک · نرخ کلیک {2}", stats.impression, stats.click,
+    new Intl.NumberFormat(document.documentElement.lang, { style: "percent", maximumFractionDigits: 1 }).format(stats.impression ? stats.click / stats.impression : 0)) : "";
+
   for (const name of ["title", "description", "url", "mediaType", "mediaUrl", "linkLabel"]) fields[name].value = promotion?.[name] ?? "";
   for (const name of ["startsAt", "endsAt"]) fields[name].value = localDateTime(promotion?.[name]);
   fields.enabled.checked = promotion?.enabled ?? false;
   preview();
   const now = Date.now();
-  status("promotion-status", !promotion?.enabled ? "در حال حاضر پیامی نمایش داده نمی‌شود."
+  status("promotion-status", promotion?.archived ? "آرشیوشده" : !promotion?.enabled ? "در حال حاضر پیامی نمایش داده نمی‌شود."
     : promotion.startsAt > now ? "نمایش زمان‌بندی شده است."
     : promotion.endsAt != null && promotion.endsAt <= now ? "بازهٔ نمایش تمام شده است."
     : "پیام فعال است.");
 }
+function showCampaigns(result) {
+  campaigns = result.campaigns ?? (result.promotion ? [result.promotion] : []);
+  const options = campaigns.map(row => new Option(row.title + " · " + t(row.archived ? "آرشیوشده" : row.enabled ? "روشن" : "پیش‌نویس"), row.id));
+  $("promotion-campaign").replaceChildren(new Option(t("کمپین جدید"), ""), ...options);
+  $("promotion-campaign").value = result.promotion?.id ?? "";
+  showPromotion(result.promotion);
+}
+$("promotion-campaign").addEventListener("change", event => {
+  showPromotion(campaigns.find(row => row.id === event.target.value));
+});
 async function request(path, method = "GET", body) {
   const response = await fetch(path, {
     method,
-    ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
+    ...(body instanceof File ? { body } : body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
   });
   if (response.status === 401 || response.status === 403) {
     panel.hidden = true;
@@ -104,6 +132,9 @@ function accountRow(account) {
   const email = element("bdi", account.email, "quiet");
   username.dir = email.dir = "ltr";
   identity.append(username, email);
+  if (account.emailVerified) identity.append(element("small", t("ایمیل تأیید شده"), "quiet"));
+  if (account.createdAt != null) identity.append(element("small", t("ساخت حساب: {0}",
+    new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: "medium" }).format(account.createdAt)), "quiet"));
   row.append(identity);
   if (account.admin) row.append(element("span", t("مدیر"), "quiet"));
   else {
@@ -115,7 +146,20 @@ function accountRow(account) {
       confirmation.showModal();
     });
     remove.setAttribute("aria-label", t("حذف حساب {0}", account.username));
-    row.append(remove);
+    const revoke = button(t("خروج از همهٔ نشست‌ها"), async () => {
+      if (!window.confirm(t("همهٔ نشست‌های این کاربر بسته شوند؟"))) return;
+      revoke.disabled = true;
+      try {
+        const result = await request(accountsPath, "PATCH", { username: account.username, tag: account.tag });
+        if (result) status("admin-account-status", result.error ? "خروج از نشست‌ها انجام نشد." : "همهٔ نشست‌ها بسته شدند.", Boolean(result.error));
+      } catch {
+        status("admin-account-status", "خروج از نشست‌ها انجام نشد.", true);
+      } finally { revoke.disabled = false; }
+    });
+    revoke.className = "secondary";
+    const actions = element("div", "", "buttons admin-account-actions");
+    actions.append(revoke, remove);
+    row.append(actions);
   }
   return row;
 }
@@ -185,6 +229,8 @@ for (const tab of tabs) tab.addEventListener("click", async () => {
     item.setAttribute("aria-pressed", String(item === tab));
     $(item.getAttribute("aria-controls")).hidden = item !== tab;
   }
+  if (tab.dataset.adminTab === "operations") void loadOperations();
+  if (tab.dataset.adminTab === "tickets") void loadTickets();
   if (tab.dataset.adminTab !== "promotion" || promotionLoaded || loadingPromotion) return;
   loadingPromotion = true;
   $("promotion-fields").disabled = true;
@@ -192,7 +238,7 @@ for (const tab of tabs) tab.addEventListener("click", async () => {
   try {
     const result = await request(promotionPath);
     if (result) {
-      showPromotion(result.promotion);
+      showCampaigns(result);
       promotionLoaded = true;
     }
   } catch {
@@ -204,31 +250,114 @@ for (const tab of tabs) tab.addEventListener("click", async () => {
 });
 
 form.addEventListener("input", preview);
-form.addEventListener("submit", async event => {
-  event.preventDefault();
-  const payload = {
+fields.mediaType.addEventListener("change", () => {
+  mediaId = "";
+  $("promotion-upload").value = "";
+  status("promotion-upload-status", "");
+  preview();
+});
+$("promotion-remove-media").addEventListener("click", () => {
+  mediaId = "";
+  $("promotion-upload").value = "";
+  status("promotion-upload-status", "");
+  preview();
+  fields.mediaUrl.focus();
+});
+$("promotion-upload").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
+  status("promotion-upload-status", "در حال آپلود…");
+  try {
+    const result = await request(promotionPath + "/media", "POST", file);
+    if (!result || result.error) {
+      status("promotion-upload-status", result?.error === "media_limit" ? "ظرفیت فایل‌های تبلیغ پر شده است." : "فرمت فایل یا حجم آن معتبر نیست.", true);
+      return;
+    }
+    mediaId = result.id;
+    fields.mediaType.value = result.mediaType;
+    fields.mediaUrl.value = "";
+    status("promotion-upload-status", "فایل آپلودشده انتخاب شده است.");
+  } catch {
+    status("promotion-upload-status", "آپلود انجام نشد. دوباره تلاش کنید.", true);
+  } finally {
+    $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
+    preview();
+  }
+});
+
+function payload() {
+  return {
     title: fields.title.value,
     description: fields.description.value,
     url: fields.url.value,
     mediaType: fields.mediaType.value,
-    mediaUrl: fields.mediaType.value ? fields.mediaUrl.value.trim() : "",
+    mediaUrl: fields.mediaType.value && !mediaId ? fields.mediaUrl.value.trim() : "",
+    mediaId,
     linkLabel: fields.linkLabel.value,
     startsAt: fields.startsAt.value ? new Date(fields.startsAt.value).getTime() : null,
     endsAt: fields.endsAt.value ? new Date(fields.endsAt.value).getTime() : null,
     enabled: fields.enabled.checked
   };
-  $("promotion-fields").disabled = true;
+}
+async function savePromotion(mode) {
+  if (!form.reportValidity()) return;
+  const body = payload();
+  const isPreview = mode === "preview";
+  if (isPreview) body.enabled = false;
+  else if (currentCampaign) {
+    body.id = currentCampaign.id;
+    body.archived = mode === "archive" ? !currentCampaign.archived : Boolean(currentCampaign.archived);
+    if (mode === "archive") body.enabled = false;
+  } else body.create = true;
+  $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
   try {
-    const result = await request(promotionPath, "PUT", payload);
+    const result = await request(promotionPath + (isPreview ? "/preview" : ""), "PUT", body);
     if (!result) return;
     if (result.error) {
-      status("promotion-status", "عنوان، لینک‌های HTTPS و بازهٔ نمایش را بررسی کنید.", true);
-    } else showPromotion(result.promotion);
+      status("promotion-status", result.error === "campaign_limit_or_missing" ?
+        "کمپین پیدا نشد یا ظرفیت کمپین‌ها پر شده است." : "عنوان، لینک‌های HTTPS و بازهٔ نمایش را بررسی کنید.", true);
+    } else if (isPreview) {
+      $("promotion-private-link").hidden = false;
+      status("promotion-status", "پیش‌نمایش خصوصی آماده است.");
+    } else showCampaigns(result);
   } catch {
     status("promotion-status", "پیام ذخیره نشد. دوباره تلاش کنید.", true);
   } finally {
-    $("promotion-fields").disabled = false;
+    $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
+  }
+}
+form.addEventListener("submit", event => { event.preventDefault(); void savePromotion("save"); });
+$("promotion-private").addEventListener("click", () => void savePromotion("preview"));
+$("promotion-archive").addEventListener("click", () => void savePromotion("archive"));
+$("promotion-delete").addEventListener("click", async () => {
+  if (!currentCampaign?.archived || !window.confirm(t("کمپین و آمار آن حذف شوند؟"))) return;
+  $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
+  try {
+    const result = await request(promotionPath, "DELETE", { id: currentCampaign.id });
+    if (result && !result.error) showCampaigns(result);
+    else if (result) status("promotion-status", "کمپین حذف نشد.", true);
+  } catch {
+    status("promotion-status", "کمپین حذف نشد.", true);
+  } finally {
+    $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
+  }
+});
+$("promotion-copy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(new URL("/admin/preview/", location.origin).href);
+    status("promotion-status", "لینک کپی شد.");
+  } catch {
+    status("promotion-status", "لینک پیش‌نمایش را از نشانی صفحه کپی کنید.");
   }
 });
 
-await loadAccounts();
+{
+  const access = await fetch("/api/admin/operations/access").then(response => response.ok ? response.json() : null).catch(() => null);
+  if (access?.role === "support") {
+    panel.hidden = false;
+    tabs.filter(item => item.dataset.adminTab !== "tickets").forEach(item => { item.hidden = true; });
+    tabs.find(item => item.dataset.adminTab === "tickets").click();
+    status("admin-status", "");
+  } else await loadAccounts();
+}

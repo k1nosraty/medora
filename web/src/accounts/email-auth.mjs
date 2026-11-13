@@ -1,3 +1,4 @@
+import { operations, logOperation } from "../operations/routes.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { scryptSync } from "node:crypto";
 import { smallJson } from "../http/validation.mjs";
@@ -85,8 +86,8 @@ function reply(data, status = 200, setCookie) {
 
 const deletionTag = (env, record) => hmac(env.EMAIL_AUTH_SECRET, "delete-account-v1", `${record.email_id}:${record.salt}`);
 
-export async function handleAdminAccounts(request, env, url) {
-  if (!["GET", "DELETE"].includes(request.method)) return reply({ error: "method" }, 405);
+export async function handleAdminAccounts(request, env, url, ctx) {
+  if (!["GET", "DELETE", "PATCH"].includes(request.method)) return reply({ error: "method" }, 405);
   const actor = await signedInEmail(request, env);
   if (!actor) return reply({ error: "sign_in" }, 401);
   if (!isAdminEmail(actor, env)) return reply({ error: "forbidden" }, 403);
@@ -98,7 +99,7 @@ export async function handleAdminAccounts(request, env, url) {
     const records = await index.list(after, query);
     const users = await Promise.all(records.slice(0, 25).map(async record => ({
       username: record.username, email: record.email, admin: isAdminEmail(record.email, env),
-      tag: await deletionTag(env, record)
+      createdAt: record.created_at, emailVerified: true, tag: await deletionTag(env, record)
     })));
     return reply({ users, next: records.length > 25 ? users.at(-1).username : null });
   }
@@ -111,7 +112,14 @@ export async function handleAdminAccounts(request, env, url) {
   const record = await index.find(username);
   if (!record || !equal(body.tag, await deletionTag(env, record))) return reply({ error: "account_changed" }, 409);
   if (isAdminEmail(record.email, env)) return reply({ error: "protected_account" }, 409);
-  const removed = await env.EMAIL_ACCOUNTS.getByName(record.email_id).remove(username, record.email_id, record.salt);
+  const client = env.EMAIL_ACCOUNTS.getByName(record.email_id);
+  const revoke = request.method === "PATCH";
+  const removed = revoke ? await client.revokeSessions(username, record.email_id, record.salt) :
+    await client.remove(username, record.email_id, record.salt);
+  if (removed) {
+    const audit = logOperation(env, actor, revoke ? "sessions_revoked" : "account_removed");
+    if (audit) ctx.waitUntil(audit);
+  }
   return removed ? reply({}) : reply({ error: "account_changed" }, 409);
 }
 
@@ -139,9 +147,15 @@ export async function handleEmailAuth(request, env, url, ctx) {
     const username = usernameOf(body?.username);
     if (!username || !validPassword(body?.password)) return reply({ error: "credentials" }, 401);
     const record = await index.find(username);
-    if (!record) return reply({ error: "credentials" }, 401);
+    if (!record) {
+      const task = operations(env)?.count(["login:failed"]).catch(() => {});
+      if (task) ctx.waitUntil(task);
+      return reply({ error: "credentials" }, 401);
+    }
     const client = env.EMAIL_ACCOUNTS.getByName(record.email_id);
     const result = await client.login(username, record.email_id, body.password);
+    const task = operations(env)?.count([result.token ? "login:success" : "login:failed"]).catch(() => {});
+    if (task) ctx.waitUntil(task);
     if (!result.token) return reply({ error: result.error }, result.error === "rate_limit" ? 429 : 401);
     return signedIn(env, record.email, username, record.email_id, result.token);
   }
@@ -263,6 +277,9 @@ export class EmailAccount extends DurableObject {
             : `کد تأیید ایمیل شما در مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر شما درخواست کد نداده‌اید، این پیام را نادیده بگیرید.`
         })
       });
+      const metric = response.ok ? "email:accepted" : "email:failed";
+      const count = operations(this.env)?.count([metric]).catch(() => {});
+      if (count) this.ctx.waitUntil(count);
       if (response.ok) return { challenge: id };
       await response.body?.cancel();
     } catch {
@@ -342,6 +359,16 @@ export class EmailAccount extends DurableObject {
       });
       await this.ctx.storage.deleteAlarm();
       return index.remove(username, emailId, salt);
+    });
+  }
+
+  async revokeSessions(username, emailId, salt) {
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const record = await credentials(this.env).find(username);
+      if (record?.email_id !== emailId || record.salt !== salt || isAdminEmail(record.email, this.env)) return false;
+      this.sql.exec("DELETE FROM sessions");
+      await this.scheduleCleanup();
+      return true;
     });
   }
 

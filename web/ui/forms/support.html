@@ -1,0 +1,17 @@
+  <dialog id="support-dialog" class="sheet" aria-labelledby="support-title">
+    <div class="sheet-header">
+      <h2 id="support-title">پشتیبانی مدورا</h2>
+      <button type="button" class="icon-button" data-close="support-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <form id="support-form">
+        <label>شرح مشکل<textarea id="support-message" rows="4" maxlength="1000" required></textarea></label>
+        <p class="quiet">لطفاً اطلاعات سلامت یا رمز حساب را در پیام ننویسید.</p>
+        <label><input id="support-diagnostics" type="checkbox">ضمیمه‌کردن نسخهٔ برنامه، نوع دستگاه و مجوز اعلان</label>
+        <button type="submit" class="block-action">ارسال گزارش</button>
+      </form>
+      <p id="support-status" role="status"></p>
+      <a id="support-sign-in" href="/medication/?view=account" hidden>ورود به حساب مدورا</a>
+      <div id="support-history"></div>
+    </div>
+  </dialog>

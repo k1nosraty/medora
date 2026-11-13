@@ -6,8 +6,11 @@ export class Credentials extends DurableObject {
     this.sql = ctx.storage.sql;
     this.sql.exec(`CREATE TABLE IF NOT EXISTS credentials_v1 (
       username TEXT PRIMARY KEY, email_id TEXT NOT NULL UNIQUE, email TEXT NOT NULL,
-      salt TEXT NOT NULL, proof TEXT NOT NULL
+      salt TEXT NOT NULL, proof TEXT NOT NULL, created_at INTEGER
     )`);
+    if (!this.sql.exec("PRAGMA table_info(credentials_v1)").toArray().some(column => column.name === "created_at")) {
+      this.sql.exec("ALTER TABLE credentials_v1 ADD COLUMN created_at INTEGER");
+    }
   }
 
   usernameFor(emailId) {
@@ -19,7 +22,7 @@ export class Credentials extends DurableObject {
   }
 
   list(after, query) {
-    return this.sql.exec(`SELECT username, email, email_id, salt FROM credentials_v1
+    return this.sql.exec(`SELECT username, email, email_id, salt, created_at FROM credentials_v1
       WHERE username > ? AND (instr(username, ?) > 0 OR instr(email, ?) > 0)
       ORDER BY username LIMIT 26`, after, query, query).toArray();
   }
@@ -36,8 +39,8 @@ export class Credentials extends DurableObject {
 
   register(username, emailId, email, salt, proof) {
     const inserted = this.sql.exec(
-      "INSERT OR IGNORE INTO credentials_v1 VALUES (?, ?, ?, ?, ?) RETURNING username",
-      username, emailId, email, salt, proof
+      "INSERT OR IGNORE INTO credentials_v1 VALUES (?, ?, ?, ?, ?, ?) RETURNING username",
+      username, emailId, email, salt, proof, Date.now()
     ).toArray().length;
     if (inserted) return null;
     return this.usernameFor(emailId) ? "already_registered" : "username_taken";

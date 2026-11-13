@@ -10,3 +10,7 @@
   background: var(--stage);
 }
 .promotion-creative video { aspect-ratio: 16 / 9; }
+.medora #service-notice { margin-block: .55rem; }
+.medora #service-notice p { margin-block: .2rem 0; }
+.medora .support-ticket { padding-block: .45rem; border-block-start: 1px solid var(--outline); overflow-wrap: anywhere; }
+.medora .support-ticket p { margin-block: .25rem; white-space: pre-wrap; }

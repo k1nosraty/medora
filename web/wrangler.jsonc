@@ -14,6 +14,7 @@
   "ratelimits": [
     { "name": "PUSH_ENROLL_LIMIT", "namespace_id": "750501", "simple": { "limit": 30, "period": 60 } },
     { "name": "PUSH_DEVICE_LIMIT", "namespace_id": "750502", "simple": { "limit": 60, "period": 60 } },
+    { "name": "PROMOTION_EVENT_LIMIT", "namespace_id": "750504", "simple": { "limit": 60, "period": 60 } },
     { "name": "EMAIL_AUTH_LIMIT", "namespace_id": "750503", "simple": { "limit": 8, "period": 60 } }
   ],
   "durable_objects": {
@@ -22,7 +23,8 @@
       { "name": "REMINDERS", "class_name": "MedicationReminders" },
       { "name": "EMAIL_ACCOUNTS", "class_name": "EmailAccount" },
       { "name": "CREDENTIALS", "class_name": "Credentials" },
-      { "name": "PROMOTIONS", "class_name": "Promotions" }
+      { "name": "PROMOTIONS", "class_name": "Promotions" },
+      { "name": "OPERATIONS", "class_name": "Operations" }
     ]
   },
   "migrations": [
@@ -30,6 +32,7 @@
     { "tag": "v2", "new_sqlite_classes": ["MedicationReminders"] },
     { "tag": "v3", "new_sqlite_classes": ["EmailAccount"] },
     { "tag": "v4", "new_sqlite_classes": ["Promotions"] },
-    { "tag": "v5", "new_sqlite_classes": ["Credentials"] }
+    { "tag": "v5", "new_sqlite_classes": ["Credentials"] },
+    { "tag": "v6", "new_sqlite_classes": ["Operations"] }
   ]
 }
