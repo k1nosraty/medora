@@ -10,9 +10,10 @@
   <!-- include layout/styles.html -->
   <link rel="stylesheet" href="/design/gallery.css">
   <link rel="stylesheet" href="/design/finish.css">
+  <link rel="stylesheet" href="/design/panels.css">
   <script type="module" src="/design/gallery.js"></script>
 </head>
-<body class="medora" data-finish="glass">
+<body class="medora design-gallery" data-finish="glass">
   <!-- include assets/icons/library.html -->
   <main class="gallery">
     <header class="gallery-heading">
@@ -38,7 +39,10 @@
       <h2><span data-en="Cards and banners">کارت‌ها و بنرها</span></h2>
       <div class="gallery-surface-grid">
         <article class="gallery-surface">
-          <h3>امروز</h3>
+          <div class="gallery-today-heading">
+            <h3>امروز</h3>
+            <button type="button" id="gallery-open-settings" class="icon-button finish-action secondary" aria-label="تنظیمات" data-en-aria-label="Settings"><svg aria-hidden="true"><use href="#i-settings"/></svg></button>
+          </div>
           <label class="gallery-hero-picker"><span data-en="Today banner image">تصویر بنر امروز</span> <select id="hero-art">
             <option value="heart" data-en="Heart">قلب</option>
             <option value="classic" data-en="Original Medora artwork">تصویر قبلی مدورا</option>

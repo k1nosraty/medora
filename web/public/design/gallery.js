@@ -13,6 +13,7 @@ import { today } from "../medication/shared/ui/dates.js";
 import { installCalendarPreview } from "./calendar.js";
 import { glassObject, medicineGlass, refreshArtwork, visitGlass, routineGlass } from "./glass.js";
 import { installChoiceArt, installFormArt, renderMedicineCover } from "./form-art.js";
+import { installPanelPreview } from "./panels.js";
 import { appearanceColors, complete, cycleArt, glass, heart, readCatalog } from "./catalog.js";
 
 localizeMarkup({ manifest: false });
@@ -27,9 +28,11 @@ const fa = language === "fa";
 const text = (persian, english) => fa ? persian : english;
 const normalize = value => value.toLocaleLowerCase().normalize("NFKC").replaceAll("ي", "ی").replaceAll("ك", "ک").replace(/[\s‌-]/g, "");
 const now = today();
-const dates = calendarFormat(defaultCalendar);
+const previewParams = new URLSearchParams(location.search);
+const calendar = ["persian", "gregory"].includes(previewParams.get("calendar")) ? previewParams.get("calendar") : defaultCalendar;
+const dates = calendarFormat(calendar);
 const { formatDay } = dates;
-const state = { medicines: {}, visits: {}, routines: {}, routineLogs: {}, water: [], doses: {} };
+const state = { medicines: {}, visits: {}, routines: {}, routineLogs: {}, water: [], doses: {}, calendar };
 const noSave = async () => {
   $("status").textContent = text("در گالری داده‌ای ذخیره نمی‌شود.", "The gallery does not save records.");
   return false;
@@ -104,7 +107,9 @@ function cycleDialog() {
   $("design-cycle-dialog").showModal();
 }
 function updateDisplay() {
-  applyDisplay({ theme: $("theme").value, accent: $("accent").value }, { cycleEnabled: cycleEnabled() });
+  state.theme = $("theme").value;
+  state.accent = $("accent").value;
+  applyDisplay(state, { cycleEnabled: cycleEnabled() });
 }
 function accentOptions() {
   options($("accent"), availableAccents(cycleEnabled()).map(({id,label}) => [id,fa ? label : accentText(id)]));
@@ -389,7 +394,16 @@ options($("family"),Object.entries(families));
 options($("art-color"), [["",text("پیش‌فرض","Default")], ...Object.entries(appearanceColors)]);
 installFormArt();
 installChoiceArt();
+$("cycle-preview").checked = previewParams.get("cycle") !== "off";
+$("theme").value = ["system", "light", "dark"].includes(previewParams.get("theme")) ? previewParams.get("theme") : "light";
+$("finish").value = previewParams.get("finish") === "matte" ? "matte" : "glass";
+$("finish").dispatchEvent(new Event("change"));
+installPanelPreview({ openSettings, openAccount, text, calendar });
 accentOptions();
+if ([...$("accent").options].some(option => option.value === previewParams.get("accent"))) {
+  $("accent").value = previewParams.get("accent");
+  updateDisplay();
+}
 renderSurfaces();
 renderControls();
 water.renderTodayWater(state, now, 750, 2000, .375);

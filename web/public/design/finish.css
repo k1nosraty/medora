@@ -49,14 +49,14 @@ html[dir="ltr"] .gallery-arrow { transform: scaleX(-1); }
   box-shadow: inset 0 1px var(--glass-glint), inset 0 -1px color-mix(in srgb, var(--outline) 70%, transparent), 0 .22rem .58rem var(--glass-shadow);
 }
 .medora :is([data-finish="glass"] .finish-action, [data-finish="glass"] .gallery-arrow),
-.medora[data-finish="glass"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery #today-water-actions button,.gallery #day-controls .day-arrow) {
+.medora[data-finish="glass"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery .today-water-actions button,.gallery #day-controls .day-arrow) {
   --button-tint: var(--action);
   border: 1px solid var(--glass-rim);
   box-shadow: inset 0 1px color-mix(in srgb, #fff 60%, transparent), inset 0 -2px var(--glass-shadow), 0 .2rem .45rem var(--glass-shadow);
   background: linear-gradient(155deg, color-mix(in srgb, #fff 24%, var(--button-tint)), var(--button-tint));
 }
 .medora :is([data-finish="glass"] .finish-action, [data-finish="glass"] .gallery-arrow):is(.secondary,.text-button),
-.medora[data-finish="glass"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery #today-water-actions button,.gallery #day-controls .day-arrow):is(.secondary,.text-button) {
+.medora[data-finish="glass"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery .today-water-actions button,.gallery #day-controls .day-arrow):is(.secondary,.text-button) {
   --button-tint: color-mix(in srgb, var(--action) 13%, var(--panel));
   background: linear-gradient(155deg, color-mix(in srgb, var(--panel) 78%, transparent), var(--button-tint));
 }
@@ -78,14 +78,14 @@ html[dir="ltr"] .gallery-arrow { transform: scaleX(-1); }
   backdrop-filter: none;
 }
 .medora :is([data-finish="matte"] .finish-action, [data-finish="matte"] .gallery-arrow),
-.medora[data-finish="matte"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery #today-water-actions button,.gallery #day-controls .day-arrow) {
+.medora[data-finish="matte"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery .today-water-actions button,.gallery #day-controls .day-arrow) {
   border: 1px solid var(--outline);
   box-shadow: 0 2px 0 var(--outline);
   background: var(--action);
   backdrop-filter: none;
 }
 .medora :is([data-finish="matte"] .finish-action, [data-finish="matte"] .gallery-arrow):is(.secondary,.text-button),
-.medora[data-finish="matte"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery #today-water-actions button,.gallery #day-controls .day-arrow):is(.secondary,.text-button) {
+.medora[data-finish="matte"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery .today-water-actions button,.gallery #day-controls .day-arrow):is(.secondary,.text-button) {
   background: var(--panel);
 }
 .medora .finish-action.danger-link { color: var(--error); }
