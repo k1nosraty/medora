@@ -67,7 +67,10 @@ html[dir="ltr"] .gallery-arrow { transform: scaleX(-1); }
   border-color: color-mix(in srgb, var(--program-ink, var(--action)) 20%, var(--outline));
   box-shadow: 0 2px 0 var(--outline);
 }
-.medora[data-finish="matte"] .gallery .today-story { background: color-mix(in srgb, var(--cover) 43%, var(--panel)); }
+.medora[data-finish="matte"] .gallery .today-story,
+.medora[data-finish="matte"] .glass-comparison-cell article.gallery-banner.glass-cover {
+  background: color-mix(in srgb, var(--cover) 60%, var(--cover-shade));
+}
 [data-finish="matte"] :is(.gallery-month,.gallery #day-controls), .gallery-finish-card[data-finish="matte"] .gallery-mini-week {
   background: var(--calendar-neutral);
   border: 1px solid var(--outline);
