@@ -1,4 +1,5 @@
 import { exportResponse } from "./export.mjs";
+import { emptyHash } from "./backup-parts-format.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { isAdminEmail, signedInEmail } from "../accounts/email-auth.mjs";
 import { pilotConfig, smallJson } from "../http/validation.mjs";
@@ -116,8 +117,8 @@ export class Operations extends DurableObject {
 
   registerReminder(id) { return this.ctx.storage.put("reminder:" + id, true); }
 
-  async reminderIds(after) {
-    const page = await this.ctx.storage.list({ prefix: "reminder:", limit: 100, ...(after && { startAfter: "reminder:" + after }) });
+  async reminderIds(after, limit = 100) {
+    const page = await this.ctx.storage.list({ prefix: "reminder:", limit, ...(after && { startAfter: "reminder:" + after }) });
     return [...page.keys()].map(key => key.slice(9));
   }
 
@@ -156,6 +157,37 @@ export class Operations extends DurableObject {
         return;
       }
       await storage.put("server-restore", { ...journal, until: 0, ...(result && { done: true, result, reminders }) });
+    });
+  }
+
+  async partRestore(hash, total, phase, index) {
+    return this.ctx.storage.transaction(async storage => {
+      const journal = await storage.get("server-restore");
+      if (journal && (journal.hash !== hash || journal.total !== total)) return { error: "archive_conflict" };
+      if (phase === "reminders" && !journal?.done) return { error: "restore_data_first" };
+      const next = journal?.[phase + "Index"] ?? 0;
+      if (index < next) return { next };
+      if (index !== next || index >= total) return { error: "part_out_of_order" };
+      if (journal?.until > Date.now()) return { error: "restore_in_progress" };
+      const id = crypto.randomUUID();
+      await storage.put("server-restore", { ...journal, hash, total, id, until: Date.now() + 120_000 });
+      return { id, prepared: journal?.prepared, chain: journal?.[phase + "Chain"] ?? emptyHash };
+    });
+  }
+
+  async finishPart(id, phase, index, chain) {
+    return this.ctx.storage.transaction(async storage => {
+      const journal = await storage.get("server-restore");
+      if (journal?.id !== id) throw new Error("restore_in_progress");
+      if (!journal.prepared) {
+        await storage.delete("server-restore");
+        return index;
+      }
+      const next = index + Number(Boolean(chain));
+      await storage.put("server-restore", { ...journal, until: 0, [phase + "Index"]: next,
+        ...(chain && { [phase + "Chain"]: chain }),
+        done: journal.done || (phase === "data" && next === journal.total) });
+      return next;
     });
   }
 
@@ -207,6 +239,14 @@ export class Operations extends DurableObject {
   async exportData() {
     return { config: await this.config(), counters: this.sql.exec("SELECT * FROM counters").toArray(),
       audit: this.sql.exec("SELECT * FROM audit").toArray(), tickets: this.sql.exec("SELECT * FROM tickets").toArray() };
+  }
+
+  async exportOperationPage(offset) {
+    const config = await this.config();
+    const counters = this.sql.exec("SELECT * FROM counters ORDER BY day, metric LIMIT 100 OFFSET ?", offset).toArray();
+    const audit = this.sql.exec("SELECT * FROM audit ORDER BY id LIMIT 100 OFFSET ?", offset).toArray();
+    const tickets = this.sql.exec("SELECT * FROM tickets ORDER BY id LIMIT 100 OFFSET ?", offset).toArray();
+    return { operations: { config, counters, audit, tickets }, complete: [counters, audit, tickets].every(rows => rows.length < 100) };
   }
 
   tickets(email) {

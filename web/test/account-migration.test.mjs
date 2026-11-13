@@ -28,11 +28,11 @@ test("account merge preserves independent edits and propagates deletions", () =>
   assert.deepEqual(mergeCare(null, { water: [a] }, { water: [b] }).water, [a, b]);
 });
 
-test("encrypted migration restores existing login, account history and a pending push", { timeout: 85_000 }, async () => {
+test("encrypted migration restores existing login, account history and a pending push", { timeout: 150_000 }, async () => {
   const { outputFiles } = await build({
     absWorkingDir: fileURLToPath(new URL("..", import.meta.url)),
     entryPoints: ["src/worker.mjs"], bundle: true, platform: "browser", format: "esm",
-    external: ["cloudflare:workers", "node:crypto"], write: false
+    external: ["cloudflare:workers", "node:crypto", "node:buffer"], write: false
   });
   const vapid = createECDH("prime256v1");
   const publicKey = vapid.generateKeys().toString("base64url");
@@ -133,7 +133,7 @@ test("encrypted migration restores existing login, account history and a pending
     const shellOptions = { env: { ...process.env, MEDORA_MIGRATION_TOKEN: migrationToken,
       MEDORA_BACKUP_PASSWORD: backupPassword } };
     const cli = promisify(execFile);
-    const cliArgs = [fileURLToPath(new URL("../scripts/migrate-care.mjs", import.meta.url)), "backup", (await source.ready).href, path];
+    const cliArgs = [fileURLToPath(new URL("../scripts/migrate-care-v1.mjs", import.meta.url)), "backup", (await source.ready).href, path];
     const downloaded = await cli(process.execPath, cliArgs, shellOptions);
     const bytes = await readFile(path);
     assert.equal((await stat(path)).mode & 0o777, 0o600);
@@ -201,10 +201,44 @@ test("encrypted migration restores existing login, account history and a pending
     assert.equal((await api(target, carePath, "GET", session)).status, 401);
     const newSession = await login(target);
     assert.deepEqual(await (await api(target, carePath, "GET", newSession)).json(), { owner, revision: 1, records });
+    const largeSource = new Miniflare(options({ MEDORA_EXPORT_CONTINUITY: "true", MIGRATION_TOKEN_EXPIRES_AT: String(Date.now() + 600_000) }));
+    const largeTarget = new Miniflare(options(maintenance));
+    try {
+      const sourceAds = await stub(largeSource, "PROMOTIONS", "home");
+      const payload = Buffer.alloc(5 * 1024 * 1024, 7);
+      gif.copy(payload);
+      const assetIds = [];
+      for (let index = 0; index < 3; index++) {
+        const { id: largeId } = await sourceAds.storeMedia(payload, "image/gif", String(index));
+        assetIds.push(largeId);
+      }
+      const sourceAddress = (await largeSource.ready).href;
+      const targetAddress = (await largeTarget.ready).href;
+      const script = fileURLToPath(new URL("../scripts/migrate-care.mjs", import.meta.url));
+      const archivePath = join(backupDir, "large.medbackup");
+      const command = (mode, origin, path, ...args) =>
+        cli(process.execPath, [script, mode, origin, path, ...args], shellOptions);
+      await command("backup-keys", sourceAddress, join(backupDir, "keys.medbackup"));
+      await command("backup", sourceAddress, archivePath);
+      assert.ok((await stat(archivePath)).size > 16 * 1024 * 1024);
+      await command("verify", targetAddress, archivePath);
+      await command("restore", targetAddress, archivePath);
+      await command("restore", targetAddress, archivePath);
+      const targetAds = await stub(largeTarget, "PROMOTIONS", "home");
+      assert.deepEqual((await targetAds.library()).map(({ id }) => id), assetIds);
+      for (const id of assetIds) {
+        const restoredBytes = await targetAds.mediaBytes(id, 0, payload.length - 1);
+        assert.equal(createHash("sha256").update(restoredBytes).digest("hex"), createHash("sha256").update(payload).digest("hex"));
+      }
+    } finally {
+      await Promise.all([largeSource.dispose(), largeTarget.dispose()]);
+    }
     const restoredDevice = await stub(target, "REMINDERS", id);
     for (let attempt = 0; attempt < 130 && !outbound.length; attempt++) await sleep(500);
     assert.deepEqual(outbound, [{ url: endpoint, encoding: "aes128gcm" }]);
     assert.equal((await restoredDevice.status()).last?.status, "accepted");
+
+
   } finally {
     await Promise.all([sourceStopped ? null : source.dispose(), target.dispose(), occupied.dispose(), incompatible.dispose(),
       rm(backupDir, { recursive: true, force: true })]);

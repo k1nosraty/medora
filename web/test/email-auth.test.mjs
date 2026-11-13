@@ -12,7 +12,7 @@ test("registration, password recovery and account deletion preserve authorizatio
   const { outputFiles } = await build({
     absWorkingDir: fileURLToPath(new URL("..", import.meta.url)),
     entryPoints: ["src/worker.mjs"], bundle: true, platform: "browser",
-    format: "esm", external: ["cloudflare:workers", "node:crypto"], write: false
+    format: "esm", external: ["cloudflare:workers", "node:crypto", "node:buffer"], write: false
   });
   const deliveries = [];
   let delivered;

@@ -1,4 +1,5 @@
 import { handleMigration } from "./operations/migration.mjs";
+import { handleBackupParts } from "./operations/backup-parts.mjs";
 import { handleCareSync } from "./sync/routes.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { vapidHeaders } from "@block65/webcrypto-web-push";
@@ -27,6 +28,9 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (["backup", "verify", "restore", "keys"].some(action => url.pathname === "/api/migration/parts/" + action)) {
+      return handleBackupParts(request, env, url);
+    }
     if (["/api/migration/backup", "/api/migration/verify", "/api/migration/restore"].includes(url.pathname)) return handleMigration(request, env, url);
     if (env.MEDORA_MAINTENANCE === "true") {
       return Response.json({ error: "maintenance" }, { status: 503, headers: {

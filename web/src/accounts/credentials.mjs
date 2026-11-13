@@ -33,8 +33,8 @@ export class Credentials extends DurableObject {
     return this.sql.exec("SELECT username, email, created_at FROM credentials_v1 WHERE username > ? ORDER BY username LIMIT 100", after).toArray();
   }
 
-  backupAccounts(after) {
-    return this.sql.exec("SELECT * FROM credentials_v1 WHERE username > ? ORDER BY username LIMIT 100", after).toArray();
+  backupAccounts(after, limit = 100) {
+    return this.sql.exec("SELECT * FROM credentials_v1 WHERE username > ? ORDER BY username LIMIT ?", after, limit).toArray();
   }
 
   restoreAccount(row) {

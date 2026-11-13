@@ -6,7 +6,7 @@ const require = createRequire(process.cwd() + "/package.json");
 const { Miniflare, Response, convertV4MiniflareOptions } = require("miniflare");
 const { build } = require("esbuild");
 const { outputFiles } = await build({ entryPoints: ["src/worker.mjs"], bundle: true, platform: "browser",
-  format: "esm", external: ["cloudflare:workers", "node:crypto"], write: false });
+  format: "esm", external: ["cloudflare:workers", "node:crypto", "node:buffer"], write: false });
 const server = createECDH("prime256v1");
 const client = createECDH("prime256v1");
 const signingKey = randomBytes(32).toString("hex");
