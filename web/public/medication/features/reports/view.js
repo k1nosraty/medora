@@ -2,7 +2,7 @@ import { listSeparator, locale, shortWeek, t, weekIndex } from "../../shared/i18
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { cycleIsEnabled } from "../../domain/profile.js";
-import { cycleForecast } from "../../domain/cycle.js";
+import { cycleForecast, cycleTotals } from "../../domain/cycle.js";
 
 const numbers = new Intl.NumberFormat(locale);
 const percent = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 });
@@ -191,7 +191,21 @@ function reportStats(id, stats) {
   }));
 }
 
-export function renderReports({ first, last, period }, goal, index, formatShortDate, formatDay, monthStart) {
+function renderCycleReport(state, first, last, formatDay) {
+  const enabled = cycleIsEnabled(state);
+  $("report-cycle-card").hidden = !enabled;
+  const totals = enabled ? cycleTotals(state.cycleRecords, first, last) : null;
+  $("report-cycle-empty").hidden = Boolean(totals?.days);
+  $("report-cycle-breakdown").hidden = !totals?.days;
+  reportStats("report-cycle-breakdown", totals?.days ? [
+    ["شروع‌های ثبت‌شده", number(totals.starts)],
+    ["روزهای ثبت‌شدهٔ پریود", number(totals.days)],
+    ...(totals.latestStart === null ? [] : [["آخرین شروع در این بازه", formatDay(totals.latestStart)]])
+  ] : []);
+}
+
+export function renderReports({ first, last, period }, goal, index, formatShortDate, formatDay, monthStart, state) {
+  renderCycleReport(state, first, last, formatDay);
   const range = Array.from({ length: last - first + 1 }, (_, i) => index.waterTotal(first + i));
   const waterDays = range.filter(Boolean).length;
   const totalWater = sum(range);

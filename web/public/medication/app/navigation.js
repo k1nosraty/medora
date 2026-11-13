@@ -195,7 +195,7 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
       } else {
         const last = today();
         renderReports({ first: reportStart(last), last, period: reportPeriod }, goal, index,
-          day => dates.shortDate(day), formatDay, monthStart);
+          day => dates.shortDate(day), formatDay, monthStart, state);
         reportTimer = setTimeout(render, 60_000 - Date.now() % 60_000);
       }
     }
