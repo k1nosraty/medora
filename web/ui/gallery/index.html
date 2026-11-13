@@ -14,6 +14,7 @@
 <body class="medora">
   <!-- include assets/icons/library.html -->
   <!-- include gallery/cycle-art.svg -->
+  <!-- include gallery/glass-art.svg -->
   <main class="gallery">
     <header class="gallery-heading">
       <div class="gallery-brand"><span class="brand-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></span> مدورا</div>
@@ -23,7 +24,7 @@
     <div class="gallery-toolbar">
       <label><span data-en="Appearance">ظاهر</span> <select id="theme"><option value="light">روشن</option><option value="dark">تیره</option><option value="system">مطابق دستگاه</option></select></label>
       <label><span data-en="Accent">اکسنت</span> <select id="accent"></select></label>
-      <label class="gallery-check"><input id="cycle-preview" type="checkbox"> <span data-en="Show Cycle">نمایش چرخه</span></label>
+      <label class="gallery-check"><input id="cycle-preview" type="checkbox" checked> <span data-en="Show Cycle">نمایش چرخه</span></label>
       <label>زبان <select id="gallery-language"><option value="fa">فارسی</option><option value="en">English</option></select></label>
       <label><span data-en="Width">عرض</span> <select id="width"><option value="auto" data-en="Fit screen">متناسب با صفحه</option><option value="390px" data-en="390 pixels">۳۹۰ پیکسل</option><option value="320px" data-en="320 pixels">۳۲۰ پیکسل</option></select></label>
     </div>
@@ -61,7 +62,10 @@
       </div>
       <div class="gallery-catalog">
         <div id="icon-grid" class="gallery-icon-grid"></div>
-        <aside id="icon-specimen" class="gallery-surface" aria-label="تصویر انتخاب‌شده" data-en-aria-label="Selected illustration"></aside>
+        <div class="gallery-inspector">
+          <aside id="icon-specimen" class="gallery-surface" aria-label="تصویر انتخاب‌شده" data-en-aria-label="Selected illustration"></aside>
+          <a href="#gallery-selected-comparison" data-en="Compare selected icon across accents">مقایسهٔ آیکون انتخاب‌شده با همهٔ اکسنت‌ها</a>
+        </div>
       </div>
     </section>
     <section id="forms" class="gallery-section">
@@ -71,7 +75,9 @@
     </section>
     <section id="palette" class="gallery-section">
       <h2><span data-en="Compare accents">مقایسهٔ اکسنت‌ها</span></h2>
-      <div id="gallery-palettes" class="gallery-palette-grid"></div>
+      <p data-en="Each accent is shown in light and dark. The five categories retain their own colors.">هر اکسنت در دو حالت روشن و تیره نمایش داده می‌شود. رنگ اختصاصی دسته‌ها ثابت می‌ماند.</p>
+      <div id="gallery-palettes"></div>
+      <div id="gallery-selected-comparison"></div>
     </section>
   </main>
   <p id="status" hidden></p>

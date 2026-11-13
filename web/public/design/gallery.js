@@ -2,11 +2,8 @@ import { $, button, element } from "../medication/shared/ui/dom.js";
 import { defaultCalendar, language, localDigits, localizeMarkup, shortWeek, weekIndex } from "../medication/shared/i18n/locale.js";
 import { applyDisplay } from "../medication/styles/display.js";
 import { availableAccents } from "../medication/styles/theme.js";
-import { medicationBadge, medicationBanner } from "../medication/features/medicines/appearance.js";
 import { installMedicineEditor } from "../medication/features/medicines/editor.js";
 import { installAppointments } from "../medication/features/appointments/editor.js";
-import { visitIllustration } from "../medication/features/appointments/view.js";
-import { routineIllustration } from "../medication/features/routines/illustration.js";
 import { installRoutines } from "../medication/features/routines/view.js";
 import { installWater } from "../medication/features/water/controller.js";
 import { installSettings } from "../medication/features/settings/dialog.js";
@@ -14,7 +11,9 @@ import { installPickers } from "../medication/shared/ui/pickers.js";
 import { calendarFormat } from "../medication/shared/ui/calendar-format.js";
 import { today } from "../medication/shared/ui/dates.js";
 import { isoDay } from "../medication/domain/care-index.js";
-import { appearanceColors, complete, cycleArt, glass, readCatalog } from "./catalog.js";
+import { medicineGlass, visitGlass, routineGlass } from "./glass.js";
+import { installFormArt, renderMedicineCover } from "./form-art.js";
+import { appearanceColors, complete, cycleArt, glass, heart, readCatalog } from "./catalog.js";
 
 localizeMarkup({ manifest: false });
 if (language === "en") {
@@ -82,9 +81,9 @@ function options(select, values, previous = select.value) {
 }
 const cycleEnabled = () => $("cycle-preview").checked;
 const designCards = [
-  ["medicine", text("مصرف دارو","Medication"), () => medicationBadge("bottle")],
-  ["visit", text("قرارها","Appointments"), () => visitIllustration("general")],
-  ["routine", text("روتین‌ها","Routines"), () => routineIllustration("custom")],
+  ["medicine", text("مصرف دارو","Medication"), () => medicineGlass("bottle")],
+  ["visit", text("قرارها","Appointments"), () => visitGlass("general")],
+  ["routine", text("روتین‌ها","Routines"), () => routineGlass("custom")],
   ["water", text("مصرف آب","Water"), glass],
   ["cycle", families.cycle, cycleArt]
 ];
@@ -112,19 +111,62 @@ function accentOptions() {
   options($("accent"), availableAccents(cycleEnabled()).map(({id,label}) => [id,fa ? label : accentText(id)]));
   updateDisplay();
 }
+function accentName(id, label) {
+  return fa ? label : accentText(id);
+}
+
+function comparisonCell(theme, accent, title) {
+  const cell = element("article", "", "medora glass-comparison-cell");
+  cell.dataset.accent = accent;
+  cell.dataset.theme = theme;
+  const day = element("span", localDigits(18), "glass-sample-date");
+  const heading = element("header");
+  heading.append(element("strong", title), day);
+  cell.append(heading);
+  return cell;
+}
+
+function comparison(render, includeCycle) {
+  const panel = element("div", "", "glass-comparison");
+  for (const { id, label } of availableAccents(includeCycle)) {
+    const pair = element("div", "", "glass-comparison-pair");
+    for (const theme of themes) {
+      const mode = theme === "dark" ? text("تیره","Dark") : text("روشن","Light");
+      const cell = comparisonCell(theme, id, accentName(id, label) + " · " + mode);
+      render(cell, id);
+      pair.append(cell);
+    }
+    panel.append(pair);
+  }
+  return panel;
+}
+
 function renderPalette() {
-  const palette = themes.flatMap(theme => availableAccents(cycleEnabled()).map(({id,label}) => {
-    const color = element("article", "", "medora gallery-palette-sample");
-    color.dataset.accent = id;
-    color.dataset.theme = theme;
-    const sample = element("i");
-    sample.style.setProperty("--sample", theme === "dark" ? "var(--accent-dark)" : "var(--accent-light)");
-    color.append(sample, element("span", (fa ? label : accentText(id)) + " · " + (theme === "dark" ? text("تیره","Dark") : text("روشن","Light"))));
-    return color;
-  }));
-  $("gallery-palettes").replaceChildren(...palette);
+  const grid = comparison((cell, accent) => {
+    const cover = banner(text("امروز با مدورا","Today with Medora"), "", "image", heart(accent));
+    cover.classList.add("glass-cover");
+    cell.append(cover);
+    const cards = designCards.filter(([family]) => family !== "cycle" || cycleEnabled());
+    cell.append(...cards.map(([family,label,draw]) => banner(label, "", family, draw())));
+  }, cycleEnabled());
+  $("gallery-palettes").replaceChildren(grid);
 }
 function renderSurfaces() {
+  renderMedicineCover($("accent").value);
+  const artByFeature = {
+    medications: () => medicineGlass("bottle"), appointments: () => visitGlass("general"), routines: () => routineGlass("custom")
+  };
+  for (const control of document.querySelectorAll("#today-programs [data-destination]")) {
+    control.firstElementChild.replaceWith(artByFeature[control.dataset.destination]());
+  }
+  $("today-story").querySelector(".story-art").replaceWith(heart($("accent").value));
+  const waterArt = $("today-water").querySelector(".today-water-art");
+  waterArt.querySelector(".glass-object")?.remove();
+  waterArt.append(glass());
+  const quickArt = [medicineGlass("bottle"), visitGlass("general"), routineGlass("custom"), glass()];
+  $("quick-dialog").querySelectorAll("[data-from-quick]").forEach((control, index) => {
+    control.firstElementChild.replaceWith(quickArt[index]);
+  });
   const cards = designCards.filter(([family]) => family !== "cycle" || cycleEnabled());
   const reports = element("div", "", "report-grid");
   for (const [family,title,draw] of cards) {
@@ -167,18 +209,23 @@ function renderSurfaces() {
 function renderSpecimen(entry) {
   const panel = $("icon-specimen");
   panel.hidden = !entry;
+  $("gallery-selected-comparison").hidden = !entry;
   if (!entry) return;
   const color = $("art-color").value;
-  const specimen = banner(entry.label, text("اندازهٔ کارت","Card size"), entry.family, entry.render(color));
+  const draw = accent => entry.render(color, accent);
+  const specimen = banner(entry.label, text("اندازهٔ بنر","Banner size"), entry.family, draw($("accent").value));
   specimen.dataset.ink = color;
   const large = element("div", "", "gallery-large program-" + entry.family);
   large.dataset.ink = color;
-  large.append(artSlot(entry.render(color)));
+  large.append(artSlot(draw($("accent").value)));
   panel.replaceChildren(element("h3", entry.label), large, specimen);
-  if (entry.family === "medicine" && entry.id !== "blister") {
-    panel.append(medicationBanner(entry.id, color || "purple"));
-  }
+  const title = element("h3", text("همین آیکون با همهٔ اکسنت‌ها", "This icon across accents"));
+  const matrix = comparison((cell, accent) => {
+    cell.append(banner(entry.label, "", entry.family, draw(accent)));
+  }, cycleEnabled());
+  $("gallery-selected-comparison").replaceChildren(title, matrix);
 }
+
 function renderCatalog() {
   const family = $("family").value;
   const query = normalize($("icon-search").value.trim());
@@ -194,7 +241,7 @@ function renderCatalog() {
     control.classList.add("gallery-icon","program-" + entry.family);
     control.dataset.ink = $("art-color").value;
     control.setAttribute("aria-pressed", String(entry === selection));
-    control.append(artSlot(entry.render($("art-color").value)), element("span",entry.label));
+    control.append(artSlot(entry.render($("art-color").value, $("accent").value)), element("span",entry.label));
     return control;
   });
   $("icon-grid").replaceChildren(...cards);
@@ -214,7 +261,7 @@ function renderControls() {
   const field = element("input");
   field.placeholder = text("نمونهٔ ورودی","Sample input");
   field.setAttribute("aria-label",field.placeholder);
-  controls.append(buttons, field, banner(text("همهٔ نوبت‌ها بررسی شدند","All activities reviewed"), "", "image", complete()),
+  controls.append(buttons, field, banner(text("همهٔ نوبت‌ها بررسی شدند","All activities reviewed"), "", "image", complete($("accent").value)),
     banner(text("ثبت آب","Log water"),text("۷۵۰ از ۲٬۰۰۰ میلی‌لیتر","750 of 2,000 ml"),"water",glass()));
   $("gallery-controls").replaceChildren(controls);
 }
@@ -280,7 +327,12 @@ $("gallery-language").addEventListener("change", event => {
   location.assign(url);
 });
 $("theme").addEventListener("change", updateDisplay);
-$("accent").addEventListener("change", updateDisplay);
+$("accent").addEventListener("change", () => {
+  updateDisplay();
+  renderSurfaces();
+  renderControls();
+  renderCatalog();
+});
 $("width").addEventListener("change", event => {
   if (event.target.value === "auto") delete document.querySelector(".gallery").dataset.width;
   else document.querySelector(".gallery").dataset.width = event.target.value;
@@ -294,6 +346,7 @@ $("cycle-preview").addEventListener("change", () => {
 for (const id of ["family","art-color","icon-search"]) $(id).addEventListener(id === "icon-search" ? "input" : "change", renderCatalog);
 options($("family"),Object.entries(families));
 options($("art-color"), [["",text("پیش‌فرض","Default")], ...Object.entries(appearanceColors)]);
+installFormArt();
 accentOptions();
 renderSurfaces();
 renderControls();
