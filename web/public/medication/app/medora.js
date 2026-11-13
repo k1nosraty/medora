@@ -30,7 +30,9 @@ let care;
 let busy = false;
 const update = $("update-app");
 const updateStatus = $("app-update-status");
+let updateStatusTimer;
 update.addEventListener("click", async () => {
+  clearTimeout(updateStatusTimer);
   if (busy) {
     updateStatus.textContent = t("پس از ذخیرهٔ تغییرات دوباره تلاش کنید.");
     return;
@@ -44,6 +46,7 @@ update.addEventListener("click", async () => {
   try {
     if (await refreshApp({ canReload: () => !busy && !document.querySelector("dialog[open]") }) === false) {
       updateStatus.textContent = t("آخرین نسخه نصب است.");
+      updateStatusTimer = setTimeout(() => { updateStatus.textContent = ""; }, 3200);
     }
   } catch (error) {
     updateStatus.textContent = error.message === "update_busy"
