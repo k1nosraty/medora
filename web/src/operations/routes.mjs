@@ -123,34 +123,58 @@ export class Operations extends DurableObject {
   }
 
   async publishRelease(version) {
-    if (this.env.MEDORA_PAUSE_PUSH === "true" || this.env.MEDORA_MAINTENANCE === "true") return;
-    const storage = this.ctx.storage;
-    const state = await storage.get("release-batch");
-    if (state?.version === version) return;
-    await storage.transaction(async txn => {
-      if ((await txn.get("release-batch"))?.version === version) return;
+    if (this.env.MEDORA_PAUSE_PUSH === "true" || this.env.MEDORA_MAINTENANCE === "true") return "paused";
+    return this.ctx.storage.transaction(async txn => {
+      const current = await txn.get("release-batch");
+      if (current?.version === version) {
+        if (current.done) return "complete";
+        if (!current.runningUntil || current.runningUntil <= Date.now()) {
+          if (await txn.getAlarm() === null) await txn.setAlarm(Date.now() + 1000);
+        }
+        return "queued";
+      }
       await txn.put("release-batch", { version, after: "" });
       await txn.setAlarm(Date.now() + 1000);
+      return "queued";
     });
   }
 
   async alarm() {
     const storage = this.ctx.storage;
     const state = await storage.get("release-batch");
-    if (!state || state.done) return;
+    if (!state || state.done || Date.now() < (state.runningUntil ?? 0)) return;
     if (this.env.MEDORA_PAUSE_PUSH === "true" || this.env.MEDORA_MAINTENANCE === "true") {
       await storage.setAlarm(Date.now() + 60_000);
       return;
     }
+    const claimed = await storage.transaction(async txn => {
+      const current = await txn.get("release-batch");
+      if (current?.version !== state.version || current.done || current.after !== state.after ||
+          Date.now() < (current.runningUntil ?? 0)) return false;
+      const runningUntil = Date.now() + 65_000;
+      await txn.put("release-batch", { ...state, runningUntil });
+      await txn.setAlarm(runningUntil);
+      return true;
+    });
+    if (!claimed) return;
     const ids = await this.reminderIds(state.after, 12);
-    // Keep outbound connections bounded and let failures retry via the alarm.
+    let retry = false;
+    // Keep outbound connections bounded and repeat this page on transient provider failures.
     for (let i = 0; i < ids.length; i += 3) {
-      await Promise.all(ids.slice(i, i + 3).map(id => this.env.REMINDERS.getByName(id).sendRelease(state.version)));
+      const outcomes = await Promise.allSettled(ids.slice(i, i + 3).map(id =>
+        this.env.REMINDERS.getByName(id).sendRelease(state.version)));
+      retry ||= outcomes.some(outcome => outcome.status === "rejected" || outcome.value === "retry");
     }
     await storage.transaction(async txn => {
       if ((await txn.get("release-batch"))?.version !== state.version) return;
+      if (retry && (state.attempt ?? 0) < 2) {
+        await txn.put("release-batch", { version: state.version, after: state.after, attempt: (state.attempt ?? 0) + 1 });
+        await txn.setAlarm(Date.now() + 30_000);
+        return;
+      }
       await txn.put("release-batch", { version: state.version, after: ids.at(-1) ?? state.after, done: ids.length < 12 });
       if (ids.length === 12) await txn.setAlarm(Date.now() + 1000);
+      else await txn.deleteAlarm();
     });
   }
 

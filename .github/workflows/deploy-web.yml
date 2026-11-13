@@ -42,3 +42,8 @@ jobs:
             exit 1
           fi
           npm run deploy -- --keep-vars --tag "$GITHUB_SHA" --var "MEDORA_RELEASE:$GITHUB_SHA"
+      - name: Queue the published release notification
+        run: |
+          curl --fail-with-body --silent --show-error --retry 5 --retry-all-errors --retry-delay 4 --max-time 20 \
+            "https://medorapp.ir/api/operations/release?version=$GITHUB_SHA" |
+            jq -e --arg version "$GITHUB_SHA" '.version == $version and (.status == "queued" or .status == "complete")'

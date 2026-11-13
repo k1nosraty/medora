@@ -1,13 +1,24 @@
 .promotion-creative:empty { display: none; }
 .promotion-creative { margin-block: .55rem; }
-.promotion-creative a { display: block; border-radius: .95rem; }
+.promotion-creative a { display: block; }
 .promotion-creative :is(img, video) {
   display: block;
   inline-size: 100%;
   max-block-size: min(45dvh, 24rem);
-  border-radius: .95rem;
+  border-radius: inherit;
   object-fit: contain;
   background: var(--stage);
+}
+.promotion-creative:not(:empty) { overflow: hidden; border-radius: .95rem; }
+.promotion-creative img {
+  aspect-ratio: 4 / 3;
+  max-block-size: min(52dvh, 25rem);
+  object-fit: cover;
+}
+.medora #promotion-dialog .promotion-creative:not(:empty) {
+  margin-left: calc(-1 * max(1rem, env(safe-area-inset-left)));
+  margin-right: calc(-1 * max(1rem, env(safe-area-inset-right)));
+  border-radius: 0;
 }
 .promotion-creative video { aspect-ratio: 16 / 9; }
 .medora #service-notice { margin-block: .55rem; }

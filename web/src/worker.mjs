@@ -42,6 +42,13 @@ export default {
         "Cache-Control": "no-store", "Retry-After": "60"
       } });
     }
+    if (url.pathname === "/api/operations/release" && request.method === "GET") {
+      const version = env.MEDORA_RELEASE;
+      if (!/^[a-f0-9]{40}$/.test(version ?? "") || url.searchParams.get("version") !== version) {
+        return reply({ error: "not_found" }, 404);
+      }
+      return reply({ version, status: await env.OPERATIONS.getByName("operations").publishRelease(version) });
+    }
     if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url, ctx);
     if (url.pathname === "/api/account/care") return handleCareSync(request, env, url);
     if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url, ctx);

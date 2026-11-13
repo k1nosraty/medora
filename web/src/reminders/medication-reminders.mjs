@@ -82,11 +82,14 @@ export class MedicationReminders extends DurableObject {
 
   async sendRelease(version) {
     const { storage } = this.ctx;
+    if (this.env.MEDORA_PAUSE_PUSH === "true") return "retry";
     const reservation = await storage.transaction(async txn => {
+      const previous = await txn.get("release-send");
+      if (previous?.version === version && previous.until > Date.now()) return null;
       if (await txn.get("release-sent") === version) return null;
       const current = await txn.get("state");
       if (!current?.plan?.subscription) return null;
-      await txn.put("release-sent", version);
+      await txn.put("release-send", { version, until: Date.now() + 20_000 });
       return current;
     });
     if (!reservation) return;
@@ -97,8 +100,16 @@ export class MedicationReminders extends DurableObject {
       tag: "medora-release", release: version,
       day: new Date().toISOString().slice(0, 10)
     }, 43_200, async () => (await storage.get("state"))?.revision === reservation.revision);
+    const retry = ["failed", "superseded", "paused"].includes(outcome.status) ||
+      outcome.providerStatus === 429 || outcome.providerStatus >= 500;
+    await storage.transaction(async txn => {
+      if ((await txn.get("release-send"))?.version !== version) return;
+      if (!retry) await txn.put("release-sent", version);
+      await txn.delete("release-send");
+    });
     const count = operations(this.env)?.count(["release:" + outcome.status]);
     if (count) this.ctx.waitUntil(count.catch(() => {}));
+    return retry ? "retry" : outcome.status;
   }
 
   async restoreReminder(state) {

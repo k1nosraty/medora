@@ -206,7 +206,7 @@ export async function initializeReminders() {
     return status(t("اعلان وب در این مرورگر در دسترس نیست."));
   }
   try {
-    const [root, config] = await Promise.all([navigator.serviceWorker.register("/sw.js", { scope: "/" }), fetch("/api/config")]);
+    const [root, config] = await Promise.all([navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }), fetch("/api/config")]);
     if (!config.ok) throw new Error("config");
     const { publicKey: key } = await config.json();
     publicKey = Uint8Array.from(atob(key.replaceAll("-", "+").replaceAll("_", "/")), char => char.charCodeAt(0));

@@ -239,11 +239,14 @@ test("encrypted migration restores existing login, account history and a pending
     assert.equal((await restoredDevice.status()).last?.status, "accepted");
     const release = "f".repeat(40);
     await target.setOptions(options({ MEDORA_RELEASE: release }));
-    assert.equal((await target.dispatchFetch(origin + "/cdn-cgi/local/scheduled")).status, 200);
+    assert.equal((await api(target, "/api/operations/release?version=" + "e".repeat(40))).status, 404);
+    const queue = () => api(target, "/api/operations/release?version=" + release);
+    assert.deepEqual(await (await queue()).json(), { version: release, status: "queued" });
     for (let attempt = 0; attempt < 25 && outbound.length < 2; attempt++) await sleep(200);
     assert.equal(outbound.length, 2, "only the enabled device receives the release notification");
     assert.equal((await target.dispatchFetch(origin + "/cdn-cgi/local/scheduled")).status, 200);
     await sleep(1300);
+    assert.deepEqual(await (await queue()).json(), { version: release, status: "complete" });
     assert.equal(outbound.length, 2, "the same deployed revision is only announced once");
   } finally {
     await Promise.all([sourceStopped ? null : source.dispose(), target.dispose(), occupied.dispose(), incompatible.dispose(),
