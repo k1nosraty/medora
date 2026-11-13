@@ -12,7 +12,7 @@ import { calendarFormat } from "../medication/shared/ui/calendar-format.js";
 import { today } from "../medication/shared/ui/dates.js";
 import { isoDay } from "../medication/domain/care-index.js";
 import { medicineGlass, visitGlass, routineGlass } from "./glass.js";
-import { installFormArt, renderMedicineCover } from "./form-art.js";
+import { installChoiceArt, installFormArt, renderMedicineCover } from "./form-art.js";
 import { appearanceColors, complete, cycleArt, glass, heart, readCatalog } from "./catalog.js";
 
 localizeMarkup({ manifest: false });
@@ -99,9 +99,15 @@ function banner(title, detail, family, node) {
   surface.append(label, artSlot(node));
   return surface;
 }
+function cycleBanner() {
+  const preview = banner(text("پریود بعدی", "Next period"),
+    text("۲۲ تا ۲۶ آبان · بازهٔ تخمینی", "Nov 13–17 · Estimated"), "cycle", cycleArt());
+  preview.classList.add("cycle-showcase");
+  return preview;
+}
+
 function cycleDialog() {
-  $("design-cycle-banner").replaceChildren(banner(text("پریود بعدی","Next period"),
-    text("۲۲ تا ۲۶ آبان · بازهٔ تخمینی","Nov 13–17 · Estimated"),"cycle",cycleArt()));
+  $("design-cycle-banner").replaceChildren(cycleBanner());
   $("design-cycle-dialog").showModal();
 }
 function updateDisplay() {
@@ -263,6 +269,7 @@ function renderControls() {
   field.setAttribute("aria-label",field.placeholder);
   controls.append(buttons, field, banner(text("همهٔ نوبت‌ها بررسی شدند","All activities reviewed"), "", "image", complete($("accent").value)),
     banner(text("ثبت آب","Log water"),text("۷۵۰ از ۲٬۰۰۰ میلی‌لیتر","750 of 2,000 ml"),"water",glass()));
+  if (cycleEnabled()) controls.prepend(cycleBanner());
   $("gallery-controls").replaceChildren(controls);
 }
 const byId = id => () => $(id).showModal();
@@ -340,6 +347,7 @@ $("width").addEventListener("change", event => {
 $("cycle-preview").addEventListener("change", () => {
   accentOptions();
   renderSurfaces();
+  renderControls();
   renderPalette();
   renderCatalog();
 });
@@ -347,6 +355,7 @@ for (const id of ["family","art-color","icon-search"]) $(id).addEventListener(id
 options($("family"),Object.entries(families));
 options($("art-color"), [["",text("پیش‌فرض","Default")], ...Object.entries(appearanceColors)]);
 installFormArt();
+installChoiceArt();
 accentOptions();
 renderSurfaces();
 renderControls();

@@ -29,8 +29,8 @@ export function readCatalog(visitOptions) {
     item("flow", language === "fa" ? "شدت خون‌ریزی" : "Flow", "cycle", () => glassObject("cycle-flow", "cycle")),
     item("spotting", language === "fa" ? "لکه‌بینی" : "Spotting", "cycle", () => glassObject("cycle-spotting", "cycle")),
     item("pain", language === "fa" ? "درد" : "Pain", "cycle", () => glassObject("cycle-pain", "cycle")),
-    item("cycle-private", t("قفل"), "cycle", () => controlGlass("lock", "berry")),
-    item("notification-art", t("اعلان"), "image", (_, accent) => controlGlass("bell", accent)),
+    item("cycle-private", t("قفل"), "cycle", () => glassObject("cycle-lock", "cycle")),
+    item("notification-art", t("اعلان"), "image", (_, accent) => glassObject("notification", "image", { accent })),
     item("backup-art", t("پشتیبان‌گیری"), "image", (_, accent) => glassObject("backup", "image", { accent })),
     ...Object.entries(controls).map(([id,label]) =>
       item(id, t(label), "control", (_, accent) => controlGlass(id, accent)))

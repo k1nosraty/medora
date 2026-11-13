@@ -32,7 +32,28 @@ export function installFormArt() {
   }
 }
 
+function decorateChoices(container, selector, draw) {
+  function refresh() {
+    for (const button of container.querySelectorAll(selector)) {
+      if (button.querySelector(".glass-object")) continue;
+      button.querySelector("svg")?.remove();
+      button.prepend(draw(button));
+    }
+  }
+  new MutationObserver(refresh).observe(container, { childList: true, subtree: true });
+  refresh();
+}
+
+export function installChoiceArt() {
+  decorateChoices($("medicine-icons"), "button[data-choice]", button =>
+    medicineGlass(button.dataset.choice, $("medicine-color").value));
+  decorateChoices($("routine-categories"), "button[data-category]", button =>
+    routineGlass(button.dataset.category));
+  decorateChoices($("visit-category-results"), "button[data-category]", button =>
+    visitGlass(button.dataset.category));
+}
+
 export function renderMedicineCover(accent) {
   const cover = $("medication-dialog").querySelector(".wizard-visual");
-  cover.querySelector("img, .glass-object")?.replaceWith(heart(accent));
+  cover.querySelector("img")?.replaceWith(heart(accent));
 }
