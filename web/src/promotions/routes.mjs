@@ -26,14 +26,15 @@ export function validatedPromotion(value) {
   const description = value.description.trim();
   const url = value.url.trim();
   if (!title || title.length > 80 || description.length > 240 || url.length > 512 || (url && !httpsUrl(url))) return null;
-  const { mediaType = "", mediaUrl = "", mediaId = "", linkLabel = "", startsAt = null, endsAt = null } = value;
+  const { mediaType = "", mediaUrl = "", mediaId = "", linkLabel = "", startsAt = null, endsAt = null, frequency = 1 } = value;
   if (!["", "image", "video"].includes(mediaType) || typeof mediaUrl !== "string" ||
       typeof mediaId !== "string" || (mediaId && !mediaIdPattern.test(mediaId)) || (mediaId && mediaUrl) ||
       mediaUrl.length > 512 || Boolean(mediaType) !== Boolean(mediaUrl || mediaId) ||
       (mediaUrl && !httpsUrl(mediaUrl)) || typeof linkLabel !== "string" || linkLabel.length > 40 ||
       ![startsAt, endsAt].every(time => time === null || (Number.isSafeInteger(time) && time >= 0 && time <= 8.64e15)) ||
-      (startsAt !== null && endsAt !== null && endsAt <= startsAt)) return null;
-  return { title, description, url, enabled: value.enabled, mediaType, mediaUrl, mediaId, linkLabel: linkLabel.trim(), startsAt, endsAt };
+      (startsAt !== null && endsAt !== null && endsAt <= startsAt) ||
+      !Number.isInteger(frequency) || frequency < 1 || frequency > 10) return null;
+  return { title, description, url, enabled: value.enabled, mediaType, mediaUrl, mediaId, linkLabel: linkLabel.trim(), startsAt, endsAt, frequency };
 }
 
 function creative(row, prefix) {

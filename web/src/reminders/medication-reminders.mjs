@@ -80,6 +80,27 @@ export class MedicationReminders extends DurableObject {
     return await this.ctx.storage.get("state") ?? null;
   }
 
+  async sendRelease(version) {
+    const { storage } = this.ctx;
+    const reservation = await storage.transaction(async txn => {
+      if (await txn.get("release-sent") === version) return null;
+      const current = await txn.get("state");
+      if (!current?.plan?.subscription) return null;
+      await txn.put("release-sent", version);
+      return current;
+    });
+    if (!reservation) return;
+    const english = reservation.plan.language === "en";
+    const outcome = await sendPush(this.env, reservation.plan.subscription, {
+      title: english ? "Medora has been updated" : "مدورا به‌روز شد",
+      body: english ? "Tap to open the latest version." : "برای باز کردن نسخهٔ تازه، روی اعلان بزنید.",
+      tag: "medora-release", release: version,
+      day: new Date().toISOString().slice(0, 10)
+    }, 43_200, async () => (await storage.get("state"))?.revision === reservation.revision);
+    const count = operations(this.env)?.count(["release:" + outcome.status]);
+    if (count) this.ctx.waitUntil(count.catch(() => {}));
+  }
+
   async restoreReminder(state) {
     return this.ctx.storage.transaction(async storage => {
       const existing = await storage.get("state");

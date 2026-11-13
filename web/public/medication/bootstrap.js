@@ -29,6 +29,17 @@ retry.addEventListener("click", async () => {
   catch { retry.disabled = false; }
 });
 monitorUpdates();
+const url = new URL(location.href);
+const release = url.searchParams.get("release");
+if (/^[a-f0-9]{40}$/.test(release ?? "")) {
+  // Reload only when the worker actually changes. Older notifications can point to a superseded release.
+  const current = document.querySelector('meta[name="medora-release"]')?.content === release;
+  const settled = current || await refreshApp().then(result => result === false, () => false);
+  if (settled) {
+    url.searchParams.delete("release");
+    history.replaceState(history.state, "", url);
+  }
+}
 
 try {
   await import("./app/medora.js");

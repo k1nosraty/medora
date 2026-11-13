@@ -43,7 +43,7 @@ const revision = process.env.GITHUB_SHA;
 if (revision && !/^[a-f0-9]{40}$/.test(revision)) throw new Error("Invalid deployment revision");
 const version = revision || hash.digest("hex").slice(0, 20);
 await Promise.all([
-  emit(new URL("index.html", medication), html),
+  emit(new URL("index.html", medication), html.replace("{{version}}", version)),
   emit(new URL("sw.js", medication), worker.replace("{{version}}", version).replace("{{assets}}", JSON.stringify(shell, null, 2))),
   emit(new URL("design/index.html", publicDir), await render("gallery/index.html"))
 ]);

@@ -107,6 +107,7 @@ function showPromotion(promotion) {
   for (const name of ["title", "description", "url", "mediaType", "mediaUrl", "linkLabel"]) fields[name].value = promotion?.[name] ?? "";
   for (const name of ["startsAt", "endsAt"]) fields[name].value = localDateTime(promotion?.[name]);
   fields.enabled.checked = promotion?.enabled ?? false;
+  fields.frequency.value = promotion?.frequency ?? 1;
   preview();
   const now = Date.now();
   status("promotion-status", promotion?.archived ? "آرشیوشده" : !promotion?.enabled ? "در حال حاضر پیامی نمایش داده نمی‌شود."
@@ -319,7 +320,8 @@ function payload() {
     linkLabel: fields.linkLabel.value,
     startsAt: fields.startsAt.value ? new Date(fields.startsAt.value).getTime() : null,
     endsAt: fields.endsAt.value ? new Date(fields.endsAt.value).getTime() : null,
-    enabled: fields.enabled.checked
+    enabled: fields.enabled.checked,
+    frequency: Number(fields.frequency.value)
   };
 }
 async function savePromotion(mode) {

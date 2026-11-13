@@ -41,4 +41,4 @@ jobs:
             echo "::error::Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to the repository's Actions secrets."
             exit 1
           fi
-          npm run deploy -- --keep-vars --tag "$GITHUB_SHA"
+          npm run deploy -- --keep-vars --tag "$GITHUB_SHA" --var "MEDORA_RELEASE:$GITHUB_SHA"

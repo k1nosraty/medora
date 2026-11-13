@@ -25,6 +25,11 @@ function reply(data, status = 200) {
 }
 
 export default {
+  async scheduled(_event, env) {
+    if (/^[a-f0-9]{40}$/.test(env.MEDORA_RELEASE ?? "")) {
+      await env.OPERATIONS.getByName("operations").publishRelease(env.MEDORA_RELEASE);
+    }
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);

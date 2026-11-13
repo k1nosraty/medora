@@ -40,7 +40,7 @@ test("encrypted migration restores existing login, account history and a pending
   vapid.getPrivateKey().copy(privateKey, 32 - vapid.getPrivateKey().length);
   const outbound = [];
   const make = (extra = {}) => ({
-    modules: true, script: outputFiles[0].text, compatibilityDate: "2026-10-29",
+    modules: true, script: outputFiles[0].text, compatibilityDate: "2026-10-29", unsafeTriggerHandlers: true,
     compatibilityFlags: ["nodejs_compat"],
     durableObjects: Object.fromEntries(Object.entries({ EMAIL_ACCOUNTS: "EmailAccount", CREDENTIALS: "Credentials",
       PROMOTIONS: "Promotions", OPERATIONS: "Operations", REMINDERS: "MedicationReminders", PILOT: "PushPilot" })
@@ -237,8 +237,14 @@ test("encrypted migration restores existing login, account history and a pending
     for (let attempt = 0; attempt < 130 && !outbound.length; attempt++) await sleep(500);
     assert.deepEqual(outbound, [{ url: endpoint, encoding: "aes128gcm" }]);
     assert.equal((await restoredDevice.status()).last?.status, "accepted");
-
-
+    const release = "f".repeat(40);
+    await target.setOptions(options({ MEDORA_RELEASE: release }));
+    assert.equal((await target.dispatchFetch(origin + "/cdn-cgi/local/scheduled")).status, 200);
+    for (let attempt = 0; attempt < 25 && outbound.length < 2; attempt++) await sleep(200);
+    assert.equal(outbound.length, 2, "only the enabled device receives the release notification");
+    assert.equal((await target.dispatchFetch(origin + "/cdn-cgi/local/scheduled")).status, 200);
+    await sleep(1300);
+    assert.equal(outbound.length, 2, "the same deployed revision is only announced once");
   } finally {
     await Promise.all([sourceStopped ? null : source.dispose(), target.dispose(), occupied.dispose(), incompatible.dispose(),
       rm(backupDir, { recursive: true, force: true })]);

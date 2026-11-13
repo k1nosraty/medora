@@ -11,11 +11,26 @@ function metricLabel(metric) {
   const [kind, key, status] = metric.split(":");
   if (kind === "push") return t(names[key] ?? key) + " · " + t(outcomes[status] ?? status);
   if (kind === "push-http") return t("کد پاسخ Push") + " " + key;
+  if (kind === "release") return t("اعلان انتشار") + " · " + t(outcomes[key] ?? key);
   if (kind === "email") return t(key === "accepted" ? "ایمیل پذیرفته‌شده" : "خطای ایمیل");
   return t(key === "success" ? "ورود موفق" : "ورود ناموفق");
 }
 
 const local = time => time == null ? "" : new Date(time - new Date(time).getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+const audienceNames = ["promotions", "support"];
+function audience(name, value) {
+  const select = $(name + "-audience");
+  const input = $("operations-form").elements[name];
+  if (value !== undefined) {
+    select.value = value === 100 || value === 0 ? String(value) : "custom";
+    input.value = select.value === "custom" ? value : "";
+  }
+  input.disabled = select.value !== "custom";
+  input.required = !input.disabled;
+  input.closest("[data-audience-percent]").hidden = input.disabled;
+  return Number(input.disabled ? select.value : input.value);
+}
+for (const name of audienceNames) $(name + "-audience").addEventListener("change", () => audience(name));
 async function api(path, body) {
   const response = await fetch("/api/admin/operations" + path, body ? {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
@@ -37,7 +52,8 @@ export async function loadOperations() {
   try {
     const { notice, flags, configured, counters, audit, activity = [], storage = {} } = await api("");
     for (const [name, value] of Object.entries({ title: notice?.title, message: notice?.message,
-      start: local(notice?.start), end: local(notice?.end), ...flags })) form.elements[name].value = value ?? "";
+      start: local(notice?.start), end: local(notice?.end) })) form.elements[name].value = value ?? "";
+    for (const name of audienceNames) audience(name, flags[name]);
     form.elements.enabled.checked = notice?.enabled ?? false;
     $("operations-config").textContent = [
       t(configured.push ? "ارسال Push پیکربندی شده است." : "ارسال Push پیکربندی نشده است."),
@@ -117,7 +133,7 @@ $("operations-form").addEventListener("submit", async event => {
   save.disabled = true;
   try {
     await api("", { notice: { title: fields.title.value, message: fields.message.value, start: value("start"), end: value("end"), enabled: fields.enabled.checked },
-      flags: { promotions: Number(fields.promotions.value), support: Number(fields.support.value) } });
+      flags: Object.fromEntries(audienceNames.map(name => [name, audience(name)])) });
     await loadOperations();
     $("operations-status").textContent = t("تنظیمات سرویس ذخیره شد.");
   } catch {

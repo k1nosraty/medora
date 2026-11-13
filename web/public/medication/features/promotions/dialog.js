@@ -8,7 +8,8 @@ export function installPromotion(loadOperations) {
   if (!dialog || !today) return;
   const allowed = loadOperations();
   const key = "medora-promotion";
-  let seenInPage = "";
+  const historyKey = "medora-promotion-history";
+  let history = {};
   let timer;
   let fetching = false;
   let lastAttempt = 0;
@@ -17,9 +18,16 @@ export function installPromotion(loadOperations) {
   let lastInteraction = 0;
   let pending;
 
-  function lastSeen() {
-    try { return localStorage.getItem(key) ?? seenInPage; }
-    catch { return seenInPage; }
+  function displayHistory() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(historyKey) ?? "{}");
+      const legacy = localStorage.getItem(key);
+      if (legacy) {
+        const id = legacy.slice(legacy.lastIndexOf(" ") + 1);
+        if (!Object.hasOwn(stored, id)) stored[id] = 1;
+      }
+      return { ...stored, ...history };
+    } catch { return history; }
   }
 
   function eligible() {
@@ -37,7 +45,8 @@ export function installPromotion(loadOperations) {
   async function check() {
     if (fetching || !eligible()) return;
     const day = new Date().toDateString();
-    if (lastSeen().startsWith(day + " ")) return;
+    if (displayHistory().day === day) return;
+    try { if (localStorage.getItem(key)?.startsWith(day + " ")) return; } catch {}
     fetching = true;
     try {
       if (!await allowed || !eligible()) return;
@@ -60,8 +69,9 @@ export function installPromotion(loadOperations) {
       const { promotion } = pending;
       pending = undefined;
       const creativeId = promotion.creativeId ?? promotion.id;
-      const seen = lastSeen();
-      if (seen.startsWith(day + " ") || seen.endsWith(" " + creativeId)) return;
+      const seen = displayHistory();
+      const previous = Object.hasOwn(seen, creativeId) ? seen[creativeId] : 0;
+      if (seen.day === day || previous >= (promotion.frequency ?? 1)) return;
       const count = event => void fetch("/api/promotion/events", {
         method: "POST", credentials: "omit", keepalive: true,
         headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: promotion.id, event })
@@ -71,8 +81,8 @@ export function installPromotion(loadOperations) {
         if (!clicked) count("click");
         clicked = true;
       });
-      seenInPage = `${day} ${creativeId}`;
-      try { localStorage.setItem(key, seenInPage); } catch {}
+      history = { ...seen, [creativeId]: previous + 1, day };
+      try { localStorage.setItem(historyKey, JSON.stringify(history)); } catch {}
       count("impression");
     } catch {
       retryAfter = Date.now() + 15_000;

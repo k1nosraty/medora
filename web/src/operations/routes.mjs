@@ -122,6 +122,38 @@ export class Operations extends DurableObject {
     return [...page.keys()].map(key => key.slice(9));
   }
 
+  async publishRelease(version) {
+    if (this.env.MEDORA_PAUSE_PUSH === "true" || this.env.MEDORA_MAINTENANCE === "true") return;
+    const storage = this.ctx.storage;
+    const state = await storage.get("release-batch");
+    if (state?.version === version) return;
+    await storage.transaction(async txn => {
+      if ((await txn.get("release-batch"))?.version === version) return;
+      await txn.put("release-batch", { version, after: "" });
+      await txn.setAlarm(Date.now() + 1000);
+    });
+  }
+
+  async alarm() {
+    const storage = this.ctx.storage;
+    const state = await storage.get("release-batch");
+    if (!state || state.done) return;
+    if (this.env.MEDORA_PAUSE_PUSH === "true" || this.env.MEDORA_MAINTENANCE === "true") {
+      await storage.setAlarm(Date.now() + 60_000);
+      return;
+    }
+    const ids = await this.reminderIds(state.after, 12);
+    // Keep outbound connections bounded and let failures retry via the alarm.
+    for (let i = 0; i < ids.length; i += 3) {
+      await Promise.all(ids.slice(i, i + 3).map(id => this.env.REMINDERS.getByName(id).sendRelease(state.version)));
+    }
+    await storage.transaction(async txn => {
+      if ((await txn.get("release-batch"))?.version !== state.version) return;
+      await txn.put("release-batch", { version: state.version, after: ids.at(-1) ?? state.after, done: ids.length < 12 });
+      if (ids.length === 12) await txn.setAlarm(Date.now() + 1000);
+    });
+  }
+
   async migrationTargetEmpty() {
     const storage = this.ctx.storage;
     return !await storage.get("config") && !(await storage.list({ prefix: "reminder:", limit: 1 })).size &&

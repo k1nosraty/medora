@@ -91,6 +91,19 @@ test("the service worker displays a notification without an open client", async 
   });
   await completion;
   assert.equal(notifications[3].data.routineId, id);
+  const release = "a".repeat(40);
+  listeners.get("push")({
+    data: { json: () => ({ title: "Medora updated", release, day: "2026-11-09" }) },
+    waitUntil: promise => { completion = promise; }
+  });
+  await completion;
+  assert.equal(notifications.at(-1).data.release, release);
+  listeners.get("notificationclick")({
+    notification: { data: notifications.at(-1).data, close() {} },
+    waitUntil: promise => { completion = promise; }
+  });
+  await completion;
+  assert.equal(paths.pop(), "/medication/?release=" + release);
   for (const [data, destination] of [
     [{ kind: "water" }, "water"],
     [{ kind: "appointment" }, "appointments"],
