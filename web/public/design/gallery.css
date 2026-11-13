@@ -34,9 +34,6 @@
 .gallery-art .glass-object { inline-size: 4.35rem; block-size: 4.35rem; max-width: 100%; }
 .gallery-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: .2rem; text-align: center; background: var(--calendar-neutral); border-radius: .8rem; padding: .35rem; margin-block-end: .55rem; }
 .gallery-calendar span { padding: .18rem 0; border-radius: .4rem; }
-.gallery-calendar .selected { background: var(--action); color: var(--on-action); }
-.gallery-calendar .recorded { background: var(--program-ink); color: var(--program-fill); }
-.gallery-calendar .forecast { border: 1px dashed var(--program-ink); color: var(--program-ink); }
 .gallery-catalog { display: grid; grid-template-columns: minmax(0,1fr) minmax(15rem, 28%); gap: .75rem; margin-block-start: .75rem; align-items: start; }
 .gallery-icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 6rem), 1fr)); gap: .45rem; }
 .medora .gallery-icon { display: grid; justify-items: center; gap: .2rem; margin: 0; padding: .3rem; min-block-size: 6.5rem; border-color: var(--outline); background: var(--program-fill, var(--panel)); color: var(--program-ink, var(--ink)); font-size: .78rem; white-space: normal; overflow-wrap: anywhere; }

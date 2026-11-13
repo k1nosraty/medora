@@ -1,5 +1,5 @@
 import { $, button, element } from "../medication/shared/ui/dom.js";
-import { defaultCalendar, language, localDigits, localizeMarkup, shortWeek, weekIndex } from "../medication/shared/i18n/locale.js";
+import { defaultCalendar, language, localDigits, localizeMarkup } from "../medication/shared/i18n/locale.js";
 import { applyDisplay } from "../medication/styles/display.js";
 import { availableAccents } from "../medication/styles/theme.js";
 import { installMedicineEditor } from "../medication/features/medicines/editor.js";
@@ -10,8 +10,8 @@ import { installSettings } from "../medication/features/settings/dialog.js";
 import { installPickers } from "../medication/shared/ui/pickers.js";
 import { calendarFormat } from "../medication/shared/ui/calendar-format.js";
 import { today } from "../medication/shared/ui/dates.js";
-import { isoDay } from "../medication/domain/care-index.js";
-import { medicineGlass, visitGlass, routineGlass } from "./glass.js";
+import { installCalendarPreview } from "./calendar.js";
+import { glassObject, medicineGlass, refreshArtwork, visitGlass, routineGlass } from "./glass.js";
 import { installChoiceArt, installFormArt, renderMedicineCover } from "./form-art.js";
 import { appearanceColors, complete, cycleArt, glass, heart, readCatalog } from "./catalog.js";
 
@@ -36,8 +36,9 @@ const noSave = async () => {
 };
 const noAction = () => {};
 const sample = { getState: () => state, today, render: noAction, mutate: noSave, requestDeletion: noAction, formatDay };
-const pickers = installPickers({ selectedDay: today, today, dashboard: {
-  dateLimit: () => Infinity, chooseDay: noAction,
+const calendarPreview = installCalendarPreview(dates, now);
+const pickers = installPickers({ selectedDay: calendarPreview.selected, today, dashboard: {
+  dateLimit: () => Infinity, chooseDay: calendarPreview.choose,
   formatDay, formatMonth: dates.month, formatDayNumber: dates.dayNumber, monthStart: dates.monthStart
 } });
 const refreshFields = pickers.refresh;
@@ -55,17 +56,9 @@ for (const control of document.querySelectorAll("[data-from-quick]")) {
   control.addEventListener("click", () => $("quick-dialog").close(), { capture: true });
 }
 for (const form of document.forms) form.addEventListener("submit", event => event.preventDefault());
-$("day").value = isoDay(now);
 $("today-dates").append($("day-controls"));
 $("story-date").textContent = formatDay(now);
 $("story-summary").textContent = text("داروها، قرارها و روتین‌های امروز", "Today’s medication, appointments and routines");
-$("day-label").textContent = dates.month(now);
-for (let day = now - 3; day <= now + 3; day++) {
-  const control = button(dates.dayNumber(day), noAction);
-  control.append(element("span",shortWeek[weekIndex(day)]));
-  if (day === now) control.setAttribute("aria-current", "date");
-  $("day-week").append(control);
-}
 const all = readCatalog($("visit-category").options);
 const families = {
   all: text("همه", "All"), medicine: text("دارو", "Medication"), visit: text("قرار", "Appointments"),
@@ -147,9 +140,39 @@ function comparison(render, includeCycle) {
   return panel;
 }
 
+function heroArt(accent) {
+  const choice = $("hero-art").value;
+  if (choice === "heart") return heart(accent);
+  if (choice !== "classic") return glassObject(choice, "image", { accent, className: "story-art" });
+  const art = new Image(560, 350);
+  art.src = "/medication/assets/illustrations/care.svg";
+  art.alt = "";
+  art.className = "story-art classic-story-art gallery-cover-art";
+  return art;
+}
+
+function renderHero() {
+  $("today-story").querySelector(".story-art").replaceWith(heroArt($("accent").value));
+}
+
+function renderFinishComparison() {
+  const cards = [["glass", text("شیشه‌ای", "Glass")], ["matte", text("سه‌بعدی مات", "Matte 3D")]].map(([finish, label]) => {
+    const sample = element("article", "", "gallery-finish-card");
+    sample.dataset.finish = finish;
+    const art = glassObject("bottle", "medicine", { finish });
+    const week = element("div", "", "gallery-mini-week");
+    for (let day = 15; day <= 21; day++) week.append(element("span", localDigits(day), day === 18 ? "selected" : ""));
+    const action = button(text("ثبت مصرف", "Log dose"), noAction);
+    action.className = "finish-action";
+    sample.append(element("h3", label), banner(text("دارو", "Medication"), "", "medicine", art), week, action);
+    return sample;
+  });
+  $("gallery-finish-comparison").replaceChildren(...cards);
+}
+
 function renderPalette() {
   const grid = comparison((cell, accent) => {
-    const cover = banner(text("امروز با مدورا","Today with Medora"), "", "image", heart(accent));
+    const cover = banner(text("امروز با مدورا","Today with Medora"), "", "image", heroArt(accent));
     cover.classList.add("glass-cover");
     cell.append(cover);
     const cards = designCards.filter(([family]) => family !== "cycle" || cycleEnabled());
@@ -165,7 +188,7 @@ function renderSurfaces() {
   for (const control of document.querySelectorAll("#today-programs [data-destination]")) {
     control.firstElementChild.replaceWith(artByFeature[control.dataset.destination]());
   }
-  $("today-story").querySelector(".story-art").replaceWith(heart($("accent").value));
+  renderHero();
   const waterArt = $("today-water").querySelector(".today-water-art");
   waterArt.querySelector(".glass-object")?.remove();
   waterArt.append(glass());
@@ -187,13 +210,7 @@ function renderSurfaces() {
   $("gallery-reports").replaceChildren(reports);
   const agenda = element("div", "", "gallery-stack");
   agenda.append(element("h3",text("تقویم و برنامهٔ روز","Calendar and agenda")));
-  const calendar = element("div", "", "gallery-calendar program-cycle");
-  for (let day = 15; day <= 21; day++) {
-    const date = element("span", localDigits(day), day === 18 ? "selected" : "");
-    if (cycleEnabled() && day !== 18) date.className = day < 18 ? "recorded" : "forecast";
-    calendar.append(date);
-  }
-  agenda.append(calendar, ...cards.map(([family,label,draw]) => banner(label, text("نمونهٔ کارت تقویم","Sample calendar card"), family, draw())));
+  agenda.append(...cards.map(([family,label,draw]) => banner(label, text("نمونهٔ کارت تقویم","Sample calendar card"), family, draw())));
   $("gallery-agenda").replaceChildren(agenda);
   const quick = $("quick-dialog").querySelector(".quick-items");
   $("cycle-program")?.remove();
@@ -259,10 +276,11 @@ function renderControls() {
   const buttons = element("div","","gallery-buttons");
   for (const [label,kind] of [[text("افزودن","Add"),""],[text("انجام دادم","Done"),"secondary"],[text("ویرایش","Edit"),"text-button"],[text("حذف","Delete"),"text-button danger-link"]]) {
     const control = button(label,noAction);
-    control.className = kind;
+    control.className = kind + " finish-action";
     buttons.append(control);
   }
   buttons.append(button(text("غیرفعال","Disabled"),noAction));
+  buttons.lastElementChild.classList.add("finish-action");
   buttons.lastElementChild.disabled = true;
   const field = element("input");
   field.placeholder = text("نمونهٔ ورودی","Sample input");
@@ -334,6 +352,14 @@ $("gallery-language").addEventListener("change", event => {
   location.assign(url);
 });
 $("theme").addEventListener("change", updateDisplay);
+$("finish").addEventListener("change", () => {
+  document.body.dataset.finish = $("finish").value;
+  refreshArtwork($("finish").value);
+});
+$("hero-art").addEventListener("change", () => {
+  renderHero();
+  renderPalette();
+});
 $("accent").addEventListener("change", () => {
   updateDisplay();
   renderSurfaces();
@@ -351,6 +377,13 @@ $("cycle-preview").addEventListener("change", () => {
   renderPalette();
   renderCatalog();
 });
+for (const control of document.querySelectorAll("[data-preview-target]")) {
+  control.addEventListener("click", () => {
+    const target = $(control.dataset.previewTarget);
+    if (target instanceof HTMLDialogElement) target.showModal();
+    else target.scrollIntoView({ block: "center" });
+  });
+}
 for (const id of ["family","art-color","icon-search"]) $(id).addEventListener(id === "icon-search" ? "input" : "change", renderCatalog);
 options($("family"),Object.entries(families));
 options($("art-color"), [["",text("پیش‌فرض","Default")], ...Object.entries(appearanceColors)]);
@@ -362,5 +395,6 @@ renderControls();
 water.renderTodayWater(state, now, 750, 2000, .375);
 $("today-water-quick").disabled = true;
 $("open-water-history").disabled = true;
+renderFinishComparison();
 renderPalette();
 renderCatalog();

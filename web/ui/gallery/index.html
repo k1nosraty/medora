@@ -9,9 +9,10 @@
   <link rel="stylesheet" href="/style.css">
   <!-- include layout/styles.html -->
   <link rel="stylesheet" href="/design/gallery.css">
+  <link rel="stylesheet" href="/design/finish.css">
   <script type="module" src="/design/gallery.js"></script>
 </head>
-<body class="medora">
+<body class="medora" data-finish="glass">
   <!-- include assets/icons/library.html -->
   <main class="gallery">
     <header class="gallery-heading">
@@ -20,6 +21,10 @@
       <p><span data-en="Preview icons, cards, banners and forms at their actual size. Changes apply to this preview only.">آیکون، کارت، بنر و فرم را با رنگ و اندازهٔ واقعی بررسی کن. انتخاب‌ها فقط روی این پیش‌نمایش اثر می‌گذارند.</span></p>
     </header>
     <div class="gallery-toolbar">
+      <label><span data-en="Style">سبک طراحی</span> <select id="finish">
+        <option value="glass" data-en="Glass">شیشه‌ای</option>
+        <option value="matte" data-en="Matte 3D">سه‌بعدی مات</option>
+      </select></label>
       <label><span data-en="Appearance">ظاهر</span> <select id="theme"><option value="light">روشن</option><option value="dark">تیره</option><option value="system">مطابق دستگاه</option></select></label>
       <label><span data-en="Accent">اکسنت</span> <select id="accent"></select></label>
       <label class="gallery-check"><input id="cycle-preview" type="checkbox" checked> <span data-en="Show Cycle">نمایش چرخه</span></label>
@@ -34,14 +39,26 @@
       <div class="gallery-surface-grid">
         <article class="gallery-surface">
           <h3>امروز</h3>
+          <label class="gallery-hero-picker"><span data-en="Today banner image">تصویر بنر امروز</span> <select id="hero-art">
+            <option value="heart" data-en="Heart">قلب</option>
+            <option value="classic" data-en="Original Medora artwork">تصویر قبلی مدورا</option>
+            <option value="sprout" data-en="Sprout">جوانه</option>
+            <option value="sunrise" data-en="Sunrise">طلوع</option>
+          </select></label>
           <!-- include layout/day-navigation.html -->
           <!-- include layout/program-cards.html -->
           <!-- include layout/today-water.html -->
           <p id="future-schedule" hidden></p>
+          <nav class="gallery-dock-preview" aria-label="نمونهٔ نوار پایین" data-en-aria-label="Bottom navigation preview">
+            <button type="button" class="secondary finish-action" data-preview-target="today-story" data-en="Today">امروز</button>
+            <button type="button" class="finish-action gallery-dock-add" data-preview-target="quick-dialog" aria-label="افزودن" data-en-aria-label="Add">+</button>
+            <button type="button" class="secondary finish-action" data-preview-target="gallery-reports" data-en="Reports">گزارش‌ها</button>
+          </nav>
         </article>
         <article class="gallery-surface">
           <h3><span data-en="Reports and calendar">گزارش‌ها و تقویم</span></h3>
           <div id="gallery-reports"></div>
+          <!-- include gallery/calendar.html -->
           <div id="gallery-agenda"></div>
         </article>
         <article class="gallery-surface">
@@ -74,6 +91,7 @@
     <section id="palette" class="gallery-section">
       <h2><span data-en="Compare accents">مقایسهٔ اکسنت‌ها</span></h2>
       <p data-en="Each accent is shown in light and dark. The five categories retain their own colors.">هر اکسنت در دو حالت روشن و تیره نمایش داده می‌شود. رنگ اختصاصی دسته‌ها ثابت می‌ماند.</p>
+      <div id="gallery-finish-comparison"></div>
       <div id="gallery-palettes"></div>
       <div id="gallery-selected-comparison"></div>
     </section>

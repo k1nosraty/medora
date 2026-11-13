@@ -5,9 +5,14 @@ const colorAngles = {
 const familyAngles = { medicine: 267, visit: 155, routine: 17 };
 const accentAngles = { blue: 211, green: 153, lilac: 267, coral: 8, berry: 330 };
 
-export function glassObject(id, family, { color, accent, className } = {}) {
+const artworkFolder = finish => finish === "matte" ? "matte-3d" : "optical-glass";
+
+export function glassObject(id, family, { color, accent, className, finish } = {}) {
   const artwork = new Image(256, 256);
-  artwork.src = "/design/optical-glass/" + id + ".webp";
+  artwork.dataset.art = id;
+  if (finish) artwork.dataset.artFinish = finish;
+  const folder = artworkFolder(finish ?? document.body.dataset.finish);
+  artwork.src = "/design/" + folder + "/" + id + ".webp";
   artwork.alt = "";
   artwork.decoding = "async";
   artwork.loading = "lazy";
@@ -36,4 +41,10 @@ export function routineGlass(id, color) {
 
 export function controlGlass(id, accent) {
   return glassObject("control-" + id, "control", { accent, className: "category-art" });
+}
+
+export function refreshArtwork(finish) {
+  for (const art of document.querySelectorAll("img[data-art]:not([data-art-finish])")) {
+    art.src = "/design/" + artworkFolder(finish) + "/" + art.dataset.art + ".webp";
+  }
 }
