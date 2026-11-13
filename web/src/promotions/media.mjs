@@ -2,7 +2,7 @@ const limit = 8 * 1024 * 1024;
 export const mediaIdPattern = /^[a-f0-9-]{36}$/;
 const ascii = (bytes, start, length) => String.fromCharCode(...bytes.subarray(start, start + length));
 
-function identify(bytes) {
+export function identify(bytes) {
   if (bytes.length < 16) return null;
   if (ascii(bytes, 0, 6).match(/^GIF8[79]a$/)) return "image/gif";
   if (ascii(bytes, 0, 8) === "\x89PNG\r\n\x1a\n") return "image/png";

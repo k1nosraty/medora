@@ -116,8 +116,47 @@ export class Operations extends DurableObject {
 
   registerReminder(id) { return this.ctx.storage.put("reminder:" + id, true); }
 
-  async reminderIds() {
-    return [...(await this.ctx.storage.list({ prefix: "reminder:" })).keys()].map(key => key.slice(9));
+  async reminderIds(after) {
+    const page = await this.ctx.storage.list({ prefix: "reminder:", limit: 100, ...(after && { startAfter: "reminder:" + after }) });
+    return [...page.keys()].map(key => key.slice(9));
+  }
+
+  async migrationTargetEmpty() {
+    const storage = this.ctx.storage;
+    return !await storage.get("config") && !(await storage.list({ prefix: "reminder:", limit: 1 })).size &&
+      !this.sql.exec("SELECT 1 FROM counters UNION ALL SELECT 1 FROM audit UNION ALL SELECT 1 FROM tickets LIMIT 1").toArray().length;
+  }
+
+  async claimRestore(hash, reminders) {
+    return this.ctx.storage.transaction(async storage => {
+      const journal = await storage.get("server-restore");
+      if (journal && journal.hash !== hash) return { error: "archive_conflict" };
+      if (journal?.until > Date.now()) return { error: "restore_in_progress" };
+      if (journal?.done && (!reminders || journal.reminders)) return { complete: true, ...journal.result };
+      const id = crypto.randomUUID();
+      await storage.put("server-restore", { ...journal, hash, id, until: Date.now() + 3_600_000 });
+      return { id, prepared: journal?.prepared, done: journal?.done, result: journal?.result };
+    });
+  }
+
+  async prepareRestore(id) {
+    await this.ctx.storage.transaction(async storage => {
+      const journal = await storage.get("server-restore");
+      if (journal?.id !== id) throw new Error("restore_in_progress");
+      await storage.put("server-restore", { ...journal, prepared: true });
+    });
+  }
+
+  async releaseRestore(id, result, reminders) {
+    await this.ctx.storage.transaction(async storage => {
+      const journal = await storage.get("server-restore");
+      if (journal?.id !== id) throw new Error("restore_in_progress");
+      if (!result && !journal.prepared) {
+        await storage.delete("server-restore");
+        return;
+      }
+      await storage.put("server-restore", { ...journal, until: 0, ...(result && { done: true, result, reminders }) });
+    });
   }
 
   async restoreData(data) {

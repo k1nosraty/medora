@@ -1,6 +1,6 @@
 # نسخهٔ وب مدورا
 
-نسخهٔ وب، برنامهٔ دارو، دوز، موجودی، ثبت آب و قرارها را روی دستگاه نگه می‌دارد. با فعال‌کردن اعلان، زمان‌بندی دارو، تعویق، آب و قرار به همراه اشتراک Push به سرور فرستاده می‌شوند. برای توقف اعلان آب فقط روز رسیدن به هدف فرستاده می‌شود. نام دارو و قرار، مقدار آب، دوز، موجودی و سوابق در مرورگر می‌مانند. متن اعلان عمومی است و لمس آن بخش مربوط را باز می‌کند.
+نسخهٔ وب، برنامهٔ دارو، دوز، موجودی، ثبت آب و قرارها را روی دستگاه نگه می‌دارد. با فعال‌کردن اعلان، زمان‌بندی دارو، تعویق، آب و قرار به همراه اشتراک Push به سرور فرستاده می‌شوند. برای توقف اعلان آب فقط روز رسیدن به هدف فرستاده می‌شود. سوابق به‌صورت پیش‌فرض در مرورگر ذخیره می‌شوند و با فعال‌کردن همگام‌سازی حساب روی سرور هم نگه داشته می‌شوند. متن اعلان به‌صورت پیش‌فرض عمومی است. می‌توانید نمایش جزئیات نوبت در اعلان را از تنظیمات فعال کنید.
 
 زبان رابط را از بالای صفحه یا از تنظیمات عوض کنید. انتخاب زبان روی همان دستگاه ذخیره می‌شود و زبان یادآوری‌ها پس از همگام‌سازی تغییر می‌کند. فارسی به‌طور پیش‌فرض از تقویم شمسی و انگلیسی از تقویم میلادی استفاده می‌کند. تقویم را می‌توان جداگانه از تنظیمات انتخاب کرد.
 
@@ -65,15 +65,32 @@ Durable Objectهای SQLite روی Workers Free اجرا می‌شوند. هر �
 
 ۵. «بررسی وضعیت» نتیجهٔ آخرین ارسال را نشان می‌دهد و «آزمایش همین گوشی» پیام آزمایشی را به اشتراک همان نصب می‌فرستد. پذیرفته‌شدن پیام در سرویس Push با نمایش آن روی گوشی فرق دارد.
 
-## Account sync and server migration
+## همگام‌سازی حساب و بکاپ سرور
 
-A signed-in user can enable record sync in their account. Browser storage remains the source for offline use. Sync uses revision-checked snapshots with a three-way merge keyed by record ID. For simultaneous edits to the same record, the change from the device performing the sync takes precedence. An empty device restores the existing account snapshot after sign-in. Each uploaded snapshot is limited to 4 MiB.
+همگام‌سازی سوابق اختیاری است. داده‌ها برای کار آفلاین روی دستگاه می‌مانند. هر حساب می‌تواند تا ۴ مگابایت داده را با سرور همگام کند. روی دستگاه تازه، پس از ورود، سوابق همگام‌شده قابل بازیابی‌اند. سوابق مهمان و تغییراتی که هنوز همگام نشده‌اند در بکاپ شخصی دستگاه می‌مانند.
 
-The migration routes are disabled until the Worker has a dedicated 64-character hexadecimal `MIGRATION_TOKEN`. Set this only for the migration window. Use the same `EMAIL_AUTH_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, and `REMINDER_SIGNING_KEY` on both environments. Set the migration token and archive password in your shell securely. Keep them out of command-line arguments and version control.
+### آماده‌سازی و تمرین بازیابی
+
+- نسخهٔ همین کد را روی مبدأ و یک مقصد آزمایشی با فضای ذخیرهٔ جدا اجرا کنید. مقصد Worker آزمایشی را عمومی یا متصل به دامنهٔ اصلی نکنید. بازیابی کامل به مقصد تازه با Durable Objectهای SQLite نیاز دارد.
+- روی مبدأ و مقصد `EMAIL_AUTH_SECRET`، `VAPID_PUBLIC_KEY`، `VAPID_PRIVATE_KEY`، `VAPID_SUBJECT` و `REMINDER_SIGNING_KEY` یکسان باشند. این مقادیر برای ورود با رمز قبلی و ادامهٔ اشتراک‌های اعلان لازم‌اند. تنظیمات ارسال ایمیل، حساب مدیر، حساب‌های پشتیبانی و مسیردهی دامنه را جداگانه بررسی کنید. رازهای محیط در فایل بکاپ قرار نمی‌گیرند.
+- موقتاً برای هر محیط یک `MIGRATION_TOKEN` مستقل با `openssl rand -hex 32` بسازید. توکن و رمز بکاپِ حداقل ۲۴ نویسه را از طریق متغیرهای محیطی `MEDORA_MIGRATION_TOKEN` و `MEDORA_BACKUP_PASSWORD` به ابزار بدهید. رازها را در مدیر رمز نگه دارید و در تاریخچهٔ ترمینال، لاگ یا ریپو قرار ندهید.
+- از مسیر Settings → Variables and Secrets روی **مقصد** هر دو متغیر `MEDORA_MAINTENANCE=true` و `MEDORA_PAUSE_PUSH=true` را ثبت کنید. اولی API برنامه را موقتاً با 503 متوقف می‌کند و دومی ارسال اعلان را متوقف می‌کند. وب‌اپ نصب‌شده همچنان می‌تواند از داده‌های محلی استفاده کند.
+- دستورها را از پوشهٔ `web` اجرا کنید. برای هر درخواست، توکن محیطی را که نشانی‌اش در دستور آمده تنظیم کنید.
 
 ```sh
 node scripts/migrate-care.mjs backup https://source.example medora.medbackup
+node scripts/migrate-care.mjs verify https://target.example medora.medbackup
 node scripts/migrate-care.mjs restore https://target.example medora.medbackup
 ```
 
-Restore into an empty target and verify password login, synced records and ad assets before switching traffic. For the live cutover, stop source writes and take a final archive. Stop the source notification sender before restoring with `--resume-reminders` so the same subscription does not receive duplicate notifications. Existing notification devices enter the migration registry when the updated app next refreshes their schedule. Users who have not opened the updated app may need to reopen it to resync notifications. Old account sessions are recreated on sign-in. Health records that have not synced remain in the device's own encrypted backup. Archives use the existing authenticated encryption format and have a 16 MiB limit. A larger production dataset needs a streaming archive before moving. The current restore targets a clean Cloudflare-compatible runtime. A server running PostgreSQL still needs a storage and scheduler adapter.
+ابزار بکاپ قبل از ذخیرهٔ فایل، رمزگشایی و ساختار آن را بررسی می‌کند و SHA-256 و تعداد حساب‌ها، فایل‌ها و دستگاه‌های ثبت‌شده را نشان می‌دهد. فایل خروجی خصوصی است و ابزار فایل قبلی را بازنویسی نمی‌کند. گزارش و نسخهٔ رمزدار را جدا از مبدأ نگه دارید. رمز در جای جداگانه‌ای نگهداری شود. Verify هیچ داده‌ای را تغییر نمی‌دهد. برای آزمون ورود به مقصد آزمایشی، فقط حالت نگهداری مقصد را بردارید و ارسال اعلان را متوقف نگه دارید. ورود با رمز قبلی، سوابق، تنظیمات، تبلیغات و فایل‌ها را بررسی کنید. بعد از تمرین، مقصد آزمایشی دارای داده است و برای مهاجرت نهایی باید مقصد تازه داشته باشید.
+
+### جابه‌جایی دامنه و بازگشت
+
+1. انتشارهای هم‌زمان را متوقف کنید. روی **مبدأ** نیز هر دو متغیر نگهداری و توقف اعلان را فعال کنید. از بیرون 503 را بررسی کنید و اجازه دهید درخواست‌ها و اعلان‌های در‌حال اجرا تمام شوند. بکاپ نهایی را با نامی تازه بگیرید. نسخهٔ نهایی و SHA-256 آن را نگه دارید.
+2. روی مقصد تازه در حالت نگهداری فایل را Verify و Restore کنید. اگر قطع شد، همان فایل را دوباره بفرستید. مقصد تنها همان آرشیو را می‌پذیرد. در صورت `restore_in_progress` بگذارید عملیات جاری تمام شود. اگر فرآیند قطع اجباری شده باشد، قفل پس از یک ساعت آزاد می‌شود.
+3. مبدأ را متوقف نگه دارید و روی مقصد همین فایل را با `restore ... --resume-reminders` دوباره اجرا کنید تا نوبت‌ها نصب شوند. تأیید کنید تعدادها با گزارش Verify هم‌خوان‌اند. نشانی عمومی `medorapp.ir` را حفظ کنید تا داده‌های مرورگر و نصب PWA با همان مبدأ وب در دسترس بمانند. دامنه را به مقصد متصل کنید، سپس حالت نگهداری و توقف اعلان را فقط روی مقصد بردارید.
+4. ورود و همگام‌سازی یک حساب آزمایشی، بازیابی رمز، تبلیغ، و دریافت اعلان با اپ بسته روی آیفون را بررسی کنید. از زمان باز شدن API مقصد، هر برگشت باید با توقف مقصد و حفظ تغییرات نوشته‌شده روی آن برنامه‌ریزی شود. پیش از باز شدن API مقصد، می‌توانید دامنه را به مبدأ برگردانید و مبدأ را دوباره فعال کنید. هم‌زمان فقط یک فرستندهٔ اعلان فعال باشد.
+5. توکن‌های موقت را از هر دو محیط حذف کنید. مبدأ و بکاپ نهایی را تا پایان دورهٔ بازگشت حفظ کنید. نشست‌های قبلی روی مقصد تازه‌اند و کاربران برای همگام‌سازی دوباره وارد می‌شوند. نصب‌هایی که قبلاً در فهرست مهاجرت ثبت نشده‌اند با باز کردن اپ و همگام‌سازی زمان‌بندی دوباره وارد فهرست می‌شوند. اعلان‌هایی که بیشتر از پنجرهٔ ارسال گذشته‌اند دوباره ارسال نمی‌شوند.
+
+فایل رمزدار فعلاً سقف ۱۶ مگابایت دارد. تعداد زیاد Durable Objectها ممکن است زودتر به محدودیت درخواست یا CPU پلن برسد. این فرایند سقف اندازه و تعداد حساب‌ها را در محیط واقعی مقصد تضمین نمی‌کند. مهاجرت حجیم به انتقال بخش‌بندی‌شده و قابل ادامه نیاز دارد. مهاجرت به VPS با PostgreSQL هم به پیاده‌سازی لایهٔ ذخیره و زمان‌بند مقصد و تمرین بازیابی روی همان سرور نیاز دارد. بازیابی نقطه‌ای Cloudflare برای هر Durable Object جداگانه است. [محدودیت‌های Workers](https://developers.cloudflare.com/workers/platform/limits/) · [بازیابی SQLite Durable Objects](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/)

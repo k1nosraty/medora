@@ -27,8 +27,13 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (["/api/migration/backup", "/api/migration/verify", "/api/migration/restore"].includes(url.pathname)) return handleMigration(request, env, url);
+    if (env.MEDORA_MAINTENANCE === "true") {
+      return Response.json({ error: "maintenance" }, { status: 503, headers: {
+        "Cache-Control": "no-store", "Retry-After": "60"
+      } });
+    }
     if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url, ctx);
-    if (["/api/migration/backup", "/api/migration/restore"].includes(url.pathname)) return handleMigration(request, env, url);
     if (url.pathname === "/api/account/care") return handleCareSync(request, env, url);
     if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url, ctx);
     if (["/api/promotion", "/api/admin/promotion"].some(path => url.pathname === path || url.pathname.startsWith(path + "/"))) {
@@ -108,6 +113,10 @@ export class PushPilot extends DurableObject {
     if (!job) return;
 
     const now = Date.now();
+    if (this.env.MEDORA_PAUSE_PUSH === "true") {
+      if (now < job.dueAt + expiry) await storage.setAlarm(Math.max(job.dueAt, now + 60_000));
+      return;
+    }
     if (now < job.dueAt) {
       await storage.setAlarm(job.dueAt);
       return;

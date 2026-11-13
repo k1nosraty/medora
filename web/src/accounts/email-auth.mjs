@@ -52,10 +52,6 @@ function validPassword(password) {
 }
 const accountId = (env, email) => hmac(env.EMAIL_AUTH_SECRET, "account-v1", email);
 const credentials = env => env.CREDENTIALS.getByName("medora-credentials-v1");
-export async function registeredIdentity(env, email) {
-  const id = await accountId(env, email);
-  return await credentials(env).usernameFor(id) ? id : null;
-}
 async function passwordProof(secret, password, salt) {
   const peppered = await hmac(secret, "password-v1", password);
   return hex(scryptSync(peppered, salt, 32, { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }));
@@ -75,6 +71,11 @@ export async function signedInEmail(request, env) {
   if (!configured(env)) return null;
   const session = await readSession(request, env.EMAIL_AUTH_SECRET);
   return session ? env.EMAIL_ACCOUNTS.getByName(session.id).session(session.token) : null;
+}
+export async function careSession(request, env) {
+  if (!configured(env)) return null;
+  const session = await readSession(request, env.EMAIL_AUTH_SECRET);
+  return session && await credentials(env).usernameFor(session.id) ? session : null;
 }
 export function isAdminEmail(email, env) {
   return Boolean(email && email === env.ADMIN_EMAIL?.trim().toLowerCase());
@@ -357,29 +358,49 @@ export class EmailAccount extends DurableObject {
       const index = credentials(this.env);
       const record = await index.find(username);
       if (record?.email_id !== emailId || record.salt !== salt || isAdminEmail(record.email, this.env)) return false;
-      this.ctx.storage.transactionSync(() => {
+      await this.ctx.storage.transaction(async storage => {
         this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM reset_challenge; DELETE FROM deliveries; DELETE FROM password_attempts;");
         this.sql.exec("INSERT OR REPLACE INTO account_reset VALUES (1, ?)", hex(crypto.getRandomValues(new Uint8Array(16))));
+        await storage.delete("care-sync");
       });
       await this.ctx.storage.deleteAlarm();
-      await this.ctx.storage.delete("care-sync");
       return index.remove(username, emailId, salt);
     });
   }
 
   async restoreCare(snapshot, epoch) {
-    await this.ctx.storage.transaction(async storage => {
+    return this.ctx.storage.transaction(async storage => {
+      const currentEpoch = this.epoch();
+      const current = await storage.get("care-sync");
+      if ((currentEpoch && currentEpoch !== epoch) || (current && JSON.stringify(current) !== JSON.stringify(snapshot))) {
+        return false;
+      }
       if (epoch) this.sql.exec("INSERT OR IGNORE INTO account_reset VALUES (1, ?)", epoch);
-      if (snapshot?.records && !(await storage.get("care-sync"))) await storage.put("care-sync", snapshot);
+      if (snapshot.records && !current) await storage.put("care-sync", snapshot);
+      return true;
     });
   }
 
-  async careSnapshot() {
-    return await this.ctx.storage.get("care-sync") ?? { revision: 0, records: null };
+  async exportCare() {
+    return this.ctx.storage.transaction(async storage => ({
+      care: await storage.get("care-sync") ?? { revision: 0, records: null },
+      epoch: this.epoch()
+    }));
   }
 
-  saveCareSnapshot(revision, records, generation) {
+  async readCareForSession(token) {
+    const hash = await sessionHash(token);
     return this.ctx.storage.transaction(async storage => {
+      if (!this.activeSessionEmail(hash)) return null;
+      const snapshot = await storage.get("care-sync") ?? { revision: 0, records: null };
+      return { epoch: this.epoch(), ...snapshot };
+    });
+  }
+
+  async saveCareSnapshot(revision, records, generation, token) {
+    const hash = await sessionHash(token);
+    return this.ctx.storage.transaction(async storage => {
+      if (!this.activeSessionEmail(hash)) return { signedOut: true };
       if (generation !== this.epoch()) return null;
       const current = await storage.get("care-sync") ?? { revision: 0 };
       if (current.revision !== revision) return null;
@@ -412,6 +433,10 @@ export class EmailAccount extends DurableObject {
 
   async session(token) {
     const hash = await sessionHash(token);
+    return this.activeSessionEmail(hash);
+  }
+
+  activeSessionEmail(hash) {
     return this.sql.exec("SELECT email FROM sessions WHERE hash = ? AND expires > ?", hash, Date.now()).toArray()[0]?.email ?? null;
   }
 

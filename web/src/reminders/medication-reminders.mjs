@@ -55,10 +55,10 @@ export async function handleMedicationReminders(request, env, url) {
       return reply({ error: "bad_schedule" }, 400);
     }
     plan = { ...schedule, subscription, language: body.language === "en" ? "en" : "fa" };
+    // A registered device must be discoverable by backup even if this request is interrupted.
+    if (operations(env)) await operations(env).registerReminder(match[1]);
   }
-  const state = await device.replace(body.revision, plan);
-  if (state.enabled && operations(env)) await operations(env).registerReminder(match[1]).catch(() => {});
-  return reply(state);
+  return reply(await device.replace(body.revision, plan));
 }
 
 function publicState(state) {
@@ -83,9 +83,10 @@ export class MedicationReminders extends DurableObject {
   async restoreReminder(state) {
     return this.ctx.storage.transaction(async storage => {
       const existing = await storage.get("state");
-      if (existing) return existing.revision === state.revision;
+      if (existing) return existing.revision === state.revision && JSON.stringify(existing.plan) === JSON.stringify(state.plan);
       const now = Date.now();
-      const next = state.next?.at >= now ? state.next : state.plan ? nextCareReminder(state.plan, now) : null;
+      const next = !state.plan ? null : state.next && state.next.at > now - sendWindow
+        ? state.next : nextCareReminder(state.plan, now);
       await saveState(storage, { ...state, next, attempts: 0 });
       return true;
     });
@@ -129,6 +130,10 @@ export class MedicationReminders extends DurableObject {
     if (!state?.next || !state.plan) return;
     const now = Date.now();
     const due = state.next.at;
+    if (this.env.MEDORA_PAUSE_PUSH === "true") {
+      await this.ctx.storage.setAlarm(Math.max(due, now + 60_000));
+      return;
+    }
     if (now < due) {
       await this.ctx.storage.setAlarm(due);
       return;

@@ -19,7 +19,7 @@ function httpsUrl(value) {
   return target?.protocol === "https:" && !target.username && !target.password;
 }
 
-function validatedPromotion(value) {
+export function validatedPromotion(value) {
   if (typeof value?.enabled !== "boolean" || typeof value.title !== "string" ||
       typeof value.description !== "string" || typeof value.url !== "string") return null;
   const title = value.title.trim();
@@ -231,6 +231,13 @@ export class Promotions extends DurableObject {
 
   async exportData() {
     return { ...await this.dashboard(), preview: await this.preview(), assets: await this.library() };
+  }
+
+  async migrationTargetEmpty() {
+    const storage = this.ctx.storage;
+    return !(await this.campaigns()).length && !(await storage.get("assets"))?.length &&
+      !await this.preview() && !(await storage.list({ prefix: "meta:", limit: 1 })).size &&
+      !(await storage.list({ prefix: "count:", limit: 1 })).size;
   }
   mediaMeta(id) { return this.ctx.storage.get("meta:" + id); }
 

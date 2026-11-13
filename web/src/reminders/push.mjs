@@ -9,6 +9,7 @@ export async function pushTopic(tag) {
 }
 
 export async function sendPush(env, subscription, data, ttl, stillCurrent = async () => true) {
+  if (env.MEDORA_PAUSE_PUSH === "true") return { status: "paused" };
   try {
     const endpoint = new URL(subscription.endpoint);
     const signer = env.PILOT.getByName("medora-vapid");
