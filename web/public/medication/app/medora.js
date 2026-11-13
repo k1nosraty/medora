@@ -14,34 +14,44 @@ import { installMedicineEditor } from "../features/medicines/editor.js";
 import { installMedicineView } from "../features/medicines/view.js";
 import { installAccount } from "../features/account/dialog.js";
 import { installSupport, loadOperations, reportDailyOpen } from "../features/operations.js";
-import { showPromotion } from "../features/promotions/dialog.js";
+import { installPromotion } from "../features/promotions/dialog.js";
 import { installRoutines } from "../features/routines/view.js";
 import { renderToday } from "../features/today/view.js";
 import { installBackupRestore } from "../features/backups/dialog.js";
 import { installNavigation } from "./navigation.js";
+import { refreshApp } from "./update.js";
 import { showIntro } from "./onboarding.js";
 import { installSurfaceArt } from "../design/surfaces.js";
-
-// An older cached page can still load this module from the current release.
-if (!document.getElementById("account-sync-enable")) {
-  const url = new URL(location.href);
-  const firstAttempt = !url.searchParams.has("retry");
-  url.searchParams.set("retry", Date.now());
-  if (firstAttempt) location.replace(url);
-  else {
-    const link = document.createElement("a");
-    link.href = url;
-    link.textContent = t("بارگذاری دوباره");
-    document.getElementById("boot-status").replaceChildren(link);
-  }
-  throw new Error("Outdated Medora page");
-}
 
 localizeMarkup();
 installSurfaceArt();
 installSupport();
 let care;
 let busy = false;
+const update = $("update-app");
+const updateStatus = $("app-update-status");
+update.addEventListener("click", async () => {
+  if (busy) {
+    updateStatus.textContent = t("پس از ذخیرهٔ تغییرات دوباره تلاش کنید.");
+    return;
+  }
+  if (!navigator.onLine) {
+    updateStatus.textContent = t("برای به‌روزرسانی به اینترنت وصل شوید.");
+    return;
+  }
+  update.disabled = true;
+  updateStatus.textContent = t("در حال بررسی به‌روزرسانی…");
+  try {
+    if (await refreshApp({ canReload: () => !busy && !document.querySelector("dialog[open]") }) === false) {
+      updateStatus.textContent = t("آخرین نسخه نصب است.");
+    }
+  } catch (error) {
+    updateStatus.textContent = error.message === "update_busy"
+      ? t("پس از ذخیرهٔ تغییرات دوباره تلاش کنید.") : t("به‌روزرسانی انجام نشد. دوباره تلاش کنید.");
+  } finally {
+    update.disabled = false;
+  }
+});
 const getState = () => care;
 async function mutate(change, success, scheduleChanged = false, day) {
   if (busy) return false;
@@ -196,10 +206,7 @@ try {
     history.replaceState(history.state, "", `?${params}`);
   }
   if (!location.search) void reportDailyOpen();
-  void loadOperations().then(showAds => {
-    if (showAds && !location.search && !$("app").hidden) void showPromotion();
-  });
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/medication/sw.js").catch(() => {});
+  installPromotion(loadOperations);
   void initializeReminders();
 } catch {
   $("boot-status").textContent = t("موتور برنامهٔ دارو یا فضای ذخیرهٔ محلی در دسترس نیست.");

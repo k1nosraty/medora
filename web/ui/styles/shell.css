@@ -24,3 +24,18 @@ html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-ba
   clip-path: inset(50%);
   overflow: hidden;
 }
+
+.medora #app-update-status {
+  max-inline-size: 55rem;
+  margin: 0 auto;
+  padding: 0 1rem .45rem;
+  color: var(--muted);
+  font-size: .78rem;
+}
+.medora #app-update-status:empty { padding: 0; }
+.medora #update-app[data-update-ready] { border-color: var(--action); }
+.medora #update-app:disabled svg { animation: medora-update-spin .9s linear infinite; }
+@keyframes medora-update-spin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) {
+  .medora #update-app:disabled svg { animation: none; }
+}

@@ -5,8 +5,7 @@ const openShell = () => shellCache ??= caches.open(cacheName);
 
 self.addEventListener("install", event => {
   const requests = shell.map(path => new Request(path, { cache: "reload" }));
-  // An update waits for old windows to close so one page always uses one shell.
-  event.waitUntil(openShell().then(cache => cache.addAll(requests)));
+  event.waitUntil(openShell().then(cache => cache.addAll(requests)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", event => {

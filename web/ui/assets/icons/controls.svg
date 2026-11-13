@@ -16,3 +16,4 @@
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 4v5h-5M4 20v-5h5M5.3 9a7 7 0 0 1 11.7-2.8L20 9M4 15l3 2.8A7 7 0 0 0 18.7 15"/></symbol>

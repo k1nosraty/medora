@@ -1,3 +1,5 @@
+import { monitorUpdates, refreshApp } from "./app/update.js";
+
 const status = document.getElementById("boot-status");
 const retry = document.getElementById("boot-retry");
 let pressedControl;
@@ -21,11 +23,12 @@ for (const type of ["pointerup", "pointercancel"]) {
 }
 window.addEventListener("blur", releasePress);
 
-retry.addEventListener("click", () => {
-  const url = new URL(location.href);
-  url.searchParams.set("retry", Date.now());
-  location.replace(url);
+retry.addEventListener("click", async () => {
+  retry.disabled = true;
+  try { await refreshApp({ reload: true }); }
+  catch { retry.disabled = false; }
 });
+monitorUpdates();
 
 try {
   await import("./app/medora.js");

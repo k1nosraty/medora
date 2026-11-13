@@ -10,6 +10,7 @@ test("the installed shell serves a coherent offline page and does not intercept 
   const listeners = new Map();
   const stored = new Map();
   const network = [];
+  let skippedWaiting = false;
   const cache = {
     async addAll(requests) {
       for (const request of requests) stored.set(new URL(request.url).pathname, new Response("installed"));
@@ -24,11 +25,16 @@ test("the installed shell serves a coherent offline page and does not intercept 
     },
     caches: { open: async () => cache },
     fetch: async request => { network.push(request.url); return new Response("network"); },
-    self: { location: { origin }, addEventListener: (type, listener) => listeners.set(type, listener) }
+    self: { location: { origin }, addEventListener: (type, listener) => listeners.set(type, listener),
+      skipWaiting() {
+        assert.ok(stored.has("/medication/"));
+        skippedWaiting = true;
+      } }
   });
   let installed;
   listeners.get("install")({ waitUntil: promise => { installed = promise; } });
   await installed;
+  assert.ok(skippedWaiting);
   const html = await readFile(new URL("medication/index.html", publicDir), "utf8");
   for (const [, asset] of html.matchAll(/(?:src|href)="(\/[^"#]+\.(?:css|js|svg|png|webmanifest))"/g)) {
     assert.ok(stored.has(asset), `The shell page links to uncached asset ${asset}`);
