@@ -24,3 +24,29 @@
       <path d="M24 48C44 39 63 54 88 46V92H24Z" fill="#86b3e4" stroke="none" clip-path="url(#category-water-clip)" transform="rotate(-13 56 51)"/>
       <use href="#art-water-overlay"/>
     </symbol>
+
+    <symbol id="art-water-progress" viewBox="0 0 256 256">
+              <defs>
+                <clipPath id="today-glass-inside"><path d="M40 46Q128 68 216 46L201 190Q197 207 128 213Q61 209 55 191Z"/></clipPath>
+                <clipPath id="today-matte-rim"><ellipse cx="128" cy="33" rx="84" ry="20"/></clipPath>
+                <linearGradient id="today-glass-dry" x2="1" y2="0"><stop stop-color="#77a8db"/><stop offset=".35" stop-color="#dceeff"/><stop offset=".72" stop-color="#c0d8f2"/><stop offset="1" stop-color="#79a7d5"/></linearGradient>
+                <linearGradient id="today-glass-liquid" x2="0" y2="1"><stop stop-color="#8dc7f5"/><stop offset=".45" stop-color="#659fdc"/><stop offset="1" stop-color="#437fbd"/></linearGradient>
+              </defs>
+              <image class="water-icon-glass" href="/design/optical-glass/water.webp" width="256" height="256"/>
+              <g class="water-icon-interior" clip-path="url(#today-glass-inside)">
+                <path fill="url(#today-glass-dry)" d="M40 46Q128 68 216 46L201 190Q197 207 128 213Q61 209 55 191Z"/>
+                <g class="water-icon-liquid">
+                  <path d="M30 0H226V210H30Z" fill="url(#today-glass-liquid)"/>
+                  <ellipse cx="128" cy="0" rx="96" ry="12" fill="#a6d9ff" stroke="#d5eeff" stroke-width="1.5"/>
+                  <g fill="#bce4ff" opacity=".65"><circle cx="105" cy="21" r="2"/><circle cx="141" cy="35" r="3"/><circle cx="120" cy="60" r="2"/></g>
+                </g>
+                <path d="M47 56l13 123m140-123-11 128" stroke="#edf8ff" opacity=".43" stroke-width="2"/>
+              </g>
+              <g class="water-icon-matte">
+                <image href="/design/matte-3d/water.webp" width="256" height="256"/>
+                <g clip-path="url(#today-matte-rim)">
+                  <ellipse cx="128" cy="33" rx="87" ry="23" fill="#52769e"/>
+                  <ellipse class="water-matte-liquid" cx="128" cy="53" rx="88" ry="19" fill="#76b8ea"/>
+                </g>
+              </g>
+                </symbol>

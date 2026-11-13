@@ -146,9 +146,7 @@ export function installWater({ getState, selectedDay, today, actionDay, mutate, 
     }
   });
   function fillGlass(container, progress) {
-    const level = 90 - 78 * progress;
-    $(container).querySelector(".glass-water")
-      .setAttribute("d", progress ? `M0 ${level}C30 ${level - 7} 65 ${level + 8} 100 ${level}V100H0Z` : "");
+    $(container).querySelector(".water-glass").dataset.level = String(Math.min(4, Math.floor(progress * 4)));
   }
 
   function renderTodayWater(state, day, total, goal, progress) {
@@ -164,8 +162,7 @@ export function installWater({ getState, selectedDay, today, actionDay, mutate, 
     $("today-water").toggleAttribute("data-goal-reached", total >= goal);
     quickWaterButton.hidden = day !== today();
     renderQuickWaterFeedback(state, day);
-    const glass = $("today-water").querySelector(".water-glass");
-    glass.dataset.level = String(Math.min(4, Math.floor(progress * 4)));
+    fillGlass("today-water", progress);
   }
 
   function renderWater(day, index, total, goal, progress) {

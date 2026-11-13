@@ -56,7 +56,9 @@ export async function handleMedicationReminders(request, env, url) {
     }
     plan = { ...schedule, subscription, language: body.language === "en" ? "en" : "fa" };
   }
-  return reply(await device.replace(body.revision, plan));
+  const state = await device.replace(body.revision, plan);
+  if (state.enabled && operations(env)) await operations(env).registerReminder(match[1]).catch(() => {});
+  return reply(state);
 }
 
 function publicState(state) {
@@ -74,6 +76,21 @@ async function saveState(storage, state, alarm = state.next?.at) {
 }
 
 export class MedicationReminders extends DurableObject {
+  async exportReminder() {
+    return await this.ctx.storage.get("state") ?? null;
+  }
+
+  async restoreReminder(state) {
+    return this.ctx.storage.transaction(async storage => {
+      const existing = await storage.get("state");
+      if (existing) return existing.revision === state.revision;
+      const now = Date.now();
+      const next = state.next?.at >= now ? state.next : state.plan ? nextCareReminder(state.plan, now) : null;
+      await saveState(storage, { ...state, next, attempts: 0 });
+      return true;
+    });
+  }
+
   async status() {
     return publicState(await this.ctx.storage.get("state"));
   }

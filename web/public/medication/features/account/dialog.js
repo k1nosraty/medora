@@ -25,7 +25,7 @@ const screens = {
   loading: [null, "حساب مدورا", ""]
 };
 
-export function installAccount() {
+export function installAccount({ onSignIn = () => {}, onShortcut = () => {} } = {}) {
   const dialog = $("account-dialog");
   const fit = fitDialogToViewport(dialog);
   const controls = [...dialog.querySelectorAll('button:not([data-close]):not([data-reveal-password])')];
@@ -51,10 +51,12 @@ export function installAccount() {
     for (const button of dialog.querySelectorAll("[data-account-mode]")) {
       button.setAttribute("aria-pressed", String(button.dataset.accountMode === next));
     }
+    $("account-avatar").textContent = (account?.username || account?.email || "").slice(0, 1).toUpperCase();
     $("account-address").textContent = account?.email ?? "";
     $("account-username").textContent = account?.username ?? "";
     $("account-username").hidden = !account?.username;
     $("legacy-setup").hidden = !account || Boolean(account.username);
+    $("account-sync-title").closest("section").hidden = !account?.username;
     $("open-admin").hidden = !account?.admin;
     $("account-dismiss").textContent = t(account ? "بازگشت به مدورا" : "ادامه بدون ورود");
     $("account-local-note").hidden = Boolean(account) || ["code", "setup", "resetEmail", "resetCode"].includes(next);
@@ -105,6 +107,7 @@ export function installAccount() {
 
   function signedIn(data) {
     account = data;
+    onSignIn(data);
     email = challenge = grant = "";
     $("login-username").value = data.username ?? "";
     $("account-email").value = $("account-code").value = $("register-username").value = "";
@@ -130,6 +133,12 @@ export function installAccount() {
       view("login", false);
       if (data) status(errors.unavailable, true);
     }
+  }
+  for (const control of dialog.querySelectorAll("[data-account-shortcut]")) {
+    control.addEventListener("click", () => {
+      dialog.close();
+      onShortcut(control.dataset.accountShortcut);
+    });
   }
   for (const button of document.querySelectorAll("[data-open-account]")) button.addEventListener("click", open);
   for (const button of dialog.querySelectorAll("[data-account-mode]")) {

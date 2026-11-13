@@ -33,6 +33,19 @@ export class Credentials extends DurableObject {
     return this.sql.exec("SELECT username, email, created_at FROM credentials_v1 WHERE username > ? ORDER BY username LIMIT 100", after).toArray();
   }
 
+  backupAccounts(after) {
+    return this.sql.exec("SELECT * FROM credentials_v1 WHERE username > ? ORDER BY username LIMIT 100", after).toArray();
+  }
+
+  restoreAccount(row) {
+    const inserted = this.sql.exec("INSERT OR IGNORE INTO credentials_v1 VALUES (?, ?, ?, ?, ?, ?) RETURNING username",
+      row.username, row.email_id, row.email, row.salt, row.proof, row.created_at).toArray().length;
+    if (inserted) return true;
+    const current = this.find(row.username);
+    return current?.email_id === row.email_id && current.email === row.email &&
+      current.salt === row.salt && current.proof === row.proof;
+  }
+
   remove(username, emailId, salt) {
     return this.sql.exec("DELETE FROM credentials_v1 WHERE username = ? AND email_id = ? AND salt = ? RETURNING username",
       username, emailId, salt).toArray().length > 0;

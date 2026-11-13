@@ -44,7 +44,7 @@ const settings = {
 };
 export const webBackupSettings = Object.keys(settings);
 
-function portable(state) {
+export function portable(state) {
   return {
     medicines: state.medicines, doses: state.doses, water: state.water ?? [], visits: state.visits ?? {},
     routines: state.routines ?? {}, routineLogs: state.routineLogs ?? {},
@@ -92,7 +92,7 @@ function validHistory(history, validatePhases) {
     }));
 }
 
-function validate(data, validatePhases) {
+export function validatePortable(data, validatePhases) {
   if (!object(data) || !object(data.settings) || !Object.entries(data.settings).every(([key, value]) =>
     Object.hasOwn(settings, key) && settings[key](value)) ||
     !record(data.medicines, (row, id) => row.id === id && validMedicine(row, validatePhases)) ||
@@ -118,10 +118,10 @@ function validate(data, validatePhases) {
 export async function writeWebBackup(state, password, validatePhases) {
   if (!validBackupPassword(password)) throw new Error("backup_password");
   const data = portable(state);
-  validate(data, validatePhases);
+  validatePortable(data, validatePhases);
   return encryptBackup(data, password, magic);
 }
 
 export async function readWebBackup(bytes, password, validatePhases) {
-  return validate(await decryptBackup(bytes, password, magic), validatePhases);
+  return validatePortable(await decryptBackup(bytes, password, magic), validatePhases);
 }

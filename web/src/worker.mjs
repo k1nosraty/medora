@@ -1,3 +1,5 @@
+import { handleMigration } from "./operations/migration.mjs";
+import { handleCareSync } from "./sync/routes.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { vapidHeaders } from "@block65/webcrypto-web-push";
 import { pilotConfig, smallJson, validSubscription } from "./http/validation.mjs";
@@ -26,6 +28,8 @@ export default {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url, ctx);
+    if (["/api/migration/backup", "/api/migration/restore"].includes(url.pathname)) return handleMigration(request, env, url);
+    if (url.pathname === "/api/account/care") return handleCareSync(request, env, url);
     if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url, ctx);
     if (["/api/promotion", "/api/admin/promotion"].some(path => url.pathname === path || url.pathname.startsWith(path + "/"))) {
       return handlePromotions(request, env, ctx, url);

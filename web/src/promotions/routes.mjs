@@ -258,6 +258,27 @@ export class Promotions extends DurableObject {
     });
   }
 
+  async restoreMedia(asset, bytes) {
+    await this.ctx.storage.transaction(async storage => {
+      if (await storage.get("meta:" + asset.id)) return;
+      const assets = await storage.get("assets") ?? [];
+      const { id, size, type, name, createdAt } = asset;
+      const entries = { ["meta:" + id]: { type, size }, assets: [...assets, { id, size, name, createdAt }] };
+      for (let offset = 0; offset < size; offset += chunkSize) entries[`media:${id}:${offset / chunkSize}`] = bytes.slice(offset, offset + chunkSize);
+      await storage.put(entries);
+    });
+  }
+
+  async restoreCampaigns(data) {
+    await this.ctx.storage.transaction(async storage => {
+      if ((await this.campaigns(storage)).length) return;
+      const entries = { campaigns: data.campaigns.map(({ stats, ...campaign }) => campaign) };
+      if (data.preview) entries.preview = data.preview;
+      for (const campaign of data.campaigns) if (campaign.stats) entries["count:" + campaign.id] = campaign.stats;
+      await storage.put(entries);
+    });
+  }
+
   async mediaBytes(id, first, last) {
     const start = Math.floor(first / chunkSize);
     const end = Math.floor(last / chunkSize);

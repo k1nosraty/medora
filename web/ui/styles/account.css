@@ -89,3 +89,16 @@
   .account-mark { display: none; }
   .account-cover h2 { padding-inline-end: 3rem; }
 }
+.medora .account-sync { margin-block: .45rem; padding: .65rem; border: 1px solid var(--outline); border-radius: 1rem; }
+.medora .account-sync p { margin-block: .25rem; }
+.medora .account-sync button { margin-block-start: .3rem; }
+.account-identity { display: flex; align-items: center; gap: .65rem; padding: .55rem .7rem; border-radius: 1rem; background: var(--surface-fill); border: 1px solid var(--surface-edge); }
+.account-identity bdi { display: block; color: var(--muted); font-size: .84rem; }
+.account-avatar { display: grid; place-items: center; flex: 0 0 2.75rem; aspect-ratio: 1; border-radius: 50%; background: var(--dock-active); color: var(--action); font-weight: 800; }
+.account-sync-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .3rem; }
+#account-sync-badge { border-radius: 2rem; background: var(--stage); color: var(--muted); padding: .1rem .45rem; font-size: .75rem; }
+#account-sync-badge[data-enabled="true"] { background: var(--dock-active); color: var(--action); }
+#account-sync-status:empty { display: none; }
+.account-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.medora .account-shortcuts button { display: flex; justify-content: center; align-items: center; gap: .3rem; padding-inline: .2rem; }
+.medora .account-shortcuts svg { inline-size: 1rem; block-size: 1rem; }

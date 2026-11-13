@@ -114,6 +114,24 @@ export class Operations extends DurableObject {
       CREATE INDEX IF NOT EXISTS tickets_email ON tickets(email, at);`);
   }
 
+  registerReminder(id) { return this.ctx.storage.put("reminder:" + id, true); }
+
+  async reminderIds() {
+    return [...(await this.ctx.storage.list({ prefix: "reminder:" })).keys()].map(key => key.slice(9));
+  }
+
+  async restoreData(data) {
+    if (!data) return;
+    await this.ctx.storage.put("config", data.config);
+    this.ctx.storage.transactionSync(() => {
+      for (const { day, metric, count } of data.counters) this.sql.exec("INSERT OR REPLACE INTO counters VALUES (?, ?, ?)", day, metric, count);
+      for (const { id, at, actor, action } of data.audit) this.sql.exec("INSERT OR IGNORE INTO audit VALUES (?, ?, ?, ?)", id, at, actor, action);
+      for (const { id, email, at, message, diagnostics, reply, status } of data.tickets) {
+        this.sql.exec("INSERT OR IGNORE INTO tickets VALUES (?, ?, ?, ?, ?, ?, ?)", id, email, at, message, diagnostics, reply, status);
+      }
+    });
+  }
+
   async config() {
     return await this.ctx.storage.get("config") ?? { flags: { promotions: 100, support: 100 }, notice: null };
   }

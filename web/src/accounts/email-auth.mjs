@@ -52,6 +52,10 @@ function validPassword(password) {
 }
 const accountId = (env, email) => hmac(env.EMAIL_AUTH_SECRET, "account-v1", email);
 const credentials = env => env.CREDENTIALS.getByName("medora-credentials-v1");
+export async function registeredIdentity(env, email) {
+  const id = await accountId(env, email);
+  return await credentials(env).usernameFor(id) ? id : null;
+}
 async function passwordProof(secret, password, salt) {
   const peppered = await hmac(secret, "password-v1", password);
   return hex(scryptSync(peppered, salt, 32, { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }));
@@ -358,7 +362,30 @@ export class EmailAccount extends DurableObject {
         this.sql.exec("INSERT OR REPLACE INTO account_reset VALUES (1, ?)", hex(crypto.getRandomValues(new Uint8Array(16))));
       });
       await this.ctx.storage.deleteAlarm();
+      await this.ctx.storage.delete("care-sync");
       return index.remove(username, emailId, salt);
+    });
+  }
+
+  async restoreCare(snapshot, epoch) {
+    await this.ctx.storage.transaction(async storage => {
+      if (epoch) this.sql.exec("INSERT OR IGNORE INTO account_reset VALUES (1, ?)", epoch);
+      if (snapshot?.records && !(await storage.get("care-sync"))) await storage.put("care-sync", snapshot);
+    });
+  }
+
+  async careSnapshot() {
+    return await this.ctx.storage.get("care-sync") ?? { revision: 0, records: null };
+  }
+
+  saveCareSnapshot(revision, records, generation) {
+    return this.ctx.storage.transaction(async storage => {
+      if (generation !== this.epoch()) return null;
+      const current = await storage.get("care-sync") ?? { revision: 0 };
+      if (current.revision !== revision) return null;
+      const next = { revision: revision + 1, records };
+      await storage.put("care-sync", next);
+      return next;
     });
   }
 

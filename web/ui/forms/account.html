@@ -65,8 +65,22 @@
         <button type="button" class="text-button" id="setup-back">بازگشت</button>
       </form>
       <div id="account-session" class="account-session" hidden>
-        <strong id="account-username" dir="auto"></strong>
-        <bdi id="account-address"></bdi>
+        <div class="account-identity">
+          <span class="account-avatar" id="account-avatar" aria-hidden="true"></span>
+          <div><strong id="account-username" dir="auto"></strong><bdi id="account-address"></bdi></div>
+        </div>
+        <section class="account-sync" aria-labelledby="account-sync-title">
+          <div class="account-sync-heading"><h3 id="account-sync-title">همگام‌سازی سوابق</h3><span id="account-sync-badge"></span></div>
+          <p class="quiet">با فعال‌سازی، برنامه‌ها و سوابق این دستگاه به حساب اضافه می‌شوند و روی دستگاه تازه قابل بازیابی‌اند.</p>
+          <button id="account-sync-enable" type="button" class="secondary">فعال‌کردن همگام‌سازی سوابق</button>
+          <button id="account-sync-disable" type="button" class="text-button" hidden>توقف همگام‌سازی این دستگاه</button>
+          <p id="account-sync-last" class="quiet" hidden></p>
+          <p id="account-sync-status" class="quiet" role="status"></p>
+        </section>
+        <div class="account-shortcuts">
+          <button type="button" class="secondary" data-account-shortcut="notification-settings"><svg aria-hidden="true"><use href="#i-bell"/></svg>اعلان‌ها</button>
+          <button type="button" class="secondary" data-account-shortcut="backup-settings"><svg aria-hidden="true"><use href="#i-lock"/></svg>پشتیبان‌گیری</button>
+        </div>
         <button type="button" class="block-action account-primary" id="legacy-setup" hidden>ساخت نام کاربری و رمز</button>
         <div class="buttons">
           <a id="open-admin" href="/admin/" hidden>پنل مدیریت</a>

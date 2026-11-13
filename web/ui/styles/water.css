@@ -27,22 +27,22 @@
   inline-size: 100%;
   block-size: 100%;
 }
-#today-water .water-icon-interior { opacity: .96; }
-#today-water .water-icon-liquid { transform: translateY(var(--water-level, 226px)); transition: transform .3s ease; }
-#today-water .water-glass[data-level="1"] { --water-level: 172px; }
-#today-water .water-glass[data-level="2"] { --water-level: 128px; }
-#today-water .water-glass[data-level="3"] { --water-level: 84px; }
-#today-water .water-glass[data-level="4"] { --water-level: 48px; }
-#today-water .water-icon-matte { display: none; }
-.medora[data-finish="matte"] #today-water :is(.water-icon-glass, .water-icon-interior) { display: none; }
-.medora[data-finish="matte"] #today-water .water-icon-matte { display: inline; }
-#today-water .water-matte-liquid { transform: translateY(var(--matte-water-level, 24px)); transition: transform .3s ease; }
-#today-water .water-glass[data-level="1"] { --matte-water-level: 10px; }
-#today-water .water-glass[data-level="2"] { --matte-water-level: 0px; }
-#today-water .water-glass[data-level="3"] { --matte-water-level: -10px; }
-#today-water .water-glass[data-level="4"] { --matte-water-level: -20px; }
+.water-icon-interior { opacity: .96; }
+.water-icon-liquid { transform: translateY(var(--water-level, 226px)); transition: transform .3s ease; }
+.water-glass[data-level="1"] { --water-level: 172px; }
+.water-glass[data-level="2"] { --water-level: 128px; }
+.water-glass[data-level="3"] { --water-level: 84px; }
+.water-glass[data-level="4"] { --water-level: 48px; }
+.water-icon-matte { display: none; }
+.medora[data-finish="matte"] :is(.water-icon-glass, .water-icon-interior) { display: none; }
+.medora[data-finish="matte"] .water-icon-matte { display: inline; }
+.water-matte-liquid { transform: translateY(var(--matte-water-level, 24px)); transition: transform .3s ease; }
+.water-glass[data-level="1"] { --matte-water-level: 10px; }
+.water-glass[data-level="2"] { --matte-water-level: 0px; }
+.water-glass[data-level="3"] { --matte-water-level: -10px; }
+.water-glass[data-level="4"] { --matte-water-level: -20px; }
 @media (prefers-reduced-motion: reduce) {
-  #today-water :is(.water-icon-liquid, .water-matte-liquid) { transition: none; }
+  :is(.water-icon-liquid, .water-matte-liquid) { transition: none; }
 }
 .today-water-body { min-inline-size: 0; padding: .16rem .13rem .08rem; }
 .medora #today-water .water-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .4rem; align-items: center; }
@@ -140,3 +140,35 @@
 .medora #water-options[open] summary svg { transform: rotate(180deg); }
 .water-log-when { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; padding-block-end: .45rem; }
 .medora .water-log-when .picker-field { background: var(--field); }
+
+
+.medora .water-history-card {
+  padding: .85rem;
+  border: 1px solid var(--accent-glass-rim);
+  border-radius: 1.3rem;
+  background: linear-gradient(135deg, var(--glass-glint), transparent 62%), var(--category-water-fill);
+  color: var(--water-ink);
+  box-shadow: var(--surface-shadow);
+}
+.medora[data-finish="matte"] .water-history-card { background: var(--category-water-fill); }
+.medora #water-summary {
+  display: grid;
+  grid-template-columns: minmax(4rem, 27%) minmax(0, 1fr);
+  align-items: center;
+  gap: .7rem;
+}
+.medora #water-summary .water-glass { inline-size: 100%; block-size: auto; }
+.medora #water-summary .amount-line { margin-block: .15rem; }
+.medora #water-total { font-size: 1.55rem; }
+.medora #water-summary .water-progress { inline-size: 100%; accent-color: var(--category-water-bar); }
+.medora #water-summary .quiet { margin-block: .2rem 0; }
+.medora #water-entry .water-quick { margin-block-start: .65rem; }
+.medora #water-entry button { background: var(--surface-fill); color: var(--water-ink); border: 1px solid var(--accent-glass-rim); }
+.medora .water-history-entries .entry-row {
+  padding: .4rem .55rem;
+  border: 1px solid var(--surface-edge);
+  border-radius: .85rem;
+  background: var(--surface-fill);
+  margin-block-end: .4rem;
+}
+.medora .water-history-entries .entry-row button:last-child { color: var(--error); }

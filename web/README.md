@@ -64,3 +64,16 @@ Durable Objectهای SQLite روی Workers Free اجرا می‌شوند. هر �
 ۴. یادآوری آب را در «تنظیمات» ← «آب» برای چند دقیقهٔ آینده تنظیم کنید. سپس رسیدن به هدف را ثبت کنید و ببینید زمان بعدی به روز بعد منتقل می‌شود. برای قرار، ساعت شروع یادآوری روز قرار را چند دقیقهٔ دیگر بگذارید و یک قرار آزمایشی برای بعد از آن ثبت کنید.
 
 ۵. «بررسی وضعیت» نتیجهٔ آخرین ارسال را نشان می‌دهد و «آزمایش همین گوشی» پیام آزمایشی را به اشتراک همان نصب می‌فرستد. پذیرفته‌شدن پیام در سرویس Push با نمایش آن روی گوشی فرق دارد.
+
+## Account sync and server migration
+
+A signed-in user can enable record sync in their account. Browser storage remains the source for offline use. Sync uses revision-checked snapshots with a three-way merge keyed by record ID. For simultaneous edits to the same record, the change from the device performing the sync takes precedence. An empty device restores the existing account snapshot after sign-in. Each uploaded snapshot is limited to 4 MiB.
+
+The migration routes are disabled until the Worker has a dedicated 64-character hexadecimal `MIGRATION_TOKEN`. Set this only for the migration window. Use the same `EMAIL_AUTH_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, and `REMINDER_SIGNING_KEY` on both environments. Set the migration token and archive password in your shell securely. Keep them out of command-line arguments and version control.
+
+```sh
+node scripts/migrate-care.mjs backup https://source.example medora.medbackup
+node scripts/migrate-care.mjs restore https://target.example medora.medbackup
+```
+
+Restore into an empty target and verify password login, synced records and ad assets before switching traffic. For the live cutover, stop source writes and take a final archive. Stop the source notification sender before restoring with `--resume-reminders` so the same subscription does not receive duplicate notifications. Existing notification devices enter the migration registry when the updated app next refreshes their schedule. Users who have not opened the updated app may need to reopen it to resync notifications. Old account sessions are recreated on sign-in. Health records that have not synced remain in the device's own encrypted backup. Archives use the existing authenticated encryption format and have a 16 MiB limit. A larger production dataset needs a streaming archive before moving. The current restore targets a clean Cloudflare-compatible runtime. A server running PostgreSQL still needs a storage and scheduler adapter.

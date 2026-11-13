@@ -1,3 +1,4 @@
+import { installCareSync } from "../features/sync/controller.js";
 import { language, localizeMarkup, selectLanguage, t } from "../shared/i18n/locale.js";
 import { accessCare } from "../shared/storage.js";
 import { $ } from "../shared/ui/dom.js";
@@ -22,7 +23,7 @@ import { showIntro } from "./onboarding.js";
 import { installSurfaceArt } from "../design/surfaces.js";
 
 // An older cached page can still load this module from the current release.
-if (!document.getElementById("support-dialog")) {
+if (!document.getElementById("account-sync-enable")) {
   const url = new URL(location.href);
   const firstAttempt = !url.searchParams.has("retry");
   url.searchParams.set("retry", Date.now());
@@ -57,6 +58,7 @@ async function mutate(change, success, scheduleChanged = false, day) {
     render();
     $("status").textContent = success;
     if (needsSync) void syncReminders(false, care);
+    accountSync.schedule();
     return true;
   } catch (error) {
     $("status").textContent = error instanceof Error && error.name === "Error" ? error.message : t("ذخیره انجام نشد. دوباره تلاش کنید.");
@@ -151,7 +153,23 @@ const medicines = installMedicineView({
 const openEditor = installMedicineEditor({
   getState, isBusy: () => busy, mutate, removeMedicine: medicines.deleteMedicine, pickers, formatDay: dashboard.formatDay
 });
-const openAccount = installAccount();
+const accountSync = installCareSync({
+  reload: async changed => {
+    await reload();
+    if (changed) {
+      if (care?.intro === "done" && $("app").hidden) showIntro(care, mutate, dashboard.show);
+      void syncReminders(false, care);
+    }
+  },
+  remindersChanged: changeReminderRevision
+});
+const openAccount = installAccount({
+  onSignIn: () => { void accountSync.refresh(); accountSync.signedIn(); },
+  onShortcut: panel => {
+    dashboard.show("settings", panel === "notification-settings");
+    if (panel === "backup-settings") document.querySelector('[data-settings-panel="backup-settings"]').click();
+  }
+});
 const params = new URLSearchParams(location.search);
 const view = params.get("view");
 if (view === "account") void openAccount();
@@ -160,6 +178,7 @@ installBackupRestore(mutate, phases => engine.validMedicationPhases(compilePhase
 
 try {
   care = await accessCare();
+  accountSync.schedule(0);
   const day = params.get("day");
   $("day").value = /^\d{4}-\d{2}-\d{2}$/.test(day ?? "") ? day : isoDay(today());
   if (!$("day").value) $("day").value = isoDay(today());
