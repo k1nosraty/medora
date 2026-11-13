@@ -165,8 +165,7 @@ export function installWater({ getState, selectedDay, today, actionDay, mutate, 
     quickWaterButton.hidden = day !== today();
     renderQuickWaterFeedback(state, day);
     const glass = $("today-water").querySelector(".water-glass");
-    glass.style.setProperty("--water-level", `${(1 - progress) * 92}px`);
-    glass.toggleAttribute("data-empty", progress === 0);
+    glass.dataset.level = String(Math.min(4, Math.floor(progress * 4)));
   }
 
   function renderWater(day, index, total, goal, progress) {

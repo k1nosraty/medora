@@ -32,8 +32,10 @@ export async function loadOperations() {
   $("operations-metrics").replaceChildren();
   $("operations-audit").replaceChildren();
   $("operations-config").textContent = "";
+  $("operations-activity").replaceChildren();
+  $("operations-storage").replaceChildren();
   try {
-    const { notice, flags, configured, counters, audit } = await api("");
+    const { notice, flags, configured, counters, audit, activity = [], storage = {} } = await api("");
     for (const [name, value] of Object.entries({ title: notice?.title, message: notice?.message,
       start: local(notice?.start), end: local(notice?.end), ...flags })) form.elements[name].value = value ?? "";
     form.elements.enabled.checked = notice?.enabled ?? false;
@@ -42,9 +44,16 @@ export async function loadOperations() {
       t(configured.email ? "ارسال ایمیل پیکربندی شده است." : "ارسال ایمیل پیکربندی نشده است."),
       t("حساب‌های پشتیبانی: {0}", configured.supportAccounts)
     ].join(" · ");
-    $("operations-metrics").replaceChildren(...counters.map(row => element("li",
+    $("operations-metrics").replaceChildren(...counters.filter(row => row.metric !== "activity:open").map(row => element("li",
       metricLabel(row.metric) + " · " + new Intl.NumberFormat(locale).format(row.count))));
     if (!counters.length) $("operations-metrics").append(element("li", t("هنوز آماری ثبت نشده است.")));
+    const date = new Intl.DateTimeFormat(locale, { timeZone: "UTC", month: "short", day: "numeric" });
+    const number = new Intl.NumberFormat(locale);
+    $("operations-activity").replaceChildren(...activity.map(row => element("li", date.format(row.day * 86_400_000) + " · " + number.format(row.count))));
+    if (!activity.length) $("operations-activity").append(element("li", t("هنوز آماری ثبت نشده است.")));
+    const labels = { promotions: "تبلیغات و فایل‌ها", accounts: "فهرست حساب‌ها", operations: "پشتیبانی و آمار" };
+    $("operations-storage").replaceChildren(...Object.entries(storage).map(([key, bytes]) =>
+      element("li", t(labels[key]) + " · " + number.format(Math.ceil(bytes / 1024)) + " KB")));
     $("operations-audit").replaceChildren(...audit.map(row => element("li",
       [dateTime.format(row.at), t(actions[row.action] ?? row.action), row.actor].join(" · "))));
     form.hidden = false;

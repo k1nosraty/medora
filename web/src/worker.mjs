@@ -31,8 +31,8 @@ export default {
       return handlePromotions(request, env, ctx, url);
     }
 
-    if (url.pathname === "/api/support" || url.pathname === "/api/operations" ||
-        ["/api/admin/operations", "/api/admin/operations/access", "/api/admin/operations/tickets"].includes(url.pathname)) {
+    if (url.pathname === "/api/support" || ["/api/operations", "/api/operations/activity"].includes(url.pathname) ||
+        ["/api/admin/operations", "/api/admin/operations/access", "/api/admin/operations/export", "/api/admin/operations/tickets"].includes(url.pathname)) {
       return handleOperations(request, env, url, ctx);
     }
 

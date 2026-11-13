@@ -27,17 +27,22 @@
   inline-size: 100%;
   block-size: 100%;
 }
-.medora #today-water .glass-water {
-  fill: #78aee5;
-  stroke: none;
-  transform: translateY(var(--water-level, 92px));
-  opacity: .88;
-  transition: transform .38s ease, opacity .2s ease;
-}
-.medora #today-water .water-glass[data-empty] .glass-water { opacity: 0; }
-.medora[data-finish="matte"] #today-water .glass-water { fill: var(--category-water-bar); }
+#today-water .water-icon-interior { opacity: .96; }
+#today-water .water-icon-liquid { transform: translateY(var(--water-level, 226px)); transition: transform .3s ease; }
+#today-water .water-glass[data-level="1"] { --water-level: 172px; }
+#today-water .water-glass[data-level="2"] { --water-level: 128px; }
+#today-water .water-glass[data-level="3"] { --water-level: 84px; }
+#today-water .water-glass[data-level="4"] { --water-level: 48px; }
+#today-water .water-icon-matte { display: none; }
+.medora[data-finish="matte"] #today-water :is(.water-icon-glass, .water-icon-interior) { display: none; }
+.medora[data-finish="matte"] #today-water .water-icon-matte { display: inline; }
+#today-water .water-matte-liquid { transform: translateY(var(--matte-water-level, 24px)); transition: transform .3s ease; }
+#today-water .water-glass[data-level="1"] { --matte-water-level: 10px; }
+#today-water .water-glass[data-level="2"] { --matte-water-level: 0px; }
+#today-water .water-glass[data-level="3"] { --matte-water-level: -10px; }
+#today-water .water-glass[data-level="4"] { --matte-water-level: -20px; }
 @media (prefers-reduced-motion: reduce) {
-  .medora #today-water .glass-water { transition: none; }
+  #today-water :is(.water-icon-liquid, .water-matte-liquid) { transition: none; }
 }
 .today-water-body { min-inline-size: 0; padding: .16rem .13rem .08rem; }
 .medora #today-water .water-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .4rem; align-items: center; }

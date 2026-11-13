@@ -42,6 +42,8 @@
         <div class="admin-campaigns">
           <label>کمپین<select id="promotion-campaign"></select></label>
           <p id="promotion-stats" class="quiet"></p>
+          <button type="button" class="secondary" id="promotion-toggle" hidden></button>
+          <details id="promotion-library"><summary>فایل‌های آپلودشده</summary><p id="library-status" role="status"></p><ul id="library-assets"></ul></details>
         </div>
         <form id="promotion-form">
           <fieldset id="promotion-fields">
@@ -90,6 +92,13 @@
         <div class="buttons"><button id="operations-refresh" type="button" class="secondary">به‌روزرسانی</button><a href="/medication/?view=notification-settings">آزمایش اعلان همین دستگاه</a></div>
         <p id="operations-status" role="status"></p>
         <p id="operations-config"></p>
+        <h2>استفادهٔ روزانه</h2>
+        <p class="quiet">هر مرورگر یا نصب مدورا حداکثر یک بار در روز شمرده می‌شود.</p>
+        <ul id="operations-activity"></ul>
+        <h2>فضای داده‌های مدیریت</h2>
+        <ul id="operations-storage"></ul>
+        <a class="secondary" href="/api/admin/operations/export" download>دانلود خروجی داده‌های سرور</a>
+        <p class="quiet">خروجی شامل حساب‌ها، کمپین‌ها، فایل‌ها، پشتیبانی و آمار است. انتقال نشست‌ها و اعلان‌ها جداگانه انجام می‌شود.</p>
         <h2>آمار سرویس در هفت روز اخیر</h2>
         <p class="quiet">پذیرش توسط سرویس Push به معنی تأیید تحویل روی گوشی نیست. آمار از زمان فعال شدن این بخش جمع می‌شود.</p>
         <ul id="operations-metrics"></ul>

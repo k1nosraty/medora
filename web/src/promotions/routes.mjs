@@ -88,15 +88,26 @@ export async function handlePromotions(request, env, ctx, url) {
   if (path === adminPath + "/media" && method === "POST") {
     const media = await readMedia(request).catch(() => null);
     if (!media) return reply({ error: "invalid_media" }, 400);
-    const result = await promotions.storeMedia(media.bytes, media.type);
+    const result = await promotions.storeMedia(media.bytes, media.type, request.headers.get("X-Medora-Filename"));
     return result ? reply(result, 201) : reply({ error: "media_limit" }, 409);
+  }
+  if (path === adminPath + "/media") {
+    if (method === "GET") return reply({ assets: await promotions.library() });
+    if (method === "DELETE") {
+      const { id } = await smallJson(request, 256) ?? {};
+      if (typeof id !== "string" || !mediaIdPattern.test(id)) return reply({ error: "bad_request" }, 400);
+      const deleted = await promotions.removeMedia(id);
+      if (!deleted) return reply({ error: "media_in_use_or_missing" }, 409);
+      const audit = logOperation(env, email, "media_removed");
+      if (audit) ctx.waitUntil(audit);
+      return reply({ assets: await promotions.library() });
+    }
   }
   if (path === adminPath + "/preview") {
     if (method === "GET") return reply({ promotion: creative(await promotions.preview(), adminPath) });
     if (method === "PUT") {
       const row = validatedPromotion(await smallJson(request, 4096));
-      if (!row || !await promotions.validMedia(row)) return reply({ error: "invalid_promotion" }, 400);
-      await promotions.savePreview(row);
+      if (!row || !await promotions.savePreview(row)) return reply({ error: "invalid_promotion" }, 400);
       return reply({});
     }
   }
@@ -152,13 +163,13 @@ export class Promotions extends DurableObject {
     return this.ctx.storage.transaction(async storage => {
       const rows = await this.campaigns(storage);
       const previous = create ? null : id ? rows.find(entry => entry.id === id) : rows[0];
-      if ((id && !previous) || (!previous && rows.length >= 40)) return null;
+      if ((id && !previous) || (!previous && rows.length >= 40) || !await this.validMedia(row, storage)) return null;
       const same = previous && ["title", "description", "url", "mediaType", "mediaUrl", "mediaId", "linkLabel"]
         .every(key => (previous[key] ?? "") === row[key]);
-      const current = { ...row, enabled: row.enabled && !archived, archived, id: same ? previous.id : crypto.randomUUID() };
+      const current = { ...row, enabled: row.enabled && !archived, archived, id: previous?.id ?? crypto.randomUUID(),
+        creativeId: same ? previous.creativeId ?? previous.id : crypto.randomUUID() };
       const next = [current, ...rows.filter(entry => entry.id !== previous?.id)];
       await storage.put("campaigns", next);
-      if (previous && !same) await storage.delete("count:" + previous.id);
       return current;
     });
   }
@@ -184,35 +195,61 @@ export class Promotions extends DurableObject {
   }
 
   preview() { return this.ctx.storage.get("preview"); }
-  savePreview(row) { return this.ctx.storage.put("preview", { ...row, enabled: false }); }
+  savePreview(row) {
+    return this.ctx.storage.transaction(async storage => {
+      if (!await this.validMedia(row, storage)) return false;
+      await storage.put("preview", { ...row, enabled: false });
+      return true;
+    });
+  }
+
+  async library() {
+    const storage = this.ctx.storage;
+    const [assets, rows, preview] = await Promise.all([storage.get("assets"), this.campaigns(), storage.get("preview")]);
+    const all = assets ?? [];
+    const metadata = all.length ? await storage.get(all.map(asset => "meta:" + asset.id)) : new Map();
+    return all.map(asset => ({
+      ...asset, type: metadata.get("meta:" + asset.id)?.type,
+      campaigns: rows.filter(row => row.mediaId === asset.id).map(row => row.title),
+      inPreview: preview?.mediaId === asset.id
+    }));
+  }
+
+  removeMedia(id) {
+    return this.ctx.storage.transaction(async storage => {
+      const [assets, rows, preview] = await Promise.all([storage.get("assets"), this.campaigns(storage), storage.get("preview")]);
+      const asset = assets?.find(entry => entry.id === id);
+      if (!asset || rows.some(row => row.mediaId === id)) return false;
+      if (preview?.mediaId === id) await storage.delete("preview");
+      await storage.delete(["meta:" + id, ...Array.from({ length: Math.ceil(asset.size / chunkSize) }, (_, index) => `media:${id}:${index}`)]);
+      await storage.put("assets", assets.filter(entry => entry !== asset));
+      return true;
+    });
+  }
+
+  getStorageSize() { return this.ctx.storage.sql.databaseSize; }
+
+  async exportData() {
+    return { ...await this.dashboard(), preview: await this.preview(), assets: await this.library() };
+  }
   mediaMeta(id) { return this.ctx.storage.get("meta:" + id); }
 
-  async validMedia(row) {
+  async validMedia(row, storage = this.ctx.storage) {
     if (!row.mediaId) return true;
-    const meta = await this.mediaMeta(row.mediaId);
+    const meta = await storage.get("meta:" + row.mediaId);
     return meta?.type.startsWith(row.mediaType + "/") ?? false;
   }
 
-  async storeMedia(bytes, type) {
+  async storeMedia(bytes, type, filename) {
     const id = crypto.randomUUID();
     const size = bytes.byteLength;
+    let name = "";
+    try { name = decodeURIComponent(filename ?? "").replace(/[\x00-\x1f\x7f/\\]/g, "").trim().slice(0, 100); } catch {}
     return this.ctx.storage.transaction(async storage => {
-      let assets = await storage.get("assets") ?? [];
+      const assets = await storage.get("assets") ?? [];
       const now = Date.now();
-      const [rows, preview] = await Promise.all([this.campaigns(storage), storage.get("preview")]);
-      const used = new Set([...rows.map(row => row.mediaId), preview?.mediaId]);
-      const expired = assets.filter(asset => !used.has(asset.id) && asset.createdAt < now - 24 * 60 * 60_000);
-      if (expired.length) {
-        const expiredIds = new Set(expired.map(asset => asset.id));
-        assets = assets.filter(asset => !expiredIds.has(asset.id));
-        for (const asset of expired) {
-          const keys = Array.from({ length: Math.ceil(asset.size / chunkSize) }, (_, index) => `media:${asset.id}:${index}`);
-          await storage.delete(["meta:" + asset.id, ...keys]);
-        }
-        await storage.put("assets", assets);
-      }
       if (assets.length >= 50 || assets.reduce((total, asset) => total + asset.size, size) > 96 * 1024 * 1024) return null;
-      const entries = { ["meta:" + id]: { type, size }, assets: [...assets, { id, size, createdAt: now }] };
+      const entries = { ["meta:" + id]: { type, size }, assets: [...assets, { id, name, size, createdAt: now }] };
       for (let offset = 0; offset < size; offset += chunkSize) {
         entries[`media:${id}:${offset / chunkSize}`] = bytes.slice(offset, offset + chunkSize);
       }

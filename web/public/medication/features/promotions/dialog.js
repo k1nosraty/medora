@@ -20,7 +20,8 @@ export async function showPromotion() {
     if (!promotion || document.hidden || controller.signal.aborted ||
         document.querySelector("dialog[open]") || document.querySelector('[data-screen="today"]').hidden) return;
     const seen = localStorage.getItem(key);
-    if (seen?.endsWith(" " + promotion.id) || seen?.startsWith(day + " ")) return;
+    const creativeId = promotion.creativeId ?? promotion.id;
+    if (seen?.endsWith(" " + creativeId) || seen?.startsWith(day + " ")) return;
 
     const count = event => void fetch("/api/promotion/events", {
       method: "POST", credentials: "omit", keepalive: true,
@@ -31,7 +32,7 @@ export async function showPromotion() {
       if (!clicked) count("click");
       clicked = true;
     });
-    localStorage.setItem(key, `${day} ${promotion.id}`);
+    localStorage.setItem(key, `${day} ${creativeId}`);
     count("impression");
   } catch {
     // A fetch or storage error must leave Today usable.

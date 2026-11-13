@@ -1,8 +1,10 @@
+import { exportResponse } from "./export.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { isAdminEmail, signedInEmail } from "../accounts/email-auth.mjs";
 import { pilotConfig, smallJson } from "../http/validation.mjs";
 
 const day = 86_400_000;
+const tehranDay = () => Math.floor((Date.now() + 12_600_000) / day);
 const result = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 const clean = (value, max) => typeof value === "string" && value.trim().length <= max ? value.trim() : "";
 const flagNames = ["promotions", "support"];
@@ -31,6 +33,14 @@ export async function handleOperations(request, env, url, ctx) {
     { headers: { "Cache-Control": `public, max-age=${ttl}` } });
     if (ttl > 0) ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
     return response;
+  }
+  if (path === "/api/operations/activity" && method === "POST") {
+    if (request.headers.get("Origin") !== url.origin) return result({ error: "forbidden" }, 403);
+    if (env.PROMOTION_EVENT_LIMIT && !(await env.PROMOTION_EVENT_LIMIT.limit({ key: "activity:" + (request.headers.get("CF-Connecting-IP") ?? "unknown") })).success) {
+      return result({ error: "rate_limit" }, 429);
+    }
+    await store.count(["activity:open"]);
+    return new Response(null, { status: 204 });
   }
   if (!["GET", "POST", "PUT"].includes(method)) return result({ error: "method" }, 405);
   if (method !== "GET" && request.headers.get("Origin") !== url.origin) return result({ error: "forbidden" }, 403);
@@ -66,10 +76,17 @@ export async function handleOperations(request, env, url, ctx) {
     return await store.replyTicket(body.id, reply, body.status, email) ? result({}) : result({ error: "ticket_missing" }, 409);
   }
   if (!admin) return result({ error: "forbidden" }, 403);
-  if (method === "GET") return result({ ...await store.dashboard(), configured: {
-    push: Boolean(pilotConfig(env)), email: Boolean(env.EMAIL_FROM && env.RESEND_API_KEY),
-    analytics: Boolean(env.OPERATIONS), supportAccounts: (env.SUPPORT_EMAILS ?? "").split(",").filter(entry => entry.trim()).length
-  } });
+  const promotion = env.PROMOTIONS.getByName("home");
+  const credentials = env.CREDENTIALS.getByName("medora-credentials-v1");
+  if (path === "/api/admin/operations/export" && method === "GET") return exportResponse({ promotion, credentials, store });
+  if (path !== "/api/admin/operations") return result({ error: "not_found" }, 404);
+  if (method === "GET") {
+    const [dashboard, promotions, accounts] = await Promise.all([store.dashboard(), promotion.getStorageSize(), credentials.getStorageSize()]);
+    return result({ ...dashboard, storage: { promotions, accounts, operations: dashboard.storage }, configured: {
+      push: Boolean(pilotConfig(env)), email: Boolean(env.EMAIL_FROM && env.RESEND_API_KEY),
+      analytics: Boolean(env.OPERATIONS), supportAccounts: (env.SUPPORT_EMAILS ?? "").split(",").filter(entry => entry.trim()).length
+    } });
+  }
   if (method !== "PUT") return result({ error: "method" }, 405);
   const body = await smallJson(request, 4096);
   const source = body?.notice;
@@ -107,7 +124,7 @@ export class Operations extends DurableObject {
   }
 
   count(metrics) {
-    const date = Math.floor(Date.now() / day);
+    const date = tehranDay();
     for (const metric of metrics) this.sql.exec(`INSERT INTO counters VALUES (?, ?, 1)
       ON CONFLICT(day, metric) DO UPDATE SET count = count + 1`, date, metric);
     this.sql.exec("DELETE FROM counters WHERE day < ?", date - 30);
@@ -121,10 +138,18 @@ export class Operations extends DurableObject {
   async dashboard() {
     return {
       ...await this.config(),
+      storage: this.sql.databaseSize,
+      activity: this.sql.exec("SELECT day, count FROM counters WHERE metric = 'activity:open' AND day >= ? ORDER BY day",
+        tehranDay() - 13).toArray(),
       counters: this.sql.exec("SELECT metric, SUM(count) AS count FROM counters WHERE day >= ? GROUP BY metric",
-        Math.floor(Date.now() / day) - 6).toArray(),
+        tehranDay() - 6).toArray(),
       audit: this.sql.exec("SELECT at, actor, action FROM audit ORDER BY id DESC LIMIT 30").toArray()
     };
+  }
+
+  async exportData() {
+    return { config: await this.config(), counters: this.sql.exec("SELECT * FROM counters").toArray(),
+      audit: this.sql.exec("SELECT * FROM audit").toArray(), tickets: this.sql.exec("SELECT * FROM tickets").toArray() };
   }
 
   tickets(email) {

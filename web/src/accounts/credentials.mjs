@@ -27,6 +27,12 @@ export class Credentials extends DurableObject {
       ORDER BY username LIMIT 26`, after, query, query).toArray();
   }
 
+  getStorageSize() { return this.sql.databaseSize; }
+
+  exportAccounts(after) {
+    return this.sql.exec("SELECT username, email, created_at FROM credentials_v1 WHERE username > ? ORDER BY username LIMIT 100", after).toArray();
+  }
+
   remove(username, emailId, salt) {
     return this.sql.exec("DELETE FROM credentials_v1 WHERE username = ? AND email_id = ? AND salt = ? RETURNING username",
       username, emailId, salt).toArray().length > 0;

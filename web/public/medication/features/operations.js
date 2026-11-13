@@ -87,3 +87,22 @@ export function installSupport() {
     }
   });
 }
+
+
+export async function reportDailyOpen() {
+  const key = "medora-last-open-report";
+  let day;
+  try {
+    day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran", dateStyle: "short" }).format(new Date());
+    if (localStorage.getItem(key) === day) return;
+    localStorage.setItem(key, day);
+    const response = await fetch("/api/operations/activity", { method: "POST", credentials: "omit", keepalive: true });
+    if (!response.ok) throw new Error();
+  } catch {
+    try {
+      if (day && localStorage.getItem(key) === day) localStorage.removeItem(key);
+    } catch {
+      // Metrics must never interrupt the app.
+    }
+  }
+}

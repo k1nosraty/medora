@@ -129,14 +129,16 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal((await admin(cookie, { ...image, mediaUrl: "http://example.com/poster.gif" })).status, 400);
     assert.equal((await admin(cookie, { ...image, startsAt: 10, endsAt: 5 })).status, 400);
     const scheduled = (await (await admin(cookie, { ...image, startsAt: Date.now() + 60_000 })).json()).promotion;
-    assert.notEqual(scheduled.id, published.id);
+    assert.equal(scheduled.id, published.id);
+    assert.notEqual(scheduled.creativeId, published.creativeId);
     assert.equal(await publicPromotion(), null);
     const live = (await (await admin(cookie, image)).json()).promotion;
     assert.equal(live.id, scheduled.id);
     assert.equal((await publicPromotion()).id, live.id);
     const expiredPromotion = (await (await admin(cookie, { ...image, mediaType: "video",
       mediaUrl: "https://media.example.com/spot.mp4", endsAt: Date.now() - 1000 })).json()).promotion;
-    assert.notEqual(expiredPromotion.id, live.id);
+    assert.equal(expiredPromotion.id, live.id);
+    assert.notEqual(expiredPromotion.creativeId, live.creativeId);
     assert.equal(await publicPromotion(), null);
     assert.equal((await auth("logout", {}, cookie, "192.0.2.2", "https://other.test")).status, 403);
     assert.match((await auth("logout", {}, cookie)).headers.get("Set-Cookie"), /Max-Age=0/);
@@ -187,9 +189,12 @@ test("registration, password recovery and account deletion preserve authorizatio
       assert.deepEqual(new Uint8Array(await asset.arrayBuffer()), gif);
     }
     assert.equal((await api(adminAds + "/media/" + mediaId)).status, 401);
+    const library = await (await api(adminAds + "/media", "GET", previewAdmin)).json();
+    assert.equal(library.assets.find(asset => asset.id === mediaId).inPreview, true);
     assert.equal((await api("/api/promotion/media/" + mediaId)).status, 404);
     const campaign = (await (await api(adminAds, "PUT", previewAdmin, { ...privateImage, create: true })).json()).promotion;
     assert.equal((await publicPromotion()).mediaUrl, "/api/promotion/media/" + mediaId);
+    assert.equal((await api(adminAds + "/media", "DELETE", previewAdmin, { id: mediaId })).status, 409);
     const partial = await mf.dispatchFetch(origin + "/api/promotion/media/" + mediaId, { headers: { Range: "bytes=0-5" } });
     assert.equal(partial.status, 206);
     assert.equal(await partial.text(), "GIF89a");
@@ -200,6 +205,18 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal((await api(adminAds, "DELETE", previewAdmin, { id: campaign.id })).status, 200);
 
     const ops = "/api/admin/operations";
+    assert.equal((await api("/api/operations/activity", "POST")).status, 204);
+    assert.equal((await api(ops + "/export")).status, 401);
+    assert.equal((await api(ops + "/export", "GET", cookieOf(nonAdmin))).status, 403);
+    const exported = await api(ops + "/export", "GET", previewAdmin);
+    assert.match(exported.headers.get("Content-Disposition"), /medora-server-data/);
+    const lines = (await exported.text()).trim().split("\n").map(line => JSON.parse(line));
+    assert.equal(lines.at(-1).type, "end");
+    assert.equal(lines.find(line => line.type === "media_chunk").data, Buffer.from(gif).toString("base64"));
+    assert.ok(lines.filter(line => line.type === "accounts").flatMap(line => line.rows)
+      .every(row => Object.keys(row).sort().join() === "created_at,email,username"));
+    assert.equal((await api(adminAds + "/media", "DELETE", previewAdmin, { id: mediaId })).status, 200);
+    assert.equal((await api(adminAds + "/media/" + mediaId, "GET", previewAdmin)).status, 404);
     assert.equal((await api(ops, "GET", cookieOf(nonAdmin))).status, 403);
     assert.equal((await api(ops + "/tickets", "GET", cookieOf(nonAdmin))).status, 200);
     const setup = { notice: { title: "Notice", message: "Service info", start: null, end: null, enabled: true },
@@ -207,6 +224,8 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal((await api(ops, "PUT", previewAdmin, setup)).status, 200);
     const dashboard = await (await api(ops, "GET", previewAdmin)).json();
     assert.ok(dashboard.audit.some(row => row.action === "operations_updated"));
+    assert.equal(dashboard.activity[0].count, 1);
+    assert.ok(dashboard.storage.promotions > 0);
     assert.equal(dashboard.flags.promotions, 25);
     assert.equal((await (await api("/api/operations")).json()).notice.title, "Notice");
     const submitted = await api("/api/support", "POST", cookieOf(nonAdmin), { message: "A sample issue", diagnostics: { platform: "iOS", permission: "default" } });

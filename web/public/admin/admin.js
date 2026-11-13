@@ -46,7 +46,7 @@ function httpsUrl(value) {
 }
 function preview() {
   $("preview-title").textContent = fields.title.value.trim() || t("عنوان پیام");
-  $("preview-description").textContent = fields.description.value.trim();
+  $("preview-description").textContent = fields.description.value;
   const mediaType = fields.mediaType.value;
   const mediaField = $("promotion-media-field");
   mediaField.hidden = !mediaType;
@@ -97,6 +97,9 @@ function showPromotion(promotion) {
   $("promotion-delete").hidden = !promotion?.archived;
   $("promotion-archive").textContent = t(promotion?.archived ? "بازگرداندن به پیش‌نویس" : "آرشیو کمپین");
   fields.enabled.disabled = Boolean(promotion?.archived);
+  const toggle = $("promotion-toggle");
+  toggle.hidden = !promotion || Boolean(promotion.archived);
+  toggle.textContent = t(promotion?.enabled ? "توقف نمایش" : "فعال‌کردن نمایش");
   const stats = promotion?.stats;
   $("promotion-stats").textContent = stats ? t("{0} نمایش · {1} کلیک · نرخ کلیک {2}", stats.impression, stats.click,
     new Intl.NumberFormat(document.documentElement.lang, { style: "percent", maximumFractionDigits: 1 }).format(stats.impression ? stats.click / stats.impression : 0)) : "";
@@ -124,7 +127,7 @@ $("promotion-campaign").addEventListener("change", event => {
 async function request(path, method = "GET", body) {
   const response = await fetch(path, {
     method,
-    ...(body instanceof File ? { body } : body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
+    ...(body instanceof File ? { headers: { "X-Medora-Filename": encodeURIComponent(body.name.slice(0, 100)) }, body } : body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
   });
   if (response.status === 401 || response.status === 403) {
     panel.hidden = true;
@@ -283,7 +286,7 @@ $("promotion-upload").addEventListener("change", async event => {
     status("promotion-upload-status", "فرمت فایل یا حجم آن معتبر نیست.", true);
     return;
   }
-  $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
+  $("promotion-toggle").disabled = $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
   status("promotion-upload-status", "در حال آپلود…");
   try {
     const result = await request(promotionPath + "/media", "POST", file);
@@ -295,11 +298,12 @@ $("promotion-upload").addEventListener("change", async event => {
     fields.mediaType.value = result.mediaType;
     fields.mediaUrl.value = "";
     status("promotion-upload-status", "فایل آپلودشده انتخاب شده است.");
+    if ($("promotion-library").open) void loadLibrary();
   } catch {
     status("promotion-upload-status", "آپلود انجام نشد. دوباره تلاش کنید.", true);
   } finally {
     $("promotion-upload").value = "";
-    $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
+    $("promotion-toggle").disabled = $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
     preview();
   }
 });
@@ -319,16 +323,17 @@ function payload() {
   };
 }
 async function savePromotion(mode) {
-  if (mode !== "archive" && !form.reportValidity()) return;
-  const body = mode === "archive" ? { ...currentCampaign } : payload();
+  if (["save", "preview"].includes(mode) && !form.reportValidity()) return;
+  const body = ["archive", "toggle"].includes(mode) ? { ...currentCampaign } : payload();
   const isPreview = mode === "preview";
   if (isPreview) body.enabled = false;
   else if (currentCampaign) {
     body.id = currentCampaign.id;
     body.archived = mode === "archive" ? !currentCampaign.archived : Boolean(currentCampaign.archived);
     if (mode === "archive") body.enabled = false;
+    if (mode === "toggle") body.enabled = !currentCampaign.enabled;
   } else body.create = true;
-  $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
+  $("promotion-toggle").disabled = $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
   try {
     const result = await request(promotionPath + (isPreview ? "/preview" : ""), "PUT", body);
     if (!result) return;
@@ -339,18 +344,20 @@ async function savePromotion(mode) {
       $("promotion-private-link").hidden = false;
       status("promotion-status", "پیش‌نمایش خصوصی آماده است.");
     } else showCampaigns(result);
+    if ($("promotion-library").open) void loadLibrary();
   } catch {
     status("promotion-status", "پیام ذخیره نشد. دوباره تلاش کنید.", true);
   } finally {
-    $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
+    $("promotion-toggle").disabled = $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
   }
 }
 form.addEventListener("submit", event => { event.preventDefault(); void savePromotion("save"); });
 $("promotion-private").addEventListener("click", () => void savePromotion("preview"));
+$("promotion-toggle").addEventListener("click", () => void savePromotion("toggle"));
 $("promotion-archive").addEventListener("click", () => void savePromotion("archive"));
 $("promotion-delete").addEventListener("click", async () => {
   if (!currentCampaign?.archived || !window.confirm(t("کمپین و آمار آن حذف شوند؟"))) return;
-  $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
+  $("promotion-toggle").disabled = $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
   try {
     const result = await request(promotionPath, "DELETE", { id: currentCampaign.id });
     if (result && !result.error) showCampaigns(result);
@@ -358,7 +365,7 @@ $("promotion-delete").addEventListener("click", async () => {
   } catch {
     status("promotion-status", "کمپین حذف نشد.", true);
   } finally {
-    $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
+    $("promotion-toggle").disabled = $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
   }
 });
 $("promotion-copy").addEventListener("click", async () => {
@@ -369,6 +376,62 @@ $("promotion-copy").addEventListener("click", async () => {
     status("promotion-status", "لینک پیش‌نمایش را از نشانی صفحه کپی کنید.");
   }
 });
+
+function showLibrary(assets) {
+  const rows = assets.map(asset => {
+    const row = element("li", "", "admin-asset");
+    const url = promotionPath + "/media/" + asset.id;
+    const link = element("a", asset.name || asset.type || t("فایل تبلیغ"));
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    const description = element("small", new Intl.NumberFormat(document.documentElement.lang).format(Math.ceil(asset.size / 1024)) + " KB", "quiet");
+    const choose = button(t("استفاده در این کمپین"), () => {
+      if ($("promotion-fields").disabled) return;
+      mediaId = asset.id;
+      fields.mediaType.value = asset.type.startsWith("video/") ? "video" : "image";
+      fields.mediaUrl.value = "";
+      status("promotion-upload-status", "فایل آپلودشده انتخاب شده است.");
+      preview();
+    });
+    const remove = button(t("حذف فایل"), async () => {
+      if (!window.confirm(t(asset.inPreview ? "فایل و پیش‌نمایش خصوصی حذف شوند؟" : "فایل حذف شود؟"))) return;
+      remove.disabled = true;
+      try {
+        const response = await request(promotionPath + "/media", "DELETE", { id: asset.id });
+        if (!response || response.error) throw new Error();
+        if (mediaId === asset.id) $("promotion-remove-media").click();
+        showLibrary(response.assets);
+      } catch {
+        status("library-status", "حذف فایل انجام نشد. ممکن است به یک کمپین متصل باشد.", true);
+        remove.disabled = false;
+      }
+    });
+    remove.disabled = asset.campaigns.length > 0;
+    const actions = element("div", "", "buttons");
+    actions.append(choose, remove);
+    row.append(link, description);
+    if (asset.campaigns.length) row.append(element("p", t("در کمپین: {0}", asset.campaigns.join("، ")), "quiet"));
+    if (asset.inPreview) row.append(element("p", t("در پیش‌نمایش خصوصی"), "quiet"));
+    row.append(actions);
+    return row;
+  });
+  $("library-assets").replaceChildren(...rows);
+  status("library-status", rows.length ? "" : "فایلی آپلود نشده است.");
+}
+
+async function loadLibrary() {
+  try {
+    const response = await request(promotionPath + "/media");
+    if (response?.assets && $("promotion-library").open) showLibrary(response.assets);
+  } catch {
+    status("library-status", "فهرست فایل‌ها بارگذاری نشد.", true);
+  }
+}
+$("promotion-library").addEventListener("toggle", event => {
+  if (event.currentTarget.open) void loadLibrary();
+});
+
 
 {
   const access = await fetch("/api/admin/operations/access").then(response => response.ok ? response.json() : null).catch(() => null);

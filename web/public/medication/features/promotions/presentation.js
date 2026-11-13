@@ -16,6 +16,8 @@ export function presentPromotion(dialog, promotion, onClick) {
     link.addEventListener("click", onClick, { once: true });
     creative.querySelector("a")?.addEventListener("click", onClick, { once: true });
   }
-  dialog.addEventListener("close", () => creative.replaceChildren(), { once: true });
+  dialog.addEventListener("close", () => {
+    if (!dialog.open) creative.replaceChildren();
+  }, { once: true });
   dialog.showModal();
 }

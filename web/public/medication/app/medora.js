@@ -12,7 +12,7 @@ import { changeReminderRevision, initializeReminders, syncReminders } from "../f
 import { installMedicineEditor } from "../features/medicines/editor.js";
 import { installMedicineView } from "../features/medicines/view.js";
 import { installAccount } from "../features/account/dialog.js";
-import { installSupport, loadOperations } from "../features/operations.js";
+import { installSupport, loadOperations, reportDailyOpen } from "../features/operations.js";
 import { showPromotion } from "../features/promotions/dialog.js";
 import { installRoutines } from "../features/routines/view.js";
 import { renderToday } from "../features/today/view.js";
@@ -176,6 +176,7 @@ try {
     params.delete("routine");
     history.replaceState(history.state, "", `?${params}`);
   }
+  if (!location.search) void reportDailyOpen();
   void loadOperations().then(showAds => {
     if (showAds && !location.search && !$("app").hidden) void showPromotion();
   });
