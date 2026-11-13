@@ -126,7 +126,11 @@ export async function handleBackupParts(request, env, url) {
       const { id, index, cursor, key } = await smallJson(request, 1024) ?? {};
       assertBackup(mediaIdPattern.test(id) && isIndex(index) && isHash(key) && ((index === 0) === !cursor));
       const record = await nextRecord(cursor, env, store, credentials, promotion);
-      await validatePart(record, env);
+      try { await validatePart(record, env); }
+      catch (error) {
+        if (error.message === "invalid_backup") return reply({ error: "invalid_source_" + record.type }, 409);
+        throw error;
+      }
       const bytes = await sealPart(record, key, id, index);
       return new Response(bytes, { headers: { ...headers, "Content-Type": "application/octet-stream" } });
     }
