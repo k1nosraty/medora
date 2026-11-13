@@ -27,8 +27,23 @@ export function dayCardOptions(label, ...content) {
     details.open = false;
     trigger.focus();
   });
+  menu.addEventListener("click", event => {
+    if (event.target.closest("button, a[href]")) {
+      if (menu.contains(document.activeElement)) trigger.focus({ preventScroll: true });
+      details.open = false;
+    }
+  });
   return details;
 }
+
+function closeOutsideCardOptions(event) {
+  for (const menu of document.querySelectorAll(".day-card-more[open]")) {
+    if (!menu.contains(event.target)) menu.open = false;
+  }
+}
+
+document.addEventListener("click", closeOutsideCardOptions, true);
+document.addEventListener("focusin", closeOutsideCardOptions);
 
 export function fitDialogToViewport(dialog) {
   const viewport = window.visualViewport;
