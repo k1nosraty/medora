@@ -209,7 +209,9 @@ export class Promotions extends DurableObject {
     const all = assets ?? [];
     const metadata = all.length ? await storage.get(all.map(asset => "meta:" + asset.id)) : new Map();
     return all.map(asset => ({
-      ...asset, type: metadata.get("meta:" + asset.id)?.type,
+      ...asset, name: typeof asset.name === "string" ? asset.name : "",
+      createdAt: Number.isSafeInteger(asset.createdAt) && asset.createdAt >= 0 ? asset.createdAt : 0,
+      type: metadata.get("meta:" + asset.id)?.type,
       campaigns: rows.filter(row => row.mediaId === asset.id).map(row => row.title),
       inPreview: preview?.mediaId === asset.id
     }));

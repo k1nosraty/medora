@@ -85,8 +85,9 @@ export async function validateReminders(reminders) {
 
 export function validateMedia(asset, bytes) {
   assertBackup(asset && mediaIdPattern.test(asset.id) && count(asset.size) &&
-    asset.size <= 8 * 1024 * 1024 && text(asset.name) && count(asset.createdAt) &&
-    bytes.length === asset.size && identify(bytes) === asset.type);
+    asset.size <= 8 * 1024 * 1024 && text(asset.name) && count(asset.createdAt) && bytes.length === asset.size);
+  const actualType = identify(bytes);
+  assertBackup(actualType && actualType === asset.type);
 }
 
 export function validateCampaigns(ads, assets) {
