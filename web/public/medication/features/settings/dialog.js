@@ -3,12 +3,14 @@ import { $, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { integer } from "../../shared/ui/input-values.js";
 import { appointmentDefaults, waterDefaults } from "../../domain/care-plan.js";
 import { accentOf, accentLabel } from "../../styles/theme.js";
+import { canEnableCycle, cycleIsEnabled, finishOf, genders } from "../../domain/profile.js";
 
 const numbers = new Intl.NumberFormat(locale);
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 
 export function installSettings({ getState, mutate, refreshFields }) {
   const settingsPanels = {
+    "profile-settings": [t("پروفایل"), t("جنسیت و نمایش چرخه")],
     "display-settings": [t("ظاهر و زبان"), t("تم، تقویم و زبان برنامه")],
     "notification-settings": [t("اعلان‌های این دستگاه"), t("یادآوری دارو، آب، قرار و روتین")],
     "water-settings": [t("آب"), t("هدف روزانه و زمان یادآوری")],
@@ -23,6 +25,15 @@ export function installSettings({ getState, mutate, refreshFields }) {
   let settingsHomeScroll = 0;
   const fitSettings = fitDialogToViewport(settings);
   const snoozePresets = [...document.querySelectorAll('[name="snooze-preset"]')];
+  const gender = $("profile-gender");
+  const cycle = $("profile-cycle-enabled");
+  function updateCycleControl() {
+    cycle.disabled = !canEnableCycle({ gender: gender.value });
+    if (cycle.disabled) cycle.checked = false;
+    $("profile-cycle-hint").textContent = t(cycle.disabled
+      ? "با انتخاب «آقا»، چرخه غیرفعال است."
+      : "چرخه اختیاری است. خاموش‌کردن آن سوابق را پاک نمی‌کند.");
+  }
   function setOption(id, value) {
     const select = $(id);
     for (const option of select.querySelectorAll("[data-restored]")) option.remove();
@@ -48,7 +59,8 @@ export function installSettings({ getState, mutate, refreshFields }) {
       appointment.interval === 60 ? t("هر ساعت") : t("هر دو ساعت"));
     const theme = { system: t("مطابق گوشی"), light: t("روشن"), dark: t("تیره") }[data.theme] ?? t("مطابق گوشی");
     const calendar = (data.calendar ?? defaultCalendar) === "persian" ? t("شمسی") : t("میلادی");
-    $("settings-display-summary").textContent = [theme, t(accentLabel(accentOf(data.accent))), calendar, language === "fa" ? "فارسی" : "English"].join(" · ");
+    const finish = t(finishOf(data.finish) === "glass" ? "شیشه‌ای" : "سه‌بعدی مات");
+    $("settings-display-summary").textContent = [theme, t(accentLabel(accentOf(data.accent, cycleIsEnabled(data)))), calendar, language === "fa" ? "فارسی" : "English", finish].join(" · ");
   }
   function loadWaterSettings(data) {
     const water = data.waterReminders ?? waterDefaults;
@@ -65,8 +77,17 @@ export function installSettings({ getState, mutate, refreshFields }) {
     if (panel === "display-settings") {
       $("calendar-setting").value = data.calendar ?? defaultCalendar;
       $("display-form").elements.theme.value = data.theme ?? "system";
-      $("display-form").elements.accent.value = accentOf(data.accent);
+      const enabled = cycleIsEnabled(data);
+      $("settings-berry-choice").hidden = !enabled;
+      $("settings-berry-choice").querySelector("input").disabled = !enabled;
+      $("display-form").elements.accent.value = accentOf(data.accent, enabled);
+      $("settings-finish").value = finishOf(data.finish);
       $("app-language").value = language;
+    }
+    if (panel === "profile-settings") {
+      gender.value = genders.includes(data.gender) ? data.gender : "";
+      cycle.checked = cycleIsEnabled(data);
+      updateCycleControl();
     }
     if (panel === "water-settings") loadWaterSettings(data);
     if (panel === "snooze-settings") {
@@ -89,7 +110,6 @@ export function installSettings({ getState, mutate, refreshFields }) {
       $("web-backup-export").reset();
     }
     settings.dataset.panel = panel;
-    $("settings-mark").toggleAttribute("hidden", Boolean(panel));
     $("settings-back").hidden = !panel;
     $("settings-home").hidden = Boolean(panel);
     const [title, subtitle] = settingsPanels[panel] ?? [t("تنظیمات مدورا"), t("ظاهر، یادآوری‌ها و داده‌ها")];
@@ -240,11 +260,28 @@ export function installSettings({ getState, mutate, refreshFields }) {
   $("display-form").addEventListener("submit", async event => {
     event.preventDefault();
     const theme = event.currentTarget.elements.theme.value;
-    const accent = accentOf(event.currentTarget.elements.accent.value);
+    const accent = event.currentTarget.elements.accent.value;
+    const finish = finishOf($("settings-finish").value);
     const selectedCalendar = $("calendar-setting").value;
     const nextLanguage = $("app-language").value;
     if (await saveSettings(event.submitter ?? $("display-form").querySelector('[type="submit"]'),
-      state => { state.theme = theme; state.accent = accent; state.calendar = selectedCalendar; }, t("تنظیمات نمایش ذخیره شد."))) selectLanguage(nextLanguage);
+      state => {
+        state.theme = theme;
+        state.accent = accentOf(accent, cycleIsEnabled(state));
+        state.calendar = selectedCalendar;
+        state.finish = finish;
+      }, t("تنظیمات نمایش ذخیره شد."))) selectLanguage(nextLanguage);
+  });
+  gender.addEventListener("change", updateCycleControl);
+  $("profile-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const selectedGender = genders.includes(gender.value) ? gender.value : "";
+    const enabled = cycle.checked && canEnableCycle({ gender: selectedGender });
+    await saveSettings(event.submitter ?? $("profile-form").querySelector('[type="submit"]'), state => {
+      state.gender = selectedGender;
+      state.cycleEnabled = enabled;
+      loadedSettings.delete("display-settings");
+    }, t("پروفایل ذخیره شد."));
   });
 
   function open(notifications) {

@@ -10,7 +10,6 @@ export function availableAccents(cycleEnabled = false) {
   return accents.filter(accent => !accent.requiresCycle || cycleEnabled);
 }
 
-export const isBaseAccent = value => accents.some(accent => accent.id === value && !accent.requiresCycle);
 
 export function accentOf(value, cycleEnabled = false) {
   return availableAccents(cycleEnabled).find(accent => accent.id === value)?.id ?? "blue";

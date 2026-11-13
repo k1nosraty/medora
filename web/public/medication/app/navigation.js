@@ -7,8 +7,11 @@ import { installAppointments } from "../features/appointments/editor.js";
 import { installWater } from "../features/water/controller.js";
 import { calendarFormat } from "../shared/ui/calendar-format.js";
 import { isoDay as iso } from "../domain/care-index.js";
+import { cycleIsEnabled } from "../domain/profile.js";
+import { installCycle } from "../features/cycle/controller.js";
+import { refreshArtwork } from "../design/three-dimensional.js";
 
-const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), routines: t("روتین‌ها"), insights: t("گزارش و تقویم"), water: t("آب") };
+const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), routines: t("روتین‌ها"), insights: t("گزارش و تقویم"), water: t("آب"), cycle: t("چرخه") };
 
 export function installNavigation({ getState, selectedDay, today, render, mutate, requestDeletion, renderDose, renderRoutine, refreshFields }) {
   let screen = "today";
@@ -47,8 +50,10 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
     formatDayNumber: day => dates.dayNumber(day),
     formatShortMonth: day => dates.shortMonth(day)
   });
+  const cycle = installCycle({ getState, mutate, today, formatDay, requestDeletion, refreshFields });
 
   function show(destination, notifications = false) {
+    if (destination === "cycle" && !cycleIsEnabled(getState())) return;
     if (destination === "settings") {
       settings(notifications);
       return;
@@ -150,7 +155,20 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
       calendar = preferredCalendar;
       dates = calendarFormat(calendar);
     }
+    const previousFinish = document.body.dataset.finish;
     applyDisplay(state);
+    if (previousFinish !== document.body.dataset.finish) refreshArtwork(document.body.dataset.finish);
+    const cycleEnabled = cycleIsEnabled(state);
+    $("program-cycle").hidden = $("quick-cycle").hidden = !cycleEnabled;
+    document.body.toggleAttribute("data-cycle-enabled", cycleEnabled);
+    if (!cycleEnabled) {
+      $("cycle-dialog").close();
+      $("cycle-history").replaceChildren();
+      if (screen === "cycle") {
+        show("today");
+        return;
+      }
+    }
     if (["today", "medications", "water", "routines"].includes(screen)) {
       $("day-label").textContent = screen === "today" ? dates.month(day) : day === today() ? t("امروز") : formatDay(day);
       $("pick-day").setAttribute("aria-label", t("انتخاب تاریخ، {0}", formatDay(day, true)));
@@ -163,7 +181,8 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
         renderTodayHeader(day);
         water.renderTodayWater(state, day, total, goal, progress);
       } else water.renderWater(day, index, total, goal, progress);
-    } else if (screen === "appointments") appointments.renderVisits(index);
+    } else if (screen === "cycle") cycle.render(state);
+    else if (screen === "appointments") appointments.renderVisits(index);
     else if (screen === "insights") {
       if (insight === "calendar") {
         const start = monthStart(calendarSelection);

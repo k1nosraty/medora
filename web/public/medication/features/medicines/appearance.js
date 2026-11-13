@@ -1,6 +1,6 @@
 import { language, t } from "../../shared/i18n/locale.js";
 import { $ } from "../../shared/ui/dom.js";
-import { illustration } from "../../design/artwork.js";
+import { glassObject } from "../../design/three-dimensional.js";
 export const defaultMedicineIcon = "bottle";
 const defaultMedicineColor = "purple";
 export const medicineShapes = {
@@ -14,10 +14,15 @@ export const appearanceColors = {
 const knownShape = shape => Object.hasOwn(medicineShapes, shape) ? shape : defaultMedicineIcon;
 export const medicineColorOf = color => Object.hasOwn(appearanceColors, color) ? color : defaultMedicineColor;
 
+function badgeFor(art, color) {
+  const ink = medicineColorOf(color);
+  const badge = glassObject(art, "medicine", { className: "medication-badge", color: ink === defaultMedicineColor ? undefined : ink });
+  badge.dataset.ink = ink;
+  return badge;
+}
+
 export function medicationBadge(shape, color) {
-  const svg = illustration(`#art-${knownShape(shape)}`, { className: "medication-badge" });
-  svg.dataset.ink = medicineColorOf(color);
-  return svg;
+  return badgeFor(knownShape(shape), color);
 }
 
 export function medicationBanner(shape, color) {
@@ -27,8 +32,7 @@ export function medicationBanner(shape, color) {
   banner.dataset.shape = type;
   banner.dataset.ink = medicineColorOf(color);
   banner.setAttribute("aria-hidden", "true");
-  const art = medicationBadge(type, color);
-  if (type === "tablet") art.firstElementChild.setAttribute("href", "#art-blister");
+  const art = badgeFor(type === "tablet" ? "blister" : type, color);
   const echo = medicationBadge(type, color);
   echo.classList.add("banner-echo");
   const caption = document.createElement("span");

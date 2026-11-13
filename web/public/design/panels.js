@@ -8,29 +8,21 @@ const panelArt = {
   "snooze-settings": "bottle",
   "appointment-settings": "visit",
   "display-settings": "control-sun",
-  "backup-settings": "backup"
+  "backup-settings": "backup",
+  "profile-settings": "control-user"
 };
 
-function installDisplayPreview(settings, text, calendar) {
+function installDisplayPreview(settings, calendar) {
   const form = $("display-form");
-  const berry = form.querySelector(".settings-accents label").cloneNode(true);
-  berry.className = "gallery-berry-choice";
-  berry.querySelector("input").value = "berry";
-  berry.querySelector(".accent-sample").dataset.accentSample = "berry";
-  berry.lastElementChild.textContent = text("اناری", "Berry");
-  form.querySelector(".settings-accents").append(berry);
-
-  const finish = document.createElement("label");
-  const finishSelect = $("finish").cloneNode(true);
-  finishSelect.id = "gallery-settings-finish";
-  finish.append(text("سبک طراحی", "Style"), finishSelect);
-  form.prepend(finish);
+  const berry = $("settings-berry-choice");
+  const finishSelect = $("settings-finish");
 
   const names = ["theme", "accent", "finish"];
   const fields = { theme: form.elements.theme, accent: form.elements.accent, finish: finishSelect };
   function sync() {
     if (settings.dataset.panel === "display-settings") {
       berry.hidden = !$("cycle-preview").checked;
+      berry.querySelector("input").disabled = berry.hidden;
       for (const name of names) fields[name].value = $(name).value;
     } else if (!settings.dataset.panel) {
       const summary = $("settings-display-summary");
@@ -66,9 +58,8 @@ function installDisplayPreview(settings, text, calendar) {
 export function installPanelPreview({ openSettings, openAccount, text, calendar }) {
   const settings = $("settings-dialog");
   const art = id => glassObject(id, "control", { className: "gallery-panel-art" });
-  const headerArt = document.createElement("span");
+  const headerArt = $("settings-heading-art");
   headerArt.className = "gallery-settings-heading-art";
-  $("settings-mark").after(headerArt);
   const updateHeader = () => headerArt.replaceChildren(art(panelArt[settings.dataset.panel || ""]));
   new MutationObserver(updateHeader).observe(settings, { attributeFilter: ["data-panel"] });
   updateHeader();
@@ -80,7 +71,7 @@ export function installPanelPreview({ openSettings, openAccount, text, calendar 
   settings.querySelector("[data-open-account]").addEventListener("click", () => openAccount());
   $("settings-notification-state").textContent = text("پیش‌نمایش", "Preview");
   $("push-status").textContent = text("ارسال اعلان در گالری غیرفعال است.", "Notifications are disabled in the gallery.");
-  installDisplayPreview(settings, text, calendar);
+  installDisplayPreview(settings, calendar);
 
   const open = $("gallery-open-settings");
   open.replaceChildren(art(panelArt[""]));

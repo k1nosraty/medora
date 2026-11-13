@@ -1,6 +1,6 @@
   <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
     <div class="sheet-header">
-      <svg id="settings-mark" aria-hidden="true"><use href="#i-settings"/></svg>
+      <span id="settings-heading-art" aria-hidden="true"></span>
       <button type="button" id="settings-back" class="icon-button" aria-label="بازگشت به تنظیمات" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
       <div><h2 id="settings-title" tabindex="-1">تنظیمات مدورا</h2><p id="settings-subtitle">ظاهر، یادآوری‌ها و داده‌ها</p></div>
       <button class="icon-button" type="button" data-close="settings-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
@@ -9,40 +9,45 @@
       <div id="settings-home">
         <button type="button" class="settings-hero" data-settings-panel="notification-settings">
           <span class="settings-hero-copy"><strong>اعلان‌های این دستگاه</strong><small>یادآوری دارو، آب، قرار و روتین</small><span id="settings-notification-state" class="settings-state">در حال بررسی…</span></span>
-          <span class="settings-hero-art" aria-hidden="true"><svg><use href="#i-bell"/></svg></span>
+          <span class="settings-hero-art" aria-hidden="true"><svg data-surface-art="notification"><use href="#i-bell"/></svg></span>
         </button>
         <h3>یادآوری‌ها</h3>
         <div class="settings-group">
           <button type="button" class="settings-row water-row" data-settings-panel="water-settings">
-            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-water"/></svg></span>
+            <span class="settings-icon"><svg data-surface-art="water" aria-hidden="true"><use href="#i-water"/></svg></span>
             <span>آب<small id="settings-water-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
           <button type="button" class="settings-row medicine-row" data-settings-panel="snooze-settings">
-            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-pill"/></svg></span>
+            <span class="settings-icon"><svg data-surface-art="bottle" aria-hidden="true"><use href="#i-pill"/></svg></span>
             <span>تعویق یادآوری دارو<small id="settings-snooze-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
           <button type="button" class="settings-row visit-row" data-settings-panel="appointment-settings">
-            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-calendar"/></svg></span>
+            <span class="settings-icon"><svg data-surface-art="visit" aria-hidden="true"><use href="#i-calendar"/></svg></span>
             <span>یادآوری قرارها<small id="settings-appointment-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
         </div>
         <h3>برنامه و داده‌ها</h3>
         <div class="settings-group">
+          <button type="button" class="settings-row" data-settings-panel="profile-settings">
+            <span class="settings-icon"><svg data-surface-art="control-user" aria-hidden="true"><use href="#i-user"/></svg></span>
+            <span>پروفایل<small>جنسیت و نمایش چرخه</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
           <button type="button" class="settings-row" data-settings-panel="display-settings">
-            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-sun"/></svg></span>
+            <span class="settings-icon"><svg data-surface-art="control-sun" aria-hidden="true"><use href="#i-sun"/></svg></span>
             <span>ظاهر و زبان<small id="settings-display-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
           <button type="button" class="settings-row" data-settings-panel="backup-settings">
-            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-lock"/></svg></span>
+            <span class="settings-icon"><svg data-surface-art="backup" aria-hidden="true"><use href="#i-lock"/></svg></span>
             <span>پشتیبان‌گیری<small>ساخت و بازیابی فایل رمزدار</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
           <button type="button" class="settings-row" data-open-account>
-            <span class="settings-icon"><svg aria-hidden="true"><use href="#i-user"/></svg></span>
+            <span class="settings-icon"><svg data-surface-art="control-user" aria-hidden="true"><use href="#i-user"/></svg></span>
             <span>حساب مدورا<small>ورود اختیاری با نام کاربری</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
         </div>
       </div>
       <!-- include forms/settings/display.html -->
+      <!-- include forms/settings/profile.html -->
       <!-- include forms/settings/notification.html -->
       <!-- include forms/settings/water.html -->
       <!-- include forms/settings/snooze.html -->

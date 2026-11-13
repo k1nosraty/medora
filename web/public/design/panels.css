@@ -61,7 +61,6 @@
   background: transparent;
 }
 .design-gallery #settings-dialog .sheet-header { padding: .65rem .75rem; }
-.design-gallery #settings-mark { display: none; }
 .design-gallery #settings-back { order: -1; margin-inline-start: 0; }
 .gallery-settings-heading-art { flex: 0 0 2.35rem; }
 .design-gallery #settings-dialog[data-panel="water-settings"] .sheet-header { color: var(--water-ink); }
@@ -105,7 +104,7 @@
   border-color: var(--preview-rim);
 }
 .design-gallery #settings-dialog .settings-panel > form + form { margin-block-start: .65rem; }
-.design-gallery #settings-dialog .settings-accents:has(.gallery-berry-choice:not([hidden])) {
+.design-gallery #settings-dialog .settings-accents:has(#settings-berry-choice:not([hidden])) {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .design-gallery #settings-dialog .settings-accents label { padding-inline: .12rem; }

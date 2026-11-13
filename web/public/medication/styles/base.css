@@ -404,7 +404,7 @@
   background: color-mix(in srgb, var(--pill-base) 20%, var(--panel));
   color: var(--ink);
 }
-.medora svg.medication-badge { inline-size: 2.75rem; block-size: 2.75rem; stroke-width: 3; --pill-edge: color-mix(in srgb, var(--pill-base), black); }
+.medora .medication-badge { inline-size: 2.75rem; block-size: 2.75rem; stroke-width: 3; --pill-edge: color-mix(in srgb, var(--pill-base), black); }
 .pill-body { fill: var(--pill-base); stroke: var(--pill-edge); }
 .pill-light { fill: color-mix(in srgb, var(--pill-base) 45%, white); stroke: var(--pill-edge); }
 .pill-edge { fill: var(--pill-edge); stroke: var(--pill-edge); }

@@ -1,6 +1,7 @@
 import { decryptBackup, encryptBackup, hasBackupMagic } from "./crypto.js";
 import { maxRoutineAmount, maxRoutineSteps } from "../../domain/routine-plan.js";
-import { isBaseAccent } from "../../styles/theme.js";
+import { availableAccents } from "../../styles/theme.js";
+import { finishes, genders } from "../../domain/profile.js";
 import { timezone } from "../../domain/wall-clock.js";
 
 const magic = new Uint8Array([77, 69, 68, 79, 82, 65, 87, 1]);
@@ -29,7 +30,10 @@ const record = (value, check, validKey = safeId) => object(value) &&
 
 const settings = {
   theme: value => ["system", "light", "dark"].includes(value),
-  accent: isBaseAccent,
+  accent: value => availableAccents(true).some(accent => accent.id === value),
+  finish: value => finishes.includes(value),
+  gender: value => genders.includes(value),
+  cycleEnabled: flag,
   calendar: value => ["persian", "gregory"].includes(value),
   waterGoal: value => integer(value, 1, 20000),
   waterReminders: value => object(value) && flag(value.enabled) && clock(value.start) && clock(value.end) &&
@@ -45,6 +49,7 @@ function portable(state) {
     medicines: state.medicines, doses: state.doses, water: state.water ?? [], visits: state.visits ?? {},
     routines: state.routines ?? {}, routineLogs: state.routineLogs ?? {},
     ...(Object.keys(state.scheduleHistory ?? {}).length ? { scheduleHistory: state.scheduleHistory } : {}),
+    ...(state.cycleRecords !== undefined ? { cycleRecords: state.cycleRecords } : {}),
     settings: Object.fromEntries(webBackupSettings.filter(key => state[key] !== undefined).map(key => [key, state[key]]))
   };
 }
@@ -100,6 +105,9 @@ function validate(data, validatePhases) {
       optional(row.zone, zone) && optional(row.offsets, offsets => Array.isArray(offsets) &&
         offsets.every(offset => integer(offset, 0, 43200)))) ||
     !record(data.routines, (row, id) => row.id === id && validRoutinePlan(row)) ||
+    !optional(data.cycleRecords, records => record(records, (row, id) =>
+      day(Number(id)) && String(Number(id)) === id && (row.end === null || (day(row.end) && row.end >= Number(id))) &&
+      ["", "light", "medium", "heavy"].includes(row.flow) && text(row.note) && row.note.length <= 500)) ||
     !optional(data.scheduleHistory, history => validHistory(history, validatePhases)) ||
     !record(data.routineLogs, (rows, key) => String(Number(key)) === key && day(Number(key)) &&
       record(rows, validRoutine))) throw new Error("invalid_backup");

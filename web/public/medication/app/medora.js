@@ -18,9 +18,10 @@ import { renderToday } from "../features/today/view.js";
 import { installBackupRestore } from "../features/backups/dialog.js";
 import { installNavigation } from "./navigation.js";
 import { showIntro } from "./onboarding.js";
+import { installSurfaceArt } from "../design/surfaces.js";
 
 // An older cached page can still load this module from the current release.
-if (!document.getElementById("push-show-details")) {
+if (!document.getElementById("profile-form")) {
   const url = new URL(location.href);
   const firstAttempt = !url.searchParams.has("retry");
   url.searchParams.set("retry", Date.now());
@@ -35,6 +36,7 @@ if (!document.getElementById("push-show-details")) {
 }
 
 localizeMarkup();
+installSurfaceArt();
 let care;
 let busy = false;
 const getState = () => care;

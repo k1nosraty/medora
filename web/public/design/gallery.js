@@ -12,11 +12,13 @@ import { calendarFormat } from "../medication/shared/ui/calendar-format.js";
 import { today } from "../medication/shared/ui/dates.js";
 import { installCalendarPreview } from "./calendar.js";
 import { glassObject, medicineGlass, refreshArtwork, visitGlass, routineGlass } from "./glass.js";
-import { installChoiceArt, installFormArt, renderMedicineCover } from "./form-art.js";
+import { renderMedicineCover } from "./form-art.js";
 import { installPanelPreview } from "./panels.js";
 import { appearanceColors, complete, cycleArt, glass, heart, readCatalog } from "./catalog.js";
 
 localizeMarkup({ manifest: false });
+$("program-cycle").remove();
+$("quick-cycle").remove();
 if (language === "en") {
   document.title = "Medora design gallery";
   document.querySelectorAll("[data-en]").forEach(node => { node.textContent = node.dataset.en; });
@@ -60,7 +62,6 @@ for (const control of document.querySelectorAll("[data-from-quick]")) {
 }
 for (const form of document.forms) form.addEventListener("submit", event => event.preventDefault());
 $("today-dates").append($("day-controls"));
-for (const arrow of document.querySelectorAll("#day-controls .day-arrow use")) arrow.setAttribute("href", "#i-expand");
 $("story-date").textContent = formatDay(now);
 $("story-summary").textContent = text("داروها، قرارها و روتین‌های امروز", "Today’s medication, appointments and routines");
 const all = readCatalog($("visit-category").options);
@@ -110,7 +111,8 @@ function cycleDialog() {
 function updateDisplay() {
   state.theme = $("theme").value;
   state.accent = $("accent").value;
-  applyDisplay(state, { cycleEnabled: cycleEnabled() });
+  state.cycleEnabled = cycleEnabled();
+  applyDisplay({ ...state, finish: $("finish").value }, { cycleEnabled: cycleEnabled() });
 }
 function accentOptions() {
   options($("accent"), availableAccents(cycleEnabled()).map(({id,label}) => [id,fa ? label : accentText(id)]));
@@ -400,8 +402,6 @@ for (const control of document.querySelectorAll("[data-preview-target]")) {
 for (const id of ["family","art-color","icon-search"]) $(id).addEventListener(id === "icon-search" ? "input" : "change", renderCatalog);
 options($("family"),Object.entries(families));
 options($("art-color"), [["",text("پیش‌فرض","Default")], ...Object.entries(appearanceColors)]);
-installFormArt();
-installChoiceArt();
 $("cycle-preview").checked = previewParams.get("cycle") !== "off";
 $("theme").value = ["system", "light", "dark"].includes(previewParams.get("theme")) ? previewParams.get("theme") : "light";
 $("finish").value = previewParams.get("finish") === "matte" ? "matte" : "glass";

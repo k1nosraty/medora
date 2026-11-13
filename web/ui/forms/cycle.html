@@ -1,0 +1,16 @@
+  <dialog id="cycle-dialog" class="sheet" aria-labelledby="cycle-title">
+    <form id="cycle-form" class="sheet-form">
+      <div class="sheet-header">
+        <h2 id="cycle-title">ثبت چرخه</h2>
+        <button type="button" class="icon-button" data-close="cycle-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="sheet-body">
+        <label>تاریخ شروع<input id="cycle-start" type="date" required></label>
+        <label>تاریخ پایان (اختیاری)<input id="cycle-end" type="date"></label>
+        <label>شدت (اختیاری)<select id="cycle-flow"><option value="">انتخاب نشده</option><option value="light">کم</option><option value="medium">متوسط</option><option value="heavy">زیاد</option></select></label>
+        <label>علائم یا یادداشت (اختیاری)<textarea id="cycle-note" maxlength="500" rows="2"></textarea></label>
+        <p id="cycle-error" class="field-error" role="alert"></p>
+        <button class="block-action" type="submit">ذخیره</button>
+      </div>
+    </form>
+  </dialog>

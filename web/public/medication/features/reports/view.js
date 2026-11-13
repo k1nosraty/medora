@@ -1,5 +1,8 @@
 import { listSeparator, locale, shortWeek, t, weekIndex } from "../../shared/i18n/locale.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
+import { glassObject } from "../../design/three-dimensional.js";
+import { cycleIsEnabled } from "../../domain/profile.js";
+import { cycleForecast } from "../../domain/cycle.js";
 
 const numbers = new Intl.NumberFormat(locale);
 const percent = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 });
@@ -11,13 +14,7 @@ function waterCard(entries, total, openHistory, addWater) {
   const card = element("article", "", "water day-card calendar-water program-water");
   card.dataset.calendarState = "done";
   const art = element("div", "", "day-card-art");
-  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  const use = document.createElementNS(icon.namespaceURI, "use");
-  icon.setAttribute("viewBox", "0 0 128 100");
-  icon.setAttribute("aria-hidden", "true");
-  use.setAttribute("href", "#art-report-water");
-  icon.append(use);
-  art.append(icon, element("span", t("آب"), "day-card-kind"));
+  art.append(glassObject("water", "water"), element("span", t("آب"), "day-card-kind"));
   const copy = element("div", "", "day-card-content");
   copy.append(element("h3", t("{0} میلی‌لیتر", number(total))), element("p",
     entries.length === 1 ? t("۱ بار ثبت آب") : t("{0} بار ثبت آب", number(entries.length)), "quiet"));
@@ -30,6 +27,11 @@ function waterCard(entries, total, openHistory, addWater) {
 export function renderCalendar(state, index, { day, start, end, today, formatMonth, formatDay, dateButton, selectDay,
   renderDose, renderRoutine, visitCard, openWaterHistory, addWater }) {
   const slots = shortWeek.map(label => element("span", label, "quiet"));
+  const cycleEnabled = cycleIsEnabled(state);
+  const cycleRecords = cycleEnabled ? state.cycleRecords ?? {} : {};
+  const periods = Object.entries(cycleRecords).map(([first, record]) => [Number(first), record.end ?? Number(first)]);
+  const forecast = cycleEnabled ? cycleForecast(cycleRecords) : null;
+  $("calendar-cycle-key").hidden = !cycleEnabled;
   for (let offset = 0; offset < weekIndex(start); offset++) slots.push(element("span"));
   for (let date = start; date <= end; date++) {
     const control = dateButton(date, day, selected => selectDay(selected, true));
@@ -54,6 +56,13 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
     ]) if (exists) {
       dots.append(element("i", "", kind));
       control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + label);
+    }
+    if (periods.some(([first, last]) => date >= first && date <= last)) {
+      control.dataset.cycleStatus = "recorded";
+      control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t("چرخهٔ ثبت‌شده"));
+    } else if (forecast && date >= Math.max(forecast.first, today) && date <= forecast.last) {
+      control.dataset.cycleStatus = "forecast";
+      control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t("شروع تخمینی چرخه"));
     }
     control.append(dots);
     slots.push(control);

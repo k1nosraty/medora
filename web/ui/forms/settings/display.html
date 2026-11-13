@@ -1,5 +1,6 @@
       <section id="display-settings" class="settings-panel" hidden>
         <form id="display-form">
+          <label>سبک طراحی<select name="finish" id="settings-finish"><option value="glass">شیشه‌ای</option><option value="matte">سه‌بعدی مات</option></select></label>
           <fieldset class="settings-themes">
             <legend>ظاهر</legend>
             <label><input type="radio" name="theme" value="system" checked><span class="theme-sample" data-theme-sample="system" aria-hidden="true"></span><span>مطابق گوشی</span></label>
@@ -12,6 +13,7 @@
             <label><input type="radio" name="accent" value="green"><span class="accent-sample" data-accent-sample="green" aria-hidden="true"></span><span>سبز</span></label>
             <label><input type="radio" name="accent" value="lilac"><span class="accent-sample" data-accent-sample="lilac" aria-hidden="true"></span><span>یاسی</span></label>
             <label><input type="radio" name="accent" value="coral"><span class="accent-sample" data-accent-sample="coral" aria-hidden="true"></span><span>مرجانی</span></label>
+            <label id="settings-berry-choice" hidden><input type="radio" name="accent" value="berry" disabled><span class="accent-sample" data-accent-sample="berry" aria-hidden="true"></span><span>اناری</span></label>
           </fieldset>
           <label>تقویم<select id="calendar-setting"><option value="persian">شمسی</option><option value="gregory">میلادی</option></select></label>
           <label>زبان برنامه<select id="app-language"><option value="fa" lang="fa">فارسی</option><option value="en" lang="en">English</option></select></label>

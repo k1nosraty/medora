@@ -20,9 +20,14 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || event.request.method !== "GET" || !shell.includes(url.pathname)) return;
+  const artwork = /^\/design\/(?:optical-glass|matte-3d)\/[a-z0-9-]+\.webp$/.test(url.pathname);
+  if (url.origin !== self.location.origin || event.request.method !== "GET" || (!shell.includes(url.pathname) && !artwork)) return;
   event.respondWith((async () => {
     const cache = await openShell();
-    return await cache.match(url.pathname) ?? fetch(event.request);
+    const saved = await cache.match(url.pathname);
+    if (saved) return saved;
+    const response = await fetch(event.request);
+    if (artwork && response.ok) await cache.put(url.pathname, response.clone()).catch(() => {});
+    return response;
   })());
 });

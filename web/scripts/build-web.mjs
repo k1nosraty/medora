@@ -31,7 +31,10 @@ const assets = (await readdir(medication, { recursive: true, withFileTypes: true
   .filter(file => file.isFile() && /\.(js|css|svg)$/.test(file.name) && file.name !== "sw.js")
   .map(file => "/medication/" + relative(fileURLToPath(medication), resolve(file.parentPath, file.name)).split(sep).join("/"))
   .sort();
-const shell = ["/medication/", ...assets, "/manifest.webmanifest", "/manifest.en.webmanifest", "/icon-192.png",
+const mainArtwork = ["bottle", "visit", "routine", "water", "cycle", "notification", "backup",
+  "control-settings", "control-sun", "control-user", "control-calendar", "complete"];
+const artwork = ["optical-glass", "matte-3d"].flatMap(finish => mainArtwork.map(id => `/design/${finish}/${id}.webp`));
+const shell = ["/medication/", ...assets, ...artwork, "/manifest.webmanifest", "/manifest.en.webmanifest", "/icon-192.png",
   "/apple-touch-icon.png", "/medora-icon-192.png", "/medora-icon-512.png", "/style.css", "/vazirmatn.woff2"];
 const worker = await readFile(resolve(ui, "pwa/sw.js"), "utf8");
 const hash = createHash("sha256").update(html).update(worker).update(JSON.stringify(shell));

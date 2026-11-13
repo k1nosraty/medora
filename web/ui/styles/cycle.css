@@ -1,0 +1,50 @@
+.medora {
+  --cycle-fill: #f5e4eb;
+  --cycle-ink: #832d53;
+}
+.medora[data-theme="dark"] { --cycle-fill: #3d2431; --cycle-ink: #f7b8d2; }
+@media (prefers-color-scheme: dark) {
+  .medora:not([data-theme="light"]) { --cycle-fill: #3d2431; --cycle-ink: #f7b8d2; }
+}
+.medora .program-cycle { --program-fill: var(--cycle-fill); --program-ink: var(--cycle-ink); }
+.medora [data-screen="cycle"] { inline-size: var(--today-rail-width); margin-inline: auto; }
+.medora .cycle-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(39%, 9rem);
+  align-items: center;
+  gap: .6rem;
+  min-block-size: 8.5rem;
+  padding: .65rem .85rem;
+  border: 1px solid var(--surface-edge);
+  border-radius: 1.4rem;
+  background: radial-gradient(ellipse at 25% 58%, color-mix(in srgb, var(--cycle-ink) 16%, transparent), transparent 70%), var(--cycle-fill);
+  color: var(--cycle-ink);
+  box-shadow: var(--surface-shadow);
+}
+.medora .cycle-banner img { inline-size: 100%; block-size: auto; }
+.medora .cycle-banner p { margin-block: .25rem 0; }
+.medora #cycle-add { margin-block: .7rem; }
+.medora #cycle-form .sheet-body { display: grid; gap: .55rem; }
+.medora #cycle-form select { inline-size: 100%; }
+.medora .cycle-record {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .4rem;
+  padding-block: .55rem;
+}
+.medora .cycle-record + .cycle-record { border-block-start: 1px solid var(--outline); }
+.medora .cycle-record p { margin: .15rem 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.calendar-cycle-dot { inline-size: .55rem; block-size: .55rem; border-radius: 50%; background: var(--cycle-ink); }
+.medora #calendar-days button[data-cycle-status="recorded"]:not([aria-pressed="true"]) {
+  background: var(--cycle-fill);
+  color: var(--cycle-ink);
+  box-shadow: inset 0 0 0 1px var(--cycle-ink);
+}
+.medora #calendar-days button[data-cycle-status="forecast"]:not([aria-pressed="true"]) {
+  outline: 1px dashed var(--cycle-ink);
+  outline-offset: -2px;
+  color: var(--cycle-ink);
+}
+.medora #calendar-days button[data-cycle-status][aria-pressed="true"] { box-shadow: inset 0 -3px var(--cycle-ink); }

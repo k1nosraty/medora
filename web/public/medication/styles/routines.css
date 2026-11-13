@@ -181,7 +181,7 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
   background: color-mix(in srgb, var(--pill-base) 22%, var(--panel));
 }
 .medora .routine-glyph[data-ink="coral"] { background: var(--routine-fill); color: var(--routine-ink); }
-.medora svg.routine-illustration {
+.medora .routine-illustration {
   --routine-accent: var(--pill-base, #b8a4e8);
   --routine-light: color-mix(in srgb, var(--routine-accent) 32%, white);
   --routine-deep: color-mix(in srgb, var(--routine-accent) 72%, #29233f);

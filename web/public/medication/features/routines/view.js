@@ -43,7 +43,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
 
   function chooseCategory(key) {
     category = Object.hasOwn(routineLabels, key) ? key : "custom";
-    fields("preview").replaceChildren(glyph(category));
+    fields("preview").replaceChildren(glyph(category, fields("preview").dataset.ink));
     fields("category-label").textContent = labelFor(category);
     categoryOpen.setAttribute("aria-label", t("نوع روتین، {0}", labelFor(category)));
     for (const control of fields("categories").querySelectorAll("button")) {
@@ -109,7 +109,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     colorGrid.append(option);
     return input;
   });
-  fields("colors").addEventListener("change", event => { fields("preview").dataset.ink = event.target.value; });
+  fields("colors").addEventListener("change", event => { fields("preview").dataset.ink = event.target.value; chooseCategory(category); });
 
   const weekdayFields = (language === "fa" ? [5, 6, 0, 1, 2, 3, 4] : [6, 0, 1, 2, 3, 4, 5]).map(index => {
     const field = document.createElement("label");
@@ -134,10 +134,10 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     form.reset();
     fields("editor-title").textContent = plan ? t("ویرایش روتین") : t("روتین جدید");
     fields("name").value = plan?.name ?? "";
-    chooseCategory(plan?.category);
     const color = colorOf(plan?.color);
     for (const input of colors) input.checked = input.value === color;
     fields("preview").dataset.ink = color;
+    chooseCategory(plan?.category);
     fields("repeat").value = plan && (plan.mask !== 127 || plan.interval !== 1) ? "weekly" : "daily";
     fields("interval").value = plan?.interval ?? 1;
     fields("start").value = isoDay(plan?.start ?? today());

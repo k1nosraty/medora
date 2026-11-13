@@ -22,7 +22,7 @@ export function routineCard({ getState, today, colorOf, labelFor, days, formatDa
     const currentColor = !readOnly && isToday ? plan?.color : null;
     const color = colorOf(currentColor ?? entry.color);
     row.dataset.ink = art.dataset.ink = color;
-    art.append(glyph(entry.category));
+    art.append(glyph(entry.category, color));
     if (dayCard) art.append(element("span", t("روتین"), "day-card-kind"));
     const copy = element("div", "", dayCard ? "day-card-content routine-row-copy" : "routine-row-copy");
     const name = element(dayCard ? "h3" : "strong", entry.name);

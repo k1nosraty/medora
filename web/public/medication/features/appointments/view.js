@@ -2,17 +2,17 @@ import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { isoDay } from "../../domain/care-index.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
 
-import { illustration } from "../../design/artwork.js";
+import { visitGlass } from "../../design/three-dimensional.js";
 
 const clockText = value => localDigits(value);
 const pageSize = 20;
 
-export function visitIllustration(category = "general") {
+export function visitIllustration(category = "general", color) {
   const specialty = category !== "general";
-  return illustration(`#art-visit-${category}`, {
-    className: specialty ? "visit-illustration visit-specialty" : "visit-illustration",
-    viewBox: specialty ? "0 0 48 48" : "0 0 160 132"
-  });
+  const art = visitGlass(category, color === "green" ? undefined : color);
+  art.classList.add("visit-illustration");
+  if (specialty) art.classList.add("visit-specialty");
+  return art;
 }
 
 export function appointmentView({
@@ -34,7 +34,7 @@ export function appointmentView({
       card.classList.add(...(dayCard ? ["day-card", "visit-day-card"] : ["visit-shelf-card"]));
       const banner = element("div", "", "visit-banner");
       if (dayCard) banner.classList.add("day-card-art");
-      banner.append(visitIllustration(category));
+      banner.append(visitIllustration(category, card.dataset.ink));
       if (dayCard) banner.append(element("span", calendar && language === "en" ? "Visit" : t("قرار"), "day-card-kind"));
       if (variant === "next") {
         card.classList.add("visit-featured");

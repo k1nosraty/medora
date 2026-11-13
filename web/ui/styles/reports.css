@@ -53,7 +53,7 @@
   border-radius: .75rem;
   background: color-mix(in srgb, var(--pill-base) 19%, transparent);
 }
-.medora #calendar-entries .day-card-art > svg {
+.medora #calendar-entries .day-card-art > :is(svg, img) {
   inline-size: 2.65rem;
   block-size: 2.45rem;
   max-inline-size: 100%;
@@ -132,7 +132,7 @@
   pointer-events: none;
 }
 .medora .report-hero h2 { margin: 0; font-size: 1.04rem; }
-.medora .report-hero svg.report-art {
+.medora .report-hero .report-art {
   position: absolute;
   z-index: -1;
   inset-block: 0;

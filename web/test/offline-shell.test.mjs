@@ -14,7 +14,8 @@ test("the installed shell serves a coherent offline page and does not intercept 
     async addAll(requests) {
       for (const request of requests) stored.set(new URL(request.url).pathname, new Response("installed"));
     },
-    async match(path) { return stored.get(path)?.clone(); }
+    async match(path) { return stored.get(path)?.clone(); },
+    async put(path, response) { stored.set(path, response); }
   };
   vm.runInNewContext(source, {
     URL,
@@ -53,5 +54,11 @@ test("the installed shell serves a coherent offline page and does not intercept 
   assert.equal(fetchThroughWorker("/api/promotion"), undefined);
   assert.equal(fetchThroughWorker("/admin/"), undefined);
   assert.equal(fetchThroughWorker("/design/"), undefined);
-  assert.deepEqual(network, []);
+  for (const folder of ["optical-glass", "matte-3d"]) {
+    assert.equal(await (await fetchThroughWorker(`/design/${folder}/water.webp`)).text(), "installed");
+  }
+  const dental = "/design/matte-3d/visit-dental.webp";
+  assert.equal(await (await fetchThroughWorker(dental)).text(), "network");
+  assert.equal(await (await fetchThroughWorker(dental)).text(), "network");
+  assert.deepEqual(network, [origin + dental]);
 });

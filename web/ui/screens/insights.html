@@ -6,9 +6,9 @@
         <div id="calendar-panel">
           <section class="feature calendar-card" aria-labelledby="calendar-month">
             <div class="feature-head calendar-head">
-              <button type="button" id="previous-month" class="icon-button" aria-label="ماه قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+              <button type="button" id="previous-month" class="icon-button" aria-label="ماه قبل"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
               <h2 id="calendar-month" aria-live="polite"></h2>
-              <button type="button" id="next-month" class="icon-button reverse" aria-label="ماه بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+              <button type="button" id="next-month" class="icon-button reverse" aria-label="ماه بعد"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
             </div>
             <div id="calendar-days" class="calendar-grid" role="group" aria-labelledby="calendar-month"></div>
             <ul class="calendar-key" aria-label="راهنمای تقویم">
@@ -16,6 +16,7 @@
               <li><span class="calendar-dots" aria-hidden="true"><i class="water"></i></span>آب</li>
               <li><span class="calendar-dots" aria-hidden="true"><i class="visit"></i></span>قرار</li>
               <li><span class="calendar-dots" aria-hidden="true"><i class="routine"></i></span>روتین</li>
+              <li id="calendar-cycle-key" hidden><span class="calendar-cycle-dot" aria-hidden="true"></span>چرخه</li>
             </ul>
           </section>
           <section id="calendar-activity" aria-labelledby="calendar-date">
@@ -38,7 +39,7 @@
           <div class="report-cards">
             <section class="feature water report-card program-water" aria-labelledby="report-water-title">
               <div class="report-hero">
-                <svg class="report-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-report-water"/></svg>
+                <svg data-surface-art="water" class="report-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-report-water"/></svg>
                 <h2 id="report-water-title">مصرف آب</h2>
                 <div class="report-number" id="report-water-value"><strong id="report-water-number"></strong> <span>میلی‌لیتر</span></div>
                 <p id="report-average" class="report-caption">میانگین در روزهای دارای ثبت</p>
@@ -61,7 +62,7 @@
             </section>
             <section class="feature medicine report-card program-medicine" aria-labelledby="report-dose-title">
               <div class="report-hero">
-                <svg class="report-art category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-bottle"/></svg>
+                <svg data-surface-art="bottle" class="report-art category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-bottle"/></svg>
                 <h2 id="report-dose-title">مصرف دارو</h2>
                 <div class="report-number" hidden id="report-dose-value"><strong id="report-dose-number"></strong></div>
                 <p id="report-doses" class="report-caption"></p>
@@ -71,7 +72,7 @@
             </section>
             <section class="feature program-routine report-card" aria-labelledby="report-routine-title">
               <div class="report-hero">
-                <svg class="report-art category-art routine-category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
+                <svg data-surface-art="routine" class="report-art category-art routine-category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
                 <h2 id="report-routine-title">روتین‌ها</h2>
                 <div class="report-number" hidden id="report-routine-value"><strong id="report-routine-number"></strong></div>
                 <p id="report-routines" class="report-caption"></p>
@@ -81,7 +82,7 @@
             </section>
             <section class="feature visit report-card program-visit" aria-labelledby="report-visit-title">
               <div class="report-hero">
-                <svg class="report-art category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>
+                <svg data-surface-art="visit" class="report-art category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>
                 <h2 id="report-visit-title">قرارها</h2>
                 <div class="report-number" hidden id="report-visit-value"><strong id="report-visit-number"></strong></div>
                 <p id="report-visits" class="report-caption"></p>

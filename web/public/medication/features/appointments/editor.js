@@ -36,6 +36,7 @@ export function installAppointments({ getState, today, defaultDay, render, mutat
         categoryDialog.close();
       });
       control.dataset.category = option.value;
+      control.prepend(visitIllustration(option.value));
       group.append(control);
       return { control, key: categoryKey(`${option.text} ${option.value} ${categoryAliases[option.value] ?? ""}`) };
     });
@@ -90,7 +91,7 @@ export function installAppointments({ getState, today, defaultDay, render, mutat
     visitAppearance.dataset.ink = selectedVisitColor();
     $("visit-category-selected").textContent = visitCategories.get(visitCategory.value);
     $("visit-category-name-field").hidden = visitCategory.value !== "custom";
-    $("visit-appearance-preview").replaceChildren(visitIllustration(visitCategory.value));
+    $("visit-appearance-preview").replaceChildren(visitIllustration(visitCategory.value, visitAppearance.dataset.ink));
   }
   visitAppearance.addEventListener("change", updateVisitAppearance);
 

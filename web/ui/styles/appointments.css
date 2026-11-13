@@ -81,7 +81,7 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
   pointer-events: none;
 }
 .medora .day-card .day-card-art::before { content: none; }
-.medora .day-card .day-card-art > svg {
+.medora .day-card .day-card-art > :is(svg, img) {
   grid-column: 1;
   inline-size: min(94%, 5.75rem);
   block-size: auto;
@@ -121,7 +121,7 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
 .medora .day-card .dose-meta { display: flex; flex-wrap: wrap; gap: .12rem .4rem; color: var(--muted); }
 .medora .day-card .dose-meta .hero-kicker { color: var(--muted); font-size: .75rem; }
 .medora .day-card .dose-snoozed { grid-column: 1 / -1; margin: 0; font-size: .75rem; }
-.medora .day-card .routine-day-art > svg {
+.medora .day-card .routine-day-art > :is(svg, img) {
   inline-size: min(76%, 3.8rem);
   aspect-ratio: 1;
   filter: drop-shadow(0 .16rem .22rem var(--glass-shadow));
@@ -192,7 +192,7 @@ html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5re
   margin: -.45rem;
   border-radius: inherit;
 }
-.medora .timeline .day-card-art > svg { max-block-size: 3.65rem; }
+.medora .timeline .day-card-art > :is(svg, img) { max-block-size: 3.65rem; }
 .medora .timeline .day-card-content h3 { font-size: clamp(.94rem, 3.7vw, 1.08rem); }
 .medora .timeline .day-card-content .badge { font-size: .73rem; }
 .medora .timeline .day-card-kind { font-size: .68rem; }
@@ -346,8 +346,8 @@ html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5re
 .visit-shelf-details { display: flex; flex: 1; flex-direction: column; min-inline-size: 0; overflow-wrap: anywhere; }
 .visit-shelf-details .badge { align-self: start; }
 .medora .visit-shelf-card .buttons { margin-block-start: auto; padding-block-start: .3rem; }
-.medora svg.visit-illustration { inline-size: 8rem; max-inline-size: 48%; block-size: auto; aspect-ratio: 160 / 132; }
-.medora svg.visit-illustration.visit-specialty {
+.medora .visit-illustration { inline-size: 8rem; max-inline-size: 48%; block-size: auto; aspect-ratio: 160 / 132; }
+.medora .visit-illustration.visit-specialty {
   position: relative;
   inline-size: 7.3rem;
   max-inline-size: 64%;
@@ -356,7 +356,7 @@ html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5re
   stroke-width: 1.5;
   filter: drop-shadow(0 .25rem .24rem #2b1e4733);
 }
-.medora #visit-appearance-preview svg.visit-specialty { inline-size: 5.65rem; }
+.medora #visit-appearance-preview .visit-specialty { inline-size: 5.65rem; }
 .medora #visit-appearance-preview:has(.visit-specialty)::before { inline-size: min(72%, 8.1rem); }
 .medora .visit-empty {
   display: flex;

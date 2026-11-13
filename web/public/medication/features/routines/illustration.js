@@ -1,11 +1,9 @@
-import { illustration } from "../../design/artwork.js";
+import { routineGlass } from "../../design/three-dimensional.js";
 import { routineLabels } from "./catalog.js";
 
-export function routineIllustration(category) {
-  const symbol = category !== "custom" && Object.hasOwn(routineLabels, category) ? category : "banner";
-  const banner = symbol === "banner";
-  return illustration("/medication/assets/icons/routines.svg#" + symbol, {
-    viewBox: banner ? "0 0 128 100" : "0 0 24 24",
-    className: banner ? "routine-illustration routine-category-art" : "routine-illustration"
-  });
+export function routineIllustration(category, color) {
+  const symbol = Object.hasOwn(routineLabels, category) ? category : "custom";
+  const art = routineGlass(symbol, color === "coral" ? undefined : color);
+  art.classList.add("routine-illustration");
+  return art;
 }

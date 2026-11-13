@@ -1,3 +1,4 @@
+import { glassObject } from "../../design/three-dimensional.js";
 import { localDigits, locale, t } from "../../shared/i18n/locale.js";
 import { routineComplete } from "../../domain/routine-plan.js";
 import { doseTime } from "../../domain/care-index.js";
@@ -90,11 +91,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     const art = element("span");
     art.className = "today-state-art";
     art.setAttribute("aria-hidden", "true");
-    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const symbol = document.createElementNS(icon.namespaceURI, "use");
-    symbol.setAttribute("href", completed ? "#art-today-complete" : "#i-calendar");
-    icon.append(symbol);
-    art.append(icon);
+    art.append(glassObject(completed ? "complete" : "control-calendar", "image"));
     const copy = element("div");
     const title = completed ? t("برنامهٔ امروز کامل شد") : total ? t("ادامهٔ روز") : t("روزتان را بچینید");
     const summary = completed ? t("همهٔ موارد برنامهٔ امروز ثبت شدند.") :
