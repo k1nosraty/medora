@@ -1,0 +1,19 @@
+      <section id="today-story" class="today-story" aria-labelledby="story-title">
+        <div class="story-copy">
+          <time id="story-date" class="story-label"></time>
+          <h2 id="story-title">امروز با مدورا</h2>
+          <p id="story-summary"></p>
+        </div>
+        <img class="story-art" src="/medication/assets/illustrations/care.svg" width="560" height="350" alt="">
+      </section>
+      <div id="today-dates"></div>
+      <div id="day-controls" class="day-controls">
+        <div class="day-toolbar">
+          <button id="pick-day" class="date-field" type="button"><span id="day-label" aria-live="polite"></span><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+          <button type="button" id="today-reset" class="secondary" aria-label="بازگشت به امروز" hidden>امروز</button>
+        </div>
+        <input id="day" type="date" hidden>
+        <button type="button" class="secondary day-arrow icon-button" id="previous-day" aria-label="روز قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+        <div class="day-week-window"><div id="day-week" class="day-week" aria-label="روزهای هفته"></div></div>
+        <button type="button" class="secondary day-arrow icon-button reverse" id="next-day" aria-label="روز بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+      </div>

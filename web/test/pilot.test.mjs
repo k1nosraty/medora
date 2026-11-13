@@ -3,8 +3,8 @@ import { createECDH } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
-import { smallJson, validSubject, validSubscription } from "../src/validation.mjs";
-import { pushTopic } from "../src/push.mjs";
+import { smallJson, validSubject, validSubscription } from "../src/http/validation.mjs";
+import { pushTopic } from "../src/reminders/push.mjs";
 
 const ecdh = createECDH("prime256v1");
 const keys = { p256dh: ecdh.generateKeys().toString("base64url"), auth: Buffer.alloc(16).toString("base64url") };

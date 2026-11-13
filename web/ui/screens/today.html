@@ -1,0 +1,21 @@
+      <div data-screen="today" class="daily-sheet">
+        <!-- include layout/program-cards.html -->
+        <!-- include layout/today-water.html -->
+        <div class="daily-main">
+          <div class="daily-heading">
+            <h2 id="day-title">برنامهٔ روز</h2>
+            <output id="today-count" aria-label="پیشرفت برنامهٔ روز" hidden></output>
+          </div>
+          <div id="today-focus" hidden></div>
+          <p id="future-schedule" class="quiet" hidden>برنامهٔ آینده. ثبت مصرف فقط از روز موعد فعال می‌شود.</p>
+          <section class="timeline" aria-labelledby="timeline-title">
+            <h3 id="timeline-title">داروها، قرارها و روتین‌ها</h3>
+            <div id="doses"></div>
+          </section>
+        </div>
+        <section id="today-reminders" class="feature mist" hidden>
+          <h2>یادآوری‌ها</h2>
+          <p class="quiet">وضعیت اعلان این گوشی را در تنظیمات مدورا ببینید.</p>
+          <button type="button" class="secondary" data-destination="settings" data-open-notifications>تنظیم اعلان‌ها</button>
+        </section>
+      </div>

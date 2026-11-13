@@ -1,15 +1,15 @@
 import { DurableObject } from "cloudflare:workers";
 import { vapidHeaders } from "@block65/webcrypto-web-push";
-import { pilotConfig, smallJson, validSubscription } from "./validation.mjs";
-import { handleMedicationReminders } from "./medication-reminders.mjs";
-import { sendPush } from "./push.mjs";
-import { handleAdminAccounts, handleEmailAuth } from "./email-auth.mjs";
-import { handlePromotions } from "./promotions.mjs";
+import { pilotConfig, smallJson, validSubscription } from "./http/validation.mjs";
+import { handleMedicationReminders } from "./reminders/medication-reminders.mjs";
+import { sendPush } from "./reminders/push.mjs";
+import { handleAdminAccounts, handleEmailAuth } from "./accounts/email-auth.mjs";
+import { handlePromotions } from "./promotions/routes.mjs";
 
-export { MedicationReminders } from "./medication-reminders.mjs";
-export { EmailAccount } from "./email-auth.mjs";
-export { Credentials } from "./credentials.mjs";
-export { Promotions } from "./promotions.mjs";
+export { MedicationReminders } from "./reminders/medication-reminders.mjs";
+export { EmailAccount } from "./accounts/email-auth.mjs";
+export { Credentials } from "./accounts/credentials.mjs";
+export { Promotions } from "./promotions/routes.mjs";
 
 const hour = 3_600_000;
 const expiry = 180_000;

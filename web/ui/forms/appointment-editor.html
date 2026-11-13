@@ -1,0 +1,105 @@
+  <dialog id="visit-dialog" class="sheet" aria-labelledby="visit-form-title">
+    <form id="visit-editor" class="sheet-form" novalidate>
+      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="visit-form-title">قرار جدید</h2><button class="icon-button" type="button" data-close="visit-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body">
+        <label class="editor-field">نام پزشک یا عنوان قرار<input id="visit-name" maxlength="120" required></label>
+        <div class="visit-when">
+          <label class="editor-field">تاریخ قرار<input id="visit-day" type="date" required></label>
+          <label class="editor-field">ساعت قرار<input id="visit-time" type="time" step="1" required></label>
+        </div>
+        <label class="editor-field">مکان<input id="visit-place" maxlength="160"></label>
+        <details id="visit-appearance" class="editor-options">
+          <summary><span class="visit-appearance-dot" aria-hidden="true"></span>ظاهر قرار (اختیاری)</summary>
+          <div id="visit-appearance-preview" class="visit-banner"></div>
+          <div class="visit-type-field">
+            <span id="visit-type-label">نوع قرار</span>
+            <button id="visit-category-open" type="button" class="secondary" aria-haspopup="dialog" aria-labelledby="visit-type-label visit-category-selected"><span id="visit-category-selected"></span><svg aria-hidden="true"><use href="#i-search"/></svg></button>
+            <select id="visit-category" hidden>
+              <option value="general">عمومی</option>
+              <optgroup label="پزشکان و تخصص‌ها">
+                <option value="family">پزشکی خانواده</option>
+                <option value="internal">داخلی</option>
+                <option value="pediatrics">کودکان</option>
+                <option value="obgyn">زنان و زایمان</option>
+                <option value="midwife">مامایی</option>
+                <option value="eye">چشم‌پزشکی</option>
+                <option value="ent">گوش، حلق و بینی</option>
+                <option value="skin">پوست و مو</option>
+                <option value="heart">قلب و عروق</option>
+                <option value="neurology">مغز و اعصاب</option>
+                <option value="psychiatry">روان‌پزشکی</option>
+                <option value="endocrine">غدد و متابولیسم</option>
+                <option value="gastro">گوارش و کبد</option>
+                <option value="pulmonology">ریه</option>
+                <option value="nephrology">کلیه</option>
+                <option value="urology">اورولوژی</option>
+                <option value="rheumatology">روماتولوژی</option>
+                <option value="allergy">آلرژی و ایمنی‌شناسی</option>
+                <option value="infectious">بیماری‌های عفونی</option>
+                <option value="hematology">خون‌شناسی</option>
+                <option value="oncology">سرطان‌شناسی</option>
+                <option value="geriatrics">طب سالمندان</option>
+                <option value="general-surgery">جراحی عمومی</option>
+                <option value="orthopedics">ارتوپدی</option>
+                <option value="pain">طب درد</option>
+                <option value="sleep">طب خواب</option>
+                <option value="occupational-medicine">طب کار</option>
+              </optgroup>
+              <optgroup label="دندان و خدمات درمانی">
+                <option value="dental">دندان‌پزشکی</option>
+                <option value="orthodontics">ارتودنسی</option>
+                <option value="endodontics">درمان ریشهٔ دندان</option>
+                <option value="psychology">روان‌شناسی</option>
+                <option value="physiotherapy">فیزیوتراپی</option>
+                <option value="occupational-therapy">کاردرمانی</option>
+                <option value="speech">گفتاردرمانی</option>
+                <option value="audiology">شنوایی‌سنجی</option>
+                <option value="optometry">بینایی‌سنجی</option>
+                <option value="nutrition">تغذیه</option>
+                <option value="sports">پزشکی ورزشی</option>
+              </optgroup>
+              <optgroup label="آزمایش، تصویربرداری و سایر خدمات">
+                <option value="lab">آزمایشگاه</option>
+                <option value="imaging">تصویربرداری</option>
+                <option value="radiology">رادیولوژی</option>
+                <option value="ultrasound">سونوگرافی</option>
+                <option value="mri">ام‌آر‌آی</option>
+                <option value="ct">سی‌تی‌اسکن</option>
+                <option value="mammography">ماموگرافی</option>
+                <option value="densitometry">سنجش تراکم استخوان</option>
+                <option value="ecg">نوار قلب</option>
+                <option value="echocardiography">اکوی قلب</option>
+                <option value="endoscopy">آندوسکوپی</option>
+                <option value="dialysis">دیالیز</option>
+                <option value="vaccination">واکسیناسیون</option>
+                <option value="nuclear-medicine">پزشکی هسته‌ای</option>
+              </optgroup>
+              <option value="custom">سفارشی</option>
+            </select>
+          </div>
+          <label class="editor-field" id="visit-category-name-field" hidden>نام دستهٔ سفارشی (اختیاری)<input id="visit-category-name" dir="auto" maxlength="60"></label>
+          <fieldset id="visit-colors"><legend>رنگ قرار</legend><div class="visit-color-grid"></div></fieldset>
+        </details>
+        <details id="visit-extra" class="editor-options"><summary>گزینه‌های بیشتر</summary>
+          <label class="editor-field">منطقهٔ زمانی مطب<input id="visit-zone" dir="ltr" maxlength="64" spellcheck="false"></label>
+          <p class="quiet">تاریخ و ساعت قرار را به وقت مطب وارد کن.</p>
+          <label class="editor-field">راه تماس<input id="visit-contact" maxlength="160"></label>
+          <label class="editor-field">یادداشت<textarea id="visit-note" maxlength="600" rows="2"></textarea></label>
+        </details>
+        <details id="visit-reminder-options" class="editor-options">
+          <summary>یادآوری قرار</summary>
+          <label class="feature-head editor-switch">یادآوری این قرار<input id="visit-reminders-enabled" type="checkbox" role="switch" checked></label>
+          <fieldset class="reminder-options" id="visit-reminder-offsets"><legend>یادآوری زودتر (اختیاری)</legend>
+            <label><input type="checkbox" name="visit-offset" value="60">یک ساعت قبل</label>
+            <label><input type="checkbox" name="visit-offset" value="120">دو ساعت قبل</label>
+            <label><input type="checkbox" name="visit-offset" value="1440">یک روز قبل</label>
+          </fieldset>
+        </details>
+        <p id="visit-reminder-summary" class="quiet" aria-live="polite"></p>
+        <p id="visit-error" role="alert" class="field-error"></p>
+        <button type="submit" class="block-action">ذخیرهٔ قرار</button>
+        <button type="button" id="delete-edited-visit" class="text-button danger-link block-action" hidden>حذف قرار</button>
+        <button type="button" class="text-button block-action" data-close="visit-dialog">انصراف</button>
+      </div>
+    </form>
+  </dialog>

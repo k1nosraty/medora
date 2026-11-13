@@ -28,10 +28,14 @@ test("the installed shell serves a coherent offline page and does not intercept 
   let installed;
   listeners.get("install")({ waitUntil: promise => { installed = promise; } });
   await installed;
+  const html = await readFile(new URL("medication/index.html", publicDir), "utf8");
+  for (const [, asset] of html.matchAll(/(?:src|href)="(\/[^"#]+\.(?:css|js|svg|png|webmanifest))"/g)) {
+    assert.ok(stored.has(asset), `The shell page links to uncached asset ${asset}`);
+  }
   for (const path of stored.keys()) {
     if (!path.startsWith("/medication/") || !path.endsWith(".js")) continue;
     const module = await readFile(new URL(path.slice(1), publicDir), "utf8");
-    for (const match of module.matchAll(/(?:from\s+|import\(\s*)["'](\.{1,2}\/[^"']+|\/care-engine\/[^"']+)["']/g)) {
+    for (const match of module.matchAll(/(?:from\s+|import\(\s*)["'](\.{1,2}\/[^"']+|\/medication\/[^"']+)["']/g)) {
       assert.ok(stored.has(new URL(match[1], origin + path).pathname), `${path} loads an uncached module`);
     }
   }
@@ -44,9 +48,10 @@ test("the installed shell serves a coherent offline page and does not intercept 
     return response;
   }
   assert.equal(await (await fetchThroughWorker("/medication/?day=2026-11-09&view=water")).text(), "installed");
-  assert.equal(await (await fetchThroughWorker("/medication/english.js")).text(), "installed");
+  assert.equal(await (await fetchThroughWorker("/medication/shared/i18n/english.js")).text(), "installed");
   assert.equal(fetchThroughWorker("/api/reminders"), undefined);
   assert.equal(fetchThroughWorker("/api/promotion"), undefined);
   assert.equal(fetchThroughWorker("/admin/"), undefined);
+  assert.equal(fetchThroughWorker("/design/"), undefined);
   assert.deepEqual(network, []);
 });

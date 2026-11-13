@@ -28,7 +28,7 @@ retry.addEventListener("click", () => {
 });
 
 try {
-  await import("./medication.js");
+  await import("./app/medora.js");
 } catch {
   let english = document.documentElement.lang === "en";
   try {

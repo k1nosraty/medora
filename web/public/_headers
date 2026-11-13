@@ -8,3 +8,6 @@
   Cache-Control: no-store
 /admin/*
   Cache-Control: no-store
+/design/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex

@@ -1,0 +1,19 @@
+  <dialog id="date-picker" class="sheet value-picker" aria-labelledby="date-picker-title">
+    <div class="sheet-body">
+      <h2 id="date-picker-title">انتخاب تاریخ</h2>
+      <div class="feature-head calendar-head">
+        <button type="button" id="picker-previous-month" class="icon-button" aria-label="ماه قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+        <strong id="picker-month"></strong>
+        <button type="button" id="picker-next-month" class="icon-button reverse" aria-label="ماه بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+      </div>
+      <div id="picker-days" class="calendar-grid"></div>
+      <div class="feature-head picker-actions">
+        <button type="button" class="text-button" data-close="date-picker">انصراف</button>
+        <div>
+          <button type="button" class="text-button" id="picker-clear-date" hidden>پاک‌کردن</button>
+          <button type="button" class="text-button" id="picker-today">امروز</button>
+          <button type="button" id="picker-date-confirm">انتخاب</button>
+        </div>
+      </div>
+    </div>
+  </dialog>

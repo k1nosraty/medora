@@ -1,0 +1,49 @@
+  <dialog id="routine-editor" class="sheet routine-sheet" aria-labelledby="routine-editor-title">
+    <form id="routine-form" class="sheet-form" novalidate>
+      <div class="sheet-header"><svg aria-hidden="true"><use href="/medication/assets/icons/routines.svg#custom"/></svg><h2 id="routine-editor-title">روتین جدید</h2><button type="button" class="icon-button" data-close="routine-editor" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body routine-fields">
+        <label>نام روتین<input id="routine-name" type="text" dir="auto" maxlength="80" placeholder="مثلاً تمرین کششی" required></label>
+        <div class="routine-category-choice">
+          <span>نوع روتین</span>
+          <button id="routine-category-open" type="button" class="secondary" aria-haspopup="dialog">
+            <span class="routine-glyph" id="routine-preview"></span>
+            <span id="routine-category-label"></span>
+            <svg aria-hidden="true"><use href="#i-expand"/></svg>
+          </button>
+        </div>
+        <fieldset id="routine-colors"><legend>رنگ روتین</legend><div class="visit-color-grid"></div></fieldset>
+        <fieldset class="routine-schedule">
+          <legend>تکرار</legend>
+          <select id="routine-repeat" aria-label="تکرار"><option value="daily">هر روز</option><option value="weekly">روزهای انتخابی</option></select>
+          <div id="routine-weekly" class="routine-fields" hidden>
+            <div id="routine-weekdays" class="weekdays" role="group" aria-label="روزهای تکرار"></div>
+            <label>بازهٔ تکرار<select id="routine-interval"><option value="1">هر هفته</option><option value="2">هر دو هفته</option><option value="3">هر سه هفته</option><option value="4">هر چهار هفته</option></select></label>
+          </div>
+        </fieldset>
+        <details class="editor-options" id="routine-options">
+          <summary>هدف، ساعت و جزئیات</summary>
+          <div class="routine-fields">
+            <div class="routine-time-fields">
+              <label>تاریخ شروع<input id="routine-start" type="date" required></label>
+              <label>ساعت روتین<input id="routine-time" type="time"></label>
+            </div>
+            <label class="routine-check"><input id="routine-reminder" type="checkbox">اعلان در ساعت روتین</label>
+            <p id="routine-reminder-help" class="quiet" hidden>برای دریافت اعلان، اعلان‌های این دستگاه را در تنظیمات فعال کنید.</p>
+            <label>روش ثبت<select id="routine-mode"><option value="done">انجام شد</option><option value="quantity">هدف عددی</option><option value="steps">چک‌لیست</option></select></label>
+            <div id="routine-target-fields" class="routine-time-fields" hidden>
+              <label>مقدار هدف<input id="routine-target" type="text" inputmode="numeric" dir="ltr" maxlength="5" placeholder="۲۰"></label>
+              <label>واحد<input id="routine-unit" type="text" dir="auto" maxlength="24" placeholder="دقیقه، صفحه یا تکرار"></label>
+            </div>
+            <label id="routine-steps-field" hidden>مراحل، هر مرحله در یک خط<textarea id="routine-steps" rows="3" dir="auto" maxlength="840" placeholder="شست‌وشو&#10;مرطوب‌کننده&#10;ضدآفتاب"></textarea></label>
+            <label>یادداشت (اختیاری)<textarea id="routine-notes" rows="2" dir="auto" maxlength="320"></textarea></label>
+          </div>
+        </details>
+        <p id="routine-editor-status" class="field-error" role="alert"></p>
+        <button id="routine-save" type="submit" class="block-action">ذخیرهٔ روتین</button>
+        <div id="routine-management" hidden>
+          <button id="routine-pause" class="secondary" type="button">توقف موقت</button>
+          <button id="routine-delete" class="secondary danger" type="button">حذف روتین</button>
+        </div>
+      </div>
+    </form>
+  </dialog>

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f3fa">
+  <meta name="robots" content="noindex">
+  <title>گالری طراحی مدورا</title>
+  <link rel="stylesheet" href="/style.css">
+  <!-- include layout/styles.html -->
+  <link rel="stylesheet" href="/design/gallery.css">
+  <script type="module" src="/design/gallery.js"></script>
+</head>
+<body class="medora">
+  <!-- include assets/icons/library.html -->
+  <!-- include gallery/cycle-art.svg -->
+  <main class="gallery">
+    <header class="gallery-heading">
+      <div class="gallery-brand"><span class="brand-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></span> مدورا</div>
+      <h1 data-en="Medora design gallery">گالری طراحی مدورا</h1>
+      <p><span data-en="Preview icons, cards, banners and forms at their actual size. Changes apply to this preview only.">آیکون، کارت، بنر و فرم را با رنگ و اندازهٔ واقعی بررسی کن. انتخاب‌ها فقط روی این پیش‌نمایش اثر می‌گذارند.</span></p>
+    </header>
+    <div class="gallery-toolbar">
+      <label><span data-en="Appearance">ظاهر</span> <select id="theme"><option value="light">روشن</option><option value="dark">تیره</option><option value="system">مطابق دستگاه</option></select></label>
+      <label><span data-en="Accent">اکسنت</span> <select id="accent"></select></label>
+      <label class="gallery-check"><input id="cycle-preview" type="checkbox"> <span data-en="Show Cycle">نمایش چرخه</span></label>
+      <label>زبان <select id="gallery-language"><option value="fa">فارسی</option><option value="en">English</option></select></label>
+      <label><span data-en="Width">عرض</span> <select id="width"><option value="auto" data-en="Fit screen">متناسب با صفحه</option><option value="390px" data-en="390 pixels">۳۹۰ پیکسل</option><option value="320px" data-en="320 pixels">۳۲۰ پیکسل</option></select></label>
+    </div>
+    <nav class="gallery-nav" aria-label="بخش‌های گالری" data-en-aria-label="Gallery sections">
+      <a href="#surfaces"><span data-en="Cards and banners">کارت و بنر</span></a><a href="#icons"><span data-en="Icons">آیکون‌ها</span></a><a href="#forms"><span data-en="Forms">فرم‌ها</span></a><a href="#palette"><span data-en="Colors">رنگ‌ها</span></a>
+    </nav>
+    <section id="surfaces" class="gallery-section">
+      <h2><span data-en="Cards and banners">کارت‌ها و بنرها</span></h2>
+      <div class="gallery-surface-grid">
+        <article class="gallery-surface">
+          <h3>امروز</h3>
+          <!-- include layout/day-navigation.html -->
+          <!-- include layout/program-cards.html -->
+          <!-- include layout/today-water.html -->
+          <p id="future-schedule" hidden></p>
+        </article>
+        <article class="gallery-surface">
+          <h3><span data-en="Reports and calendar">گزارش‌ها و تقویم</span></h3>
+          <div id="gallery-reports"></div>
+          <div id="gallery-agenda"></div>
+        </article>
+        <article class="gallery-surface">
+          <h3><span data-en="States and controls">حالت‌ها و کنترل‌ها</span></h3>
+          <div id="gallery-controls"></div>
+        </article>
+      </div>
+    </section>
+    <section id="icons" class="gallery-section">
+      <h2><span data-en="Icon library">مجموعهٔ آیکون‌ها</span></h2>
+      <div class="gallery-filter">
+        <label><span data-en="Category">دسته</span> <select id="family"></select></label>
+        <label>جست‌وجو <input id="icon-search" type="search" placeholder="مثلاً دندان یا ساشه" data-en-placeholder="For example, dental or sachet"></label>
+        <label><span data-en="Illustration color">رنگ تصویر</span> <select id="art-color"></select></label>
+        <span id="icon-count" role="status"></span>
+      </div>
+      <div class="gallery-catalog">
+        <div id="icon-grid" class="gallery-icon-grid"></div>
+        <aside id="icon-specimen" class="gallery-surface" aria-label="تصویر انتخاب‌شده" data-en-aria-label="Selected illustration"></aside>
+      </div>
+    </section>
+    <section id="forms" class="gallery-section">
+      <h2><span data-en="Forms and dialogs">فرم‌ها و پنجره‌ها</span></h2>
+      <p><span data-en="Open a sample to inspect its fields and appearance. The gallery saves no records.">برای بررسی فیلدها و ظاهر فرم‌ها، یک نمونه را باز کن. گالری داده‌ای ذخیره نمی‌کند.</span></p>
+      <div class="gallery-form-grid" id="gallery-forms"></div>
+    </section>
+    <section id="palette" class="gallery-section">
+      <h2><span data-en="Compare accents">مقایسهٔ اکسنت‌ها</span></h2>
+      <div id="gallery-palettes" class="gallery-palette-grid"></div>
+    </section>
+  </main>
+  <p id="status" hidden></p>
+  <!-- include screens/routines.html -->
+  <!-- include forms/quick-add.html -->
+  <!-- include forms/medicine-editor.html -->
+  <!-- include forms/medicine-phase.html -->
+  <!-- include forms/medicine-slot.html -->
+  <!-- include forms/medicine-appearance.html -->
+  <!-- include forms/appointment-editor.html -->
+  <!-- include forms/appointment-category.html -->
+  <!-- include forms/routine-editor.html -->
+  <!-- include forms/routine-category.html -->
+  <!-- include forms/routine-log.html -->
+  <!-- include forms/water-log.html -->
+  <!-- include forms/date-picker.html -->
+  <!-- include forms/time-picker.html -->
+  <!-- include forms/settings.html -->
+  <!-- include forms/account.html -->
+  <!-- include forms/confirm-delete.html -->
+  <dialog id="design-cycle-dialog" class="sheet" aria-labelledby="design-cycle-title">
+    <div class="sheet-header">
+      <h2 id="design-cycle-title" data-en="Cycle">چرخه</h2>
+      <button type="button" class="icon-button" data-close="design-cycle-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <div id="design-cycle-banner"></div>
+      <p data-en="This sample contains no personal records.">این نمونه از دادهٔ ساختگی استفاده می‌کند.</p>
+    </div>
+  </dialog>
+</body>
+</html>

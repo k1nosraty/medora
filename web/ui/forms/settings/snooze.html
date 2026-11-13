@@ -1,0 +1,13 @@
+      <section id="snooze-settings" class="settings-panel" hidden>
+        <form id="snooze-form">
+          <p class="quiet">وقتی مصرف یک نوبت را به تعویق می‌اندازی، مدورا بعد از این مدت دوباره یادآوری می‌کند.</p>
+          <fieldset class="settings-choices"><legend>مدت تعویق دارو</legend>
+            <label><input type="radio" name="snooze-preset" value="10" checked><span>۱۰ دقیقه</span></label>
+            <label><input type="radio" name="snooze-preset" value="30"><span>۳۰ دقیقه</span></label>
+            <label><input type="radio" name="snooze-preset" value="60"><span>۶۰ دقیقه</span></label>
+            <label><input type="radio" name="snooze-preset" value="custom"><span>دلخواه</span></label>
+          </fieldset>
+          <label id="snooze-custom-row" hidden>مدت تعویق (دقیقه)<input id="snooze-minutes" dir="ltr" inputmode="numeric" maxlength="4"></label>
+          <button type="submit" class="block-action">ذخیرهٔ مدت تعویق</button>
+        </form>
+      </section>

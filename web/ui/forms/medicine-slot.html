@@ -1,0 +1,16 @@
+  <template id="slot-template">
+    <div class="slot">
+      <div class="slot-heading"><strong></strong><button type="button" class="remove-slot text-button danger-link">حذف نوبت</button></div>
+      <div class="slot-fields">
+        <label>ساعت مصرف<input class="time" type="time" dir="ltr" value="08:00" required></label>
+        <div class="dose-field">
+          <label>دوز (اختیاری)<input class="amount" inputmode="decimal" dir="ltr" maxlength="15" placeholder="مثلاً ۰٫۵"></label>
+          <div class="dose-quick-values" role="group" aria-label="انتخاب سریع دوز">
+            <button type="button" class="secondary" data-dose-value="250" aria-label="یک‌چهارم واحد">¼</button>
+            <button type="button" class="secondary" data-dose-value="500" aria-label="نیم واحد">½</button>
+            <button type="button" class="secondary" data-dose-value="1000" aria-label="یک واحد">۱</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>

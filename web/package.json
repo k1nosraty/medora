@@ -5,10 +5,13 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
+    "build": "node scripts/build-web.mjs",
+    "predev": "npm run build",
     "dev": "wrangler dev",
-    "predeploy": "node scripts/version-offline-shell.mjs",
+    "predeploy": "npm run build",
     "deploy": "wrangler deploy",
     "pilot:secrets": "node scripts/pilot-secrets.mjs",
+    "pretest": "npm run build",
     "test": "node --test",
     "test:care": "node --test scripts/care-engine.check.mjs",
     "test:alarms": "node scripts/reminder-alarm.check.mjs"

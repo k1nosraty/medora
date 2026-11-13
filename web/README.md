@@ -8,10 +8,9 @@
 
 ## ساخت و انتشار
 
-به Node.js نسخهٔ ۲۲ به بالا و JDK نیاز دارید. از ریشهٔ ریپو اجرا کنید.
+به Node.js نسخهٔ ۲۲ به بالا نیاز دارید. از ریشهٔ ریپو اجرا کنید.
 
 ```bash
-bash gradlew -p care-core jvmTest buildWebEngine
 cd web
 npm ci
 npm test
@@ -21,11 +20,13 @@ npm run pilot:secrets -- https://github.com/k1nosraty/medora
 npm run dev
 ```
 
+پس از ویرایش قالب، آیکون یا استایل در `web/ui/`، دستور `npm run build` را اجرا کنید. گالری طراحی در `/design/` از قطعات وب‌اپ و دادهٔ آزمایشی استفاده می‌کند.
+
 دستور ساخت کلید فقط برای راه‌اندازی سرویس تازه است. فایل‌های محلی `.dev.vars` و `.pilot-secrets.json` محرمانه‌اند. کد `PILOT_ACCESS_CODE` فقط برای ابزار عیب‌یابی `/pilot/` است. کاربران مدورا اعلان را با مجوز گوشی فعال می‌کنند. کلیدهای VAPID و امضای اشتراک را در انتشارهای بعدی حفظ کنید.
 
 برای انتشار دائمی از حساب Workers Free استفاده کنید.
 
-پوش به شاخهٔ `deploy`، موتور مشترک را می‌سازد، تست‌های وب را اجرا می‌کند و وب‌اپ را روی Worker فعلی منتشر می‌کند. برای راه‌اندازی، `CLOUDFLARE_ACCOUNT_ID` و `CLOUDFLARE_API_TOKEN` را در [Actions secrets مخزن](https://github.com/k1nosraty/medora/settings/secrets/actions) ثبت کنید. توکن باید دسترسی ویرایش Workers را فقط برای حسابی داشته باشد که مدورا روی آن اجرا می‌شود.
+پوش به شاخهٔ `deploy`، قالب‌ها و کش آفلاین را می‌سازد، تست‌های وب را اجرا می‌کند و وب‌اپ را روی Worker فعلی منتشر می‌کند. برای راه‌اندازی، `CLOUDFLARE_ACCOUNT_ID` و `CLOUDFLARE_API_TOKEN` را در [Actions secrets مخزن](https://github.com/k1nosraty/medora/settings/secrets/actions) ثبت کنید. توکن باید دسترسی ویرایش Workers را فقط برای حسابی داشته باشد که مدورا روی آن اجرا می‌شود.
 
 برای انتشار دستی از پوشهٔ `web` اجرا کنید.
 

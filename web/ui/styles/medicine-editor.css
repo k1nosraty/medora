@@ -1,0 +1,24 @@
+.medora .wizard-visual {
+  position: relative;
+  isolation: isolate;
+  min-block-size: 9.1rem;
+  padding: .7rem;
+  display: flex;
+  align-items: flex-start;
+  border-radius: 1.35rem;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 70% 0, var(--cover-haze), transparent 66%), linear-gradient(135deg, var(--cover-shade), var(--cover-light));
+  color: var(--cover-text);
+}
+.medora .wizard-visual > p { max-inline-size: 47%; margin: .5rem .3rem; font-size: clamp(.96rem, 3.7vw, 1.35rem); line-height: 1.3; font-weight: 800; }
+.wizard-visual img { position: absolute; z-index: -1; inset-inline-end: -8%; inset-block-end: -.32rem; inline-size: 74%; max-inline-size: 21rem; height: auto; opacity: .65; }
+html[dir="rtl"] .wizard-visual img { transform: scaleX(-1); }
+.medora .wizard-visual .wizard-banner { position: absolute; inset: auto auto -.35rem 0; inline-size: 43%; }
+html[dir="ltr"] .medora .wizard-visual .wizard-banner { inset: auto 0 -.35rem auto; }
+.medora .wizard-visual .medication-banner { background: transparent; color: var(--ink); }
+.medora .wizard-visual .medication-banner span { inset-inline-start: .12rem; inset-block-end: .72rem; }
+.medora .wizard-visual .medication-banner .medication-badge { inline-size: 5.8rem; block-size: 5.8rem; }
+.medora #editor .wizard-steps { background: var(--stage); border-radius: .95rem; padding: .2rem; }
+.medora #editor .wizard-steps li { border: 0; }
+.medora #editor .wizard-steps li[aria-current="step"] { background: var(--panel); color: var(--action); box-shadow: 0 .12rem .35rem var(--glass-shadow); }
+.medora #editor .wizard-steps li[data-complete="true"] { background: transparent; color: var(--ok); }

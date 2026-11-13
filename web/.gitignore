@@ -2,4 +2,7 @@ node_modules/
 .wrangler/
 .dev.vars
 .pilot-secrets.json
-public/care-engine/
+public/medication/index.html
+public/medication/sw.js
+public/design/index.html
+public/medication/styles/app.css

@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { readAndroidBackup } from "../public/medication/android-backup.js";
-import { isWebBackup, readWebBackup, writeWebBackup } from "../public/medication/web-backup.js";
+import { readAndroidBackup } from "../public/medication/features/backups/android-format.js";
+import { isWebBackup, readWebBackup, writeWebBackup } from "../public/medication/features/backups/web-format.js";
 import {
   WebPhase, WebSlot, validMedicationPhases, medicationSlots,
   quantityFromText, updateStock, isLowStock
-} from "../public/care-engine/care-core.mjs";
-import { nextMedicationReminder, nextCareReminder, validSchedule } from "../src/medication-schedule.mjs";
-import { scheduleForPush } from "../public/medication/care-plan.js";
-import { routineComplete, routineLog } from "../public/medication/routine-plan.js";
-import { createCareIndex, doseTime, trackSchedule } from "../public/medication/care-index.js";
+} from "../public/medication/domain/medication-rules.js";
+import { nextMedicationReminder, nextCareReminder, validSchedule } from "../src/reminders/medication-schedule.mjs";
+import { scheduleForPush } from "../public/medication/domain/care-plan.js";
+import { routineComplete, routineLog } from "../public/medication/domain/routine-plan.js";
+import { createCareIndex, doseTime, trackSchedule } from "../public/medication/domain/care-index.js";
 
 const day = iso => Date.parse(`${iso}T00:00:00Z`) / 86_400_000;
 const instant = iso => Date.parse(iso);
@@ -271,7 +271,7 @@ test("routine targets preserve logged history and only suppress the completed oc
 });
 
 test("notification names stay private by default and opted-in reminders retain due details", async () => {
-  const { reminderCopy } = await import("../src/reminder-copy.mjs");
+  const { reminderCopy } = await import("../src/reminders/copy.mjs");
   const start = day("2026-11-09");
   const now = instant("2026-11-09T07:59:00Z");
   const medicines = Object.fromEntries(["A", "B"].map((name, index) => [name, {

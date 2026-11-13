@@ -1,0 +1,18 @@
+      <div data-screen="routines" hidden>
+        <section class="routine-banner program-routine" aria-labelledby="routine-banner-title">
+          <div><h2 id="routine-banner-title">روتین‌های من</h2><p id="routine-progress" aria-live="polite"></p>
+            <progress id="routine-meter" max="1" value="0" aria-label="پیشرفت روتین‌های روز" hidden></progress>
+          </div>
+          <svg class="category-art routine-category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
+        </section>
+        <div id="routine-dates"></div>
+        <div class="routine-filters segmented glass-toolbar" role="group" aria-label="نمای روتین‌ها">
+          <button type="button" data-routine-filter="today" aria-pressed="true">امروز</button>
+          <button type="button" data-routine-filter="all" aria-pressed="false">همه</button>
+          <button type="button" data-routine-filter="history" aria-pressed="false">سوابق</button>
+        </div>
+        <label class="routine-search" id="routine-search-wrap" hidden>جست‌وجوی روتین<input id="routine-search" type="search" placeholder="نام یا دستهٔ روتین"></label>
+        <div id="routine-list"></div>
+        <button type="button" class="secondary block-action" id="routine-more" hidden>سوابق بیشتر</button>
+        <button type="button" class="block-action" id="routine-first" data-open-routine hidden>روتین جدید</button>
+      </div>

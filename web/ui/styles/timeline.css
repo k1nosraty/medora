@@ -1,0 +1,124 @@
+.daily-main { min-inline-size: 0; }
+.daily-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: 0 0 .55rem; }
+.medora .daily-heading h2 { font-size: 1.25rem; margin: 0; }
+.medora .daily-heading output { padding: .2rem .62rem; border-radius: 100vw; background: var(--dock-active); color: var(--action); font-size: .75rem; font-weight: 740; }
+.medora #med-day-doses .dose-card { padding: .5rem .65rem; }
+.medora #med-day-doses .dose-info { display: flex; align-items: baseline; flex-wrap: wrap; gap: .15rem .4rem; min-inline-size: 0; flex: 1; }
+.medora #med-day-doses .dose-info :is(h3, p) { margin: 0; }
+.medora #med-day-doses .dose-info h3 { flex-basis: 100%; }
+.medora #med-day-doses .dose-result { gap: .12rem .4rem; }
+.medora #med-day-doses .dose-quick button { min-block-size: 2.75rem; padding: .2rem .45rem; font-size: .86rem; }
+.today-state {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .85rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--outline);
+  border-radius: 1.35rem;
+  background: linear-gradient(115deg, var(--panel), var(--stage));
+}
+.medora .today-state h3 { margin: 0; font-size: 1.13rem; }
+.medora .today-state p { color: var(--muted); font-size: .87rem; }
+.today-state-art {
+  display: grid;
+  place-items: center;
+  inline-size: 3.45rem;
+  aspect-ratio: 1;
+  border-radius: 42%;
+  background: var(--dock-active);
+  color: var(--action);
+  box-shadow: 0 0 0 .28rem var(--panel), inset 0 1px 0 var(--glass-glint);
+}
+.medora .today-state-art svg { inline-size: 1.7rem; block-size: 1.7rem; }
+.today-state[data-complete="true"] .today-state-art { inline-size: 4.35rem; background: none; box-shadow: none; }
+.medora .today-state[data-complete="true"] .today-state-art svg { inline-size: 100%; block-size: 100%; }
+.medora .daily-sheet .timeline {
+  position: relative;
+  inline-size: var(--today-rail-width);
+  margin: 1rem auto;
+}
+.medora .daily-sheet .timeline::before {
+  content: "";
+  position: absolute;
+  inset-block: 1.7rem 0;
+  inset-inline-start: -.5rem;
+  border-inline-start: 2px solid var(--outline);
+}
+.medora #timeline-title { margin-block-end: .45rem; }
+.medora .daily-sheet .timeline article::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -.775rem;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  inline-size: .55rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--action);
+  box-shadow: 0 0 0 .2rem var(--page);
+}
+.medora .daily-sheet .timeline article { position: relative; }
+.medora .day-queue-heading {
+  margin: .25rem 0 .4rem;
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 750;
+}
+.day-focus-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .15rem .6rem;
+  margin-block-end: .35rem;
+}
+.medora .day-focus-header .day-queue-heading { margin: 0; }
+.day-focus-controls {
+  display: flex;
+  align-items: center;
+  gap: .1rem;
+  margin-inline-start: auto;
+}
+.day-focus-position {
+  min-inline-size: 3.25rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: .78rem;
+  white-space: nowrap;
+}
+.medora .day-focus-controls .icon-button {
+  border: 1px solid color-mix(in srgb, var(--action) 24%, transparent);
+  border-radius: .8rem;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--glass-glint) 32%, transparent), transparent 68%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-glint) 56%, transparent);
+  -webkit-backdrop-filter: blur(8px) saturate(125%);
+  backdrop-filter: blur(8px) saturate(125%);
+  color: var(--action);
+}
+.medora .day-focus-controls .icon-button[aria-disabled="true"] { opacity: .45; cursor: default; }
+.medora .day-focus-controls svg { inline-size: 1.1rem; block-size: 1.1rem; }
+html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { scale: -1 1; }
+.day-focus-swipe { touch-action: pan-y pinch-zoom; }
+.day-focus-dragging { overflow: clip; }
+.day-focus-dragging > article { translate: var(--day-focus-drag); animation: none; }
+.day-focus-enter { animation: day-focus-enter 180ms ease-out; }
+@keyframes day-focus-enter {
+  from { translate: var(--day-focus-entry); opacity: .8; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .day-focus-enter { animation: none; }
+}
+.medora .day-queue-done {
+  margin-block-start: .85rem;
+  padding-block-start: .55rem;
+  border-block-start: 1px solid var(--outline);
+}
+.medora .daily-sheet .timeline article[data-day-state="done"] {
+  background: color-mix(in srgb, var(--muted) 9%, var(--panel));
+  border-color: var(--outline);
+}
+.medora .daily-sheet .timeline article[data-day-state="done"]::before {
+  background: var(--muted);
+}
+.medora .day-card[data-day-state="done"] .day-card-art { filter: grayscale(1); }

@@ -1,0 +1,86 @@
+.medora .cabinet-search {
+  display: flex;
+  gap: .52rem;
+  align-items: center;
+  padding-inline: .72rem .28rem;
+  margin: 0 0 .5rem;
+  border: 1px solid var(--outline);
+  border-radius: 1rem;
+  color: var(--action);
+  background: var(--panel);
+}
+.medora .cabinet-search input { flex: 1; min-inline-size: 0; max-inline-size: none; min-block-size: 2.65rem; border: 0; background: transparent; }
+.medora .cabinet-search svg { inline-size: 1.15rem; block-size: 1.15rem; }
+.medora #editor:not([data-step="0"]) .wizard-visual { display: none; }
+.medora #medication-dialog { scroll-padding-block-end: 5.5rem; }
+.editor-footer {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  padding-block: .4rem .55rem;
+  border-radius: .85rem .85rem 0 0;
+  background: color-mix(in srgb, var(--page) 90%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.medora .plan-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .24rem; }
+.medora .plan-mode :is(legend, input), .medora .phase .weekdays input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  min-block-size: 0;
+  padding: 0;
+  clip-path: inset(50%);
+}
+.medora .plan-mode label, .medora .phase .weekdays label {
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: .22rem .52rem;
+  border-radius: .8rem;
+  min-block-size: 2.5rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.medora :is(.plan-mode, .phase .weekdays) label:has(:checked) {
+  background: var(--dock-active);
+  color: var(--action);
+  font-weight: 750;
+}
+.medora :is(.plan-mode, .phase .weekdays) label:has(:focus-visible) { outline: .15rem solid var(--action); outline-offset: .12rem; }
+.medora .phase { margin: .65rem 0; padding: .65rem; border-radius: 1.2rem; background: var(--panel); }
+.medora .phase legend { padding-inline: .4rem; color: var(--action); font-weight: 800; }
+.medora .phase select { display: block; inline-size: 100%; }
+.medora .phase :is(.plan-dates, .slot-fields) label { margin-block: 0 .2rem; font-size: .86rem; color: var(--muted); }
+.medora .phase :is(.plan-dates, .slot-fields) .picker-field { padding-inline: .25rem; border-radius: .9rem; background: var(--field); }
+.medora .phase .weekdays { gap: .25rem; align-items: stretch; }
+.medora .phase .weekdays label { min-block-size: 2.25rem; border: 1px solid var(--outline); font-size: .81rem; }
+.medora .weekly-plan > label { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
+.medora .weekly-plan .interval { inline-size: 5rem; }
+.exact-days { display: flex; flex-wrap: wrap; gap: .28rem; margin-block: .4rem; }
+.medora .exact-days button { min-block-size: 2.5rem; font-size: .8rem; }
+.doses-heading { display: flex; justify-content: space-between; align-items: center; gap: .4rem; margin-block: .3rem .05rem; }
+.medora .doses-heading h4 { margin: 0; }
+.medora .dose-unit-link { font-size: .82rem; text-align: end; overflow-wrap: anywhere; }
+.medora .slot {
+  padding: .5rem .6rem;
+  margin-block: .4rem;
+  border: 1px solid var(--outline);
+  border-radius: 1rem;
+  background: var(--stage);
+}
+.slot-heading { display: flex; justify-content: space-between; align-items: center; min-block-size: 2.15rem; gap: .4rem; }
+.medora .slot-heading button { min-block-size: 2.3rem; font-size: .76rem; }
+.medora .slot .amount { inline-size: 100%; }
+.dose-quick-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; margin-block: .25rem; }
+.medora .dose-quick-values button { min-block-size: 2.35rem; min-inline-size: 0; padding: .1rem; border-radius: .7rem; }
+.medora .phase .buttons { margin-block-start: .45rem; }
+.medora #editor-review .review-upcoming { padding: .55rem .65rem; border-radius: .85rem; background: var(--dock-active); color: var(--action); }
+.medora #editor-review ol { display: grid; gap: .4rem; padding: 0; list-style: none; }
+.medora #editor-review li { padding: .5rem .65rem; border-radius: .85rem; background: var(--stage); }
+.medora #editor-review h5 { margin: 0 0 .25rem; font-size: .9rem; color: var(--action); }
+.medora #editor [aria-invalid="true"] { border-color: var(--error); }
+@media (max-width: 350px) {
+  .medora .slot-fields { gap: .35rem; }
+  .medora .slot-fields .picker-field { min-block-size: 2.75rem; }
+}

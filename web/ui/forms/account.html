@@ -1,0 +1,82 @@
+  <dialog id="account-dialog" class="sheet" aria-labelledby="account-title">
+    <header class="account-cover">
+      <span class="account-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></span>
+      <button type="button" class="icon-button" data-close="account-dialog" aria-label="بستن" autofocus><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      <h2 id="account-title">حساب مدورا</h2>
+      <p id="account-intro">برای ورود، نام کاربری و رمز عبورت رو وارد کن.</p>
+    </header>
+    <div class="account-content">
+      <div class="account-modes" id="account-modes" role="group" aria-label="ورود یا ثبت‌نام" hidden>
+        <button type="button" data-account-mode="login" aria-pressed="true">ورود</button>
+        <button type="button" data-account-mode="email" aria-pressed="false">ثبت‌نام</button>
+      </div>
+      <form id="password-login" class="account-form" method="post" hidden>
+        <label>نام کاربری<input id="login-username" name="username" dir="ltr" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" required></label>
+        <div class="account-password">
+          <label>رمز عبور<input id="login-password" name="password" type="password" dir="auto" autocomplete="current-password" maxlength="128" required></label>
+          <button type="button" class="text-button" data-reveal-password="login-password">نمایش</button>
+        </div>
+        <button type="submit" class="block-action account-primary">ورود به مدورا</button>
+        <button type="button" class="text-button" id="forgot-password">رمز عبور را فراموش کرده‌ام</button>
+      </form>
+      <form id="reset-email-form" class="account-form" method="post" hidden>
+        <label>نشانی ایمیل<input id="reset-email" type="email" dir="ltr" autocomplete="email" maxlength="254" required></label>
+        <button type="submit" class="block-action account-primary">ارسال کد بازیابی</button>
+        <button type="button" class="text-button" data-reset-back>بازگشت به ورود</button>
+      </form>
+      <form id="reset-password-form" class="account-form" method="post" hidden>
+        <p class="quiet">اگر با این ایمیل حسابی داشته باشی، کد بازیابی به آن فرستاده می‌شود.</p>
+        <label>کد ۶ رقمی<input id="reset-code" dir="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9۰-۹٠-٩]{6}" required></label>
+        <div class="account-password">
+          <label>رمز عبور تازه<input id="reset-password" type="password" dir="auto" autocomplete="new-password" minlength="15" maxlength="128" required></label>
+          <button type="button" class="text-button" data-reveal-password="reset-password">نمایش</button>
+        </div>
+        <p class="quiet">حداقل ۱۵ نویسه. می‌تونی از یک عبارت طولانی استفاده کنی.</p>
+        <button type="submit" class="block-action account-primary">ذخیرهٔ رمز تازه</button>
+        <div class="account-options">
+          <button type="button" class="text-button" id="reset-change-email">تغییر ایمیل</button>
+          <button type="button" class="text-button" id="reset-resend">ارسال دوبارهٔ کد</button>
+        </div>
+        <button type="button" class="text-button" data-reset-back>بازگشت به ورود</button>
+      </form>
+      <form id="email-start" class="account-form" hidden>
+        <label>نشانی ایمیل<input id="account-email" type="email" dir="ltr" autocomplete="email" maxlength="254" required></label>
+        <p class="quiet">ایمیل رو یک بار تأیید کن و بعد نام کاربری و رمزت رو بساز.</p>
+        <button type="submit" class="block-action account-primary">ارسال کد تأیید</button>
+      </form>
+      <form id="email-verify" class="account-form" hidden>
+        <p class="quiet">کد ارسال‌شده به <bdi id="account-recipient"></bdi> را وارد کنید.</p>
+        <label>کد ۶ رقمی<input id="account-code" dir="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9۰-۹٠-٩]{6}" required></label>
+        <button type="submit" class="block-action account-primary">تأیید ایمیل</button>
+        <div class="account-options">
+          <button type="button" class="text-button" id="email-change">تغییر ایمیل</button>
+          <button type="button" class="text-button" id="email-resend">ارسال دوبارهٔ کد</button>
+        </div>
+      </form>
+      <form id="password-register" class="account-form" method="post" hidden>
+        <label>نام کاربری<input id="register-username" name="username" dir="ltr" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9_]{3,32}" maxlength="32" aria-describedby="username-hint" required></label>
+        <p class="quiet" id="username-hint">۳ تا ۳۲ حرف انگلیسی، عدد یا زیرخط.</p>
+        <div class="account-password">
+          <label>رمز عبور<input id="register-password" name="password" type="password" dir="auto" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="password-hint" required></label>
+          <button type="button" class="text-button" data-reveal-password="register-password">نمایش</button>
+        </div>
+        <p class="quiet" id="password-hint">حداقل ۱۵ نویسه. می‌تونی از یک عبارت طولانی استفاده کنی.</p>
+        <button type="submit" class="block-action account-primary">ذخیرهٔ نام کاربری و رمز</button>
+        <button type="button" class="text-button" id="setup-back">بازگشت</button>
+      </form>
+      <div id="account-session" class="account-session" hidden>
+        <strong id="account-username" dir="auto"></strong>
+        <bdi id="account-address"></bdi>
+        <button type="button" class="block-action account-primary" id="legacy-setup" hidden>ساخت نام کاربری و رمز</button>
+        <div class="buttons">
+          <a id="open-admin" href="/admin/" hidden>پنل مدیریت</a>
+          <button id="email-logout" type="button" class="secondary">خروج از حساب</button>
+        </div>
+      </div>
+      <p id="account-status" class="quiet" role="status"></p>
+      <footer class="account-footer">
+        <button type="button" id="account-dismiss" class="text-button" data-close="account-dialog">ادامه بدون ورود</button>
+        <p class="quiet" id="account-local-note">برنامه و سوابق روی همین دستگاه نگه‌داری می‌شوند.</p>
+      </footer>
+    </div>
+  </dialog>

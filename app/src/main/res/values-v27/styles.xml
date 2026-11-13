@@ -1,6 +1,0 @@
-<resources>
-    <style name="Theme.Medora" parent="Theme.Medora.Base">
-        <item name="android:navigationBarColor">#FFFFFF</item>
-        <item name="android:windowLightNavigationBar">true</item>
-    </style>
-</resources>

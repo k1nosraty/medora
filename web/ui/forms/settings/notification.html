@@ -1,0 +1,20 @@
+      <section id="notification-settings" class="settings-panel" hidden>
+        <div class="settings-callout">
+          <h3>وضعیت اعلان این دستگاه</h3>
+          <p id="push-status" role="status">در حال آماده‌سازی اعلان…</p>
+        </div>
+        <div class="settings-push-actions">
+          <button id="push-enable" type="button" disabled>فعال‌کردن اعلان</button>
+          <button id="push-test" type="button" disabled hidden>آزمایش همین دستگاه</button>
+          <button id="push-check" type="button" class="secondary" disabled hidden>بررسی وضعیت</button>
+        </div>
+        <label class="routine-check"><input id="push-show-details" type="checkbox" aria-describedby="push-privacy">نمایش نام و جزئیات در اعلان</label>
+        <p id="push-privacy" class="quiet">این جزئیات برای ارسال اعلان به سرور می‌روند و ممکن است روی صفحهٔ قفل دیده شوند.</p>
+        <p id="push-test-result" class="settings-message" role="status"></p>
+        <details id="push-details" class="editor-options">
+          <summary>جزئیات ارسال اعلان</summary>
+          <p id="push-delivery" class="quiet" role="status"></p>
+          <p class="quiet">برای ارسال اعلان، زمان‌بندی و وضعیت رسیدن به هدف آب به سرور می‌رسد. تغییر آفلاین پس از اتصال همگام می‌شود.</p>
+        </details>
+        <button id="push-disable" type="button" class="text-button danger-link block-action" disabled hidden>خاموش‌کردن اعلان</button>
+      </section>

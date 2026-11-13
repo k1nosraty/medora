@@ -1,0 +1,16 @@
+      <div data-screen="medications" hidden>
+        <section aria-labelledby="plans-title">
+          <div class="section-heading" id="plans-heading"><div><h2 id="plans-title">قفسهٔ داروهای من</h2><p id="cabinet-count" class="quiet"></p></div><button id="add" type="button" data-open-medication>＋ داروی جدید</button></div>
+          <label class="cabinet-search" id="cabinet-search-wrap" hidden><svg aria-hidden="true"><use href="#i-search"/></svg><input id="cabinet-search" type="search" placeholder="جست‌وجوی دارو" aria-label="جست‌وجوی دارو"></label>
+          <div id="plans" role="region" aria-labelledby="plans-title" tabindex="0"></div>
+          <p class="empty" id="cabinet-empty" role="status" hidden>دارویی با این نام پیدا نشد.</p>
+        </section>
+        <section aria-labelledby="med-day-title">
+          <h2 id="med-day-title">نوبت‌های روز</h2>
+          <div id="med-day-summary" class="feature feature-head">
+            <div><strong id="med-day-count"></strong><p class="quiet">مصرف ثبت‌شده</p></div>
+            <div id="med-day-ring" class="progress-ring"><span></span></div>
+          </div>
+          <div id="med-day-doses"></div>
+        </section>
+      </div>

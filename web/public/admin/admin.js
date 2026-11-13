@@ -1,7 +1,7 @@
-import { $, button, element } from "/medication/dom.js";
-import { localizeMarkup, t } from "/medication/locale.js";
-import { applyDisplay } from "/medication/display.js";
-import { accessCareSettings } from "/medication/storage.js";
+import { $, button, element } from "/medication/shared/ui/dom.js";
+import { localizeMarkup, t } from "/medication/shared/i18n/locale.js";
+import { applyDisplay } from "/medication/styles/display.js";
+import { accessCareSettings } from "/medication/shared/storage.js";
 
 localizeMarkup();
 const refreshDisplay = () => accessCareSettings().then(applyDisplay).catch(() => {});

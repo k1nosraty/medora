@@ -1,0 +1,93 @@
+      <div data-screen="insights" hidden>
+        <div class="insights-tabs glass-toolbar" role="group" aria-label="نمای گزارش و تقویم">
+          <button type="button" data-insight="calendar" aria-controls="calendar-panel" aria-pressed="true"><svg aria-hidden="true"><use href="#i-calendar"/></svg>تقویم</button>
+          <button type="button" data-insight="reports" aria-controls="reports-panel" aria-pressed="false"><svg aria-hidden="true"><use href="#i-reports"/></svg>گزارش‌ها</button>
+        </div>
+        <div id="calendar-panel">
+          <section class="feature calendar-card" aria-labelledby="calendar-month">
+            <div class="feature-head calendar-head">
+              <button type="button" id="previous-month" class="icon-button" aria-label="ماه قبل"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+              <h2 id="calendar-month" aria-live="polite"></h2>
+              <button type="button" id="next-month" class="icon-button reverse" aria-label="ماه بعد"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+            </div>
+            <div id="calendar-days" class="calendar-grid" role="group" aria-labelledby="calendar-month"></div>
+            <ul class="calendar-key" aria-label="راهنمای تقویم">
+              <li><span class="calendar-dots" aria-hidden="true"><i class="medicine"></i></span>دارو</li>
+              <li><span class="calendar-dots" aria-hidden="true"><i class="water"></i></span>آب</li>
+              <li><span class="calendar-dots" aria-hidden="true"><i class="visit"></i></span>قرار</li>
+              <li><span class="calendar-dots" aria-hidden="true"><i class="routine"></i></span>روتین</li>
+            </ul>
+          </section>
+          <section id="calendar-activity" aria-labelledby="calendar-date">
+            <header class="calendar-agenda-head">
+              <div><h2 id="calendar-date" aria-live="polite"></h2><p id="calendar-agenda-label"></p></div>
+              <button type="button" id="calendar-today" class="secondary" hidden>بازگشت به امروز</button>
+            </header>
+            <div id="calendar-entries"></div>
+          </section>
+        </div>
+        <div id="reports-panel" hidden>
+          <div class="report-period glass-toolbar">
+            <div id="report-range" class="segmented" role="group" aria-label="بازهٔ گزارش">
+              <button type="button" data-report-range="week" aria-pressed="false">هفته</button>
+              <button type="button" data-report-range="month" aria-pressed="true">ماه</button>
+              <button type="button" data-report-range="year" aria-pressed="false">سال</button>
+            </div>
+            <p id="report-dates" class="quiet"></p>
+          </div>
+          <div class="report-cards">
+            <section class="feature water report-card program-water" aria-labelledby="report-water-title">
+              <div class="report-hero">
+                <svg class="report-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-report-water"/></svg>
+                <h2 id="report-water-title">مصرف آب</h2>
+                <div class="report-number" id="report-water-value"><strong id="report-water-number"></strong> <span>میلی‌لیتر</span></div>
+                <p id="report-average" class="report-caption">میانگین در روزهای دارای ثبت</p>
+                <p id="report-water-empty" class="report-empty" hidden>در این بازه آبی ثبت نشده است.</p>
+              </div>
+              <div id="report-water-trend" class="report-trend">
+                <p class="report-goal"><span aria-hidden="true"></span><span id="report-goal-label"></span></p>
+                <div id="report-chart" class="report-chart" role="group" aria-label="نمودار مصرف آب"></div>
+                <div id="report-chart-dates" class="quiet"></div>
+                <div class="report-chart-controls">
+                  <button type="button" id="report-chart-previous" class="secondary icon-button" aria-label="بازهٔ قبلی نمودار"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+                  <p id="report-chart-selection" class="quiet" aria-live="polite"></p>
+                  <button type="button" id="report-chart-next" class="secondary icon-button reverse" aria-label="بازهٔ بعدی نمودار"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+                </div>
+              </div>
+              <details id="report-water-details" class="report-water-details">
+                <summary>جزئیات مصرف آب<svg aria-hidden="true"><use href="#i-expand"/></svg></summary>
+                <dl id="report-water-coverage" class="report-stats"></dl>
+              </details>
+            </section>
+            <section class="feature medicine report-card program-medicine" aria-labelledby="report-dose-title">
+              <div class="report-hero">
+                <svg class="report-art category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-bottle"/></svg>
+                <h2 id="report-dose-title">مصرف دارو</h2>
+                <div class="report-number" hidden id="report-dose-value"><strong id="report-dose-number"></strong></div>
+                <p id="report-doses" class="report-caption"></p>
+              </div>
+              <progress id="report-dose-progress" class="report-progress" max="1" value="0" aria-label="سهم مصرف از نوبت‌های موعدرسیده یا ثبت‌شده" hidden></progress>
+              <dl class="report-stats" id="report-dose-breakdown" hidden></dl>
+            </section>
+            <section class="feature program-routine report-card" aria-labelledby="report-routine-title">
+              <div class="report-hero">
+                <svg class="report-art category-art routine-category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
+                <h2 id="report-routine-title">روتین‌ها</h2>
+                <div class="report-number" hidden id="report-routine-value"><strong id="report-routine-number"></strong></div>
+                <p id="report-routines" class="report-caption"></p>
+              </div>
+              <progress id="report-routine-progress" class="report-progress" max="1" value="0" aria-label="سهم روتین‌های انجام‌شده" hidden></progress>
+              <dl class="report-stats" id="report-routine-breakdown" hidden></dl>
+            </section>
+            <section class="feature visit report-card program-visit" aria-labelledby="report-visit-title">
+              <div class="report-hero">
+                <svg class="report-art category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>
+                <h2 id="report-visit-title">قرارها</h2>
+                <div class="report-number" hidden id="report-visit-value"><strong id="report-visit-number"></strong></div>
+                <p id="report-visits" class="report-caption"></p>
+              </div>
+              <dl class="report-stats" id="report-visit-breakdown" hidden></dl>
+            </section>
+          </div>
+        </div>
+      </div>

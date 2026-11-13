@@ -1,0 +1,15 @@
+  <dialog id="routine-log-dialog" class="sheet routine-sheet" aria-labelledby="routine-log-title">
+    <form id="routine-log-form" class="sheet-form" novalidate>
+      <div class="routine-log-header">
+        <div id="routine-log-banner"></div>
+        <button type="button" class="icon-button" data-close="routine-log-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="sheet-body routine-fields">
+        <p id="routine-log-notes" class="quiet" dir="auto"></p>
+        <label id="routine-amount-field">مقدار انجام‌شده تا این لحظه<input id="routine-amount" type="text" inputmode="numeric" dir="ltr" maxlength="5"><small id="routine-log-goal"></small></label>
+        <div id="routine-log-steps" class="routine-fields"></div>
+        <p id="routine-log-status" class="field-error" role="alert"></p>
+        <button id="routine-log-save" type="submit" class="block-action">ذخیرهٔ پیشرفت</button>
+      </div>
+    </form>
+  </dialog>

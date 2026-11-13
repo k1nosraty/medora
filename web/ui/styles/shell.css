@@ -1,0 +1,26 @@
+html[dir="ltr"] .medora { font-family: system-ui, -apple-system, sans-serif; }
+html[dir="ltr"] .medora h1, html[dir="ltr"] .medora .story-copy h2 { letter-spacing: -.045em; }
+html[dir="ltr"] .medora :is(#previous-day, #next-day, #screen-back, #settings-back, #previous-month, #next-month, #picker-previous-month, #picker-next-month, #report-chart-previous, #report-chart-next) svg { scale: -1 1; }
+.medora .app-content, .app-bar-inner { max-inline-size: 55rem; }
+.medora .app-content { box-sizing: border-box; }
+.medora .app-bar-inner { min-block-size: 3.7rem; }
+.medora .brand-mark { background: var(--action); color: var(--on-action); border-radius: .68rem; }
+.medora .header-tools button {
+  border: 1px solid var(--glass-rim);
+  background: color-mix(in srgb, var(--glass) 72%, transparent);
+  box-shadow: inset 0 1px 0 var(--glass-glint), 0 .18rem .65rem var(--glass-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+.medora .header-tools .language-switch { display: inline-flex; gap: .28rem; padding-inline: .58rem; font: 750 .69rem system-ui, sans-serif; border-radius: 100vw; }
+.medora .header-tools .language-switch svg { inline-size: 1.02rem; block-size: 1.02rem; }
+.medora .page-heading { margin-block: .4rem .65rem; }
+.medora #app:not([data-active-screen]) .page-heading,
+.medora #app:is([data-active-screen="today"], [data-active-screen="insights"], [data-active-screen="routines"]) .page-heading {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+}

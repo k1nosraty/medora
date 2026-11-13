@@ -1,0 +1,22 @@
+      <section id="water-settings" class="settings-panel water-panel" hidden>
+        <form id="water-goal-form" novalidate>
+          <label>هدف روزانه (میلی‌لیتر)<input id="water-goal" dir="ltr" inputmode="numeric" maxlength="5" required></label>
+          <label class="feature-head editor-switch settings-switch">یادآوری آب<input type="checkbox" id="water-reminders-enabled" role="switch"></label>
+          <div id="water-reminder-fields" hidden>
+            <div class="settings-time-grid">
+              <label>شروع یادآوری<input id="water-reminders-start" type="time" value="08:00" required></label>
+              <label>پایان یادآوری<input id="water-reminders-end" type="time" value="22:00" required></label>
+            </div>
+            <label>فاصلهٔ یادآوری<select id="water-reminders-interval"><option value="30">۳۰ دقیقه</option><option value="60">یک ساعت</option><option value="120">دو ساعت</option></select></label>
+            <details class="editor-options"><summary>گزینه‌های بیشتر</summary>
+              <label>تکرار یک‌باره<select id="water-reminders-repeat"><option value="0">خاموش</option><option value="5">۵ دقیقه بعد</option><option value="10">۱۰ دقیقه بعد</option><option value="15">۱۵ دقیقه بعد</option></select></label>
+            </details>
+          </div>
+          <button type="submit" class="block-action">ذخیرهٔ تنظیمات آب</button>
+        </form>
+        <div id="water-pause-card" class="settings-callout" hidden>
+          <h3>وقفهٔ موقت</h3>
+          <p id="water-pause-status" class="quiet"></p>
+          <button type="button" class="secondary" id="water-reminders-pause">توقف برای یک ساعت</button>
+        </div>
+      </section>

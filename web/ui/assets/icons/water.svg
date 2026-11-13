@@ -1,0 +1,26 @@
+    <symbol id="i-glass" viewBox="0 0 100 100"><ellipse fill="#5b9abe" fill-opacity=".1" cx="50" cy="94" rx="34" ry="4"/><path fill="url(#glass-fill)" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></symbol>
+    <symbol id="i-glass-rim" viewBox="0 0 100 100"><path stroke="white" stroke-opacity=".72" stroke-width="5.5" d="M22 18l8 61"/><path stroke="#b7daf0" stroke-width="2.5" d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/><ellipse stroke="white" stroke-opacity=".4" stroke-width="2.5" cx="50" cy="6.25" rx="37" ry="4.75"/></symbol>
+    <symbol id="art-water-base" viewBox="0 0 128 100">
+      <ellipse cx="65" cy="89" rx="42" ry="6" fill="#416ba6" opacity=".16" stroke="none"/>
+      <path d="M76 24c11-5 21 2 22 10 1 6-2 12-8 15" fill="none" stroke="#b8d6f2" stroke-width="5" opacity=".72"/>
+      <g transform="rotate(-13 56 51)">
+        <path d="M29 27Q56 17 83 27L76 72Q74 84 66 86H47Q38 84 36 72Z" fill="#87aad6" stroke="none" transform="translate(4 3)"/>
+        <path d="M29 27Q56 17 83 27L76 72Q74 84 66 86H47Q38 84 36 72Z" fill="#d4e8f9" stroke="#eff8ff" stroke-width="2"/>
+      </g>
+    </symbol>
+    <symbol id="art-water-overlay" viewBox="0 0 128 100">
+      <g transform="rotate(-13 56 51)">
+        <ellipse cx="56" cy="27" rx="27" ry="5.5" fill="#c1d9f2" stroke="#f4faff" stroke-width="2"/>
+        <path d="m37 36 6 33m10 8q7 2 13-1" stroke="#f3faff" stroke-width="2.6" opacity=".85"/>
+      </g>
+      <circle cx="94" cy="74" r="17" fill="#577faf" opacity=".2" stroke="none"/>
+      <circle cx="94" cy="70" r="16" fill="#d3e8fc" stroke="#eff8ff" stroke-width="2"/>
+      <path d="M94 60c-3 5-7 8-7 12a7 7 0 0 0 14 0c0-4-4-7-7-12Z" fill="#73a6df" stroke="none"/>
+      <path d="M90 72q0 3 3 4" stroke="#eff8ff" stroke-width="1.5"/>
+      <path d="M104 12c1 5 3 7 8 8-5 1-7 3-8 8-1-5-3-7-8-8 5-1 7-3 8-8ZM19 51c.7 4 2 5 6 6-4 1-5.3 2-6 6-.7-4-2-5-6-6 4-1 5.3-2 6-6Z" fill="#92bce8" stroke="none"/>
+    </symbol>
+    <symbol id="art-report-water" viewBox="0 0 128 100">
+      <use href="#art-water-base"/>
+      <path d="M24 48C44 39 63 54 88 46V92H24Z" fill="#86b3e4" stroke="none" clip-path="url(#category-water-clip)" transform="rotate(-13 56 51)"/>
+      <use href="#art-water-overlay"/>
+    </symbol>

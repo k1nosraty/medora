@@ -1,0 +1,93 @@
+/* The illustrated cover overlaps the calendar; translucent surfaces sit above the color field. */
+.medora, .accent-sample[data-accent-sample="blue"] {
+  --accent-light: #423997;
+  --accent-dark: #bacaff;
+  --accent-cover: #4c47bb;
+  --accent-dark-cover: #2d416b;
+  --accent-glow: #eab5f7;
+}
+.medora[data-accent="green"], .accent-sample[data-accent-sample="green"] {
+  --accent-light: #236b43;
+  --accent-dark: #d0e99d;
+  --accent-cover: #246b51;
+  --accent-dark-cover: #2b404a;
+  --accent-glow: #a5e0a7;
+}
+.medora[data-accent="lilac"], .accent-sample[data-accent-sample="lilac"] {
+  --accent-light: #734092;
+  --accent-dark: #e6b9ff;
+  --accent-cover: #70459e;
+  --accent-dark-cover: #4b345b;
+  --accent-glow: #e9b5ff;
+}
+.medora[data-accent="coral"], .accent-sample[data-accent-sample="coral"] {
+  --accent-light: #9a4136;
+  --accent-dark: #ffb9ac;
+  --accent-cover: #a54f51;
+  --accent-dark-cover: #5b363a;
+  --accent-glow: #ffc2aa;
+}
+.medora[data-accent="berry"], .accent-sample[data-accent-sample="berry"] {
+  --accent-light: #832d53;
+  --accent-dark: #f7b8d2;
+  --accent-cover: #963d65;
+  --accent-dark-cover: #503044;
+  --accent-glow: #f6bad4;
+}
+.medora {
+  --cover: var(--accent-cover);
+  --cover-light: color-mix(in srgb, var(--cover) 94%, var(--accent-glow));
+  --cover-shade: color-mix(in srgb, var(--cover) 75%, #130e28);
+  --cover-haze: color-mix(in srgb, var(--cover-light) 64%, transparent);
+  --cover-text: #faf7ff;
+  --cover-badge: color-mix(in srgb, var(--cover-shade) 70%, transparent);
+  --cover-button-text: #151b20;
+  --stage: color-mix(in srgb, var(--action) 7%, var(--panel));
+  --glass-rim: #fffc;
+  --glass-glint: #fff9;
+  --glass-shadow: color-mix(in srgb, var(--action) 14%, transparent);
+  --accent-glass-fill: color-mix(in srgb, var(--action) 92%, transparent);
+  --accent-glass-rim: color-mix(in srgb, var(--action) 58%, white);
+  --mint: #dcf0bf;
+  --mint-ink: #233d2c;
+  background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--action) 10%, transparent), transparent 34rem), var(--page);
+  --page: #f4f3fa;
+  --panel: #fcfbff;
+  --calendar-neutral: #eeedf0;
+  --field: #fff;
+  --action: var(--accent-light);
+  accent-color: var(--action);
+  --ink: #211d3a;
+  --muted: #5f5974;
+  --outline: #dedbef;
+  --dock-active: color-mix(in srgb, var(--action) 13%, var(--panel));
+  --today-rail-width: min(calc(100% - 1.35rem), 40rem);
+}
+@media (prefers-color-scheme: dark) {
+  .medora:not([data-theme="light"]) {
+    --cover: var(--accent-dark-cover);
+    --calendar-neutral: #34373b;
+    --action: var(--accent-dark);
+    --on-action: var(--cover-button-text);
+    --cover-text: #f6f9fa;
+    --glass-rim: color-mix(in srgb, var(--action) 24%, transparent);
+    --glass-glint: color-mix(in srgb, var(--action) 13%, transparent);
+    --glass-shadow: #0006;
+    --mint: #d0e8b2;
+    --mint-ink: #243b29;
+    background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--cover) 40%, transparent), transparent 34rem), var(--page);
+  }
+}
+.medora[data-theme="dark"] {
+  --cover: var(--accent-dark-cover);
+  --calendar-neutral: #34373b;
+  --action: var(--accent-dark);
+  --on-action: var(--cover-button-text);
+  --cover-text: #f6f9fa;
+  --glass-rim: color-mix(in srgb, var(--action) 24%, transparent);
+  --glass-glint: color-mix(in srgb, var(--action) 13%, transparent);
+  --glass-shadow: #0006;
+  --mint: #d0e8b2;
+  --mint-ink: #243b29;
+  background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--cover) 40%, transparent), transparent 34rem), var(--page);
+}

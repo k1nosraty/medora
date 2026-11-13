@@ -1,0 +1,44 @@
+@media (min-width: 42rem) {
+  .story-copy { align-self: center; padding-inline-start: 1rem; }
+  .medora .today-story .story-art { max-block-size: 13.2rem; margin-block: -.5rem; }
+  .medora .daily-sheet {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "programs" "water" "daily" "reminders";
+    gap: .7rem;
+    align-items: start;
+  }
+  .medora .daily-sheet:has(#today-water[hidden]) { grid-template-areas: "programs" "daily" "reminders"; }
+  .daily-main { grid-area: daily; }
+  .medora #today-water { grid-area: water; margin-block-end: 0; }
+  .medora #today-reminders { grid-area: reminders; box-sizing: border-box; inline-size: var(--today-rail-width); margin: 0 auto; }
+  #plans { grid-auto-columns: min(48%, 23rem); }
+  #visits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #visits > :is(h2, .visit-empty, .visit-featured) { grid-column: 1 / -1; }
+  .medora #visits .visit-featured {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: .95rem;
+    min-block-size: 0;
+  }
+  .medora #visits .visit-featured .visit-banner { block-size: auto; min-block-size: 10rem; margin: 0; }
+  .report-cards { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); align-items: start; }
+  .medora .report-cards .water { grid-row: span 2; }
+  .medora .report-cards .visit { grid-column: 1 / -1; }
+  #calendar-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+  .medora #calendar-panel > section { margin-block: 0; }
+  .calendar-agenda-head { margin-block-start: 0; }
+}
+@media (max-width: 360px) {
+  .medora .app-content {
+    padding-left: max(.7rem, env(safe-area-inset-left));
+    padding-right: max(.7rem, env(safe-area-inset-right));
+  }
+  .medora .today-story { padding-inline: .85rem; }
+  .medora .story-copy h2 { font-size: 1.64rem; }
+  .medora .dock button { font-size: .68rem; }
+  .medora .header-tools { gap: .28rem; }
+  .medora #calendar-entries .day-card { --day-art-width: 3.05rem; grid-template-columns: var(--day-art-width) minmax(0, 1fr) 4.65rem; }
+  .medora #visit-add { font-size: .875rem; }
+}
+.medora #today-dates .day-week { grid-template-columns: repeat(7, minmax(0, 1fr)); }

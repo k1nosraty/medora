@@ -1,0 +1,31 @@
+  <template id="phase-template">
+    <fieldset class="phase">
+      <legend>مرحلهٔ مصرف</legend>
+      <label class="plan-repeat">تکرار برنامه
+        <select class="repeat">
+          <option value="daily">هر روز</option>
+          <option value="weekly">روزهای هفته</option>
+          <option value="dates">تاریخ‌های انتخابی</option>
+        </select>
+      </label>
+      <div class="fields plan-dates">
+        <label>روز شروع<input class="start" type="date" required></label>
+        <label>روز پایان (اختیاری)<input class="end" type="date"></label>
+      </div>
+      <div class="weekly-plan" hidden>
+        <label>فاصلهٔ تکرار (هفته)<input class="interval" type="number" inputmode="numeric" dir="ltr" min="1" max="52" value="1" required></label>
+        <div class="weekdays" role="group" aria-label="روزهای مصرف"></div>
+      </div>
+      <div class="exact-plan" hidden>
+        <p class="quiet">ساعت‌ها و دوزهای پایین در همهٔ تاریخ‌های انتخابی یکسان‌اند.</p>
+        <div class="exact-days"></div>
+        <button type="button" class="secondary add-exact-day">＋ افزودن تاریخ</button>
+      </div>
+      <div class="doses-heading"><h4>نوبت‌های مصرف</h4><button type="button" class="text-button dose-unit-link"></button></div>
+      <div class="slots"></div>
+      <div class="buttons">
+        <button type="button" class="add-slot secondary">افزودن نوبت</button>
+        <button type="button" class="remove-phase secondary phase-only">حذف مرحله</button>
+      </div>
+    </fieldset>
+  </template>

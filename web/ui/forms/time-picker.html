@@ -1,0 +1,16 @@
+  <dialog id="time-picker" class="sheet value-picker" aria-labelledby="time-picker-title">
+    <form id="time-form" class="sheet-form sheet-body">
+      <h2 id="time-picker-title">انتخاب ساعت</h2>
+      <p class="quiet time-hint">زمان را با قالب ۲۴ ساعته وارد کنید.</p>
+      <div class="time-inputs" dir="ltr">
+        <label dir="auto">ساعت<input id="keyboard-hour" dir="ltr" inputmode="numeric" maxlength="2" autocomplete="off" autofocus></label>
+        <span aria-hidden="true">:</span>
+        <label dir="auto">دقیقه<input id="keyboard-minute" dir="ltr" inputmode="numeric" maxlength="2" autocomplete="off"></label>
+      </div>
+      <p id="time-error" class="field-error" role="alert"></p>
+      <div class="action-pair picker-actions">
+        <button type="button" class="secondary" data-close="time-picker">انصراف</button>
+        <button type="submit" id="picker-time-confirm">انتخاب</button>
+      </div>
+    </form>
+  </dialog>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f3fa">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/medora-icon-192.png">
+  <link rel="stylesheet" href="/style.css">
+  <!-- include layout/styles.html -->
+  <link rel="modulepreload" href="/medication/app/medora.js">
+  <link rel="modulepreload" href="/medication/domain/medication-rules.js">
+  <title>مدورا</title>
+  <script type="module" src="/medication/bootstrap.js"></script>
+</head>
+<body class="medora">
+  <!-- include assets/icons/library.html -->
+  <!-- include layout/onboarding.html -->
+  <!-- include layout/header.html -->
+  <main class="app-content">
+    <p id="boot-status" role="status">در حال بارگذاری مدورا…</p>
+    <button id="boot-retry" type="button" hidden>بارگذاری دوباره</button>
+    <div id="app" hidden>
+      <div class="page-heading"><h1 id="screen-title">امروز</h1><p id="header-date"></p></div>
+      <!-- include layout/day-navigation.html -->
+      <!-- include screens/today.html -->
+      <!-- include screens/medications.html -->
+      <!-- include screens/appointments.html -->
+      <!-- include screens/routines.html -->
+      <!-- include screens/water.html -->
+      <!-- include screens/insights.html -->
+      <p id="status" class="app-status" role="status"></p>
+      <!-- include layout/dock.html -->
+    </div>
+  </main>
+  <!-- include forms/quick-add.html -->
+  <!-- include forms/routine-editor.html -->
+  <!-- include forms/routine-category.html -->
+  <!-- include forms/routine-log.html -->
+  <!-- include forms/water-log.html -->
+  <!-- include forms/medicine-editor.html -->
+  <!-- include forms/medicine-appearance.html -->
+  <!-- include forms/medicine-details.html -->
+  <!-- include forms/appointment-editor.html -->
+  <!-- include forms/appointment-category.html -->
+  <!-- include forms/confirm-delete.html -->
+  <!-- include forms/account.html -->
+  <!-- include forms/promotion.html -->
+  <!-- include forms/settings.html -->
+  <!-- include forms/date-picker.html -->
+  <!-- include forms/time-picker.html -->
+  <!-- include forms/medicine-phase.html -->
+  <!-- include forms/medicine-slot.html -->
+</body>
+</html>

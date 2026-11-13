@@ -1,6 +1,6 @@
 import { createECDH, randomBytes } from "node:crypto";
 import { access, writeFile } from "node:fs/promises";
-import { validSubject } from "../src/validation.mjs";
+import { validSubject } from "../src/http/validation.mjs";
 
 const input = process.argv[2] ?? "";
 const subject = input.includes("@") && !input.includes(":") ? `mailto:${input}` : input;

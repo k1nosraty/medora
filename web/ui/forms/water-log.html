@@ -1,0 +1,21 @@
+  <dialog id="water-dialog" class="sheet" aria-labelledby="water-dialog-title">
+    <form id="water-custom" class="sheet-form" novalidate>
+      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-water"/></svg><h2 id="water-dialog-title">ثبت آب</h2><button class="icon-button" type="button" data-close="water-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body">
+        <label class="water-amount-field">
+          <span>مقدار آب</span>
+          <span class="water-amount-value"><input id="water-amount" dir="ltr" inputmode="numeric" maxlength="5" required><span>میلی‌لیتر</span></span>
+        </label>
+        <div id="water-presets" class="water-quick" role="group" aria-label="انتخاب سریع مقدار آب">
+          <button type="button" data-water-preset="150" aria-pressed="false">۱۵۰</button><button type="button" data-water-preset="250" aria-pressed="true">۲۵۰</button><button type="button" data-water-preset="500" aria-pressed="false">۵۰۰</button>
+        </div>
+        <details id="water-options" class="editor-options">
+          <summary><span>تاریخ و ساعت</span><span id="water-when"></span><svg aria-hidden="true"><use href="#i-expand"/></svg></summary>
+          <div class="water-log-when"><label>تاریخ<input id="water-log-day" type="date" required></label><label>ساعت<input id="water-log-time" type="time" required></label></div>
+        </details>
+        <p id="water-error" role="alert" class="field-error"></p>
+        <button type="submit" class="block-action">ذخیره</button>
+        <button type="button" class="text-button block-action" data-close="water-dialog">انصراف</button>
+      </div>
+    </form>
+  </dialog>

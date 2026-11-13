@@ -1,0 +1,46 @@
+    <symbol id="art-tablet" viewBox="0 0 100 100"><ellipse cx="50" cy="54" rx="34" ry="30" class="pill-edge"/><ellipse cx="50" cy="48" rx="34" ry="30" class="pill-body"/><ellipse cx="50" cy="46" rx="29" ry="25" class="pill-light"/><path class="pill-line" d="m30 62 38-32"/><path stroke="white" d="m32 65 39-33"/></symbol>
+    <symbol id="art-blister" viewBox="0 0 100 100">
+      <rect x="22" y="10" width="61" height="86" rx="12" class="pill-edge"/>
+      <rect x="17" y="5" width="61" height="86" rx="12" class="pill-body"/>
+      <rect x="21" y="9" width="53" height="78" rx="9" fill="none" stroke="white" stroke-opacity=".6"/>
+      <g class="pill-light">
+        <ellipse cx="35" cy="24" rx="8" ry="10"/><ellipse cx="59" cy="24" rx="8" ry="10"/>
+        <ellipse cx="35" cy="48" rx="8" ry="10"/><ellipse cx="59" cy="48" rx="8" ry="10"/>
+        <ellipse cx="35" cy="72" rx="8" ry="10"/><ellipse cx="59" cy="72" rx="8" ry="10"/>
+      </g>
+      <path d="M31 21l6 5m18-5 6 5M31 45l6 5m18-5 6 5M31 69l6 5m18-5 6 5" class="pill-line" opacity=".45"/>
+    </symbol>
+    <symbol id="art-bottle" viewBox="0 0 128 100">
+      <ellipse cx="64" cy="89" rx="40" ry="6" fill="#534179" opacity=".17"/>
+      <path d="M103 15q1 7 8 8-7 1-8 8-1-7-8-8 7-1 8-8ZM21 49q1 5 6 6-5 1-6 6-1-5-6-6 5-1 6-6Z" fill="#b19bdc"/>
+      <g transform="rotate(-13 58 50)">
+        <path d="M42 29h28v8q12 5 12 15v24a12 12 0 0 1-12 12H42a12 12 0 0 1-12-12V52q0-10 12-15Z" fill="#7b63ad" opacity=".68" transform="translate(4 2)"/>
+        <path d="M42 29h28v8q12 5 12 15v24a12 12 0 0 1-12 12H42a12 12 0 0 1-12-12V52q0-10 12-15Z" fill="var(--bottle-body, #d7c4ef)" stroke="#f6edff" stroke-width="2"/>
+        <path d="M31 53h50v23H31Z" fill="#fcf6ff"/>
+        <rect x="37" y="17" width="38" height="18" rx="5" fill="var(--bottle-cap, #8264bb)" stroke="#e9dafa" stroke-width="2"/>
+        <path d="M44 22v7m8-7v7m8-7v7m8-7v7" stroke="#e1d0f6" stroke-width="2" stroke-linecap="round"/>
+        <path d="M56 58v12m-6-6h12" stroke="var(--bottle-mark, #957bc8)" stroke-width="3" stroke-linecap="round"/>
+      </g>
+      <circle cx="93" cy="73" r="16" fill="#8672a4" opacity=".23"/>
+      <circle cx="93" cy="69" r="15" fill="#e5d5f5" stroke="#f9efff" stroke-width="2"/>
+      <circle cx="93" cy="69" r="7.5" fill="#fff8ff"/>
+      <path d="m90 72 6-6" stroke="#a68ccf" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="art-capsule" viewBox="0 0 100 100"><g transform="rotate(-38 50 50)"><path class="pill-light" d="M29 50V30a21 21 0 0 1 42 0v20Z"/><path class="pill-body" d="M29 50h42v20a21 21 0 0 1-42 0Z"/><path class="pill-line" d="M29 50h42"/><path stroke="white" stroke-width="4" d="M36 24v16"/></g></symbol>
+    <symbol id="art-syrup" viewBox="0 0 100 100"><rect x="25" y="29" width="44" height="58" rx="10" class="pill-edge"/><rect x="28" y="29" width="38" height="52" rx="8" class="pill-body"/><rect x="32" y="15" width="30" height="17" rx="4" class="pill-body"/><rect x="31" y="49" width="32" height="20" rx="3" class="pill-light"/><path class="pill-line" d="M76 61v24"/><ellipse cx="76" cy="56" rx="5" ry="8" class="pill-light"/></symbol>
+    <symbol id="art-injection" viewBox="0 0 100 100"><rect x="37" y="40" width="26" height="49" rx="8" class="pill-body"/><rect x="41" y="21" width="18" height="27" rx="5" class="pill-light"/><ellipse cx="50" cy="17.5" rx="7" ry="9.5" class="pill-body"/><path class="pill-line" d="M41 32h18"/><rect x="41" y="57" width="18" height="23" rx="4" class="pill-light"/><path stroke="white" d="M43 47v5"/></symbol>
+    <symbol id="art-ointment" viewBox="0 0 100 100"><g transform="rotate(24 50 50)"><rect x="31" y="17" width="38" height="57" rx="7" class="pill-light"/><rect x="31" y="14" width="38" height="8" rx="2" class="pill-body"/><rect x="32" y="38" width="36" height="16" rx="2" class="pill-body"/><rect x="38" y="73" width="24" height="15" rx="3" class="pill-edge"/></g></symbol>
+    <symbol id="art-drops" viewBox="0 0 100 100"><rect x="27" y="43" width="46" height="44" rx="9" class="pill-light"/><rect x="32" y="33" width="36" height="16" rx="4" class="pill-body"/><rect x="39" y="13" width="22" height="27" rx="8" class="pill-edge"/><rect x="30" y="61" width="40" height="17" rx="3" class="pill-body"/><path stroke="white" d="M34 49v7"/></symbol>
+    <symbol id="art-spray" viewBox="0 0 100 100"><rect x="29" y="42" width="42" height="45" rx="8" class="pill-light"/><rect x="32" y="62" width="36" height="17" rx="3" class="pill-body"/><rect x="39" y="26" width="22" height="19" rx="3" class="pill-body"/><rect x="38" y="15" width="34" height="12" rx="3" class="pill-edge"/><path class="pill-line" d="M76 20h7m-4-8 6-3m-6 19 6 3"/></symbol>
+    <symbol id="art-sachet" viewBox="0 0 100 100">
+      <g transform="rotate(-12 50 50)"><rect x="24" y="12" width="52" height="76" rx="7" class="pill-edge"/>
+      <rect x="26" y="12" width="48" height="71" rx="6" class="pill-light"/><path d="M26 31h48v34H26z" class="pill-body"/>
+      <path d="M31 21h38m-38 54h38m-30-33h22m-22 8h15" class="pill-line"/></g>
+    </symbol>
+    <symbol id="art-powder" viewBox="0 0 100 100">
+      <path d="M11 70c10-5 16-18 24-21 7-3 11 10 24 16l9 6c2 2 0 5-4 5H16c-7 0-8-4-5-6Z" class="pill-light"/>
+      <ellipse cx="48" cy="72" rx="21" ry="8" transform="rotate(-13 48 72)" class="pill-body"/>
+      <path d="M62 65 85 40c4-4 9 0 5 5L68 70" class="pill-edge"/>
+      <path d="M19 71c6-2 11-9 17-11m4 9 5-2" class="pill-line"/>
+      <circle cx="22" cy="46" r="2.4" class="pill-body"/><circle cx="50" cy="49" r="2" class="pill-body"/>
+    </symbol>

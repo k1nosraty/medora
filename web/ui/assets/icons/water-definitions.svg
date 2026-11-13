@@ -1,0 +1,4 @@
+    <linearGradient id="glass-fill"><stop stop-color="#e4f4ff" stop-opacity=".4"/><stop offset="1" stop-color="#f3faff" stop-opacity=".7"/></linearGradient>
+    <linearGradient id="glass-water-fill" x2="0" y2="1"><stop stop-color="#89e5db"/><stop offset="1" stop-color="#339d96"/></linearGradient>
+    <clipPath id="glass-clip"><path d="M13 7Q50 0 87 7L77 88Q50 97 23 88Z"/></clipPath>
+    <clipPath id="category-water-clip"><path d="M31 30H81L75 72Q73 81 65 83H48Q40 81 38 72Z"/></clipPath>

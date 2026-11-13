@@ -1,0 +1,371 @@
+.medora .segmented:not(.glass-toolbar) { background: var(--stage); }
+.medora .glass-toolbar { padding: .3rem; border-radius: 1.18rem; }
+.medora .visit-toolbar { margin-block: 1rem .75rem; padding: .6rem .7rem .3rem; }
+.medora #visits-heading {
+  flex-wrap: nowrap;
+  margin-block-end: .38rem;
+  padding-inline: .25rem;
+}
+.medora #visits-heading h2 { min-inline-size: 0; margin: 0; overflow-wrap: anywhere; }
+.medora #visit-filters { background: transparent; padding: 0; }
+.medora #visit-filters button { min-inline-size: 0; border-radius: .9rem; text-wrap: balance; }
+.medora #visit-filters button[aria-pressed="true"],
+.medora #report-range button[aria-pressed="true"] {
+  background: var(--dock-active);
+  color: var(--action);
+  box-shadow: 0 .14rem .35rem var(--glass-shadow);
+}
+.medora #visit-add { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: .3rem; border-radius: 5rem; padding-inline: .75rem; }
+.medora #visit-add svg { inline-size: 1.1rem; block-size: 1.1rem; }
+#visits { display: grid; gap: .7rem; }
+.medora #visits-more { grid-column: 1 / -1; justify-self: center; padding-inline: 1rem; }
+.medora #visits > h2 { margin: .35rem .1rem 0; font-size: 1.04rem; }
+.medora #visits article { margin: 0; }
+.visit-card-header { display: flex; align-items: flex-start; gap: .75rem; }
+.visit-card-body { flex: 1; min-inline-size: 0; }
+.visit-date {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  flex: none;
+  min-inline-size: 3.2rem;
+  min-block-size: 3.3rem;
+  padding: .15rem .32rem;
+  box-sizing: border-box;
+  background: var(--panel);
+  border-radius: .95rem;
+  color: var(--visit-ink);
+  line-height: 1.2;
+}
+.visit-date strong { font-size: 1.16rem; }
+.visit-date span { font-size: .69rem; }
+.visit-hour {
+  display: inline-block;
+  border-radius: .6rem;
+  padding: .08rem .4rem;
+  background: var(--panel);
+  color: var(--visit-ink);
+  font-size: .79rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.medora .day-card {
+  --day-art-width: clamp(4.5rem, 28%, 7rem);
+  --day-art-origin: 12%;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--day-art-width) minmax(0, 1fr);
+  gap: .35rem .55rem;
+  padding: .55rem .65rem;
+  border-color: color-mix(in srgb, var(--pill-base) 22%, var(--outline));
+  background: color-mix(in srgb, var(--pill-base) 8%, var(--panel));
+  color: var(--ink);
+}
+html[dir="rtl"] .day-card { --day-art-origin: 88%; }
+.medora .day-card .day-card-art {
+  position: relative;
+  display: grid;
+  grid-area: 1 / 1 / 2 / -1;
+  grid-template-columns: var(--day-art-width) minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  justify-items: center;
+  row-gap: .15rem;
+  min-block-size: 5.15rem;
+  block-size: auto;
+  margin: -.55rem -.65rem 0;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  background: radial-gradient(ellipse 52% 94% at var(--day-art-origin) 25%,
+    color-mix(in srgb, var(--pill-base) 45%, var(--panel)), transparent);
+  pointer-events: none;
+}
+.medora .day-card .day-card-art::before { content: none; }
+.medora .day-card .day-card-art > svg {
+  grid-column: 1;
+  inline-size: min(94%, 5.75rem);
+  block-size: auto;
+  max-block-size: 4.5rem;
+  max-inline-size: none;
+  opacity: .95;
+  transform: rotate(-9deg);
+}
+.medora .day-card .day-card-content {
+  position: relative;
+  grid-area: 1 / 2;
+  align-self: center;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  padding: 0;
+}
+.medora .day-card-content :is(h3, p) { margin: .12rem 0; }
+.medora .day-card-content h3 { font-size: clamp(1.02rem, 3.9vw, 1.32rem); line-height: 1.35; }
+.medora .day-card-art > .day-card-kind {
+  position: static;
+  grid-column: 1;
+  padding: .08rem .44rem;
+  border-radius: .6rem;
+  background: var(--dock-active);
+  color: var(--ink);
+  font-size: .74rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+.medora .day-card .medication-banner .medication-badge {
+  position: relative;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 .2rem .3rem var(--glass-shadow));
+}
+.medora .day-card .medication-banner :is(.banner-echo, span:not(.day-card-kind)) { display: none; }
+.medora .day-card .dose-info { min-inline-size: 0; }
+.medora .day-card .dose-meta { display: flex; flex-wrap: wrap; gap: .12rem .4rem; color: var(--muted); }
+.medora .day-card .dose-meta .hero-kicker { color: var(--muted); font-size: .75rem; }
+.medora .day-card .dose-snoozed { grid-column: 1 / -1; margin: 0; font-size: .75rem; }
+.medora .day-card .routine-day-art > svg {
+  inline-size: min(76%, 3.8rem);
+  aspect-ratio: 1;
+  filter: drop-shadow(0 .16rem .22rem var(--glass-shadow));
+}
+.medora .day-card > .day-card-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  grid-column: 1 / -1;
+  gap: .3rem;
+  padding-block-start: .28rem;
+  border-block-start: 1px solid var(--outline);
+}
+.medora .day-card .day-card-actions > button.secondary, .medora .day-card-more > summary {
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  border: 0;
+  border-radius: .8rem;
+  padding: .1rem .2rem;
+  background: color-mix(in srgb, var(--dock-active) 42%, transparent);
+  color: var(--action);
+  font-size: .76rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.medora .day-card-more { flex: 0 0 2.75rem; }
+.medora :is(.dose-card, .visit-card, .routine-row):not(.day-card) .care-record-action {
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--dock-active) 52%, transparent);
+  color: var(--action);
+}
+.medora .day-card-more > summary { list-style: none; background: transparent; font-size: 1.24rem; cursor: pointer; }
+.medora .day-card-more > summary::-webkit-details-marker { display: none; }
+.medora .day-card-more[open] > summary { background: var(--dock-active); }
+.medora .day-card:has(.day-card-more[open]) { z-index: 2; }
+.medora .day-card-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-end: calc(100% + .25rem);
+  display: grid;
+  gap: .25rem;
+  inline-size: min(100%, 18rem);
+  padding: .55rem;
+  border: 1px solid var(--outline);
+  border-radius: .95rem;
+  background: var(--panel);
+  box-shadow: 0 .45rem 1.3rem var(--glass-shadow);
+}
+.medora .day-card-more:not([open]) .day-card-menu { display: none; }
+.medora .day-card-menu input { inline-size: 100%; }
+.medora .day-card-menu > button { min-block-size: 2.75rem; }
+.medora .timeline .day-card {
+  --day-art-width: clamp(3.25rem, 22%, 5.1rem);
+  grid-template-columns: var(--day-art-width) minmax(0, 1fr) clamp(4.8rem, 25%, 7rem);
+  box-sizing: border-box;
+  min-block-size: 6.75rem;
+  padding: .45rem;
+  gap: .35rem;
+}
+html[dir="ltr"] .medora .timeline .visit-day-card { --day-art-width: clamp(4.5rem, 24%, 5.1rem); }
+.medora .timeline .day-card-art {
+  min-block-size: 0;
+  margin: -.45rem;
+  border-radius: inherit;
+}
+.medora .timeline .day-card-art > svg { max-block-size: 3.65rem; }
+.medora .timeline .day-card-content h3 { font-size: clamp(.94rem, 3.7vw, 1.08rem); }
+.medora .timeline .day-card-content .badge { font-size: .73rem; }
+.medora .timeline .day-card-kind { font-size: .68rem; }
+.medora .timeline .day-card > .day-card-actions {
+  position: static;
+  flex-direction: column;
+  justify-content: space-between;
+  grid-area: 1 / 3;
+  padding: 0;
+  border: 0;
+  gap: .08rem;
+}
+.medora .timeline .day-card-more { align-self: end; inline-size: 2.75rem; }
+.medora .timeline .day-card .day-card-actions > button.secondary {
+  flex: none;
+  align-self: stretch;
+  background: color-mix(in srgb, var(--dock-active) 27%, transparent);
+}
+.medora .timeline .day-card-menu {
+  inset-block: 2.75rem auto;
+  inset-inline-end: .4rem;
+  inline-size: min(calc(100% - .8rem), 18rem);
+}
+.medora .visit-card :is(.visit-date, .visit-hour, .visit-category) {
+  background: color-mix(in srgb, var(--pill-base) 24%, var(--panel));
+  color: var(--ink);
+}
+.visit-category {
+  display: inline-block;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  margin-inline-start: .28rem;
+  padding: .08rem .4rem;
+  border-radius: .6rem;
+  font-size: .79rem;
+  overflow-wrap: anywhere;
+}
+.visit-banner {
+  --banner-tint: var(--pill-base, #b9a8ec);
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.visit-art-accent { fill: var(--pill-base, #b9a8ec); }
+.visit-art-light { fill: color-mix(in srgb, var(--pill-base, #b9a8ec) 26%, #fff); }
+.visit-banner:has(.visit-specialty)::before {
+  content: "";
+  position: absolute;
+  inline-size: min(76%, 10.2rem);
+  aspect-ratio: 1.3;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 35% 20%, #fff8, transparent 72%),
+    color-mix(in srgb, var(--banner-tint) 46%, #f9f6ff);
+  box-shadow: inset 0 0 0 1px #fff5, 0 .45rem 1.25rem #1d16321a;
+  opacity: .75;
+  transform: rotate(-12deg);
+}
+.medora #visit-appearance > summary {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  list-style: none;
+}
+.medora #visit-appearance > summary::-webkit-details-marker { display: none; }
+.medora #visit-appearance > summary::after { content: "⌄"; margin-inline-start: auto; }
+.medora #visit-appearance[open] > summary::after { content: "⌃"; }
+.visit-appearance-dot {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--pill-base);
+}
+.medora #visit-appearance-preview { block-size: 6.25rem; margin: 0 0 .36rem; }
+.medora #visit-appearance-preview .visit-illustration { inline-size: 7.2rem; }
+.visit-when, .medora .fields.plan-dates, .slot-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+  align-items: start;
+}
+.medora :is(.visit-when, .plan-dates) { align-items: stretch; }
+.medora :is(.visit-when, .plan-dates) > .picker-control { display: flex; flex-direction: column; }
+.medora :is(.visit-when, .plan-dates) .picker-field { flex: 1; }
+.medora #visit-category-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  inline-size: 100%;
+  margin-block-start: .2rem;
+  background: var(--field);
+  text-align: start;
+}
+.medora #visit-category-open svg { inline-size: 1.05rem; block-size: 1.05rem; color: var(--action); }
+.medora #visit-category-dialog { max-block-size: min(82dvh, 37rem); }
+.medora #visit-category-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+.medora #visit-category-dialog .sheet-body { overflow: auto; overscroll-behavior: contain; }
+.medora #visit-category-dialog .cabinet-search { position: sticky; inset-block-start: 0; z-index: 1; }
+.visit-category-group { display: grid; gap: .28rem; margin-block-end: .65rem; }
+.medora .visit-category-group h3 { margin: .38rem .2rem .12rem; color: var(--muted); font-size: .82rem; }
+.medora .visit-category-group button { text-align: start; }
+.medora .visit-category-group button[aria-pressed="true"] { background: var(--dock-active); color: var(--action); }
+.medora #visit-reminder-summary { padding-inline: .3rem; }
+.medora #visit-colors { margin: .6rem 0 0; padding: 0; border: 0; background: transparent; }
+.visit-color-grid, #medicine-colors { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .3rem; }
+.visit-color-grid { display: grid; }
+.medora .visit-color-grid label {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: .18rem;
+  min-block-size: 2.75rem;
+  margin: 0;
+  padding: .25rem .12rem;
+  border: 1px solid var(--outline);
+  border-radius: .85rem;
+  background: var(--field);
+  font-size: .74rem;
+  text-align: center;
+  cursor: pointer;
+}
+.medora .visit-color-grid input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  inline-size: .95rem;
+  min-block-size: 0;
+  block-size: .95rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--outline);
+  border-radius: 50%;
+  background: var(--pill-base);
+}
+.medora .visit-color-grid input:checked { border: .2rem solid var(--action); }
+.medora .visit-color-grid label:has(input:checked) { border-color: var(--action); }
+.medora .visit-eyebrow {
+  position: absolute;
+  inset-inline-end: .55rem;
+  inset-block-end: .45rem;
+  padding: .15rem .48rem;
+  border-radius: 5rem;
+  background: var(--panel);
+  color: var(--visit-ink);
+  font-size: .72rem;
+}
+.medora .visit-shelf-card .visit-card-header { margin-block: .4rem .15rem; align-items: center; }
+.medora .visit-shelf-card .visit-title { font-size: 1.12rem; line-height: 1.3; }
+.visit-shelf-details { display: flex; flex: 1; flex-direction: column; min-inline-size: 0; overflow-wrap: anywhere; }
+.visit-shelf-details .badge { align-self: start; }
+.medora .visit-shelf-card .buttons { margin-block-start: auto; padding-block-start: .3rem; }
+.medora svg.visit-illustration { inline-size: 8rem; max-inline-size: 48%; block-size: auto; aspect-ratio: 160 / 132; }
+.medora svg.visit-illustration.visit-specialty {
+  position: relative;
+  inline-size: 7.3rem;
+  max-inline-size: 64%;
+  aspect-ratio: 1;
+  stroke: color-mix(in srgb, var(--banner-tint) 24%, #29233f);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 .25rem .24rem #2b1e4733);
+}
+.medora #visit-appearance-preview svg.visit-specialty { inline-size: 5.65rem; }
+.medora #visit-appearance-preview:has(.visit-specialty)::before { inline-size: min(72%, 8.1rem); }
+.medora .visit-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  min-block-size: 7rem;
+  padding: .8rem 1rem;
+  border: 1px solid var(--outline);
+  border-radius: 1.48rem;
+  background: var(--stage);
+}

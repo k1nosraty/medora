@@ -1,0 +1,19 @@
+.medora .welcome {
+  background: radial-gradient(ellipse at 68% 24%, var(--cover-haze), transparent 60%), linear-gradient(147deg, var(--cover-shade), var(--cover-light));
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
+}
+.medora .welcome .intro-landscape { display: none; }
+.welcome-top { display: flex; align-items: center; justify-content: space-between; }
+.medora .welcome-top .brand-mark { background: #fff2; border: 1px solid #fff5; inline-size: 2.65rem; block-size: 2.65rem; }
+.medora .welcome-top button { margin: 0; padding-inline: .75rem; background: #fff2; color: white; border-color: #fff5; }
+.medora .welcome-art { display: block; inline-size: min(100%, 30rem); block-size: min(37dvh, 18rem); margin: .45rem auto 0; object-fit: contain; }
+.medora .welcome h1 { font-size: 2.6rem; line-height: 1.14; }
+.medora .welcome h2 { margin-block: .5rem; }
+.medora .welcome p { color: var(--cover-text); }
+.medora .welcome .intro-content > .block-action {
+  margin-block-start: 1.25rem;
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  color: var(--cover-button-text);
+}

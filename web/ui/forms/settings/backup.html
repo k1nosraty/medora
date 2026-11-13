@@ -1,0 +1,26 @@
+      <section id="backup-settings" class="settings-panel" hidden>
+        <form id="web-backup-export">
+          <h3>ساخت پشتیبان رمزدار</h3>
+          <p class="quiet">داروها، قرارها، روتین‌ها، آب و سوابق در یک فایل روی همین دستگاه رمزگذاری می‌شوند. رمز فایل را نگه دار تا بتوانی آن را بازیابی کنی.</p>
+          <label>رمز فایل<input id="web-backup-password" type="password" minlength="15" maxlength="128" autocomplete="new-password" spellcheck="false" required></label>
+          <label>تکرار رمز فایل<input id="web-backup-confirm" type="password" minlength="15" maxlength="128" autocomplete="new-password" spellcheck="false" required></label>
+          <p class="quiet">برای رمز فایل حداقل ۱۵ نویسه وارد کن.</p>
+          <button type="submit" class="block-action">ساخت فایل پشتیبان</button>
+          <p id="web-backup-status" class="settings-message" role="status"></p>
+          <a id="web-backup-download" class="block-action" hidden>دانلود فایل رمزدار</a>
+        </form>
+        <form id="android-restore">
+          <h3>بازیابی از وب یا اندروید</h3>
+          <p>فایل پشتیبان مدورا با پسوند <bdi>.medora</bdi> روی همین دستگاه باز می‌شود.</p>
+          <label class="backup-file-picker">
+            <span>انتخاب فایل پشتیبان</span>
+            <bdi id="android-backup-filename" class="quiet">فایلی انتخاب نشده است.</bdi>
+            <input id="android-backup-file" type="file" aria-label="انتخاب فایل پشتیبان" aria-describedby="android-backup-filename" required>
+          </label>
+          <label>رمز فایل<input id="android-backup-password" type="password" maxlength="128" autocomplete="off" spellcheck="false" required></label>
+          <p class="settings-restore-note">با بازیابی، داده‌های فعلی وب جایگزین می‌شوند. بعد از بازیابی، یادآوری‌ها را دوباره فعال کنید.</p>
+          <label class="editor-switch"><input type="checkbox" id="android-backup-confirm" required><span>جایگزینی سوابق فعلی را تأیید می‌کنم.</span></label>
+          <p id="android-restore-status" role="status"></p>
+          <button id="android-restore-submit" type="submit" class="block-action">بازیابی از فایل پشتیبان</button>
+        </form>
+      </section>

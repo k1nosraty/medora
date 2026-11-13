@@ -1,0 +1,17 @@
+      <div data-screen="water" hidden>
+        <section class="feature water">
+          <div id="water-summary" class="feature-head water-summary">
+            <svg class="water-glass" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><use href="#i-glass"/><path class="glass-water" clip-path="url(#glass-clip)"/><use href="#i-glass-rim"/></svg>
+            <div class="water-info"><strong id="water-date"></strong><p class="amount-line"><strong id="water-total">۰</strong> از <span id="water-goal-label">۲٬۰۰۰</span> میلی‌لیتر</p><progress class="water-progress" id="water-progress" max="1" value="0" aria-label="پیشرفت هدف آب"></progress><p class="quiet" id="water-remaining"></p></div>
+          </div>
+          <div id="water-entry">
+            <div class="water-quick">
+              <button type="button" data-water-add="150"><b>+۱۵۰</b><small>میلی‌لیتر</small></button>
+              <button type="button" data-water-add="250"><b>+۲۵۰</b><small>میلی‌لیتر</small></button>
+              <button type="button" data-water-add="500"><b>+۵۰۰</b><small>میلی‌لیتر</small></button>
+            </div>
+          </div>
+        </section>
+        <button id="water-custom-action" type="button" class="block-action" data-open-water>مقدار دلخواه</button>
+        <section><h2>مصرف این روز</h2><div id="water-entries"></div></section>
+      </div>

@@ -19,18 +19,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Test and build the shared care engine
-        run: bash gradlew -p care-core jvmTest buildWebEngine
       - name: Install and test the web app
         working-directory: web
         run: |

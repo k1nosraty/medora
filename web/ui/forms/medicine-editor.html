@@ -1,0 +1,59 @@
+  <dialog id="medication-dialog" class="sheet" aria-labelledby="editor-title">
+    <form id="editor" class="sheet-form" novalidate>
+      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="editor-title">داروی جدید</h2><button class="icon-button" type="button" data-close="medication-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body">
+        <div class="wizard-visual">
+          <p id="editor-chapter">نام، شکل و رنگ</p>
+          <img src="/medication/assets/illustrations/care.svg" width="560" height="350" alt="">
+          <div id="editor-banner" class="wizard-banner"></div>
+        </div>
+        <ol id="editor-steps" class="wizard-steps" aria-label="مراحل ثبت دارو">
+          <li><span>۱</span>نام و شکل</li><li><span>۲</span>دوز و برنامه</li><li><span>۳</span>مرور و ذخیره</li>
+        </ol>
+        <section data-editor-step="0" aria-labelledby="editor-identity">
+          <h3 id="editor-identity" tabindex="-1">چه دارویی مصرف می‌کنید؟</h3>
+          <label class="editor-field">نام دارو یا مکمل<input id="name" maxlength="120" required></label>
+          <button type="button" id="medicine-appearance" class="medicine appearance-tile">
+            <span id="medicine-appearance-icon"></span><span>ظاهر دارو (اختیاری)</span><svg aria-hidden="true"><use href="#i-expand"/></svg>
+          </button>
+          <input type="hidden" id="medicine-icon" value="bottle"><input type="hidden" id="medicine-color" value="purple">
+        </section>
+        <section data-editor-step="1" aria-labelledby="editor-schedule" hidden>
+          <h3 id="editor-schedule" tabindex="-1">چه وقت و چه مقدار؟</h3>
+          <fieldset class="plan-mode glass-toolbar">
+            <legend class="visually-hidden">نوع برنامهٔ دارو</legend>
+            <label><input type="radio" name="plan-mode" id="regular-mode" checked><span>برنامهٔ ثابت</span></label>
+            <label><input type="radio" name="plan-mode" id="phased-mode"><span>چندمرحله‌ای</span></label>
+          </fieldset>
+          <p class="quiet phase-only">اگر پایان یک مرحله را خالی بگذاری، آن مرحله با شروع مرحلهٔ بعد تمام می‌شود.</p>
+          <p class="field-error" id="phase-mode-warning" hidden></p>
+          <div id="phases"></div>
+          <button id="add-phase" type="button" class="secondary phase-only block-action">افزودن مرحله</button>
+          <details id="dose-instructions" class="editor-options">
+            <summary>دستور مصرف (اختیاری)</summary>
+            <label class="editor-field">یادداشت مصرف<textarea id="instructions" rows="2" maxlength="600"></textarea></label>
+          </details>
+          <details id="inventory-options" class="editor-options">
+            <summary>موجودی و واحد مصرف</summary>
+            <div class="fields">
+              <label>واحد مصرف<input id="unit" value="قرص" maxlength="30" required></label>
+              <label>موجودی اولیه (اختیاری)<input id="stock" dir="ltr" inputmode="decimal" maxlength="11"></label>
+              <label id="threshold-field" hidden>آستانهٔ هشدار موجودی<input id="threshold" dir="ltr" inputmode="decimal" maxlength="11" value="۲"></label>
+            </div>
+          </details>
+        </section>
+        <section data-editor-step="2" aria-labelledby="editor-confirm" hidden>
+          <h3 id="editor-confirm" tabindex="-1">برنامه را یک بار مرور کنید</h3>
+          <div id="editor-review"></div>
+        </section>
+        <div class="editor-footer">
+          <p id="editor-status" class="field-error" role="status"></p>
+          <div class="wizard-actions">
+            <button type="submit" id="editor-next">ادامه</button>
+            <button type="button" id="editor-back" class="secondary" hidden>مرحلهٔ قبل</button>
+          </div>
+        </div>
+        <button type="button" id="delete-edited-medication" class="text-button danger-link block-action" hidden>حذف دارو</button>
+      </div>
+    </form>
+  </dialog>
