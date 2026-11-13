@@ -33,3 +33,10 @@
 @media (min-width: 42rem) {
   .admin-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
 }
+.admin-promotion-dates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: .45rem;
+}
+.admin-promotion-dates input { inline-size: 100%; }
+.admin-preview-action { text-decoration: none; }

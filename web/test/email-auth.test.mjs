@@ -122,6 +122,21 @@ test("registration, password recovery and account deletion preserve authorizatio
     const hidden = (await (await admin(cookie, { ...promotion, enabled: false })).json()).promotion;
     assert.equal(hidden.id, published.id);
     assert.equal(await publicPromotion(), null);
+    const image = { ...promotion, url: "https://www.instagram.com/example/", mediaType: "image",
+      mediaUrl: "https://media.example.com/poster.gif", linkLabel: "Instagram" };
+    assert.equal((await admin(cookie, { ...image, mediaType: "html" })).status, 400);
+    assert.equal((await admin(cookie, { ...image, mediaUrl: "http://example.com/poster.gif" })).status, 400);
+    assert.equal((await admin(cookie, { ...image, startsAt: 10, endsAt: 5 })).status, 400);
+    const scheduled = (await (await admin(cookie, { ...image, startsAt: Date.now() + 60_000 })).json()).promotion;
+    assert.notEqual(scheduled.id, published.id);
+    assert.equal(await publicPromotion(), null);
+    const live = (await (await admin(cookie, image)).json()).promotion;
+    assert.equal(live.id, scheduled.id);
+    assert.deepEqual(await publicPromotion(), live);
+    const expiredPromotion = (await (await admin(cookie, { ...image, mediaType: "video",
+      mediaUrl: "https://media.example.com/spot.mp4", endsAt: Date.now() - 1000 })).json()).promotion;
+    assert.notEqual(expiredPromotion.id, live.id);
+    assert.equal(await publicPromotion(), null);
     assert.equal((await auth("logout", {}, cookie, "192.0.2.2", "https://other.test")).status, 403);
     assert.match((await auth("logout", {}, cookie)).headers.get("Set-Cookie"), /Max-Age=0/);
     assert.equal((await admin(cookie)).status, 401);

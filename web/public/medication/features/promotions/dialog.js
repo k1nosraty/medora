@@ -1,4 +1,6 @@
 import { $ } from "../../shared/ui/dom.js";
+import { t } from "../../shared/i18n/locale.js";
+import { renderCreative } from "./creative.js";
 
 export async function showPromotion() {
   const dialog = $("promotion-dialog");
@@ -9,7 +11,7 @@ export async function showPromotion() {
   try {
     const key = "medora-promotion";
     const day = new Date().toDateString();
-    if (localStorage.getItem(key)?.startsWith(day)) return;
+    if (localStorage.getItem(key)?.startsWith(day + " ")) return;
     for (const type of ["pointerdown", "keydown"]) {
       window.addEventListener(type, interrupt, { capture: true, signal: controller.signal });
     }
@@ -19,16 +21,19 @@ export async function showPromotion() {
     if (!promotion || document.hidden || controller.signal.aborted ||
         document.querySelector("dialog[open]") || document.querySelector('[data-screen="today"]').hidden) return;
     const seen = localStorage.getItem(key);
-    if (seen?.endsWith(promotion.id) || seen?.startsWith(day)) return;
+    if (seen?.endsWith(" " + promotion.id) || seen?.startsWith(day + " ")) return;
 
     $("promotion-title").textContent = promotion.title;
     $("promotion-description").textContent = promotion.description;
     const link = $("promotion-link");
     link.hidden = !promotion.url;
     if (promotion.url) link.href = promotion.url;
+    link.textContent = promotion.linkLabel || t("مشاهدهٔ جزئیات");
+    const creative = $("promotion-creative");
+    renderCreative(creative, promotion);
+    dialog.addEventListener("close", () => creative.replaceChildren(), { once: true });
     localStorage.setItem(key, `${day} ${promotion.id}`);
     dialog.showModal();
-    link.addEventListener("click", () => dialog.close(), { once: true });
   } catch {
     // A fetch or storage error must leave Today usable.
   } finally {

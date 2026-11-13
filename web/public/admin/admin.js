@@ -2,6 +2,7 @@ import { $, button, element } from "/medication/shared/ui/dom.js";
 import { localizeMarkup, t } from "/medication/shared/i18n/locale.js";
 import { applyDisplay } from "/medication/styles/display.js";
 import { accessCareSettings } from "/medication/shared/storage.js";
+import { renderCreative } from "/medication/features/promotions/creative.js";
 
 localizeMarkup();
 const refreshDisplay = () => accessCareSettings().then(applyDisplay).catch(() => {});
@@ -24,21 +25,61 @@ let accountQuery = "";
 let loadingAccounts = false;
 let loadingPromotion = false;
 let promotionLoaded = false;
+let previewTimer;
 
 function status(id, message, error = false) {
   $(id).textContent = message ? t(message) : "";
   $(id).toggleAttribute("data-error", error);
 }
+function httpsUrl(value) {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" && !url.username && !url.password ? url.href : "";
+  } catch {
+    return "";
+  }
+}
 function preview() {
   $("preview-title").textContent = fields.title.value.trim() || t("عنوان پیام");
   $("preview-description").textContent = fields.description.value.trim();
-  $("preview-link").hidden = !fields.url.value.trim();
+  const mediaType = fields.mediaType.value;
+  const mediaField = $("promotion-media-field");
+  mediaField.hidden = !mediaType;
+  fields.mediaUrl.disabled = !mediaType;
+  fields.mediaUrl.required = Boolean(mediaType);
+  $("promotion-media-hint").textContent = t(mediaType === "video" ? "لینک مستقیم MP4 را وارد کنید." : "لینک مستقیم JPG، PNG، WebP یا GIF را وارد کنید.");
+  const url = httpsUrl(fields.url.value);
+  const link = $("preview-link");
+  link.hidden = !url;
+  if (url) link.href = url;
+  else link.removeAttribute("href");
+  link.textContent = fields.linkLabel.value.trim() || t("مشاهدهٔ جزئیات");
+  const mediaStatus = $("preview-media-status");
+  mediaStatus.hidden = true;
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => renderCreative($("preview-creative"), {
+    mediaType, mediaUrl: httpsUrl(fields.mediaUrl.value), url, title: $("preview-title").textContent
+  }, () => {
+    mediaStatus.textContent = t("فایل باز نشد. لینک مستقیم فایل را بررسی کنید.");
+    mediaStatus.hidden = false;
+  }), 250);
+}
+function localDateTime(value) {
+  if (value == null) return "";
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(value - offset).toISOString().slice(0, 16);
 }
 function showPromotion(promotion) {
-  for (const name of ["title", "description", "url"]) fields[name].value = promotion?.[name] ?? "";
+  for (const name of ["title", "description", "url", "mediaType", "mediaUrl", "linkLabel"]) fields[name].value = promotion?.[name] ?? "";
+  for (const name of ["startsAt", "endsAt"]) fields[name].value = localDateTime(promotion?.[name]);
   fields.enabled.checked = promotion?.enabled ?? false;
   preview();
-  status("promotion-status", promotion?.enabled ? "پیام فعال است." : "در حال حاضر پیامی نمایش داده نمی‌شود.");
+  const now = Date.now();
+  status("promotion-status", !promotion?.enabled ? "در حال حاضر پیامی نمایش داده نمی‌شود."
+    : promotion.startsAt > now ? "نمایش زمان‌بندی شده است."
+    : promotion.endsAt != null && promotion.endsAt <= now ? "بازهٔ نمایش تمام شده است."
+    : "پیام فعال است.");
 }
 async function request(path, method = "GET", body) {
   const response = await fetch(path, {
@@ -169,6 +210,11 @@ form.addEventListener("submit", async event => {
     title: fields.title.value,
     description: fields.description.value,
     url: fields.url.value,
+    mediaType: fields.mediaType.value,
+    mediaUrl: fields.mediaType.value ? fields.mediaUrl.value.trim() : "",
+    linkLabel: fields.linkLabel.value,
+    startsAt: fields.startsAt.value ? new Date(fields.startsAt.value).getTime() : null,
+    endsAt: fields.endsAt.value ? new Date(fields.endsAt.value).getTime() : null,
     enabled: fields.enabled.checked
   };
   $("promotion-fields").disabled = true;
@@ -176,11 +222,8 @@ form.addEventListener("submit", async event => {
     const result = await request(promotionPath, "PUT", payload);
     if (!result) return;
     if (result.error) {
-      status("promotion-status", "عنوان و نشانی HTTPS پیام را بررسی کنید.", true);
-    } else {
-      showPromotion(result.promotion);
-      status("promotion-status", result.promotion.enabled ? "پیام ذخیره شد و برای نمایش فعال است." : "پیام ذخیره شد و نمایش آن خاموش است.");
-    }
+      status("promotion-status", "عنوان، لینک‌های HTTPS و بازهٔ نمایش را بررسی کنید.", true);
+    } else showPromotion(result.promotion);
   } catch {
     status("promotion-status", "پیام ذخیره نشد. دوباره تلاش کنید.", true);
   } finally {

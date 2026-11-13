@@ -42,7 +42,15 @@
             <legend>محتوای پیام</legend>
             <label>عنوان پیام<input name="title" dir="auto" maxlength="80" required></label>
             <label>توضیحات<textarea name="description" dir="auto" maxlength="240" rows="3"></textarea></label>
-            <label>نشانی HTTPS (اختیاری)<input name="url" dir="ltr" type="url" placeholder="https://" maxlength="512"></label>
+            <label>نوع تبلیغ<select name="mediaType"><option value="">متنی</option><option value="image">پوستر یا گیف</option><option value="video">ویدیو</option></select></label>
+            <label id="promotion-media-field" hidden>لینک مستقیم فایل<input name="mediaUrl" dir="ltr" type="url" placeholder="https://" maxlength="512" aria-describedby="promotion-media-hint"><small id="promotion-media-hint" class="quiet"></small></label>
+            <label>لینک مقصد (اینستاگرام یا سایت)<input name="url" dir="ltr" type="url" placeholder="https://" maxlength="512"></label>
+            <label>متن دکمهٔ لینک (اختیاری)<input name="linkLabel" dir="auto" maxlength="40" placeholder="مشاهدهٔ جزئیات"></label>
+            <div class="admin-promotion-dates">
+              <label>شروع نمایش (اختیاری)<input name="startsAt" type="datetime-local"></label>
+              <label>پایان نمایش (اختیاری)<input name="endsAt" type="datetime-local"></label>
+            </div>
+            <small class="quiet">ساعت شروع و پایان بر اساس زمان همین دستگاه است.</small>
             <label class="admin-toggle"><input name="enabled" type="checkbox">نمایش در صفحهٔ امروز</label>
             <button type="submit" class="block-action">ذخیرهٔ پیام</button>
             <p id="promotion-status" role="status"></p>
@@ -51,10 +59,12 @@
         <div class="admin-preview">
           <p class="quiet">پیش‌نمایش پیام تبلیغاتی</p>
           <h2 id="preview-title" dir="auto">عنوان پیام</h2>
+          <div id="preview-creative" class="promotion-creative"></div>
+          <p id="preview-media-status" class="quiet" role="status" hidden></p>
           <p id="preview-description" dir="auto"></p>
           <div class="buttons">
             <span class="admin-preview-skip">رد کردن</span>
-            <span id="preview-link" class="admin-preview-action" hidden>مشاهدهٔ جزئیات</span>
+            <a id="preview-link" class="admin-preview-action" target="_blank" rel="noopener noreferrer" hidden>مشاهدهٔ جزئیات</a>
           </div>
           <p class="quiet">برای هر مرورگر، حداکثر یک پیام در روز نمایش داده می‌شود.</p>
         </div>

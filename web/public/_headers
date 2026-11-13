@@ -6,8 +6,14 @@
   Cache-Control: no-cache
 /medication/*
   Cache-Control: no-store
+/medication/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; img-src 'self' https:; media-src 'self' https:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'
 /admin/*
   Cache-Control: no-store
+/admin/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; img-src 'self' https:; media-src 'self' https:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'
 /design/*
   Cache-Control: no-store
   X-Robots-Tag: noindex

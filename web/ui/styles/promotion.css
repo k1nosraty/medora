@@ -1,0 +1,12 @@
+.promotion-creative:empty { display: none; }
+.promotion-creative { margin-block: .55rem; }
+.promotion-creative a { display: block; border-radius: .95rem; }
+.promotion-creative :is(img, video) {
+  display: block;
+  inline-size: 100%;
+  max-block-size: min(45dvh, 24rem);
+  border-radius: .95rem;
+  object-fit: contain;
+  background: var(--stage);
+}
+.promotion-creative video { aspect-ratio: 16 / 9; }
