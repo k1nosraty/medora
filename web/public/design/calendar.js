@@ -64,7 +64,9 @@ export function installCalendarPreview(dates, today) {
       render();
     });
   }
-  for (const id of ["today-reset", "gallery-month-reset"]) $(id).addEventListener("click", () => choose(today));
+  for (const [id, grid] of [["today-reset", "day-week"], ["gallery-month-reset", "gallery-month-days"]]) {
+    $(id).addEventListener("click", () => choose(today, grid));
+  }
   for (const id of ["day-week", "gallery-month-days"]) {
     $(id).addEventListener("keydown", event => {
       const day = event.target.closest("[data-date]")?.dataset.date;

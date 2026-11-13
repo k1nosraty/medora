@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/design/gallery.css">
   <link rel="stylesheet" href="/design/finish.css">
   <link rel="stylesheet" href="/design/panels.css">
+  <link rel="stylesheet" href="/design/today.css">
   <script type="module" src="/design/gallery.js"></script>
 </head>
 <body class="medora design-gallery" data-finish="glass">
@@ -54,9 +55,9 @@
           <!-- include layout/today-water.html -->
           <p id="future-schedule" hidden></p>
           <nav class="gallery-dock-preview" aria-label="نمونهٔ نوار پایین" data-en-aria-label="Bottom navigation preview">
-            <button type="button" class="secondary finish-action" data-preview-target="today-story" data-en="Today">امروز</button>
-            <button type="button" class="finish-action gallery-dock-add" data-preview-target="quick-dialog" aria-label="افزودن" data-en-aria-label="Add">+</button>
-            <button type="button" class="secondary finish-action" data-preview-target="gallery-reports" data-en="Reports">گزارش‌ها</button>
+            <button type="button" data-preview-target="today-story" aria-current="location"><svg aria-hidden="true"><use href="#i-sun"/></svg><span data-en="Today">امروز</span></button>
+            <button type="button" class="gallery-dock-add" data-preview-target="quick-dialog" aria-label="افزودن" data-en-aria-label="Add"><svg aria-hidden="true"><use href="#i-plus"/></svg></button>
+            <button type="button" data-preview-target="gallery-reports"><svg aria-hidden="true"><use href="#i-reports"/></svg><span data-en="Reports">گزارش</span></button>
           </nav>
         </article>
         <article class="gallery-surface">

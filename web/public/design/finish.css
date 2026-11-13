@@ -12,8 +12,6 @@
 .gallery-cover-art { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 .gallery-month { margin-block: .65rem .4rem; border: 1px solid var(--outline); border-radius: 1.25rem; padding: .55rem; }
 .gallery-month-head, .gallery-calendar-footer { display: flex; justify-content: space-between; align-items: center; gap: .35rem; }
-.medora .gallery-arrow { min-width: 2.5rem; min-height: 2.5rem; padding: 0; margin: 0; font-size: 1.25rem; line-height: 1; }
-html[dir="ltr"] .gallery-arrow { transform: scaleX(-1); }
 .gallery-month .gallery-calendar { background: none; padding: .35rem 0; margin: 0; gap: .18rem; }
 .medora .gallery-calendar button { width: 100%; min-width: 0; min-height: 2.3rem; margin: 0; padding: 0; border: 1px solid transparent; border-radius: .6rem; background: transparent; color: var(--ink); }
 .gallery-weekday { color: var(--muted); font-size: .76rem; }
@@ -25,7 +23,6 @@ html[dir="ltr"] .gallery-arrow { transform: scaleX(-1); }
 .gallery-calendar-legend { display: flex; flex-wrap: wrap; gap: .2rem .65rem; color: var(--muted); font-size: .72rem; }
 .gallery-calendar-legend span::before { content: ""; display: inline-block; width: .62rem; height: .62rem; margin-inline-end: .24rem; border-radius: .18rem; background: var(--program-ink); }
 #gallery-legend-forecast::before { border: 1px dashed var(--program-ink); background: transparent; }
-#gallery-month-reset { margin: 0; font-size: .73rem; }
 #gallery-agenda-date { margin-block: .25rem .65rem; }
 #gallery-finish-comparison { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .7rem; margin-block-end: 1.2rem; }
 .medora .gallery-finish-card { display: grid; gap: .6rem; padding: .65rem; margin: 0; }
@@ -48,28 +45,24 @@ html[dir="ltr"] .gallery-arrow { transform: scaleX(-1); }
   border-color: color-mix(in srgb, var(--glass-rim) 80%, var(--outline));
   box-shadow: inset 0 1px var(--glass-glint), inset 0 -1px color-mix(in srgb, var(--outline) 70%, transparent), 0 .22rem .58rem var(--glass-shadow);
 }
-.medora :is([data-finish="glass"] .finish-action, [data-finish="glass"] .gallery-arrow),
-.medora[data-finish="glass"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery .today-water-actions button,.gallery #day-controls .day-arrow) {
+.medora [data-finish="glass"] .finish-action,
+.medora[data-finish="glass"] :is(.finish-action:not(.gallery-finish-card *),.gallery .today-water-actions button) {
   --button-tint: var(--action);
   border: 1px solid var(--glass-rim);
   box-shadow: inset 0 1px color-mix(in srgb, #fff 60%, transparent), inset 0 -2px var(--glass-shadow), 0 .2rem .45rem var(--glass-shadow);
   background: linear-gradient(155deg, color-mix(in srgb, #fff 24%, var(--button-tint)), var(--button-tint));
 }
-.medora :is([data-finish="glass"] .finish-action, [data-finish="glass"] .gallery-arrow):is(.secondary,.text-button),
-.medora[data-finish="glass"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery .today-water-actions button,.gallery #day-controls .day-arrow):is(.secondary,.text-button) {
+.medora [data-finish="glass"] .finish-action:is(.secondary,.text-button),
+.medora[data-finish="glass"] :is(.finish-action:not(.gallery-finish-card *),.gallery .today-water-actions button):is(.secondary,.text-button) {
   --button-tint: color-mix(in srgb, var(--action) 13%, var(--panel));
   background: linear-gradient(155deg, color-mix(in srgb, var(--panel) 78%, transparent), var(--button-tint));
 }
 
 .medora [data-finish="matte"] article.gallery-banner,
-.medora[data-finish="matte"] :is(.gallery .program-card,.gallery .report-hero,.gallery .today-story,article.gallery-banner:not(.gallery-finish-card *)) {
+.medora[data-finish="matte"] :is(.gallery .report-hero,article.gallery-banner:not(.gallery-finish-card *, .glass-cover)) {
   background: var(--program-fill, var(--stage));
   border-color: color-mix(in srgb, var(--program-ink, var(--action)) 20%, var(--outline));
   box-shadow: 0 2px 0 var(--outline);
-}
-.medora[data-finish="matte"] .gallery .today-story,
-.medora[data-finish="matte"] .glass-comparison-cell article.gallery-banner.glass-cover {
-  background: color-mix(in srgb, var(--cover) 60%, var(--cover-shade));
 }
 [data-finish="matte"] :is(.gallery-month,.gallery #day-controls), .gallery-finish-card[data-finish="matte"] .gallery-mini-week {
   background: var(--calendar-neutral);
@@ -77,66 +70,22 @@ html[dir="ltr"] .gallery-arrow { transform: scaleX(-1); }
   box-shadow: none;
   backdrop-filter: none;
 }
-.medora :is([data-finish="matte"] .finish-action, [data-finish="matte"] .gallery-arrow),
-.medora[data-finish="matte"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery .today-water-actions button,.gallery #day-controls .day-arrow) {
+.medora [data-finish="matte"] .finish-action,
+.medora[data-finish="matte"] :is(.finish-action:not(.gallery-finish-card *),.gallery .today-water-actions button) {
   border: 1px solid var(--outline);
   box-shadow: 0 2px 0 var(--outline);
   background: var(--action);
   backdrop-filter: none;
 }
-.medora :is([data-finish="matte"] .finish-action, [data-finish="matte"] .gallery-arrow):is(.secondary,.text-button),
-.medora[data-finish="matte"] :is(.finish-action:not(.gallery-finish-card *),.gallery-arrow,.gallery .today-water-actions button,.gallery #day-controls .day-arrow):is(.secondary,.text-button) {
+.medora [data-finish="matte"] .finish-action:is(.secondary,.text-button),
+.medora[data-finish="matte"] :is(.finish-action:not(.gallery-finish-card *),.gallery .today-water-actions button):is(.secondary,.text-button) {
   background: var(--panel);
 }
 .medora .finish-action.danger-link { color: var(--error); }
-.medora .finish-action:active, .medora .gallery-arrow:active { translate: 0 2px; box-shadow: inset 0 2px 3px var(--glass-shadow); }
+.medora .finish-action:active { translate: 0 2px; box-shadow: inset 0 2px 3px var(--glass-shadow); }
 .medora .finish-action:disabled { opacity: .5; }
 .medora .gallery :is(button,select):focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 
-.gallery-dock-preview {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: .4rem;
-  width: fit-content;
-  margin: .55rem auto 0;
-  padding: .28rem;
-  border-radius: 2rem;
-  border: 1px solid var(--outline);
-  background: var(--panel);
-}
-.medora[data-finish="glass"] .gallery-dock-preview {
-  background: color-mix(in srgb, var(--panel) 73%, transparent);
-  border-color: var(--glass-rim);
-  box-shadow: inset 0 1px var(--glass-glint), 0 .3rem .65rem var(--glass-shadow);
-  backdrop-filter: blur(16px) saturate(140%);
-}
-.medora .gallery-dock-preview button {
-  padding: .32rem .6rem;
-  margin: 0;
-  min-height: 2.7rem;
-  font-size: .76rem;
-  white-space: nowrap;
-  border-radius: 1.5rem;
-}
-.medora .gallery-dock-preview .gallery-dock-add {
-  inline-size: 2.9rem;
-  block-size: 2.9rem;
-  padding: 0;
-  font: 500 1.65rem/1 system-ui, sans-serif;
-  color: var(--on-action);
-}
-.medora .gallery #day-week button[aria-pressed="true"] {
-  color: var(--on-action);
-  background: var(--action);
-  border-color: var(--action);
-}
-.medora .gallery #day-week button[aria-current="date"]:not([aria-pressed="true"]) {
-  color: var(--action);
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--action);
-}
-.medora .gallery #day-week button[aria-pressed="true"] span { color: inherit; }
 @media (max-width: 36rem) {
   .gallery-toolbar { position: static; }
   .gallery-section, #gallery-selected-comparison { scroll-margin-block-start: 1rem; }

@@ -60,6 +60,7 @@ for (const control of document.querySelectorAll("[data-from-quick]")) {
 }
 for (const form of document.forms) form.addEventListener("submit", event => event.preventDefault());
 $("today-dates").append($("day-controls"));
+for (const arrow of document.querySelectorAll("#day-controls .day-arrow use")) arrow.setAttribute("href", "#i-expand");
 $("story-date").textContent = formatDay(now);
 $("story-summary").textContent = text("داروها، قرارها و روتین‌های امروز", "Today’s medication, appointments and routines");
 const all = readCatalog($("visit-category").options);
@@ -386,7 +387,14 @@ for (const control of document.querySelectorAll("[data-preview-target]")) {
   control.addEventListener("click", () => {
     const target = $(control.dataset.previewTarget);
     if (target instanceof HTMLDialogElement) target.showModal();
-    else target.scrollIntoView({ block: "center" });
+    else {
+      const dock = control.closest(".gallery-dock-preview");
+      if (dock) {
+        dock.querySelector("[aria-current]")?.removeAttribute("aria-current");
+        control.setAttribute("aria-current", "location");
+      }
+      target.scrollIntoView({ block: "center" });
+    }
   });
 }
 for (const id of ["family","art-color","icon-search"]) $(id).addEventListener(id === "icon-search" ? "input" : "change", renderCatalog);
