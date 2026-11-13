@@ -59,7 +59,7 @@ html[dir="ltr"] .gallery-arrow { transform: scaleX(-1); }
   border-color: color-mix(in srgb, var(--program-ink, var(--action)) 20%, var(--outline));
   box-shadow: 0 2px 0 var(--outline);
 }
-.medora[data-finish="matte"] .gallery .today-story { background: color-mix(in srgb, var(--action) 14%, var(--panel)); }
+.medora[data-finish="matte"] .gallery .today-story { background: color-mix(in srgb, var(--cover) 43%, var(--panel)); }
 [data-finish="matte"] :is(.gallery-month,.gallery #day-controls), .gallery-finish-card[data-finish="matte"] .gallery-mini-week {
   background: var(--calendar-neutral);
   border: 1px solid var(--outline);

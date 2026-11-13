@@ -21,7 +21,8 @@
 .medora .gallery .today-story { width: 100%; margin: 0 0 .65rem; min-block-size: 8rem; }
 .medora .gallery .story-art { max-block-size: 8rem; }
 .medora .gallery #day-controls { width: 100%; margin: 0 0 .65rem; }
-.gallery .program-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.medora .gallery .program-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.medora .gallery .program-grid:has(> .program-cycle) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .medora .program-cycle { --program-fill: #f5e4eb; --program-ink: #832d53; }
 .medora[data-theme="dark"] .program-cycle { --program-fill: #3d2431; --program-ink: #f7b8d2; }
 @media(prefers-color-scheme: dark) {
@@ -59,7 +60,6 @@
 
 .glass-object { display: block; overflow: visible; }
 .medora .gallery .story-art.glass-object { inline-size: 100%; block-size: 100%; max-block-size: 11rem; padding: .35rem; filter: drop-shadow(0 .5rem .55rem #17153348); }
-.medora .gallery .today-story { background: linear-gradient(135deg, color-mix(in srgb, var(--action) 21%, var(--panel)), color-mix(in srgb, var(--action) 10%, var(--panel))); color: var(--ink); border-color: var(--outline); }
 .medora .gallery .today-story :is(h2,p,time) { color: var(--ink); }
 .medora .gallery .story-label { background: color-mix(in srgb, var(--panel) 65%, transparent); }
 .medora .gallery .story-copy h2 { font-size: clamp(1.35rem, 2.7vw, 2.2rem); }
@@ -80,7 +80,7 @@
 .glass-comparison-cell .gallery-banner { grid-template-columns: minmax(0,1fr) min(37%, 4rem); gap: .18rem; padding: .23rem .48rem; font-size: .81rem; }
 .glass-comparison-cell .gallery-art { block-size: 3.05rem; }
 .glass-comparison-cell .gallery-art .glass-object { block-size: 3.05rem; }
-.glass-comparison-cell .glass-cover { --program-fill: color-mix(in srgb, var(--action) 17%, var(--panel)); --program-ink: var(--ink); }
+.glass-comparison-cell .glass-cover { --program-fill: color-mix(in srgb, var(--cover) 41%, var(--panel)); --program-ink: var(--ink); }
 #gallery-selected-comparison { margin-block-start: 1.3rem; scroll-margin-block-start: 8rem; }
 #gallery-selected-comparison .glass-comparison-cell .gallery-art { block-size: 3.55rem; }
 #gallery-selected-comparison .glass-comparison-cell .gallery-art .glass-object { block-size: 3.55rem; }
@@ -129,8 +129,11 @@
 .medora #visit-category-results .glass-object { inline-size: 2rem; block-size: 2rem; flex: none; }
 
 .medora .gallery .today-story {
-  background: radial-gradient(ellipse at 19% 71%, color-mix(in srgb, var(--action) 25%, transparent), transparent 62%),
-    linear-gradient(137deg, color-mix(in srgb, var(--action) 14%, var(--panel)), var(--panel));
+  background:
+    radial-gradient(ellipse at 18% 22%, color-mix(in srgb, var(--glass-glint) 72%, transparent), transparent 65%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cover) 54%, var(--panel)), color-mix(in srgb, var(--cover) 36%, var(--panel)));
+  color: var(--ink);
+  border-color: var(--outline);
 }
 .medora .gallery .story-art.glass-object { padding: 0; }
 .medora .gallery .program-card {
@@ -171,3 +174,19 @@
   block-size: min(100%, 6.3rem);
   pointer-events: none;
 }
+
+.medora .gallery .program-grid:not(:has(> .program-cycle)) .program-card {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  justify-items: center;
+  text-align: center;
+  padding-inline: .2rem;
+}
+.medora .gallery .program-grid:not(:has(> .program-cycle)) .program-card > .glass-object {
+  grid-area: 1 / 1;
+  inline-size: min(100%, 3.7rem);
+  block-size: 3.7rem;
+}
+.medora .gallery .program-grid:not(:has(> .program-cycle)) .program-card strong { grid-area: 2 / 1; }
+.medora .gallery .program-grid:not(:has(> .program-cycle)) .program-card small { grid-area: 3 / 1; }
+.medora .gallery .program-card small:empty { display: none; }
