@@ -197,9 +197,6 @@ function renderSurfaces() {
     control.firstElementChild.replaceWith(artByFeature[control.dataset.destination]());
   }
   renderHero();
-  const waterArt = $("today-water").querySelector(".today-water-art");
-  waterArt.querySelector(".glass-object")?.remove();
-  waterArt.append(glass());
   const quickArt = [medicineGlass("bottle"), visitGlass("general"), routineGlass("custom"), glass()];
   $("quick-dialog").querySelectorAll("[data-from-quick]").forEach((control, index) => {
     control.firstElementChild.replaceWith(quickArt[index]);

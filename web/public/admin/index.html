@@ -21,7 +21,7 @@
     </header>
     <h1>پنل مدیریت مدورا</h1>
     <p id="admin-status" role="status">در حال ارتباط…</p>
-    <a id="admin-sign-in" href="/medication/?view=account" hidden>ورود به حساب مدورا</a>
+    <a id="admin-sign-in" href="/medication/?view=account&return=admin" hidden>ورود به حساب مدورا</a>
     <div id="admin-workspace" hidden>
       <nav class="admin-tabs segmented glass-toolbar" aria-label="بخش‌های مدیریت">
         <button type="button" data-admin-tab="accounts" aria-controls="admin-accounts" aria-pressed="true">حساب‌های کاربری</button>
@@ -61,9 +61,11 @@
             </div>
             <small class="quiet">ساعت شروع و پایان بر اساس زمان همین دستگاه است.</small>
             <label class="admin-toggle"><input name="enabled" type="checkbox">نمایش در صفحهٔ امروز</label>
-            <button type="submit" class="block-action">ذخیرهٔ پیام</button>
-            <div class="buttons">
+            <div class="admin-promotion-actions">
               <button type="button" class="secondary" id="promotion-private">ساخت لینک تست خصوصی</button>
+              <button type="submit">ذخیرهٔ کمپین</button>
+            </div>
+            <div class="buttons admin-campaign-actions">
               <button type="button" class="secondary" id="promotion-archive" hidden>آرشیو کمپین</button>
               <button type="button" class="secondary" id="promotion-delete" hidden>حذف کمپین آرشیوشده</button>
             </div>
@@ -81,7 +83,7 @@
             <span class="admin-preview-skip">رد کردن</span>
             <a id="preview-link" class="admin-preview-action" target="_blank" rel="noopener noreferrer" hidden>مشاهدهٔ جزئیات</a>
           </div>
-          <p class="quiet">برای هر مرورگر، حداکثر یک پیام در روز نمایش داده می‌شود.</p>
+          <p class="quiet">تبلیغ عمومی حداکثر یک بار در روز در هر مرورگر نمایش داده می‌شود. پیش‌نمایش خصوصی را می‌توانی دوباره باز کنی.</p>
         </div>
       </section>
       <section id="admin-operations" hidden>

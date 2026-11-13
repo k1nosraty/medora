@@ -164,9 +164,9 @@ export function installWater({ getState, selectedDay, today, actionDay, mutate, 
     $("today-water").toggleAttribute("data-goal-reached", total >= goal);
     quickWaterButton.hidden = day !== today();
     renderQuickWaterFeedback(state, day);
-    const waterline = 85 - 55 * progress;
-    $("today-water").querySelector(".glass-water").setAttribute("d",
-      progress ? `M24 ${waterline}C44 ${waterline - 7} 63 ${waterline + 6} 88 ${waterline - 2}V92H24Z` : "");
+    const glass = $("today-water").querySelector(".water-glass");
+    glass.style.setProperty("--water-level", `${(1 - progress) * 92}px`);
+    glass.toggleAttribute("data-empty", progress === 0);
   }
 
   function renderWater(day, index, total, goal, progress) {

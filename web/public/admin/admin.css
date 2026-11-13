@@ -24,11 +24,11 @@
 .admin input:not([type="checkbox"]) { inline-size: 100%; }
 .medora .admin-toggle { display: flex; align-items: center; gap: .5rem; min-block-size: 2.75rem; }
 .admin-toggle input { inline-size: 1.15rem; min-block-size: 1.15rem; accent-color: var(--action); }
-.admin-preview { min-inline-size: 0; padding: 1rem; border: 1px solid var(--outline); border-radius: 1.2rem 1.2rem 1.2rem .45rem; background: var(--water); }
+.admin-preview { min-inline-size: 0; padding: 1rem; border: 1px solid var(--outline); border-radius: 1.2rem; background: var(--stage); }
 .admin-preview h2 { overflow-wrap: anywhere; }
 .admin-preview .buttons { margin-block: .8rem; }
 .admin-preview-skip, .admin-preview-action { display: inline-block; padding: .45rem .8rem; border: 1px solid var(--outline); border-radius: .85rem; background: var(--field); }
-.admin-preview-action { border-color: var(--action); background: var(--action); color: var(--on-action); }
+.admin a.admin-preview-action { border-color: var(--action); background: var(--action); color: var(--on-action); }
 
 @media (min-width: 42rem) {
   .admin-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
@@ -48,3 +48,13 @@
 .medora .admin-ticket p { white-space: pre-wrap; }
 .medora .admin-ticket textarea { inline-size: 100%; }
 .medora .admin-account-actions button:first-child { color: var(--ink); }
+.medora .admin :is(select, textarea) { display: block; inline-size: 100%; }
+.medora .admin-promotion-dates label { min-inline-size: 0; }
+.medora .admin-promotion-actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-block-start: .75rem; }
+.medora .admin-promotion-actions button { flex: 1 1 9rem; }
+.admin-campaign-actions:not(:has(button:not([hidden]))) { display: none; }
+.admin-preview p { overflow-wrap: anywhere; white-space: pre-wrap; }
+@media (max-width: 30rem) {
+  .medora .admin-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .medora .admin-tabs button { inline-size: 100%; }
+}

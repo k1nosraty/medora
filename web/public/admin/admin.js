@@ -30,6 +30,7 @@ let previewTimer;
 let campaigns = [];
 let currentCampaign;
 let mediaId = "";
+let previewKey;
 
 function status(id, message, error = false) {
   $(id).textContent = message ? t(message) : "";
@@ -50,7 +51,7 @@ function preview() {
   const mediaField = $("promotion-media-field");
   mediaField.hidden = !mediaType;
   $("promotion-upload-field").hidden = !mediaType;
-  $("promotion-remove-media").hidden = !mediaId;
+  $("promotion-remove-media").hidden = !mediaType || !mediaId;
   fields.mediaUrl.disabled = !mediaType || Boolean(mediaId);
   fields.mediaUrl.required = Boolean(mediaType && !mediaId);
   $("promotion-media-hint").textContent = t(mediaType === "video" ? "لینک مستقیم MP4 را وارد کنید." : "لینک مستقیم JPG، PNG، WebP یا GIF را وارد کنید.");
@@ -61,11 +62,21 @@ function preview() {
   else link.removeAttribute("href");
   link.textContent = fields.linkLabel.value.trim() || t("مشاهدهٔ جزئیات");
   const mediaStatus = $("preview-media-status");
+  const creative = {
+    mediaType, mediaUrl: mediaId ? promotionPath + "/media/" + mediaId : httpsUrl(fields.mediaUrl.value),
+    url, title: $("preview-title").textContent
+  };
+  const key = JSON.stringify([creative.mediaType, creative.mediaUrl, creative.url]);
+  if (key === previewKey) {
+    const media = $("preview-creative").querySelector("img, video");
+    if (media instanceof HTMLImageElement) media.alt = creative.title;
+    else media?.setAttribute("aria-label", creative.title);
+    return;
+  }
+  previewKey = key;
   mediaStatus.hidden = true;
   clearTimeout(previewTimer);
-  previewTimer = setTimeout(() => renderCreative($("preview-creative"), {
-    mediaType, mediaUrl: mediaId ? promotionPath + "/media/" + mediaId : httpsUrl(fields.mediaUrl.value), url, title: $("preview-title").textContent
-  }, () => {
+  previewTimer = setTimeout(() => renderCreative($("preview-creative"), { ...creative, title: $("preview-title").textContent }, () => {
     mediaStatus.textContent = t("فایل باز نشد. لینک مستقیم فایل را بررسی کنید.");
     mediaStatus.hidden = false;
   }), 250);
@@ -78,6 +89,7 @@ function localDateTime(value) {
 }
 function showPromotion(promotion) {
   currentCampaign = promotion;
+  previewKey = undefined;
   mediaId = promotion?.mediaId ?? "";
   $("promotion-upload").value = "";
   $("promotion-upload-status").textContent = mediaId ? t("فایل آپلودشده انتخاب شده است.") : "";
@@ -266,6 +278,11 @@ $("promotion-remove-media").addEventListener("click", () => {
 $("promotion-upload").addEventListener("change", async event => {
   const file = event.target.files[0];
   if (!file) return;
+  if (file.size > 8 * 1024 * 1024) {
+    event.target.value = "";
+    status("promotion-upload-status", "فرمت فایل یا حجم آن معتبر نیست.", true);
+    return;
+  }
   $("promotion-fields").disabled = $("promotion-campaign").disabled = true;
   status("promotion-upload-status", "در حال آپلود…");
   try {
@@ -281,6 +298,7 @@ $("promotion-upload").addEventListener("change", async event => {
   } catch {
     status("promotion-upload-status", "آپلود انجام نشد. دوباره تلاش کنید.", true);
   } finally {
+    $("promotion-upload").value = "";
     $("promotion-fields").disabled = $("promotion-campaign").disabled = false;
     preview();
   }
@@ -301,8 +319,8 @@ function payload() {
   };
 }
 async function savePromotion(mode) {
-  if (!form.reportValidity()) return;
-  const body = payload();
+  if (mode !== "archive" && !form.reportValidity()) return;
+  const body = mode === "archive" ? { ...currentCampaign } : payload();
   const isPreview = mode === "preview";
   if (isPreview) body.enabled = false;
   else if (currentCampaign) {

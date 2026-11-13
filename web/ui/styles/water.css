@@ -27,7 +27,18 @@
   inline-size: 100%;
   block-size: 100%;
 }
-.medora #today-water .glass-water { fill: #86b3e4; stroke: none; }
+.medora #today-water .glass-water {
+  fill: #78aee5;
+  stroke: none;
+  transform: translateY(var(--water-level, 92px));
+  opacity: .88;
+  transition: transform .38s ease, opacity .2s ease;
+}
+.medora #today-water .water-glass[data-empty] .glass-water { opacity: 0; }
+.medora[data-finish="matte"] #today-water .glass-water { fill: var(--category-water-bar); }
+@media (prefers-reduced-motion: reduce) {
+  .medora #today-water .glass-water { transition: none; }
+}
 .today-water-body { min-inline-size: 0; padding: .16rem .13rem .08rem; }
 .medora #today-water .water-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .4rem; align-items: center; }
 .medora #today-water-label { margin: 0; color: inherit; font-size: .98rem; }

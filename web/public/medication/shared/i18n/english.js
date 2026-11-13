@@ -1,4 +1,6 @@
 export default {
+  "ذخیرهٔ کمپین": "Save campaign",
+  "تبلیغ عمومی حداکثر یک بار در روز در هر مرورگر نمایش داده می‌شود. پیش‌نمایش خصوصی را می‌توانی دوباره باز کنی.": "Public ads appear at most once per day per browser. You can replay the private preview.",
   "پیش‌نمایش خصوصی تبلیغ": "Private ad preview",
   "نمایش دوباره": "Replay preview",
   "برای پیش‌نمایش، روی همین دستگاه وارد حساب مدیر شوید.": "Sign in as an administrator on this device to preview.",

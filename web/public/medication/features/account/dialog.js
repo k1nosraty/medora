@@ -245,7 +245,12 @@ export function installAccount() {
     event.preventDefault();
     const data = await request("login", { username: $("login-username").value, password: $("login-password").value });
     clearPasswords();
-    if (data) signedIn(data);
+    if (!data) return;
+    const params = new URLSearchParams(location.search);
+    const destination = params.get("return");
+    if (data.admin && destination === "preview") location.assign("/admin/preview/");
+    else if (destination === "admin") location.assign("/admin/");
+    else signedIn(data);
   });
   $("password-register").addEventListener("submit", async event => {
     event.preventDefault();

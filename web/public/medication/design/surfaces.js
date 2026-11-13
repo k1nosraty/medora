@@ -14,12 +14,7 @@ const settingsArt = {
 
 export function installSurfaceArt() {
   for (const marker of document.querySelectorAll("[data-surface-art]")) {
-    const keep = marker.hasAttribute("data-keep-art");
-    const art = glassObject(marker.dataset.surfaceArt, "image", { className: keep ? "" : marker.getAttribute("class") ?? "" });
-    if (keep) {
-      marker.hidden = true;
-      marker.after(art);
-    } else marker.replaceWith(art);
+    marker.replaceWith(glassObject(marker.dataset.surfaceArt, "image", { className: marker.getAttribute("class") ?? "" }));
   }
   const settings = $("settings-dialog");
   const renderHeading = () => {

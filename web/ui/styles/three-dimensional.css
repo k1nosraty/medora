@@ -51,8 +51,6 @@
 .medora[data-cycle-enabled] #app .program-card small { grid-area: 3 / 1; align-self: start; }
 
 .medora #today-water .today-water-art { display: grid; place-items: center; background: transparent; }
-.medora #today-water .today-water-art .glass-object { inline-size: 100%; block-size: auto; }
-.medora #today-water .today-water-art:has(img) > svg { display: none; }
 .medora .today-state-art .glass-object { inline-size: 100%; block-size: 100%; }
 .medora :is(#water-dialog, #water-settings, #today-water, [data-screen="water"], #settings-dialog[data-panel="water-settings"] > .sheet-header),
 .medora:has(#water-dialog[open], #settings-dialog[open][data-panel="water-settings"]) .value-picker {
