@@ -2,6 +2,7 @@
   --family-surface: color-mix(in srgb, var(--glass) 47%, transparent);
   margin-block: .12rem .68rem;
 }
+#today-family-bottom > .family-context { margin-block-start: .9rem; }
 .medora .family-switcher, .medora .family-member-bar {
   display: flex;
   align-items: center;

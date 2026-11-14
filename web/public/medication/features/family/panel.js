@@ -607,9 +607,15 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     returnTo = null;
   });
   $("open-family").addEventListener("click", () => void open());
+  $("settings-open-family").addEventListener("click", () => {
+    $("settings-dialog").close();
+    void open();
+  });
   $("family-home").addEventListener("click", () => {
     leave();
-    $("open-family").focus({ preventScroll: true });
+    const control = $("family-context").hidden || $("today-family-bottom").contains($("open-family")) ?
+      document.querySelector('.app-bar [data-destination="settings"]') : $("open-family");
+    control.focus({ preventScroll: true });
   });
   $("family-member-identity").addEventListener("click", () => getFamilyView()?.profile?.());
   document.addEventListener("visibilitychange", () => {

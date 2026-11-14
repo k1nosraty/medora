@@ -8,6 +8,7 @@ import { installWater } from "../features/water/controller.js";
 import { calendarFormat } from "../shared/ui/calendar-format.js";
 import { isoDay as iso } from "../domain/care-index.js";
 import { cycleIsEnabled } from "../domain/profile.js";
+import { familyPlacementOf } from "../domain/family.js";
 import { installCycle } from "../features/cycle/controller.js";
 import { refreshArtwork } from "../design/three-dimensional.js";
 
@@ -72,10 +73,6 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     else if (screen === "water") document.querySelector('[data-screen="water"]').prepend(dayControls);
     else $("today-dates").append(dayControls);
     $("today-story").hidden = $("today-dates").hidden = screen !== "today";
-    const familyContext = $("family-context");
-    if (screen === "insights" && view) $("insights-header").prepend(familyContext);
-    else $("today-story").before(familyContext);
-    familyContext.hidden = screen !== "today" && !view;
     $("app").dataset.activeScreen = screen;
     for (const view of document.querySelectorAll("[data-screen]")) view.hidden = view.dataset.screen !== screen;
     for (const item of document.querySelectorAll(".dock [data-destination]")) {
@@ -160,6 +157,15 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     clearTimeout(reportTimer);
     const view = getFamilyView();
     const preferences = getPersonalState();
+    const familyPlacement = familyPlacementOf(preferences.familyPlacement);
+    const familyContext = $("family-context");
+    const familyHost = view && screen === "insights" ? $("insights-header") :
+      !view && screen === "today" && familyPlacement === "bottom" ? $("today-family-bottom") : $("app");
+    if (familyContext.parentElement !== familyHost) {
+      if (familyHost === $("app")) $("today-story").before(familyContext);
+      else familyHost.prepend(familyContext);
+    }
+    familyContext.hidden = !view && (screen !== "today" || familyPlacement === "hidden");
     const preferredCalendar = preferences.calendar ?? defaultCalendar;
     if (calendar !== preferredCalendar) {
       calendar = preferredCalendar;

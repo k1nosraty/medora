@@ -4,6 +4,7 @@ import { integer } from "../../shared/ui/input-values.js";
 import { appointmentDefaults, waterDefaults } from "../../domain/care-plan.js";
 import { accentOf, accentLabel } from "../../styles/theme.js";
 import { canEnableCycle, cycleIsEnabled, finishOf, genders, ageAt, validPersonalProfile } from "../../domain/profile.js";
+import { familyPlacementOf } from "../../domain/family.js";
 
 const numbers = new Intl.NumberFormat(locale);
 const profileInputs = { firstName: "profile-first-name", lastName: "profile-last-name", birthDate: "profile-birth-date", heightCm: "profile-height", weightKg: "profile-weight" };
@@ -88,6 +89,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
       $("settings-berry-choice").querySelector("input").disabled = !enabled;
       $("display-form").elements.accent.value = accentOf(data.accent, enabled);
       $("settings-finish").value = finishOf(data.finish);
+      $("settings-family-placement").value = familyPlacementOf(data.familyPlacement);
       $("app-language").value = language;
     }
     if (panel === "profile-settings") {
@@ -271,6 +273,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
     const theme = event.currentTarget.elements.theme.value;
     const accent = event.currentTarget.elements.accent.value;
     const finish = finishOf($("settings-finish").value);
+    const familyPlacement = familyPlacementOf($("settings-family-placement").value);
     const selectedCalendar = $("calendar-setting").value;
     const nextLanguage = $("app-language").value;
     if (await saveSettings(event.submitter ?? $("display-form").querySelector('[type="submit"]'),
@@ -279,6 +282,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
         state.accent = accentOf(accent, cycleIsEnabled(state));
         state.calendar = selectedCalendar;
         state.finish = finish;
+        state.familyPlacement = familyPlacement;
       }, t("تنظیمات نمایش ذخیره شد."))) selectLanguage(nextLanguage);
   });
   gender.addEventListener("change", updateCycleControl);

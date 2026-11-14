@@ -1,4 +1,8 @@
 export default {
+  "جای نوار گروه فعال": "Active group bar placement",
+  "بالای صفحهٔ امروز": "Top of Today",
+  "پایین صفحهٔ امروز": "Bottom of Today",
+  "پنهان": "Hidden",
   "گروه‌ها و اعضا": "Groups and members",
   "گروه فعال": "Active group",
   "انتخاب گروه فعال": "Choose active group",

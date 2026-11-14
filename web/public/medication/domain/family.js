@@ -1,5 +1,7 @@
 import { cycleIsEnabled } from "./profile.js";
 
+export const familyPlacementOf = value => value === "bottom" || value === "hidden" ? value : "top";
+
 export const familySections = ["profile", "medicines", "doses", "visits", "routines", "water", "cycle"];
 
 export function emptyCareRecords() {
