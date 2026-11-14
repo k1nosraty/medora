@@ -2,7 +2,6 @@ import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js"
 import { language, t } from "../../shared/i18n/locale.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { familySections } from "../../domain/family.js";
-import { dayNumber } from "../../shared/ui/dates.js";
 import { localWall, timezone } from "../../domain/wall-clock.js";
 import { quantityFromText } from "../../domain/medication-rules.js";
 import { familyRequest } from "./api.js";
@@ -24,6 +23,16 @@ function hero(title, subtitle, art = "control-user") {
   return box;
 }
 
+function icon(id, className = "") {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const use = document.createElementNS(svg.namespaceURI, "use");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", className);
+  use.setAttribute("href", `#i-${id}`);
+  svg.append(use);
+  return svg;
+}
+
 function submitButton(label, ...values) {
   const control = element("button", t(label, ...values), "block-action");
   control.type = "submit";
@@ -36,19 +45,13 @@ const policyText = policy => [
 ].filter(Boolean).join(" · ");
 
 const groupPreference = "medora-family-active-group";
-const actionTiles = [
-  { kind: "medicine", art: "bottle", color: "medicine", name: "دارو" },
-  { kind: "visit", art: "visit", color: "visit", name: "قرار" },
-  { kind: "routine", art: "routine", color: "routine", name: "روتین" },
-  { kind: "water", art: "water", color: "water", name: "ثبت آب" },
-  { kind: "cycle", art: "cycle", color: "cycle", name: "ثبت شروع پریود" }
-];
-const actionArt = kind => actionTiles.find(tile => tile.kind === kind)?.art ?? "control-user";
+const actionArt = { medicine: "bottle", visit: "visit", routine: "routine" };
 const clockFor = zone => new Date(localWall(Date.now(), timezone(zone))).toISOString().slice(11, 16);
 
 export function installFamily({ openAccount, openProfile, getState, actionDay, getFamilyView, setFamilyView, openPlan }) {
   const dialog = $("family-dialog");
   const content = $("family-content");
+  const quick = $("quick-dialog");
   const status = $("family-status");
   const back = $("family-back");
   const fit = fitDialogToViewport(dialog);
@@ -87,6 +90,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   function page(title, parent) {
     generation++;
+    dialog.removeAttribute("data-roster");
     returnTo = parent;
     back.hidden = !parent;
     $("family-title").textContent = t(title);
@@ -152,24 +156,24 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   function showHome() {
     page("گروه‌ها و اعضا");
+    dialog.setAttribute("data-roster", "");
     const selected = groupInView();
     if (selected) {
       const groups = element("div", "", "family-group-tabs");
       groups.setAttribute("role", "group");
       groups.setAttribute("aria-label", t("انتخاب گروه فعال"));
       for (const group of overview.groups) {
-        const control = button(group.name, () => {
+        const control = button("", () => {
           chooseGroup(group);
           showHome();
           [...$("family-content").querySelectorAll(".family-group-tabs button")].find(item => item.dataset.group === group.id)?.focus();
         });
+        control.append(element("span", group.name, "family-group-label"));
         control.dataset.group = group.id;
         const active = selected.id === group.id;
         control.setAttribute("aria-pressed", String(active));
         if (active) {
-          const check = element("span", "✓", "family-group-check");
-          check.setAttribute("aria-hidden", "true");
-          control.append(check);
+          control.append(icon("check"));
         }
         groups.append(control);
       }
@@ -185,20 +189,29 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
           member.received.record || member.received.add ? policyText(member.received) : t("فقط مشاهده");
         copy.append(element("strong", label), element("small", caption));
         row.append(avatar(label, member.id), copy);
-        if (open) {
-          const arrow = element("span", "‹", "family-row-arrow");
-          arrow.setAttribute("aria-hidden", "true");
-          row.append(arrow);
+        if (!member.self) {
+          const access = element("span", "", "family-access-icon");
+          access.append(icon(!member.received ? "lock" : member.received.record || member.received.add ? "pen" : "eye"));
+          row.append(access);
         }
+        if (open) row.append(icon("expand", "family-row-arrow"));
         roster.append(row);
       }
       content.append(groups, element("h3", t("اعضای {0}", selected.name), "family-roster-title"), roster);
       groups.querySelector('[aria-pressed="true"]').scrollIntoView({ block: "nearest", inline: "nearest" });
     } else content.append(hero(t("خانواده"), t("برای دیدن برنامهٔ اعضا، گروه بساز یا دعوتی را بپذیر.")));
     const controls = element("div", "", "family-group-links");
-    controls.append(button(t("ساخت گروه"), createGroup));
-    if (selected) controls.append(button(t("مدیریت گروه"), () => showGroup(selected)));
-    controls.append(button(t("پروفایل من"), () => { dialog.close(); openProfile(); }));
+    const create = button(t("ساخت گروه"), createGroup);
+    create.prepend(icon("plus"));
+    controls.append(create);
+    if (selected) {
+      const manage = button(t("مدیریت گروه"), () => showGroup(selected));
+      manage.prepend(icon("settings"));
+      controls.append(manage);
+    }
+    const profile = button(t("پروفایل من"), () => { dialog.close(); openProfile(); });
+    profile.prepend(icon("user"));
+    controls.append(profile);
     content.append(controls);
     if (overview.invitations.length) content.append(section("دعوت‌های دریافتی", overview.invitations.map(item => {
       const card = element("article", "", "family-card");
@@ -378,6 +391,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   function closeFamilyEditors() {
     editorOperation = null;
+    if (getFamilyView() && quick.open) quick.close();
     for (const editor of document.querySelectorAll("dialog[data-family-editor][open]")) editor.close();
   }
 
@@ -395,13 +409,14 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       record: details => {
         const view = getFamilyView();
         if (view?.member.id === member.id && view.group.id === group.id && view.canRecord(details.kind, details.day)) {
-          recordFor(group, { ...member, label: view.name }, details);
+          if (details.kind === "water" || details.kind === "cycle") openFor(view, details.kind, details.day, "record");
+          else recordFor(group, { ...member, label: view.name }, details);
         }
       },
       add: (kind, day) => {
         const view = getFamilyView();
         if (view?.member.id === member.id && view.group.id === group.id && view.canAdd(kind)) {
-          addFor(group, { ...member, label: view.name }, kind, Math.max(day, view.today));
+          openFor(view, kind, Math.max(day, view.today), "add");
         }
       },
       profile: () => {
@@ -455,24 +470,6 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     }
   }
 
-  function openActions() {
-    const view = getFamilyView();
-    if (!view) return;
-    const day = actionDay();
-    const choices = element("div", "", "family-action-grid");
-    for (const { kind, art, color, name } of actionTiles) {
-      const record = kind === "water" || kind === "cycle";
-      if (record ? !view.canRecord(kind, day) : !view.canAdd(kind)) continue;
-      const control = button(t(name), () => record ? view.record({ kind, day, title: t(name) }) : view.add(kind, day));
-      control.className = "secondary quick-item program-" + color;
-      control.prepend(glassObject(art, "image", { className: "category-art" }));
-      choices.append(control);
-    }
-    if (!choices.childElementCount) return;
-    openActionSheet(t("افزودن برای {0}", view.name));
-    content.append(choices);
-  }
-
   async function saved(feedback, view) {
     const current = getFamilyView();
     if (view.member.id !== current?.member.id || view.group.id !== current.group.id) return;
@@ -505,7 +502,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     const view = getFamilyView();
     openActionSheet(t("ثبت برای {0}", member.label));
     const form = element("form", "", "family-content");
-    form.append(hero(title, member.label, actionArt(kind)),
+    form.append(hero(title, member.label, actionArt[kind]),
       element("p", t("به نام شما ثبت می‌شود."), "family-card"));
     if (kind === "medicine") {
       form.append(selectField("وضعیت مصرف", "status", [["taken", "دارو را دادم"], ["skipped", "مصرف نشد"]]));
@@ -515,10 +512,6 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       dose.querySelector("input").required = false;
       dose.querySelector("input").inputMode = "decimal";
       form.append(dose);
-    }
-    if (kind === "water") {
-      const time = clockFor(view.zone);
-      form.append(field("آب (میلی‌لیتر)", "amount", "number", details.amount ?? 250), field("ساعت", "time", "time", time));
     }
     if (kind === "routine" && routine.mode === "quantity") form.append(field("مقدار انجام‌شده", "result", "number", routine.amount ?? routine.target));
     if (kind === "routine" && routine.mode === "steps") {
@@ -533,14 +526,6 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
         form.append(label);
       }
     }
-    if (kind === "cycle") {
-      const end = field("تاریخ پایان", "end", "date");
-      end.querySelector("input").required = false;
-      const note = field("یادداشت", "note", "text");
-      note.querySelector("input").required = false;
-      note.querySelector("input").maxLength = 500;
-      form.append(end, selectField("شدت", "flow", [["", "انتخاب نشده"], ["light", "کم"], ["medium", "متوسط"], ["heavy", "زیاد"]]), note);
-    }
     form.append(submitButton("ذخیره برای {0}", member.label));
     const operation = crypto.randomUUID();
     formSubmit(form, async data => {
@@ -548,37 +533,38 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       const actual = kind === "medicine" && entered ? quantityFromText(entered) : undefined;
       if (kind === "medicine" && data.get("status") === "taken" && entered && !actual) throw new Error("invalid");
       await familyRequest("record", { group: group.id, target: member.id, operation, kind, day, id: details.id,
-        minute: details.minute, time: data.get("time"), status: data.get("status"),
-        amount: kind === "water" ? Number(entered) : actual,
+        minute: details.minute, status: data.get("status"), amount: actual,
         result: routine?.mode === "steps" ? data.getAll("step").map(Number) :
-          routine?.mode === "quantity" ? Number(data.get("result")) : true,
-        ...(kind === "cycle" && { end: data.get("end") ? dayNumber(data.get("end")) : null, flow: data.get("flow"), note: data.get("note") }) });
+          routine?.mode === "quantity" ? Number(data.get("result")) : true });
       await saved("ثبت انجام شد.", view);
     });
     content.append(form);
   }
 
-  function addFor(group, member, kind, day) {
-    const view = getFamilyView();
+  function openFor(view, kind, day, action) {
+    const { group, member } = view;
     const operation = crypto.randomUUID();
     if (dialog.open) dialog.close();
     editorOperation = operation;
     openPlan(kind, {
-      name: member.label, day, zone: view.zone,
-      save: async plan => {
+      name: view.name, day, zone: view.zone,
+      ...(kind === "water" && { time: clockFor(view.zone) }),
+      save: async values => {
         const current = getFamilyView();
-        if (current?.group.id !== group.id || current.member.id !== member.id || !current.canAdd(kind)) {
+        if (current?.group.id !== group.id || current.member.id !== member.id ||
+            !(action === "record" ? current.canRecord(kind, values.day) : current.canAdd(kind))) {
           throw new Error(t(errors.forbidden));
         }
         try {
-          await familyRequest("add", { group: group.id, target: member.id, operation, kind, plan });
+          const fields = action === "record" ? values : { plan: values };
+          await familyRequest(action, { group: group.id, target: member.id, operation, kind, ...fields });
         } catch (reason) {
-          if (reason.message === "forbidden") leave(t(errors.forbidden));
+          if (reason.message === "forbidden" && editorOperation === operation) leave(t(errors.forbidden));
           throw new Error(t(errors[reason.message] ?? "ذخیره انجام نشد. دوباره تلاش کنید."));
         }
         if (editorOperation !== operation) return;
         closeFamilyEditors();
-        await saved("برنامه اضافه شد.", view);
+        await saved(action === "record" ? "ثبت انجام شد." : "برنامه اضافه شد.", view);
       }
     });
   }
@@ -621,6 +607,19 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && getFamilyView()) void checkAccess();
   });
+  $("open-quick").addEventListener("click", () => quick.showModal());
+  quick.addEventListener("click", event => {
+    const control = event.target.closest("[data-quick-kind]");
+    if (!control) return;
+    quick.close();
+    const view = getFamilyView();
+    if (!view) return;
+    event.stopImmediatePropagation();
+    const kind = control.dataset.quickKind;
+    const day = actionDay();
+    if (kind === "water" || kind === "cycle") view.record({ kind, day });
+    else view.add(kind, day);
+  }, true);
   // Delegate static controls before personal editor handlers receive the event.
   $("app").addEventListener("click", event => {
     const view = getFamilyView();
@@ -638,7 +637,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     const day = actionDay();
     const amount = control.id === "today-water-quick" ? 250 : Number(control.dataset.waterAdd);
     if (kind === "water" && amount) void quickWater(view, day, amount, control);
-    else if (kind === "water" || kind === "cycle") view.record({ kind, day, title: t(kind === "water" ? "ثبت آب" : "ثبت شروع پریود") });
+    else if (kind === "water" || kind === "cycle") view.record({ kind, day });
     else view.add(kind, day);
   }, true);
   window.addEventListener("hashchange", () => {
@@ -649,7 +648,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     if (getFamilyView()) leave(t(errors.offline));
     if (dialog.open) { page("گروه‌ها و اعضا"); message(errors.offline, true); content.append(action("تلاش دوباره", open)); }
   });
-  return { openActions, leave, refreshGroup: () => refreshGroup().catch(() => {}),
+  return { leave, refreshGroup: () => refreshGroup().catch(() => {}),
     openInvitation: () => {
       if (invite || recovery) void open();
       recovery = false;

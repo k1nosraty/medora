@@ -71,7 +71,7 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     else if (screen === "routines") $("routine-dates").append(dayControls);
     else if (screen === "water") document.querySelector('[data-screen="water"]').prepend(dayControls);
     else $("today-dates").append(dayControls);
-    $("today-story").hidden = screen !== "today";
+    $("today-story").hidden = $("today-dates").hidden = screen !== "today";
     $("family-context").hidden = screen !== "today" && !view;
     $("app").dataset.activeScreen = screen;
     for (const view of document.querySelectorAll("[data-screen]")) view.hidden = view.dataset.screen !== screen;
@@ -172,12 +172,19 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     $("today-programs").hidden = Boolean(view && !["medications", "appointments", "routines", "cycle"]
       .some(key => view.canView(key) && (key !== "cycle" || cycleEnabled)));
     document.querySelector('.dock [data-destination="insights"]').hidden = Boolean(view && !view.canView("insights"));
-    $("open-quick").hidden = Boolean(view && !["medicine", "visit", "routine", "water", "cycle"]
-      .some(kind => view.canAdd(kind) || (["water", "cycle"].includes(kind) && view.canRecord(kind, actionDay()))));
     for (const [id, kind] of [["add", "medicine"], ["visit-add", "visit"], ["cycle-add", "cycle"]]) {
       $(id).hidden = Boolean(view && !(kind === "cycle" ? view.canRecord(kind) : view.canAdd(kind)));
     }
-    $("program-cycle").hidden = $("quick-cycle").hidden = !cycleEnabled;
+    $("program-cycle").hidden = !cycleEnabled;
+    const dayForEntry = actionDay();
+    const quickItems = $("quick-dialog").querySelectorAll("[data-quick-kind]");
+    for (const item of quickItems) {
+      const kind = item.dataset.quickKind;
+      const record = kind === "water" || kind === "cycle";
+      item.hidden = view ? !(record ? view.canRecord(kind, dayForEntry) : view.canAdd(kind)) : kind === "cycle" && !cycleEnabled;
+      item.disabled = !view && kind === "water" && dayForEntry > today();
+    }
+    $("open-quick").hidden = [...quickItems].every(item => item.hidden);
     if (view) {
       const visible = $("today-programs").querySelectorAll(".program-card:not([hidden])").length;
       $("today-programs").style.setProperty("--family-program-columns", visible === 3 ? "3" : visible === 1 ? "1" : "2");
@@ -220,7 +227,7 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
           formatMonth: day => dates.month(day), formatDay, dateButton, selectDay: selectCalendarDay,
           renderDose, renderRoutine, visitCard: appointments.visitCard,
           openWaterHistory: () => show("water"), canAddWater: !view || view.canRecord("water", calendarSelection),
-          addWater: () => view ? view.record({ kind: "water", day: calendarSelection, title: t("ثبت آب") }) : water.openWater(null)
+          addWater: () => view ? view.record({ kind: "water", day: calendarSelection }) : water.openWater(null)
         });
       } else {
         const last = today();
@@ -283,7 +290,7 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     show("today");
   }
   return {
-    changeContext, openVisit: appointments.openVisit, dayVisits: appointments.dayVisits, renderScreen, monthStart, chooseDay, show, actionDay,
+    changeContext, openVisit: appointments.openVisit, openWater: water.openWater, openCycle: cycle.open, dayVisits: appointments.dayVisits, renderScreen, monthStart, chooseDay, show, actionDay,
     screen: () => screen,
     formatDay,
     formatMonth: day => dates.month(day),

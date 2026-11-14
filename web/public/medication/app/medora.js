@@ -38,6 +38,7 @@ const viewState = () => familyView?.state ?? care;
 const update = $("update-app");
 const updateStatus = $("app-update-status");
 let updateStatusTimer;
+let familyNoticeTimer;
 update.addEventListener("click", async () => {
   clearTimeout(updateStatusTimer);
   if (busy) {
@@ -135,14 +136,6 @@ async function reload() {
 
 $("day").addEventListener("change", render);
 $("today-dates").append($("day-controls"));
-$("open-quick").addEventListener("click", () => {
-  if (familyView) { family.openActions(); return; }
-  $("quick-dialog").querySelector("[data-open-water]").disabled = dashboard.actionDay() > today();
-  $("quick-dialog").showModal();
-});
-for (const item of document.querySelectorAll("[data-from-quick]")) {
-  item.addEventListener("click", () => $("quick-dialog").close(), { capture: true });
-}
 const nextLanguage = language === "fa" ? "en" : "fa";
 for (const control of document.querySelectorAll("[data-language-switch]")) {
   control.lang = nextLanguage;
@@ -196,7 +189,8 @@ const openAccount = installAccount({
 });
 const family = installFamily({ getState, openAccount, actionDay: dashboard.actionDay, getFamilyView,
   openPlan: (kind, target) => {
-    const open = { medicine: openEditor, visit: dashboard.openVisit, routine: routines.openEditor }[kind];
+    const open = { medicine: openEditor, visit: dashboard.openVisit, routine: routines.openEditor,
+      water: dashboard.openWater, cycle: dashboard.openCycle }[kind];
     open(undefined, target);
   },
   setFamilyView: (view, feedback = "") => {
@@ -209,8 +203,11 @@ const family = installFamily({ getState, openAccount, actionDay: dashboard.actio
     else if (view && !view.canView(dashboard.screen())) dashboard.show("today");
     else render();
     if (changed || feedback) {
-      $("family-notice").textContent = feedback;
-      $("family-notice").hidden = !feedback;
+      clearTimeout(familyNoticeTimer);
+      const notice = $("family-notice");
+      notice.textContent = feedback;
+      notice.hidden = !feedback;
+      if (view && feedback) familyNoticeTimer = setTimeout(() => { notice.hidden = true; }, 3500);
       $("status").textContent = "";
     }
   }, openProfile: () => {

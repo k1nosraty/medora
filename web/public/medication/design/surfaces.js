@@ -14,7 +14,9 @@ const settingsArt = {
 
 export function installSurfaceArt() {
   for (const marker of document.querySelectorAll("[data-surface-art]")) {
-    marker.replaceWith(glassObject(marker.dataset.surfaceArt, "image", { className: marker.getAttribute("class") ?? "" }));
+    const art = glassObject(marker.dataset.surfaceArt, "image", { className: marker.getAttribute("class") ?? "" });
+    if (marker.closest("#quick-dialog")) art.loading = "eager";
+    marker.replaceWith(art);
   }
   const settings = $("settings-dialog");
   const renderHeading = () => {

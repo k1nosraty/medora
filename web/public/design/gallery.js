@@ -57,7 +57,7 @@ const openSettings = installSettings({ ...sample, refreshFields });
 for (const control of document.querySelectorAll("[data-close]")) {
   control.addEventListener("click", () => $(control.dataset.close).close());
 }
-for (const control of document.querySelectorAll("[data-from-quick]")) {
+for (const control of document.querySelectorAll("[data-quick-kind]")) {
   control.addEventListener("click", () => $("quick-dialog").close(), { capture: true });
 }
 for (const form of document.forms) form.addEventListener("submit", event => event.preventDefault());
@@ -198,7 +198,7 @@ function renderSurfaces() {
   }
   renderHero();
   const quickArt = [medicineGlass("bottle"), visitGlass("general"), routineGlass("custom"), glass()];
-  $("quick-dialog").querySelectorAll("[data-from-quick]").forEach((control, index) => {
+  $("quick-dialog").querySelectorAll("[data-quick-kind]").forEach((control, index) => {
     control.firstElementChild.replaceWith(quickArt[index]);
   });
   const cards = designCards.filter(([family]) => family !== "cycle" || cycleEnabled());

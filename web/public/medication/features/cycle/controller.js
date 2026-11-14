@@ -13,13 +13,17 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
   const note = $("cycle-note");
   const error = $("cycle-error");
   let editing;
+  let delegation;
 
-  function open(day) {
+  function open(day, target) {
+    delegation = target;
+    dialog.toggleAttribute("data-family-editor", Boolean(target));
+    dialog.querySelector('[type="submit"]').textContent = target ? t("ذخیره برای {0}", target.name) : t("ذخیره");
     if (!cycleIsEnabled(getState())) return;
     editing = day;
     const record = getState().cycleRecords?.[day];
     start.max = end.max = isoDay(today());
-    start.value = isoDay(day ?? today());
+    start.value = isoDay(day ?? target?.day ?? today());
     end.value = record?.end == null ? "" : isoDay(record.end);
     flow.value = record?.flow ?? "";
     note.value = record?.note ?? "";
@@ -49,7 +53,8 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
     const submit = event.submitter;
     submit.disabled = true;
     try {
-      if (await mutate(state => {
+      if (delegation) await delegation.save({ day, ...entry });
+      else if (await mutate(state => {
         if (!cycleIsEnabled(state)) throw new Error(t("چرخه غیرفعال است."));
         state.cycleRecords ??= {};
         if (day !== previous && Object.hasOwn(state.cycleRecords, day)) throw new Error(t("برای این تاریخ قبلاً چرخه ثبت شده است."));
@@ -58,7 +63,8 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
         state.cycleRecords[day] = entry;
       }, t("چرخه ذخیره شد."))) dialog.close();
       else error.textContent = $("status").textContent;
-    } finally { submit.disabled = false; }
+    } catch (reason) { error.textContent = reason.message; }
+    finally { submit.disabled = false; }
   });
 
   function render(state) {
@@ -101,5 +107,5 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
     }));
     if (!dates.length) history.append(element("p", t("هنوز چرخه‌ای ثبت نشده است."), "quiet"));
   }
-  return { render };
+  return { open, render };
 }

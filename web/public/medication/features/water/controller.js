@@ -13,6 +13,7 @@ function clockText(value) { return value.replace(/\d/g, digit => numbers.format(
 
 export function installWater({ getState, selectedDay, today, actionDay, getFamilyView = () => null, mutate, refreshFields, formatDay, formatShortDate }) {
   let editingWater = null;
+  let delegation;
   let quickWaterEntry;
 
   function mutateWater(change, success, day) {
@@ -90,26 +91,29 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
       ? `${day === today() ? t("امروز") : formatDay(day)} · ${clockText(time)}`
       : "";
   }
-  function openWater(entry, custom = false) {
+  function openWater(entry, target, { focusAmount = false } = {}) {
+    delegation = target;
+    $("water-dialog").toggleAttribute("data-family-editor", Boolean(target));
+    $("water-custom").querySelector('[type="submit"]').textContent = target ? t("ذخیره برای {0}", target.name) : t("ذخیره");
     editingWater = entry?.id ?? null;
     $("water-dialog-title").textContent = entry ? t("ویرایش ثبت آب") : t("ثبت آب");
     $("water-amount").value = localDigits(entry?.amount ?? 250);
-    $("water-log-day").value = isoDay(entry?.day ?? actionDay());
+    $("water-log-day").value = isoDay(entry?.day ?? target?.day ?? actionDay());
     $("water-log-day").max = isoDay(today());
-    $("water-log-time").value = entry?.time ?? localClock();
+    $("water-log-time").value = entry?.time ?? target?.time ?? localClock();
     $("water-error").textContent = "";
     $("water-options").open = Boolean(entry);
     updateWaterSelection();
     updateWaterWhen();
     refreshFields($("water-dialog"));
     $("water-dialog").showModal();
-    if (custom) {
+    if (focusAmount) {
       $("water-amount").focus();
       $("water-amount").select();
     }
   }
   for (const control of document.querySelectorAll("[data-open-water]")) {
-    control.addEventListener("click", () => openWater(null, control.id === "water-custom-action"));
+    control.addEventListener("click", () => openWater(null, null, { focusAmount: control.id === "water-custom-action" }));
   }
   $("water-amount").addEventListener("input", updateWaterSelection);
   $("water-custom").addEventListener("input", () => { $("water-error").textContent = ""; });
@@ -139,8 +143,11 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
     }
     submit.disabled = true;
     try {
-      if (await addWater(value, day, time, editingWater)) $("water-dialog").close();
+      if (delegation) await delegation.save({ day, time, amount: value });
+      else if (await addWater(value, day, time, editingWater)) $("water-dialog").close();
       else error.textContent = t("ذخیره انجام نشد. دوباره تلاش کنید.");
+    } catch (reason) {
+      error.textContent = reason.message;
     } finally {
       submit.disabled = false;
     }
