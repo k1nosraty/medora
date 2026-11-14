@@ -13,7 +13,7 @@ import { refreshArtwork } from "../design/three-dimensional.js";
 
 const titles = { today: t("امروز"), medications: t("داروها"), appointments: t("قرارها"), routines: t("روتین‌ها"), insights: t("گزارش و تقویم"), water: t("آب"), cycle: t("چرخه") };
 
-export function installNavigation({ getState, selectedDay, today, render, mutate, requestDeletion, renderDose, renderRoutine, refreshFields }) {
+export function installNavigation({ getState, getFamilyView, getPersonalState, selectedDay, today, render, mutate, requestDeletion, renderDose, renderRoutine, refreshFields }) {
   let screen = "today";
   const selectedDates = new Map();
   const dayWeek = $("day-week");
@@ -39,20 +39,22 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
     render();
     if (restoreFocus) $(restoreFocus).querySelector('[aria-current="date"]')?.focus();
   }
-  const settings = installSettings({ getState, mutate, refreshFields });
+  const settings = installSettings({ getState: getPersonalState, mutate, refreshFields });
   const water = installWater({
-    getState, selectedDay, today, actionDay, mutate, refreshFields, formatDay,
+    getState, selectedDay, today, actionDay, getFamilyView, mutate, refreshFields, formatDay,
     formatShortDate: day => dates.shortDate(day)
   });
   const appointments = installAppointments({
-    getState, today, defaultDay: () => screen === "insights" ? actionDay() : today(),
+    getState, getFamilyView, today, defaultDay: () => screen === "insights" ? actionDay() : today(),
     render, mutate, requestDeletion, refreshFields, formatDay,
     formatDayNumber: day => dates.dayNumber(day),
     formatShortMonth: day => dates.shortMonth(day)
   });
-  const cycle = installCycle({ getState, mutate, today, formatDay, requestDeletion, refreshFields });
+  const cycle = installCycle({ getState, getFamilyView, mutate, today, formatDay, requestDeletion, refreshFields });
 
   function show(destination, notifications = false) {
+    const view = getFamilyView();
+    if (view && !view.canView(destination)) return;
     if (destination === "cycle" && !cycleIsEnabled(getState())) return;
     if (destination === "settings") {
       settings(notifications);
@@ -70,6 +72,7 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
     else if (screen === "water") document.querySelector('[data-screen="water"]').prepend(dayControls);
     else $("today-dates").append(dayControls);
     $("today-story").hidden = screen !== "today";
+    $("family-context").hidden = screen !== "today" && !view;
     $("app").dataset.activeScreen = screen;
     for (const view of document.querySelectorAll("[data-screen]")) view.hidden = view.dataset.screen !== screen;
     for (const item of document.querySelectorAll(".dock [data-destination]")) {
@@ -135,7 +138,9 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
     $("story-date").dateTime = iso(day);
     $("story-date").textContent = dates.weekday(day) + listSeparator + dates.shortDate(day);
     $("story-date").setAttribute("aria-label", formatDay(day, true));
-    $("story-title").textContent = day === today() ? t("امروز با مدورا") : t("برنامهٔ این روز");
+    const view = getFamilyView();
+    $("story-title").textContent = view ? t(day === today() ? "امروزِ {0}" : "برنامهٔ {0}", view.firstName) :
+      day === today() ? t("امروز با مدورا") : t("برنامهٔ این روز");
     $("today-reset").hidden = day === today();
     weekSlide?.cancel();
     dayWeek.replaceChildren(...Array.from({ length: 7 }, (_, offset) => {
@@ -150,16 +155,40 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
 
   function renderScreen(state, day, index) {
     clearTimeout(reportTimer);
-    const preferredCalendar = state.calendar ?? defaultCalendar;
+    const view = getFamilyView();
+    const preferences = getPersonalState();
+    const preferredCalendar = preferences.calendar ?? defaultCalendar;
     if (calendar !== preferredCalendar) {
       calendar = preferredCalendar;
       dates = calendarFormat(calendar);
     }
     const previousFinish = document.body.dataset.finish;
-    applyDisplay(state);
+    applyDisplay(preferences);
     if (previousFinish !== document.body.dataset.finish) refreshArtwork(document.body.dataset.finish);
     const cycleEnabled = cycleIsEnabled(state);
+    for (const control of $("today-programs").querySelectorAll("[data-destination]:not(#program-cycle)")) {
+      control.hidden = Boolean(view && !view.canView(control.dataset.destination));
+    }
+    $("today-programs").hidden = Boolean(view && !["medications", "appointments", "routines", "cycle"]
+      .some(key => view.canView(key) && (key !== "cycle" || cycleEnabled)));
+    document.querySelector('.dock [data-destination="insights"]').hidden = Boolean(view && !view.canView("insights"));
+    $("open-quick").hidden = Boolean(view && !["medicine", "visit", "routine", "water", "cycle"]
+      .some(kind => view.canAdd(kind) || (["water", "cycle"].includes(kind) && view.canRecord(kind, actionDay()))));
+    for (const [id, kind] of [["add", "medicine"], ["visit-add", "visit"], ["cycle-add", "cycle"]]) {
+      $(id).hidden = Boolean(view && !(kind === "cycle" ? view.canRecord(kind) : view.canAdd(kind)));
+    }
     $("program-cycle").hidden = $("quick-cycle").hidden = !cycleEnabled;
+    if (view) {
+      const visible = $("today-programs").querySelectorAll(".program-card:not([hidden])").length;
+      $("today-programs").style.setProperty("--family-program-columns", visible === 3 ? "3" : visible === 1 ? "1" : "2");
+    }
+    for (const label of document.querySelectorAll("[data-family-scope]")) {
+      label.hidden = Boolean(view && !view.canView(label.dataset.familyScope));
+    }
+    $("plans-title").textContent = t(view ? "قفسهٔ داروها" : "قفسهٔ داروهای من");
+    $("visits-title").textContent = t(view ? "قرارها" : "قرارهای من");
+    $("routine-banner-title").textContent = t(view ? "روتین‌ها" : "روتین‌های من");
+    $("today-reminders").inert = Boolean(view);
     document.body.toggleAttribute("data-cycle-enabled", cycleEnabled);
     if (!cycleEnabled) {
       $("cycle-dialog").close();
@@ -190,12 +219,17 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
           day: calendarSelection, start, end: monthStart(start + 32) - 1, today: today(),
           formatMonth: day => dates.month(day), formatDay, dateButton, selectDay: selectCalendarDay,
           renderDose, renderRoutine, visitCard: appointments.visitCard,
-          openWaterHistory: () => show("water"), addWater: () => water.openWater(null)
+          openWaterHistory: () => show("water"), canAddWater: !view || view.canRecord("water", calendarSelection),
+          addWater: () => view ? view.record({ kind: "water", day: calendarSelection, title: t("ثبت آب") }) : water.openWater(null)
         });
       } else {
         const last = today();
         renderReports({ first: reportStart(last), last, period: reportPeriod }, goal, index,
           day => dates.shortDate(day), formatDay, monthStart, state);
+        for (const [id, visible] of [["water", !view || view.has("water")], ["dose", !view || view.has("doses")],
+          ["routine", !view || view.has("routines")], ["visit", !view || view.has("visits")]]) {
+          $(`report-${id}-title`).closest("section").hidden = !visible;
+        }
         reportTimer = setTimeout(render, 60_000 - Date.now() % 60_000);
       }
     }
@@ -234,8 +268,22 @@ export function installNavigation({ getState, selectedDay, today, render, mutate
       selectCalendarDay(Math.min(nextEnd, nextStart + calendarSelection - oldStart));
     });
   }
+  function changeContext() {
+    selectedDates.clear();
+    calendarSelection = today();
+    for (const id of ["plans", "med-day-doses", "doses", "today-focus", "visits", "routine-list",
+      "cycle-history", "water-entries", "calendar-days", "calendar-entries", "report-chart", "report-chart-dates", "medicine-details-body"]) {
+      $(id).replaceChildren();
+    }
+    delete $("report-chart").dataset.chartKey;
+    for (const id of ["report-chart-previous", "report-chart-next"]) $(id).onclick = null;
+    $("medicine-details-title").textContent = "";
+    for (const id of ["cabinet-search", "routine-search"]) $(id).value = "";
+    if ($("medicine-details").open) $("medicine-details").close();
+    show("today");
+  }
   return {
-    dayVisits: appointments.dayVisits, renderScreen, monthStart, chooseDay, show, actionDay,
+    changeContext, openVisit: appointments.openVisit, dayVisits: appointments.dayVisits, renderScreen, monthStart, chooseDay, show, actionDay,
     screen: () => screen,
     formatDay,
     formatMonth: day => dates.month(day),

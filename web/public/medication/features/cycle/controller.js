@@ -5,7 +5,7 @@ import { isoDay } from "../../domain/care-index.js";
 import { cycleForecast } from "../../domain/cycle.js";
 import { cycleIsEnabled } from "../../domain/profile.js";
 
-export function installCycle({ getState, mutate, today, formatDay, requestDeletion, refreshFields }) {
+export function installCycle({ getState, getFamilyView = () => null, mutate, today, formatDay, requestDeletion, refreshFields }) {
   const dialog = $("cycle-dialog");
   const start = $("cycle-start");
   const end = $("cycle-end");
@@ -78,6 +78,11 @@ export function installCycle({ getState, mutate, today, formatDay, requestDeleti
       if (record.end !== null) copy.append(element("p", t("تا {0}", formatDay(record.end))));
       if (record.flow) copy.append(element("p", t({ light: "کم", medium: "متوسط", heavy: "زیاد" }[record.flow])));
       if (record.note) copy.append(element("p", record.note));
+      if (getFamilyView()) {
+        if (record.recordedBy) copy.append(element("small", t("ثبت‌کننده: {0}", record.recordedBy), "family-stamp"));
+        row.append(copy);
+        return row;
+      }
       const actions = element("div", "", "buttons");
       actions.append(button(t("ویرایش"), () => open(day)), button(t("حذف"), () => {
         requestDeletion({

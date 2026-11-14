@@ -1,0 +1,18 @@
+      <div id="family-context" class="family-context">
+        <button class="family-switcher" type="button" id="open-family" aria-haspopup="dialog" aria-controls="family-dialog">
+          <span class="family-group-art" aria-hidden="true"><span data-surface-art="control-user"></span><span data-surface-art="control-user"></span></span>
+          <span class="family-context-copy"><strong id="family-group-name">خانواده</strong><small id="family-group-caption">گروه‌ها و اعضا</small></span>
+          <span id="family-group-avatars" class="family-avatar-stack" aria-hidden="true"></span>
+          <svg class="family-chevron" aria-hidden="true"><use href="#i-expand"/></svg>
+        </button>
+        <div id="family-member-bar" class="family-member-bar" hidden>
+          <button type="button" id="family-member-identity" class="family-member-identity">
+            <span id="family-member-avatar"></span>
+            <span class="family-context-copy"><strong id="family-member-name"></strong><small id="family-member-group"></small></span>
+          </button>
+          <button type="button" id="family-home" class="family-home">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-6h6v6"/></svg><span>بازگشت به خانه</span>
+          </button>
+        </div>
+        <p id="family-notice" role="status" hidden></p>
+      </div>

@@ -1,6 +1,6 @@
 import { language, listSeparator, locale, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, action, dayCardOptions, element } from "../../shared/ui/dom.js";
-import { today } from "../../shared/ui/dates.js";
+import { recordAction } from "../family/context.js";
 import { localZone, minuteMs } from "../../domain/care-plan.js";
 import { compilePhases, createCareIndex, doseId, doseTime, timeText, trackSchedule } from "../../domain/care-index.js";
 import * as engine from "../../domain/medication-rules.js";
@@ -11,7 +11,7 @@ import { nextPlannedDose } from "./next-dose.js";
 const doseStates = { taken: t("مصرف شد"), skipped: t("مصرف نشد"), snoozed: t("به تعویق افتاد") };
 const percentFormat = new Intl.NumberFormat(locale, { style: "percent" });
 
-export function installMedicineView({ getState, mutate, requestDeletion, openEditor, formatDay }) {
+export function installMedicineView({ getState, today, getFamilyView, mutate, requestDeletion, openEditor, formatDay }) {
   function slotsFor(medicine, day) {
     if (medicine.dates?.length && !medicine.dates.includes(day)) return [];
     return engine.medicationSlots(compilePhases(engine, medicine.phases), day);
@@ -82,7 +82,8 @@ export function installMedicineView({ getState, mutate, requestDeletion, openEdi
     });
     const top = element("div");
     top.className = "feature-head";
-    top.append(heading, toggle);
+    top.append(heading);
+    if (!getFamilyView()) top.append(toggle);
     const status = element("p", medicine.paused ? t("برنامه متوقف است") : t("برنامه فعال است"));
     status.className = "quiet";
     const profile = element("div");
@@ -96,12 +97,15 @@ export function installMedicineView({ getState, mutate, requestDeletion, openEdi
     details.append(element("p", t("شروع از {0}", formatDay(medicine.phases[0].start))));
     profile.append(medicationBanner(medicine.icon, medicine.color), details);
     card.append(profile);
-    if (medicine.stock !== null) {
+    if (medicine.stock != null) {
       const upcoming = medicine.paused ? null : nextAmount(medicine);
       const low = upcoming !== null && engine.isLowStock(medicine.stock, medicine.threshold, upcoming);
       const balance = element("p", t("موجودی {0} {1}{2}", amountText(medicine.stock), doseUnit(medicine.unit, medicine.stock), low ? t("، زمان تهیهٔ دارو") : ""));
       balance.dataset.warning = String(low);
       card.append(balance);
+    }
+    if (getFamilyView()) return card;
+    if (medicine.stock != null) {
       const purchase = element("form");
       const label = element("label", t("مقدار خریداری‌شده"));
       const amount = element("input");
@@ -167,12 +171,16 @@ export function installMedicineView({ getState, mutate, requestDeletion, openEdi
     }
     const remove = action(t("حذف دارو"), () => deleteMedicine(medicine.id, "medicine-details"));
     remove.className = "text-button danger-link";
-    $("medicine-details-body").replaceChildren(medicationBanner(medicine.icon, medicine.color), summary, edit, remove, heading,
-      entries.length ? history : element("p", t("هنوز مصرفی ثبت نشده است.")));
+    const view = getFamilyView();
+    $("medicine-details-body").replaceChildren(medicationBanner(medicine.icon, medicine.color), summary,
+      ...(!view ? [edit, remove] : []),
+      ...(!view || view.has("doses") ? [heading, entries.length ? history : element("p", t("هنوز مصرفی ثبت نشده است."))] : []));
     $("medicine-details").showModal();
   }
 
   function renderDose(medicine, dose, variant) {
+    const view = getFamilyView();
+    const scheduledAt = view?.timeOf ?? doseTime;
     const dayCard = Boolean(variant);
     const featured = variant === "featured";
     const calendar = variant === "calendar";
@@ -188,7 +196,7 @@ export function installMedicineView({ getState, mutate, requestDeletion, openEdi
     const instructions = dose.instructions ?? plan?.instructions;
     const planned = dose.planned === null ? "" : `${amountText(dose.planned)} ${doseUnit(unit, dose.planned)}`;
     let recorded = doseStates[dose.status] ?? t(calendar ?
-      (doseTime(dose.day, dose.minute) > Date.now() ? "برنامه‌ریزی‌شده" : "بدون ثبت") : "در انتظار ثبت");
+      (scheduledAt(dose.day, dose.minute) > Date.now() ? "برنامه‌ریزی‌شده" : "بدون ثبت") : "در انتظار ثبت");
     if (dose.status === "taken" && dose.actual != null) recorded += `${listSeparator}${amountText(dose.actual)} ${doseUnit(unit, dose.actual)}`;
     const badge = element("p", recorded);
     badge.className = "badge";
@@ -196,7 +204,7 @@ export function installMedicineView({ getState, mutate, requestDeletion, openEdi
     const info = element("div");
     info.className = "dose-info";
     if (featured) {
-      const due = dose.snoozeUntil || doseTime(dose.day, dose.minute);
+      const due = dose.snoozeUntil || scheduledAt(dose.day, dose.minute);
       const eyebrow = element("p", dose.status === "snoozed" ? t("نوبت به‌تعویق‌افتاده") : due >= Date.now() ? t("نوبت بعدی") : t("نوبت ثبت‌نشده"));
       eyebrow.className = "hero-kicker";
       const time = dose.snoozeUntil ? new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(due) : localDigits(timeText(dose.minute));
@@ -218,10 +226,21 @@ export function installMedicineView({ getState, mutate, requestDeletion, openEdi
     card.append(header);
     const result = element("div");
     result.className = "dose-result";
-    if (!featured) result.append(badge);
+    if (!featured && (!view || view.has("doses"))) result.append(badge);
     if (planned) result.append(element("p", planned));
     if (instructions) result.append(element("p", instructions));
     if (result.childElementCount) info.append(result);
+    if (view) {
+      if (dose.recordedBy) info.append(element("small", t("ثبت‌کننده: {0}", dose.recordedBy), "family-stamp"));
+      if (view.canRecord("medicine", dose.day) && medicine && (!medicine.paused || dose.historyPlan) &&
+          !["taken", "skipped"].includes(dose.status) && scheduledAt(dose.day, dose.minute) <= Date.now()) {
+        const footer = element("div", "", dayCard ? "day-card-actions" : "dose-quick");
+        footer.append(recordAction("ثبت مصرف", () => view.record({ kind: "medicine", day: dose.day,
+          id: medicine.id, minute: dose.minute, amount: dose.planned, title: heading.textContent, unit })));
+        card.append(footer);
+      }
+      return card;
+    }
     if (dose.day > today() || !medicine || (medicine.paused && !dose.historyPlan)) return card;
     const canSnooze = dose.day === today() && !medicine.paused && !dose.historyPlan &&
       slotsFor(medicine, dose.day).some(slot => slot.minuteOfDay === dose.minute);
@@ -323,10 +342,11 @@ export function installMedicineView({ getState, mutate, requestDeletion, openEdi
     const noPlans = element("p", t("برنامهٔ دارویی ثبت نشده است."), "empty");
     $("plans").replaceChildren(...(medicines.length ? medicines.map(renderMedicine) : [noPlans]));
     filterCabinet();
+    $("plans-heading").parentElement.hidden = getFamilyView()?.has("medicines") === false;
     const consumed = daily.filter(dose => dose.status === "taken").length;
     const doseCard = dose => renderDose(getState().medicines[dose.medicineId], dose);
     const percent = daily.length ? Math.round(consumed * 100 / daily.length) : 0;
-    $("med-day-summary").hidden = daily.length === 0;
+    $("med-day-summary").hidden = daily.length === 0 || getFamilyView()?.has("doses") === false;
     $("med-day-count").textContent = t("{0} از {1} نوبت", localDigits(consumed), localDigits(daily.length));
     $("med-day-ring").style.setProperty("--percent", percent);
     $("med-day-ring").firstElementChild.textContent = percentFormat.format(percent / 100);

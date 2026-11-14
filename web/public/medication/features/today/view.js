@@ -8,14 +8,15 @@ const clock = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digi
 const slotOf = event => event.time == null ? null : Math.floor(event.time / 60_000);
 let selectedSlot;
 
-export function renderToday(care, day, today, daily, visits, routines, waterTotal, renderDose, renderRoutine) {
+export function renderToday(care, day, today, daily, visits, routines, waterTotal, renderDose, renderRoutine, view) {
+  const scheduledAt = view?.timeOf ?? doseTime;
   const events = daily.map(dose => {
     const medicine = care.medicines[dose.medicineId];
     const done = dose.status === "taken" || dose.status === "skipped";
     return {
       key: `dose:${dose.medicineId}:${dose.day}:${dose.minute}`,
       state: done ? "done" : medicine && !medicine.paused ? "pending" : "inactive",
-      time: dose.status === "snoozed" && dose.snoozeUntil ? dose.snoozeUntil : doseTime(dose.day, dose.minute),
+      time: dose.status === "snoozed" && dose.snoozeUntil ? dose.snoozeUntil : scheduledAt(dose.day, dose.minute),
       resolvedAt: dose.resolvedAt,
       render: featured => renderDose(medicine, dose, featured ? "featured" : "day")
     };
@@ -26,7 +27,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     events.push({
       key: `routine:${entry.id}`,
       state: routineComplete(entry) ? "done" : plan && !plan.paused ? "pending" : "inactive",
-      time: entry.minute == null ? null : doseTime(day, entry.minute),
+      time: entry.minute == null ? null : scheduledAt(day, entry.minute),
       resolvedAt: entry.resolvedAt,
       render: featured => renderRoutine(entry, day, { dayCard: true, featured })
     });
@@ -46,13 +47,13 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
   } : byTime);
 
   const scheduled = pending.length + done.length;
-  const includeWater = day <= today && (waterTotal > 0 || care.waterGoal != null ||
+  const includeWater = view?.has("water") !== false && day <= today && (waterTotal > 0 || care.waterGoal != null ||
     care.waterReminders?.enabled === true || (day === today && scheduled > 0));
   const waterItems = includeWater ? 1 : 0;
   const waterResolved = includeWater && waterTotal >= (care.waterGoal ?? 2000) ? 1 : 0;
   const resolved = done.length + waterResolved;
   const total = scheduled + waterItems;
-  $("today-count").hidden = !total || day > today;
+  $("today-count").hidden = !total || day > today || (view?.has("doses") === false && daily.length > 0);
   $("today-count").textContent = t("{0} از {1} مورد رسیدگی شد", localDigits(resolved), localDigits(total));
   const previousSlot = selectedSlot?.day === day ? selectedSlot : null;
   const candidates = day === today ? pending : [];
@@ -67,9 +68,11 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
   $("program-medications").textContent = doseLabel;
   $("program-appointments").textContent = visitLabel;
   $("program-routines").textContent = routineLabel;
-  $("story-summary").textContent = daily.length || visits.length || routines.length
-    ? [doseLabel, visitLabel, ...(routines.length ? [routineLabel] : [])].join(" · ")
-    : t("برای این روز برنامه‌ای ثبت نشده است.");
+  const labels = [[daily.length, doseLabel, "medications"], [visits.length, visitLabel, "appointments"], [routines.length, routineLabel, "routines"]];
+  $("story-summary").textContent = labels.some(([count]) => count)
+    ? labels.filter(([count, , section]) => view ? view.canView(section) && count : section !== "routines" || count)
+      .map(([, label]) => label).join(" · ")
+    : t(view && !view.synced ? "هنوز سابقه‌ای از این حساب همگام نشده است." : "برای این روز برنامه‌ای ثبت نشده است.");
   const focus = $("today-focus");
   const restoreFocus = focus.contains(document.activeElement);
   focus.replaceChildren();
@@ -96,7 +99,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     const title = completed ? t("برنامهٔ امروز کامل شد") : total ? t("ادامهٔ روز") : t("روزتان را بچینید");
     const summary = completed ? t("همهٔ موارد برنامهٔ امروز ثبت شدند.") :
       total ? t("{0} مورد از برنامهٔ امروز هنوز باقی مانده است.", localDigits(total - resolved)) :
-      t("از «افزودن» در نوار پایین، اولین برنامه را ثبت کنید.");
+      t(view ? "برای این روز برنامه‌ای ثبت نشده است." : "از «افزودن» در نوار پایین، اولین برنامه را ثبت کنید.");
     copy.append(element("h3", title), element("p", summary));
     hero.append(copy, art);
     focus.append(hero);

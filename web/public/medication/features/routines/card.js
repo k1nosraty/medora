@@ -1,3 +1,4 @@
+import { recordAction } from "../family/context.js";
 import { button, dayCardOptions, element } from "../../shared/ui/dom.js";
 import { listSeparator, localDigits, t } from "../../shared/i18n/locale.js";
 import { doseTime, timeText } from "../../domain/care-index.js";
@@ -10,7 +11,7 @@ function entryText(entry, displayAmount) {
   return "";
 }
 
-export function routineCard({ getState, today, colorOf, labelFor, days, formatDay, openEditor, saveLog, focusLogAction, openLog, displayAmount }) {
+export function routineCard({ getState, getFamilyView, today, colorOf, labelFor, days, formatDay, openEditor, saveLog, focusLogAction, openLog, displayAmount }) {
   function card(entry, day, { manage = false, readOnly = false, dayCard = false, featured = false, summaryOnly = false, calendar = false } = {}) {
     const compactDay = dayCard && !featured;
     const row = element("article", "", dayCard ? "day-card routine-day-card" : "routine-row");
@@ -48,6 +49,18 @@ export function routineCard({ getState, today, colorOf, labelFor, days, formatDa
     }
     row.append(art, copy);
     if (summaryOnly) return row;
+    const view = getFamilyView();
+    if (view) {
+      if (entry.notes) copy.append(element("p", entry.notes));
+      if (entry.recordedBy) copy.append(element("small", t("ثبت‌کننده: {0}", entry.recordedBy), "family-stamp"));
+      if (!manage && !readOnly && !completed && view.canRecord("routine", day)) {
+        const footer = dayCard ? element("div", "", "day-card-actions") : row;
+        footer.append(recordAction(entry.mode === "done" ? "ثبت انجام" : "ثبت پیشرفت", () =>
+          view.record({ kind: "routine", day, id: entry.id, title: entry.name, routine: entry })));
+        if (dayCard) row.append(footer);
+      }
+      return row;
+    }
     const footer = dayCard ? element("div", "", "day-card-actions") : row;
     let logAction;
     if (manage) {

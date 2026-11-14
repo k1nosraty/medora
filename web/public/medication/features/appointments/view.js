@@ -1,3 +1,4 @@
+import { recordAction } from "../family/context.js";
 import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { isoDay } from "../../domain/care-index.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
@@ -17,7 +18,7 @@ export function visitIllustration(category = "general", color) {
 
 export function appointmentView({
   categoryOf, categories, colorOf, formatDay, formatDayNumber, formatShortMonth,
-  today, openVisit, deleteVisit, mutate, render
+  today, getFamilyView, openVisit, deleteVisit, mutate, render
 }) {
   let visitFilter = "all";
   let visitLimit = pageSize;
@@ -71,11 +72,22 @@ export function appointmentView({
     else if (visit.completed) details.append(element("p", t("حضور ثبت شد"), "badge visit-attended"));
     else if (calendar) details.append(element("p", t(local.instant > Date.now() ? "برنامه‌ریزی‌شده" : "بدون ثبت حضور"), "badge"));
     const notes = [
-      ...(visit.note ? [element("p", visit.note)] : []),
+      ...((visit.note || visit.notes) ? [element("p", visit.note || visit.notes)] : []),
       ...(visit.contact ? [element("p", t("تماس: {0}", visit.contact), "quiet")] : [])
     ];
     if (!calendar) details.append(...notes);
     if (details !== card) card.append(details);
+    const view = getFamilyView();
+    if (view) {
+      if (visit.recordedBy) details.append(element("small", t("ثبت‌کننده: {0}", visit.recordedBy), "family-stamp"));
+      const options = element("div", "", dayCard ? "day-card-actions" : "buttons");
+      if (calendar && notes.length) options.append(dayCardOptions(t("گزینه‌های قرار"), ...notes));
+      if (view.canRecord("visit", local.day) && !visit.completed && !visit.cancelled) {
+        options.append(recordAction("ثبت حضور", () => view.record({ kind: "visit", day: local.day, id: visit.id, title: visit.name })));
+      }
+      if (options.childElementCount) (dayCard ? card : details).append(options);
+      return card;
+    }
     if (actionable) {
       const controls = element("div", "", dayCard ? "day-card-actions" : "buttons");
       let attendance;

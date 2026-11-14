@@ -21,7 +21,7 @@ export async function handleFamily(request, env, url) {
   const actor = { ...identity, person: session.id + (identity.epoch ? "." + identity.epoch : ""), label: session.username };
   const store = env.FAMILIES.getByName("care-groups");
   if (request.method === "GET") return reply(await store.overview(actor));
-  const data = await smallJson(request, 8192);
+  const data = await smallJson(request, 64 * 1024);
   if (!data) return reply(failure("invalid"), 400);
   let result;
   switch (data.action) {

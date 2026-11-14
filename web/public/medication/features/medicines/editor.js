@@ -14,6 +14,7 @@ const editorChapters = [t("نام، شکل و رنگ"), t("برنامهٔ ساد
 
 export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine, pickers, formatDay }) {
   let editing;
+  let delegation;
   let editingRevision;
   let editorStep = 0;
   let editorDates = [];
@@ -107,11 +108,13 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     return fieldset;
   }
 
-  function openEditor(medicine) {
+  function openEditor(medicine, target) {
+    delegation = target;
+    $("medication-dialog").toggleAttribute("data-family-editor", Boolean(target));
     editing = medicine?.id;
     editingRevision = medicine?.revision;
     $("delete-edited-medication").hidden = !medicine;
-    $("editor-title").textContent = medicine ? t("ویرایش دارو") : t("داروی جدید");
+    $("editor-title").textContent = target ? t("افزودن برای {0}", target.name) : medicine ? t("ویرایش دارو") : t("داروی جدید");
     $("name").value = medicine?.name ?? "";
     $("instructions").value = medicine?.instructions ?? "";
     $("medicine-icon").value = medicine?.icon ?? defaultMedicineIcon;
@@ -128,6 +131,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     if (medicine) medicine.phases.forEach(addPhase);
     else addPhase();
     const first = $("phases").firstElementChild;
+    if (target) first.querySelector(".start").value = isoDay(target.day);
     editorDates = (medicine?.dates ?? []).filter(day => day >= medicine.phases[0].start);
     restoreExactMode = false;
     $("phased-mode").checked = !editorDates.length && Boolean(medicine?.phased || medicine?.phases.length > 1);
@@ -152,7 +156,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       else label.removeAttribute("aria-current");
     });
     $("editor-back").hidden = step === 0;
-    $("editor-next").textContent = step === 2 ? t("ذخیرهٔ دارو") : t("ادامه");
+    $("editor-next").textContent = step === 2 ? delegation ? t("ذخیره برای {0}", delegation.name) : t("ذخیرهٔ دارو") : t("ادامه");
     $("editor-status").textContent = "";
     if (focus) {
       const panel = document.querySelector(`[data-editor-step="${step}"]`);
@@ -362,6 +366,15 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
         showEditorStep(2);
         return;
       }
+      const plan = { id, name, unit, phases, dates, stock, threshold, instructions, icon: $("medicine-icon").value,
+        color: $("medicine-color").value, phased, revision: 1 };
+      if (delegation) {
+        const save = $("editor-next");
+        save.disabled = true;
+        try { await delegation.save(plan); }
+        finally { save.disabled = false; }
+        return;
+      }
       if (await mutate(state => {
         const saved = state.medicines[id];
         if (editing && (!saved || saved.revision !== editingRevision)) {
@@ -369,9 +382,8 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
         }
         state.medicines[id] = {
           ...saved,
-          id, name, unit: saved?.stock != null ? saved.unit : unit, phases, dates, stock: saved?.stock ?? stock, threshold,
+          ...plan, unit: saved?.stock != null ? saved.unit : unit, stock: saved?.stock ?? stock,
           ...(saved && saved.stock == null && stock !== null ? { stockTrackedFrom: Date.now() } : {}),
-          instructions, icon: $("medicine-icon").value, color: $("medicine-color").value, phased,
           revision: (saved?.revision ?? 0) + 1
         };
         trackSchedule(state, "medicines", saved, state.medicines[id], Date.now());

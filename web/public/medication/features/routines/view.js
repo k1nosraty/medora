@@ -25,7 +25,7 @@ function normalizeSearch(text) {
   return text.toLowerCase().replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/[\s‌-]+/g, "");
 }
 
-export function installRoutines({ getState, today, mutate, render, formatDay, refreshFields, requestDeletion }) {
+export function installRoutines({ getState, getFamilyView, today, mutate, render, formatDay, refreshFields, requestDeletion }) {
   const editor = fields("editor");
   const form = fields("form");
   const logDialog = fields("log-dialog");
@@ -129,10 +129,14 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     fields("reminder-help").hidden = !fields("reminder").checked || Boolean(getState()?.reminders?.enabled);
   }
 
-  function openEditor(plan) {
+  let delegation;
+  function openEditor(plan, target) {
+    delegation = target;
+    editor.toggleAttribute("data-family-editor", Boolean(target));
     editing = plan;
     form.reset();
-    fields("editor-title").textContent = plan ? t("ویرایش روتین") : t("روتین جدید");
+    fields("editor-title").textContent = target ? t("افزودن برای {0}", target.name) : plan ? t("ویرایش روتین") : t("روتین جدید");
+    fields("save").textContent = target ? t("ذخیره برای {0}", target.name) : t("ذخیرهٔ روتین");
     fields("name").value = plan?.name ?? "";
     const color = colorOf(plan?.color);
     for (const input of colors) input.checked = input.value === color;
@@ -140,7 +144,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     chooseCategory(plan?.category);
     fields("repeat").value = plan && (plan.mask !== 127 || plan.interval !== 1) ? "weekly" : "daily";
     fields("interval").value = plan?.interval ?? 1;
-    fields("start").value = isoDay(plan?.start ?? today());
+    fields("start").value = isoDay(plan?.start ?? target?.day ?? today());
     const mask = plan?.mask === 127 || !plan ? 1 << routineWeekday(today()) : plan.mask;
     for (const input of weekdayFields) input.checked = Boolean(mask & Number(input.value));
     fields("time").value = plan?.minute == null ? "" : timeText(plan.minute);
@@ -234,6 +238,10 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     const previous = editing;
     save.disabled = true;
     try {
+      if (delegation) {
+        await delegation.save(plan);
+        return;
+      }
       const ok = await mutate(state => {
         const routines = state.routines ??= {};
         if (previous) ensureCurrent(state, previous);
@@ -243,6 +251,8 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       }, t("روتین ذخیره شد."), plan.reminder || Boolean(previous?.reminder), today());
       if (ok) editor.close();
       else fields("editor-status").textContent = $("status").textContent || t("ذخیره انجام نشد. دوباره تلاش کنید.");
+    } catch (error) {
+      fields("editor-status").textContent = error.message;
     } finally {
       save.disabled = false;
     }
@@ -382,7 +392,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
   }
 
   const card = routineCard({
-    getState, today, colorOf, labelFor, days, formatDay, openEditor, saveLog, focusLogAction, openLog, displayAmount
+    getState, getFamilyView, today, colorOf, labelFor, days, formatDay, openEditor, saveLog, focusLogAction, openLog, displayAmount
   });
 
   function renderPanel(state, index, day) {
@@ -397,7 +407,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     document.querySelector('[data-routine-filter="today"]').textContent = day === today() ? t("امروز") : t("این روز");
     fields("search-wrap").hidden = filter === "today" ||
       (filter === "all" ? !plans.length : !Object.keys(state.routineLogs).length);
-    fields("first").hidden = plans.length > 0;
+    fields("first").hidden = plans.length > 0 || getFamilyView()?.canAdd("routine") === false;
     fields("more").hidden = true;
     let rows;
     let empty;
@@ -406,7 +416,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     if (filter === "all") {
       rows = plans.filter(matches)
         .sort((a, b) => Number(a.paused) - Number(b.paused)).map(plan => card(plan, day, { manage: true }));
-      empty = plans.length ? t("روتینی با این نام پیدا نشد.") : t("اولین روتین خودتان را بسازید.");
+      empty = plans.length ? t("روتینی با این نام پیدا نشد.") : t(getFamilyView() ? "روتینی ثبت نشده است." : "اولین روتین خودتان را بسازید.");
     } else if (filter === "history") {
       const history = Object.entries(state.routineLogs).map(([date, records]) =>
         [Number(date), Object.entries(records).filter(([, entry]) => matches(entry))])
@@ -419,7 +429,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
       empty = t(search ? "روتینی با این نام پیدا نشد." : "هنوز پیشرفت روتینی ثبت نشده است.");
     } else {
       rows = entries.map(entry => card(entry, day));
-      empty = plans.length ? t("برای این روز روتینی ثبت نشده است.") : t("اولین روتین خودتان را بسازید.");
+      empty = plans.length ? t("برای این روز روتینی ثبت نشده است.") : t(getFamilyView() ? "روتینی ثبت نشده است." : "اولین روتین خودتان را بسازید.");
     }
     fields("list").replaceChildren(...(rows.length ? rows : [element("p", empty, "empty")]));
   }
@@ -433,5 +443,5 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
   });
   fields("search").addEventListener("input", () => { historyLimit = 14; render(); });
   fields("more").addEventListener("click", () => { historyLimit += 14; render(); });
-  return { card, renderPanel, openReminder };
+  return { card, renderPanel, openReminder, openEditor };
 }

@@ -111,6 +111,26 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.equal(updated.records.water[0].recordedBy, "family_a");
     assert.equal(updated.revision, revision + 2);
 
+    const scheduled = { action: "add", kind: "medicine", group, target: bId, operation: randomUUID(),
+      plan: { id: "supplied-id", name: "Two-stage plan", unit: "tablet", instructions: "with food",
+        color: "purple", icon: "bottle", stock: 5000, threshold: 1000, phased: true, dates: [],
+        phases: [
+          { start: today, end: today + 7, interval: 1, mask: 127, slots: [{ minute: 480, amount: 500 }] },
+          { start: today + 7, end: null, interval: 2, mask: 32, slots: [{ minute: 540, amount: 1000 }] }
+        ] } };
+    assert.equal((await family(a, scheduled)).status, 403);
+    assert.equal((await share(b, aId, { all: true, record: true, add: true })).status, 200);
+    const invalid = structuredClone(scheduled);
+    invalid.plan.phases[1].start = today + 1;
+    assert.equal((await family(a, invalid)).status, 400);
+    assert.equal((await family(a, scheduled)).status, 200);
+    assert.equal((await family(a, scheduled)).status, 200);
+    const [savedPlan] = Object.values((await (await call("account/care", null, b)).json()).records.medicines);
+    assert.equal(savedPlan.recordedBy, "family_a");
+    assert.notEqual(savedPlan.id, scheduled.plan.id);
+    assert.deepEqual(savedPlan.phases, scheduled.plan.phases);
+    assert.equal(Object.keys((await (await call("account/care", null, a)).json()).records ?? {}).length, 0);
+
     assert.equal((await family(a, { action: "revoke", group, target: bId })).status, 200);
     assert.equal((await view(b, aId)).status, 403);
     assert.equal((await view(a, bId)).status, 200);

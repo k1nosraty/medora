@@ -2,12 +2,12 @@ import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js"
 import { language, t } from "../../shared/i18n/locale.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { familySections } from "../../domain/family.js";
-import { isoDay } from "../../domain/care-index.js";
 import { dayNumber } from "../../shared/ui/dates.js";
-import { localClock } from "../../shared/ui/input-values.js";
+import { localWall, timezone } from "../../domain/wall-clock.js";
 import { quantityFromText } from "../../domain/medication-rules.js";
 import { familyRequest } from "./api.js";
-import { familyCareView, field, sectionLabels, selectField } from "./care-view.js";
+import { field, profileFacts, sectionLabels, selectField } from "./fields.js";
+import { avatar, sharedContext } from "./context.js";
 
 const errors = { sign_in: "برای همکاری خانوادگی وارد حساب شوید.", offline: "برای دیدن سوابق خانواده به اینترنت وصل شوید.",
   expired: "این دعوت دیگر معتبر نیست.", forbidden: "این دسترسی فعال نیست.", missing: "این مورد دیگر در دسترس نیست.",
@@ -24,8 +24,8 @@ function hero(title, subtitle, art = "control-user") {
   return box;
 }
 
-function submitButton(label) {
-  const control = element("button", t(label), "block-action");
+function submitButton(label, ...values) {
+  const control = element("button", t(label, ...values), "block-action");
   control.type = "submit";
   return control;
 }
@@ -35,17 +35,48 @@ const policyText = policy => [
   policy.record && t("ثبت به‌نمایندگی"), policy.add && t("افزودن برنامه")
 ].filter(Boolean).join(" · ");
 
-export function installFamily({ openAccount, openProfile, getState }) {
+const groupPreference = "medora-family-active-group";
+const actionTiles = [
+  { kind: "medicine", art: "bottle", color: "medicine", name: "دارو" },
+  { kind: "visit", art: "visit", color: "visit", name: "قرار" },
+  { kind: "routine", art: "routine", color: "routine", name: "روتین" },
+  { kind: "water", art: "water", color: "water", name: "ثبت آب" },
+  { kind: "cycle", art: "cycle", color: "cycle", name: "ثبت شروع پریود" }
+];
+const actionArt = kind => actionTiles.find(tile => tile.kind === kind)?.art ?? "control-user";
+const clockFor = zone => new Date(localWall(Date.now(), timezone(zone))).toISOString().slice(11, 16);
+
+export function installFamily({ openAccount, openProfile, getState, actionDay, getFamilyView, setFamilyView, openPlan }) {
   const dialog = $("family-dialog");
   const content = $("family-content");
   const status = $("family-status");
   const back = $("family-back");
   const fit = fitDialogToViewport(dialog);
-  const updateLabel = () => { $("family-self-label").textContent = getState()?.personalProfile?.firstName || t("من"); };
   let overview;
   let returnTo;
   let generation = 0;
   let accessTimer;
+  let accessToken = 0;
+  let activeGroup = sessionStorage.getItem(groupPreference);
+  let currentAccess;
+  let editorOperation;
+  let recovery = false;
+  let overviewRequest = 0;
+
+  const personalName = () => getState()?.personalProfile?.firstName || overview?.label || t("من");
+  const groupInView = () => overview?.groups.find(item => item.id === activeGroup) ?? overview?.groups[0];
+  function updateGroup() {
+    const group = groupInView();
+    $("family-group-name").textContent = group?.name ?? t("خانواده");
+    $("family-group-caption").textContent = t(group ? "گروه فعال" : "گروه‌ها و اعضا");
+    $("family-group-avatars").replaceChildren(...(group?.members ?? []).filter(member => !member.self).slice(0, 3)
+      .map(member => avatar(member.label, member.id)));
+  }
+  function chooseGroup(group) {
+    activeGroup = group.id;
+    sessionStorage.setItem(groupPreference, group.id);
+    updateGroup();
+  }
   let invite = inviteHash.exec(location.hash)?.[1];
 
   function message(value = "", error = false) {
@@ -56,7 +87,6 @@ export function installFamily({ openAccount, openProfile, getState }) {
 
   function page(title, parent) {
     generation++;
-    clearTimeout(accessTimer);
     returnTo = parent;
     back.hidden = !parent;
     $("family-title").textContent = t(title);
@@ -92,30 +122,84 @@ export function installFamily({ openAccount, openProfile, getState }) {
     list.append(element("h3", t(title)), ...nodes);
     return list;
   }
-  async function refresh(groupId) {
+  async function refreshGroup() {
+    const request = ++overviewRequest;
+    try {
+      const next = await familyRequest();
+      if (request === overviewRequest) {
+        overview = next;
+        updateGroup();
+      }
+    } catch (reason) {
+      if (request === overviewRequest && reason.message === "sign_in") {
+        overview = null;
+        updateGroup();
+        if (getFamilyView()) leave(t(errors.sign_in));
+      }
+      throw reason;
+    }
+  }
+
+  async function refresh(groupId, manage = false) {
     const request = generation;
-    const next = await familyRequest();
-    if (!dialog.open || request !== generation) return;
-    overview = next;
+    await refreshGroup();
+    if (!dialog.open || request !== generation || !overview) return;
     const group = overview.groups.find(item => item.id === groupId);
-    if (group) showGroup(group);
+    if (group) chooseGroup(group);
+    if (group && manage) showGroup(group);
     else showHome();
   }
 
   function showHome() {
-    page("خانواده");
-    content.append(hero(t("گروه‌های من")), button(t("ساخت گروه"), createGroup));
-    const ownProfile = button(t("پروفایل من"), () => {
-      dialog.close();
-      openProfile();
-    });
-    content.append(ownProfile);
-    for (const group of overview.groups) {
-      const card = element("article", "", "family-card");
-      card.append(element("h3", group.name), element("p", group.members.map(member => member.label).join(t(" و "))),
-        button(t("باز کردن گروه"), () => showGroup(group)));
-      content.append(card);
-    }
+    page("گروه‌ها و اعضا");
+    const selected = groupInView();
+    if (selected) {
+      const groups = element("div", "", "family-group-tabs");
+      groups.setAttribute("role", "group");
+      groups.setAttribute("aria-label", t("انتخاب گروه فعال"));
+      for (const group of overview.groups) {
+        const control = button(group.name, () => {
+          chooseGroup(group);
+          showHome();
+          [...$("family-content").querySelectorAll(".family-group-tabs button")].find(item => item.dataset.group === group.id)?.focus();
+        });
+        control.dataset.group = group.id;
+        const active = selected.id === group.id;
+        control.setAttribute("aria-pressed", String(active));
+        if (active) {
+          const check = element("span", "✓", "family-group-check");
+          check.setAttribute("aria-hidden", "true");
+          control.append(check);
+        }
+        groups.append(control);
+      }
+      const roster = element("div", "", "family-roster");
+      for (const member of [...selected.members].sort((a, b) => b.self - a.self)) {
+        const label = member.self ? personalName() : member.label;
+        const open = member.self ? () => { dialog.close(); leave(); } :
+          member.received ? () => showCare(selected, member) : null;
+        const row = open ? action("", open) : element("div");
+        row.className = "family-roster-row";
+        const copy = element("span", "", "family-context-copy");
+        const caption = member.self ? t("شما") : !member.received ? t("هنوز دسترسی نداری") :
+          member.received.record || member.received.add ? policyText(member.received) : t("فقط مشاهده");
+        copy.append(element("strong", label), element("small", caption));
+        row.append(avatar(label, member.id), copy);
+        if (open) {
+          const arrow = element("span", "‹", "family-row-arrow");
+          arrow.setAttribute("aria-hidden", "true");
+          row.append(arrow);
+        }
+        roster.append(row);
+      }
+      content.append(groups, element("h3", t("اعضای {0}", selected.name), "family-roster-title"), roster);
+      groups.querySelector('[aria-pressed="true"]').scrollIntoView({ block: "nearest", inline: "nearest" });
+    } else content.append(hero(t("خانواده"), t("برای دیدن برنامهٔ اعضا، گروه بساز یا دعوتی را بپذیر.")));
+    const controls = element("div", "", "family-group-links");
+    controls.append(button(t("ساخت گروه"), createGroup));
+    if (selected) controls.append(button(t("مدیریت گروه"), () => showGroup(selected)));
+    controls.append(button(t("پروفایل من"), () => { dialog.close(); openProfile(); }));
+    content.append(controls);
     if (overview.invitations.length) content.append(section("دعوت‌های دریافتی", overview.invitations.map(item => {
       const card = element("article", "", "family-card");
       card.append(element("h4", item.name), button(t("بررسی دعوت"), () => reviewInvite(item)));
@@ -147,7 +231,7 @@ export function installFamily({ openAccount, openProfile, getState }) {
   function showGroup(group) {
     page("دسترسی‌های من", showHome);
     content.append(hero(group.name, t("اعضای خانواده")));
-    content.append(action("تازه‌کردن دسترسی‌ها", () => refresh(group.id)));
+    content.append(action("تازه‌کردن دسترسی‌ها", () => refresh(group.id, true)));
     if (group.manager) content.append(button(t("دعوت عضو"), () => inviteMember(group)));
     const members = group.members.filter(member => !member.self);
     if (!members.length) {
@@ -265,7 +349,7 @@ export function installFamily({ openAccount, openProfile, getState }) {
       await familyRequest("share", { group: group.id, target: member?.id ?? "all", all: data.get("view") === "all",
         sections: data.getAll("section"), record: data.has("record"), add: data.has("add"),
         days: data.get("days") === "keep" ? "keep" : Number(data.get("days")) || null });
-      await refresh(group.id);
+      await refresh(group.id, true);
       message(getState()?.accountCare?.enabled ? "دسترسی ذخیره شد." :
         "دسترسی ذخیره شد. برای دیدن سوابق این دستگاه، همگام‌سازی حساب را فعال کنید.");
     });
@@ -279,56 +363,149 @@ export function installFamily({ openAccount, openProfile, getState }) {
       button(t("انصراف"), () => showGroup(group)));
     const revoke = action("قطع دسترسی", async () => {
       await familyRequest("revoke", { group: group.id, target: member.id });
-      await refresh(group.id);
+      await refresh(group.id, true);
       message("دسترسی قطع شد.");
     });
     revoke.classList.add("family-danger");
     content.append(revoke);
   }
 
-  async function showCare(group, member, day) {
-    page("برنامهٔ عضو خانواده", () => showGroup(group));
+  function openActionSheet(title, parent) {
+    if (!dialog.open) dialog.showModal();
+    page(title, parent);
+    fit();
+  }
+
+  function closeFamilyEditors() {
+    editorOperation = null;
+    for (const editor of document.querySelectorAll("dialog[data-family-editor][open]")) editor.close();
+  }
+
+  function leave(feedback) {
+    accessToken++;
+    clearTimeout(accessTimer);
+    currentAccess = null;
+    closeFamilyEditors();
+    if (getFamilyView() && dialog.open) dialog.close();
+    if (getFamilyView()) setFamilyView(null, feedback);
+  }
+
+  function enter(group, member, data, feedback) {
+    const view = sharedContext(data, group, member, {
+      record: details => {
+        const view = getFamilyView();
+        if (view?.member.id === member.id && view.group.id === group.id && view.canRecord(details.kind, details.day)) {
+          recordFor(group, { ...member, label: view.name }, details);
+        }
+      },
+      add: (kind, day) => {
+        const view = getFamilyView();
+        if (view?.member.id === member.id && view.group.id === group.id && view.canAdd(kind)) {
+          addFor(group, { ...member, label: view.name }, kind, Math.max(day, view.today));
+        }
+      },
+      profile: () => {
+        openActionSheet("پروفایل");
+        const facts = profileFacts(data.records.profile);
+        content.append(hero(getFamilyView().name, group.name));
+        content.append(facts.childElementCount ? facts : element("p", t("اطلاعات پروفایل ثبت نشده است.")));
+      }
+    });
+    currentAccess = { group, member, data, day: view.today };
+    setFamilyView(view, feedback);
+  }
+
+  async function showCare(group, member) {
     const request = generation;
     message("در حال ارتباط…");
+    const data = await familyRequest("view", { group: group.id, target: member.id });
+    if (!dialog.open || generation !== request) return;
+    chooseGroup(group);
+    dialog.close();
+    accessToken++;
+    enter(group, member, data);
+    scheduleAccess();
+    $("family-home").focus({ preventScroll: true });
+  }
+
+  function scheduleAccess() {
+    clearTimeout(accessTimer);
+    accessTimer = setTimeout(() => void checkAccess(), 15000);
+  }
+
+  async function checkAccess({ feedback, force = false } = {}) {
+    if (!currentAccess) return;
+    const { group, member, data, day } = currentAccess;
+    const token = ++accessToken;
+    clearTimeout(accessTimer);
     try {
-      const data = await familyRequest("view", { group: group.id, target: member.id });
-      if (!dialog.open || request !== generation) return;
-      message();
-      renderCare(group, member, data, day);
-      return true;
+      const latest = await familyRequest("view", { group: group.id, target: member.id,
+        ...(!force && { knownPolicy: JSON.stringify(data.policy), knownRevision: data.revision }) });
+      if (token !== accessToken) return;
+      if (!latest.unchanged) {
+        if (JSON.stringify(data.policy) !== JSON.stringify(latest.policy)) {
+          if (dialog.open) dialog.close();
+          closeFamilyEditors();
+        }
+        enter(group, member, latest, feedback);
+      } else if (day !== getFamilyView()?.today) enter(group, member, data);
+      scheduleAccess();
     } catch (reason) {
-      if (request === generation) error(reason);
+      if (token === accessToken) leave(t(errors[reason.message] ?? "ارتباط با خانواده برقرار نشد. دوباره تلاش کنید."));
     }
   }
 
-  function renderCare(group, member, data, day) {
-    const fullName = [data.records.profile?.firstName, data.records.profile?.lastName].filter(Boolean).join(" ");
-    content.replaceChildren(hero(t("برنامهٔ {0}", fullName || member.label), group.name));
-    familyCareView(content, data, { day, changeDay: day => renderCare(group, member, data, day),
-      record: record => recordFor(group, member, record), add: (changes, day) => addFor(group, member, changes, day) });
-    const request = ++generation;
-    clearTimeout(accessTimer);
-    const checkAccess = async () => {
-      try {
-        const latest = await familyRequest("view", { group: group.id, target: member.id,
-          knownPolicy: JSON.stringify(data.policy), knownRevision: data.revision });
-        if (!dialog.open || generation !== request) return;
-        if (!latest.unchanged) renderCare(group, member, latest, day);
-        else accessTimer = setTimeout(checkAccess, 15000);
-      } catch (reason) {
-        if (generation !== request) return;
-        content.replaceChildren();
-        error(reason);
+  function openActions() {
+    const view = getFamilyView();
+    if (!view) return;
+    const day = actionDay();
+    const choices = element("div", "", "family-action-grid");
+    for (const { kind, art, color, name } of actionTiles) {
+      const record = kind === "water" || kind === "cycle";
+      if (record ? !view.canRecord(kind, day) : !view.canAdd(kind)) continue;
+      const control = button(t(name), () => record ? view.record({ kind, day, title: t(name) }) : view.add(kind, day));
+      control.className = "secondary quick-item program-" + color;
+      control.prepend(glassObject(art, "image", { className: "category-art" }));
+      choices.append(control);
+    }
+    if (!choices.childElementCount) return;
+    openActionSheet(t("افزودن برای {0}", view.name));
+    content.append(choices);
+  }
+
+  async function saved(feedback, view) {
+    const current = getFamilyView();
+    if (view.member.id !== current?.member.id || view.group.id !== current.group.id) return;
+    if (dialog.open) dialog.close();
+    await checkAccess({ feedback: t(feedback), force: true });
+  }
+
+  async function quickWater(view, day, amount, control) {
+    if (!view.canRecord("water", day)) return;
+    control.disabled = true;
+    try {
+      await familyRequest("record", { group: view.group.id, target: view.member.id, operation: crypto.randomUUID(),
+        kind: "water", day, amount, time: clockFor(view.zone) });
+      if (view.member.id === getFamilyView()?.member.id && view.group.id === getFamilyView()?.group.id) {
+        await checkAccess({ feedback: t("آب ثبت شد."), force: true });
       }
-    };
-    accessTimer = setTimeout(checkAccess, 15000);
+    } catch (reason) {
+      if (view.member.id === getFamilyView()?.member.id && view.group.id === getFamilyView()?.group.id) {
+        if (reason.message === "forbidden") leave(t(errors.forbidden));
+        else {
+          $("family-notice").textContent = t(errors[reason.message] ?? "ذخیره انجام نشد. دوباره تلاش کنید.");
+          $("family-notice").hidden = false;
+        }
+      }
+    } finally { control.disabled = false; }
   }
 
   function recordFor(group, member, details) {
     const { kind, day, title, routine } = details;
-    page("ثبت به‌نمایندگی", () => void showCare(group, member, day));
+    const view = getFamilyView();
+    openActionSheet(t("ثبت برای {0}", member.label));
     const form = element("form", "", "family-content");
-    form.append(hero(t("ثبت برای {0}", member.label), title, "bottle"),
+    form.append(hero(title, member.label, actionArt(kind)),
       element("p", t("به نام شما ثبت می‌شود."), "family-card"));
     if (kind === "medicine") {
       form.append(selectField("وضعیت مصرف", "status", [["taken", "دارو را دادم"], ["skipped", "مصرف نشد"]]));
@@ -339,7 +516,10 @@ export function installFamily({ openAccount, openProfile, getState }) {
       dose.querySelector("input").inputMode = "decimal";
       form.append(dose);
     }
-    if (kind === "water") form.append(field("آب (میلی‌لیتر)", "amount", "number", 250), field("ساعت", "time", "time", localClock()));
+    if (kind === "water") {
+      const time = clockFor(view.zone);
+      form.append(field("آب (میلی‌لیتر)", "amount", "number", details.amount ?? 250), field("ساعت", "time", "time", time));
+    }
     if (kind === "routine" && routine.mode === "quantity") form.append(field("مقدار انجام‌شده", "result", "number", routine.amount ?? routine.target));
     if (kind === "routine" && routine.mode === "steps") {
       for (const [index, step] of routine.steps.entries()) {
@@ -361,7 +541,7 @@ export function installFamily({ openAccount, openProfile, getState }) {
       note.querySelector("input").maxLength = 500;
       form.append(end, selectField("شدت", "flow", [["", "انتخاب نشده"], ["light", "کم"], ["medium", "متوسط"], ["heavy", "زیاد"]]), note);
     }
-    form.append(submitButton("تأیید ثبت"));
+    form.append(submitButton("ذخیره برای {0}", member.label));
     const operation = crypto.randomUUID();
     formSubmit(form, async data => {
       const entered = data.get("amount");
@@ -373,45 +553,46 @@ export function installFamily({ openAccount, openProfile, getState }) {
         result: routine?.mode === "steps" ? data.getAll("step").map(Number) :
           routine?.mode === "quantity" ? Number(data.get("result")) : true,
         ...(kind === "cycle" && { end: data.get("end") ? dayNumber(data.get("end")) : null, flow: data.get("flow"), note: data.get("note") }) });
-      if (await showCare(group, member, day)) message("ثبت انجام شد.");
+      await saved("ثبت انجام شد.", view);
     });
     content.append(form);
   }
 
-  function addFor(group, member, changes, day) {
-    page("افزودن برنامه", () => void showCare(group, member, day));
-    const form = element("form", "", "family-content");
-    const medication = element("div", "", "family-content");
-    medication.append(field("مقدار برنامه", "amount", "text"), field("واحد", "unit", "text", t("قرص")),
-      selectField("تکرار", "repeat", [["once", "یک‌بار"], ["daily", "هر روز"]]));
-    form.append(hero(t("افزودن برای {0}", member.label)), selectField("نوع برنامه", "kind", changes),
-      field("نام", "name", "text"), field("تاریخ برنامه", "day", "date", isoDay(day)), field("ساعت", "time", "time", "08:00"),
-      medication, submitButton("ذخیرهٔ برنامه"));
-    function sync() {
-      medication.hidden = form.elements.kind.value !== "medicine";
-      for (const input of medication.querySelectorAll("input,select")) input.disabled = medication.hidden;
-    }
-    form.elements.kind.addEventListener("change", sync);
-    sync();
+  function addFor(group, member, kind, day) {
+    const view = getFamilyView();
     const operation = crypto.randomUUID();
-    formSubmit(form, async data => {
-      await familyRequest("add", { group: group.id, target: member.id, operation,
-        kind: data.get("kind"), name: data.get("name"), day: dayNumber(data.get("day")), time: data.get("time"),
-        amount: data.has("amount") ? quantityFromText(data.get("amount")) : undefined, unit: data.get("unit"), repeat: data.get("repeat") });
-      if (await showCare(group, member, day)) message("برنامه اضافه شد.");
+    if (dialog.open) dialog.close();
+    editorOperation = operation;
+    openPlan(kind, {
+      name: member.label, day, zone: view.zone,
+      save: async plan => {
+        const current = getFamilyView();
+        if (current?.group.id !== group.id || current.member.id !== member.id || !current.canAdd(kind)) {
+          throw new Error(t(errors.forbidden));
+        }
+        try {
+          await familyRequest("add", { group: group.id, target: member.id, operation, kind, plan });
+        } catch (reason) {
+          if (reason.message === "forbidden") leave(t(errors.forbidden));
+          throw new Error(t(errors[reason.message] ?? "ذخیره انجام نشد. دوباره تلاش کنید."));
+        }
+        if (editorOperation !== operation) return;
+        closeFamilyEditors();
+        await saved("برنامه اضافه شد.", view);
+      }
     });
-    content.append(form);
   }
 
   async function open() {
     if (!dialog.open) dialog.showModal();
-    page("خانواده");
+    page("گروه‌ها و اعضا");
     fit();
     message("در حال ارتباط…");
     try { await refresh(); }
     catch (reason) {
       error(reason);
       if (reason.message === "sign_in") content.append(action("ورود به حساب مدورا", async () => {
+        recovery = true;
         dialog.close();
         await openAccount();
       }));
@@ -427,17 +608,50 @@ export function installFamily({ openAccount, openProfile, getState }) {
   });
   dialog.addEventListener("close", () => {
     generation++;
-    clearTimeout(accessTimer);
+    if (dialog.open) return;
     content.replaceChildren();
     returnTo = null;
   });
   $("open-family").addEventListener("click", () => void open());
+  $("family-home").addEventListener("click", () => {
+    leave();
+    $("open-family").focus({ preventScroll: true });
+  });
+  $("family-member-identity").addEventListener("click", () => getFamilyView()?.profile?.());
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && getFamilyView()) void checkAccess();
+  });
+  // Delegate static controls before personal editor handlers receive the event.
+  $("app").addEventListener("click", event => {
+    const view = getFamilyView();
+    if (!view) return;
+    const control = event.target.closest("button");
+    if (!control) return;
+    const kind = control.matches("[data-open-water], [data-water-add], #today-water-quick") ? "water" :
+      control.matches("[data-open-medication]") ? "medicine" :
+      control.matches("[data-open-visit]") ? "visit" :
+      control.matches("[data-open-routine]") ? "routine" :
+      control.matches("#cycle-add") ? "cycle" : null;
+    if (!kind) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const day = actionDay();
+    const amount = control.id === "today-water-quick" ? 250 : Number(control.dataset.waterAdd);
+    if (kind === "water" && amount) void quickWater(view, day, amount, control);
+    else if (kind === "water" || kind === "cycle") view.record({ kind, day, title: t(kind === "water" ? "ثبت آب" : "ثبت شروع پریود") });
+    else view.add(kind, day);
+  }, true);
   window.addEventListener("hashchange", () => {
     invite = inviteHash.exec(location.hash)?.[1];
     if (invite) void open();
   });
   window.addEventListener("offline", () => {
-    if (dialog.open) { page("خانواده"); message(errors.offline, true); content.append(action("تلاش دوباره", open)); }
+    if (getFamilyView()) leave(t(errors.offline));
+    if (dialog.open) { page("گروه‌ها و اعضا"); message(errors.offline, true); content.append(action("تلاش دوباره", open)); }
   });
-  return { updateLabel, openInvitation: () => { if (invite) void open(); } };
+  return { openActions, leave, refreshGroup: () => refreshGroup().catch(() => {}),
+    openInvitation: () => {
+      if (invite || recovery) void open();
+      recovery = false;
+    } };
 }

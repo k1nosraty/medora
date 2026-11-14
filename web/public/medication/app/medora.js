@@ -9,11 +9,13 @@ import { localZone } from "../domain/care-plan.js";
 import { compilePhases, createCareIndex, isoDay } from "../domain/care-index.js";
 import * as engine from "../domain/medication-rules.js";
 import { validRoutineId } from "../domain/routine-plan.js";
+import { familySections } from "../domain/family.js";
 import { changeReminderRevision, initializeReminders, syncReminders } from "../features/reminders/controller.js";
 import { installMedicineEditor } from "../features/medicines/editor.js";
 import { installMedicineView } from "../features/medicines/view.js";
 import { installAccount } from "../features/account/dialog.js";
 import { installFamily } from "../features/family/panel.js";
+import { renderMemberHeader } from "../features/family/context.js";
 import { installSupport, loadOperations, reportDailyOpen } from "../features/operations.js";
 import { installPromotion } from "../features/promotions/dialog.js";
 import { installRoutines } from "../features/routines/view.js";
@@ -29,6 +31,10 @@ installSurfaceArt();
 installSupport();
 let care;
 let busy = false;
+let familyView;
+const getFamilyView = () => familyView;
+const viewToday = () => familyView?.today ?? today();
+const viewState = () => familyView?.state ?? care;
 const update = $("update-app");
 const updateStatus = $("app-update-status");
 let updateStatusTimer;
@@ -58,7 +64,7 @@ update.addEventListener("click", async () => {
 });
 const getState = () => care;
 async function mutate(change, success, scheduleChanged = false, day) {
-  if (busy) return false;
+  if (busy || familyView) return false;
   busy = true;
   $("app").setAttribute("aria-busy", "true");
   try {
@@ -88,28 +94,29 @@ let indexedDay;
 let careIndex;
 
 function currentIndex() {
-  const zone = localZone();
-  const day = today();
-  if (indexedState !== care || indexedDay !== day || careIndex.zone !== zone) {
-    indexedState = care;
+  const zone = familyView?.zone ?? localZone();
+  const day = viewToday();
+  const state = viewState();
+  if (indexedState !== state || indexedDay !== day || careIndex.zone !== zone) {
+    indexedState = state;
     indexedDay = day;
-    careIndex = createCareIndex(care, engine, zone, day);
+    careIndex = createCareIndex(state, engine, zone, day, familyView?.timeOf);
   }
   return careIndex;
 }
 
 function render() {
   if (!care || !$("day").value) return;
-  family.updateLabel();
   const day = selectedDay();
   const index = currentIndex();
   const screen = dashboard.screen();
-  dashboard.renderScreen(care, day, index);
+  const state = viewState();
+  dashboard.renderScreen(state, day, index);
   if (screen === "medications") medicines.renderMedications(index.dosesOn(day));
-  else if (screen === "routines") routines.renderPanel(care, index, day);
+  else if (screen === "routines") routines.renderPanel(state, index, day);
   else if (screen === "today") {
     const entries = index.routinesOn(day);
-    renderToday(care, day, today(), index.dosesOn(day), dashboard.dayVisits(index, day), entries, index.waterTotal(day), medicines.renderDose, routines.card);
+    renderToday(state, day, viewToday(), index.dosesOn(day), dashboard.dayVisits(index, day), entries, index.waterTotal(day), medicines.renderDose, routines.card, familyView);
   }
 }
 
@@ -129,6 +136,7 @@ async function reload() {
 $("day").addEventListener("change", render);
 $("today-dates").append($("day-controls"));
 $("open-quick").addEventListener("click", () => {
+  if (familyView) { family.openActions(); return; }
   $("quick-dialog").querySelector("[data-open-water]").disabled = dashboard.actionDay() > today();
   $("quick-dialog").showModal();
 });
@@ -150,20 +158,20 @@ window.addEventListener("focus", () => {
   void reload();
   void syncReminders(true, care);
 });
-const selectedDay = () => $("day").value ? dayNumber($("day").value) : today();
+const selectedDay = () => $("day").value ? dayNumber($("day").value) : viewToday();
 const requestDeletion = installDeletion(mutate);
 const dashboard = installNavigation({
-  getState, selectedDay, today, render, mutate, requestDeletion,
+  getState: viewState, selectedDay, today: viewToday, getFamilyView, getPersonalState: getState, render, mutate, requestDeletion,
   renderDose: (...args) => medicines.renderDose(...args),
   refreshFields: container => pickers.refresh(container), renderRoutine: (entry, day, options) => routines.card(entry, day, options)
 });
-const pickers = installPickers({ selectedDay, today, dashboard });
+const pickers = installPickers({ selectedDay, today: viewToday, dashboard });
 const routines = installRoutines({
-  getState: () => care, today, mutate, render, requestDeletion, formatDay: dashboard.formatDay,
+  getState: viewState, today: viewToday, getFamilyView, mutate, render, requestDeletion, formatDay: dashboard.formatDay,
   refreshFields: pickers.refresh
 });
 const medicines = installMedicineView({
-  getState, mutate, requestDeletion, openEditor: medicine => openEditor(medicine), formatDay: dashboard.formatDay
+  getState: viewState, today: viewToday, getFamilyView, mutate, requestDeletion, openEditor: medicine => openEditor(medicine), formatDay: dashboard.formatDay
 });
 const openEditor = installMedicineEditor({
   getState, isBusy: () => busy, mutate, removeMedicine: medicines.deleteMedicine, pickers, formatDay: dashboard.formatDay
@@ -179,17 +187,40 @@ const accountSync = installCareSync({
   remindersChanged: changeReminderRevision
 });
 const openAccount = installAccount({
-  onSignIn: () => { void accountSync.refresh(); accountSync.signedIn(); },
+  onSignIn: () => { void accountSync.refresh(); accountSync.signedIn(); void family.refreshGroup(); },
+  onSignOut: () => void family.refreshGroup(),
   onShortcut: panel => {
     dashboard.show("settings", panel === "notification-settings");
     if (panel === "backup-settings") document.querySelector('[data-settings-panel="backup-settings"]').click();
   }
 });
-const family = installFamily({ getState, openAccount, openProfile: () => {
+const family = installFamily({ getState, openAccount, actionDay: dashboard.actionDay, getFamilyView,
+  openPlan: (kind, target) => {
+    const open = { medicine: openEditor, visit: dashboard.openVisit, routine: routines.openEditor }[kind];
+    open(undefined, target);
+  },
+  setFamilyView: (view, feedback = "") => {
+    const changed = familyView?.member.id !== view?.member.id || familyView?.group.id !== view?.group.id;
+    const narrowed = !changed && view && familyView && familyView.state !== view.state &&
+      familySections.some(key => familyView.has(key) && !view.has(key));
+    familyView = view;
+    renderMemberHeader(view);
+    if (changed || narrowed) dashboard.changeContext();
+    else if (view && !view.canView(dashboard.screen())) dashboard.show("today");
+    else render();
+    if (changed || feedback) {
+      $("family-notice").textContent = feedback;
+      $("family-notice").hidden = !feedback;
+      $("status").textContent = "";
+    }
+  }, openProfile: () => {
   dashboard.show("settings");
   document.querySelector('[data-settings-panel="profile-settings"]').click();
 } });
 $("account-dialog").addEventListener("close", family.openInvitation);
+document.querySelector(".app-bar").addEventListener("click", event => {
+  if (event.target.closest('[data-open-account], [data-destination="settings"]')) family.leave();
+}, true);
 const params = new URLSearchParams(location.search);
 const view = params.get("view");
 if (view === "account") void openAccount();
@@ -218,6 +249,7 @@ try {
   if (!location.search) void reportDailyOpen();
   installPromotion(loadOperations);
   family.openInvitation();
+  void family.refreshGroup();
   void initializeReminders();
 } catch {
   $("boot-status").textContent = t("موتور برنامهٔ دارو یا فضای ذخیرهٔ محلی در دسترس نیست.");

@@ -25,7 +25,7 @@ const screens = {
   loading: [null, "حساب مدورا", ""]
 };
 
-export function installAccount({ onSignIn = () => {}, onShortcut = () => {} } = {}) {
+export function installAccount({ onSignIn = () => {}, onSignOut = () => {}, onShortcut = () => {} } = {}) {
   const dialog = $("account-dialog");
   const fit = fitDialogToViewport(dialog);
   const controls = [...dialog.querySelectorAll('button:not([data-close]):not([data-reveal-password])')];
@@ -278,6 +278,7 @@ export function installAccount({ onSignIn = () => {}, onShortcut = () => {} } = 
     account = undefined;
     view("login");
     status("از حساب خارج شدید.");
+    onSignOut();
   });
   return open;
 }

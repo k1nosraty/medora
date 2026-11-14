@@ -11,8 +11,9 @@ const numbers = new Intl.NumberFormat(locale);
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "green";
 
-export function installAppointments({ getState, today, defaultDay, render, mutate, requestDeletion, refreshFields, formatDay, formatDayNumber, formatShortMonth }) {
+export function installAppointments({ getState, getFamilyView, today, defaultDay, render, mutate, requestDeletion, refreshFields, formatDay, formatDayNumber, formatShortMonth }) {
   let editingVisit = null;
+  let delegation;
   const visitOffsetFields = [...document.querySelectorAll('[name="visit-offset"]')];
   const visitCategory = $("visit-category");
   const visitCategories = new Map(Array.from(visitCategory.options, option => [option.value, option.text]));
@@ -131,17 +132,20 @@ export function installAppointments({ getState, today, defaultDay, render, mutat
     field.addEventListener("change", refreshVisitReminder);
   }
 
-  function openVisit(visit) {
+  function openVisit(visit, target) {
+    delegation = target;
+    $("visit-dialog").toggleAttribute("data-family-editor", Boolean(target));
     editingVisit = visit?.id ?? null;
     $("delete-edited-visit").hidden = !visit;
-    $("visit-form-title").textContent = visit ? t("ویرایش قرار") : t("قرار جدید");
+    $("visit-form-title").textContent = target ? t("افزودن برای {0}", target.name) : visit ? t("ویرایش قرار") : t("قرار جدید");
+    $("visit-editor").querySelector('[type="submit"]').textContent = target ? t("ذخیره برای {0}", target.name) : t("ذخیرهٔ قرار");
     $("visit-name").value = visit?.name ?? "";
-    $("visit-day").value = isoDay(visit?.day ?? defaultDay());
+    $("visit-day").value = isoDay(visit?.day ?? target?.day ?? defaultDay());
     $("visit-time").value = visit?.time ?? localClock();
     $("visit-place").value = visit?.place ?? "";
     $("visit-note").value = visit?.note ?? "";
     $("visit-contact").value = visit?.contact ?? "";
-    $("visit-zone").value = visit?.zone ?? localZone();
+    $("visit-zone").value = visit?.zone ?? target?.zone ?? localZone();
     $("visit-extra").open = Boolean(visit?.note || visit?.contact || visit?.zone && visit.zone !== localZone());
     visitAppearance.open = false;
     visitCategory.value = visitCategoryOf(visit?.category);
@@ -206,15 +210,22 @@ export function installAppointments({ getState, today, defaultDay, render, mutat
     const remindersOff = !visitReminderToggle.checked;
     const chosenOffsets = checkedVisitOffsets();
     submit.disabled = true;
+    const plan = { id, name, day, time, place, note, contact, zone, category, color,
+      ...(categoryName ? { categoryName } : {}), ...(remindersOff ? { remindersOff } : {}) };
+    if (delegation) {
+      try { await delegation.save({ ...plan, offsets: chosenOffsets }); }
+      catch (error) { $("visit-error").textContent = error.message; }
+      finally { submit.disabled = false; }
+      return;
+    }
     const saved = await mutate(state => {
       const visits = state.visits ??= {};
       if (existingId && !visits[id]) throw new Error(t("این قرار حذف شده است."));
       const previous = visits[id];
       const offsets = [...retainedVisitOffsets(previous), ...chosenOffsets];
       const completed = previous?.completed && previous.day === day && previous.time === time && previous.zone === zone;
-      visits[id] = { id, name, day, time, place, note, contact, zone, category, color, offsets, cancelled: previous?.cancelled ?? false,
-        ...(completed ? { completed, resolvedAt: previous.resolvedAt } : {}),
-        ...(categoryName ? { categoryName } : {}), ...(remindersOff ? { remindersOff } : {}) };
+      visits[id] = { ...plan, offsets, cancelled: previous?.cancelled ?? false,
+        ...(completed ? { completed, resolvedAt: previous.resolvedAt } : {}) };
     }, t("قرار ذخیره شد."), true);
     submit.disabled = false;
     if (saved) $("visit-dialog").close();
@@ -228,8 +239,8 @@ export function installAppointments({ getState, today, defaultDay, render, mutat
     categoryOf: visitCategoryOf, categories: visitCategories, colorOf: visitColorOf,
     formatDay, formatDayNumber,
     formatShortMonth,
-    today, openVisit, deleteVisit, mutate, render
+    today, getFamilyView, openVisit, deleteVisit, mutate, render
   });
 
-  return appointments;
+  return { ...appointments, openVisit };
 }

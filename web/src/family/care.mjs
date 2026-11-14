@@ -1,14 +1,63 @@
-import { createCareIndex, doseId, scheduledRoutinesOn } from "../../public/medication/domain/care-index.js";
+import { compilePhases, createCareIndex, doseId, scheduledRoutinesOn } from "../../public/medication/domain/care-index.js";
 import { dayMs, timezone, instantForWall, localWall } from "../../public/medication/domain/wall-clock.js";
-import { routineComplete, routineLog } from "../../public/medication/domain/routine-plan.js";
+import { maxRoutines, routineComplete, routineLog } from "../../public/medication/domain/routine-plan.js";
 import * as engine from "../../public/medication/domain/medication-rules.js";
 import { emptyCareRecords } from "../../public/medication/domain/family.js";
 import { cycleIsEnabled } from "../../public/medication/domain/profile.js";
+import { validatePortable } from "../../public/medication/features/backups/web-format.js";
 
 export const idPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 export const clean = (value, max) => typeof value === "string" && value.length <= max && !/\p{Cc}/u.test(value) ? value.trim() : "";
 const integer = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
 const clockMinute = time => typeof time === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? Number(time.slice(0, 2)) * 60 + Number(time.slice(3)) : -1;
+
+function planFor(data, zone) {
+  const { plan, kind, id } = data;
+  const name = clean(plan?.name, 120);
+  if (!name || typeof plan !== "object" || Array.isArray(plan)) return null;
+  const dateAllowed = value => integer(value, -719162, 2932896);
+  const present = (value, max) => value == null || typeof value === "string" && value.length <= max;
+  const asset = value => typeof value === "string" && /^[a-z0-9-]{1,48}$/.test(value);
+  let scope, row;
+  if (kind === "medicine") {
+    const { phases, dates, stock, threshold, unit, instructions, icon, color, phased } = plan;
+    if (!Array.isArray(phases) || !phases.length || phases.length > 50 ||
+        !phases.every(phase => phase && dateAllowed(phase.start) && (phase.end === null || integer(phase.end, phase.start + 1, 2932896)) &&
+          integer(phase.interval, 1, 52) && integer(phase.mask, 1, 127) && Array.isArray(phase.slots) &&
+          phase.slots.length > 0 && phase.slots.length <= 12 &&
+          phase.slots.every(slot => slot && integer(slot.minute, 0, 1439) &&
+            (slot.amount === null ? stock === null : integer(slot.amount, 1, 1_000_000_000) && Boolean(unit)))) ||
+        !Array.isArray(dates) || !dates.every(dateAllowed) || !present(unit, 32) ||
+        !present(instructions, 2000) || (stock !== null && !integer(stock, 0, 1_000_000_000)) ||
+        !integer(threshold, 0, Number.MAX_SAFE_INTEGER) || !asset(icon) || !asset(color)) return null;
+    scope = "medicines";
+    row = { id, name, unit, instructions, stock, threshold, icon, color, phased: phased === true, revision: 1, dates,
+      phases: phases.map(({ start, end, interval, mask, slots, autoEnd }) => ({ start, end, interval, mask,
+        slots: slots.map(({ minute, amount }) => ({ minute, amount })), ...(autoEnd === true && { autoEnd }) })) };
+  } else if (kind === "visit") {
+    const { day, time, place, note, contact, category, color, categoryName, offsets = [], remindersOff } = plan;
+    if (!dateAllowed(day) || !present(place, 200) || !present(note, 2000) || !present(contact, 160) ||
+        !present(categoryName, 100) || !asset(category) || !asset(color) ||
+        !Array.isArray(offsets) || offsets.length > 20 || !present(plan.zone, 64)) return null;
+    scope = "visits";
+    row = { id, name, day, time, place, note, contact, category, color, categoryName, offsets,
+      zone: plan.zone || zone, cancelled: false, remindersOff: remindersOff === true };
+  } else if (kind === "routine") {
+    const { start, mask, interval, minute, reminder, mode, notes, target, unit, steps, category, color } = plan;
+    if (!dateAllowed(start) || !asset(category) || !asset(color) || !present(notes, 2000) || !present(unit, 40) ||
+        (steps !== undefined && (!Array.isArray(steps) || !steps.every(step => present(step, 70)))) ||
+        (reminder === true && minute === null)) return null;
+    scope = "routines";
+    row = { id, name, start, mask, interval, minute, reminder: reminder === true, mode, notes, category, color, paused: false, revision: 1,
+      ...(mode === "quantity" && { target, unit }), ...(mode === "steps" && { steps }) };
+  } else return null;
+  try {
+    const sample = emptyCareRecords();
+    sample[scope][id] = row;
+    validatePortable(sample, phases => engine.validMedicationPhases(compilePhases(engine, phases)));
+    return { scope, row };
+  } catch { return null; }
+}
 
 export function applyFamilyChange(snapshot, data, actor, homeZone, now = Date.now()) {
   const records = snapshot ?? emptyCareRecords();
@@ -22,6 +71,13 @@ export function applyFamilyChange(snapshot, data, actor, homeZone, now = Date.no
   const author = { recordedBy: actor, recordedAt: now };
 
   if (action === "add") {
+    if (kind === "routine" && Object.keys(records.routines).length >= maxRoutines) return "limit";
+    if (data.plan !== undefined) {
+      const entry = planFor(data, homeZone);
+      if (!entry) return "invalid";
+      records[entry.scope][id] = { ...entry.row, ...author };
+      return records;
+    }
     const name = clean(data.name, 100);
     if (!name || !validDay || day < today || day > today + 3660 || scheduledTime < 0) return "invalid";
     if (kind === "medicine") {

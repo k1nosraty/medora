@@ -19,13 +19,14 @@ function waterCard(entries, total, openHistory, addWater) {
   copy.append(element("h3", t("{0} میلی‌لیتر", number(total))), element("p",
     entries.length === 1 ? t("۱ بار ثبت آب") : t("{0} بار ثبت آب", number(entries.length)), "quiet"));
   const actions = element("div", "", "day-card-actions");
-  actions.append(dayCardOptions(t("گزینه‌های ثبت آب"), button(t("سوابق"), openHistory)), button(t("ثبت آب"), addWater));
+  actions.append(dayCardOptions(t("گزینه‌های ثبت آب"), button(t("سوابق"), openHistory)));
+  if (addWater) actions.append(button(t("ثبت آب"), addWater));
   card.append(art, copy, actions);
   return card;
 }
 
 export function renderCalendar(state, index, { day, start, end, today, formatMonth, formatDay, dateButton, selectDay,
-  renderDose, renderRoutine, visitCard, openWaterHistory, addWater }) {
+  renderDose, renderRoutine, visitCard, openWaterHistory, canAddWater = true, addWater }) {
   const slots = shortWeek.map(label => element("span", label, "quiet"));
   const cycleEnabled = cycleIsEnabled(state);
   const cycleRecords = cycleEnabled ? state.cycleRecords ?? {} : {};
@@ -88,7 +89,7 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
       render: () => renderRoutine(entry, day, { dayCard: true, calendar: true, readOnly: day >= today && Boolean(entry.historical) })
     })),
     ...(water.length ? [{ key: "water", minute: water.reduce((first, entry) => Math.min(first, timeMinutes(entry.time)), Infinity),
-      render: () => waterCard(water, index.waterTotal(day), openWaterHistory, addWater) }] : [])
+      render: () => waterCard(water, index.waterTotal(day), openWaterHistory, canAddWater ? addWater : null) }] : [])
   ].sort((a, b) => a.minute - b.minute);
   $("calendar-date").textContent = formatDay(day, true);
   $("calendar-agenda-label").textContent = t(day > today ? "برنامهٔ این روز" : "برنامه و سابقهٔ این روز");

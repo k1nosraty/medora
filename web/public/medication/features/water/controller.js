@@ -11,7 +11,7 @@ const percent = new Intl.NumberFormat(locale, { style: "percent" });
 function empty(text) { return element("p", text, "empty"); }
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 
-export function installWater({ getState, selectedDay, today, actionDay, mutate, refreshFields, formatDay, formatShortDate }) {
+export function installWater({ getState, selectedDay, today, actionDay, getFamilyView = () => null, mutate, refreshFields, formatDay, formatShortDate }) {
   let editingWater = null;
   let quickWaterEntry;
 
@@ -151,7 +151,9 @@ export function installWater({ getState, selectedDay, today, actionDay, mutate, 
 
   function renderTodayWater(state, day, total, goal, progress) {
     const future = day > today();
-    $("today-water").hidden = future;
+    const view = getFamilyView();
+    $("today-water").hidden = future || view?.has("water") === false;
+    $("today-water").querySelector("[data-open-water]").hidden = view?.canRecord("water", day) === false;
     $("future-schedule").hidden = !future;
     $("open-water-history").hidden = future;
     $("today-water-label").textContent = day === today() ? t("مصرف آب امروز") : t("مصرف آب این روز");
@@ -160,14 +162,15 @@ export function installWater({ getState, selectedDay, today, actionDay, mutate, 
     $("today-water-progress").value = progress;
     $("today-water-percent").textContent = percent.format(progress);
     $("today-water").toggleAttribute("data-goal-reached", total >= goal);
-    quickWaterButton.hidden = day !== today();
-    renderQuickWaterFeedback(state, day);
+    quickWaterButton.hidden = day !== today() || view?.canRecord("water", day) === false;
+    if (view) $("today-water-feedback").hidden = true;
+    else renderQuickWaterFeedback(state, day);
     fillGlass("today-water", progress);
   }
 
   function renderWater(day, index, total, goal, progress) {
-    $("water-custom-action").hidden = day > today();
-    $("water-entry").hidden = day > today();
+    const view = getFamilyView();
+    $("water-custom-action").hidden = $("water-entry").hidden = day > today() || view?.canRecord("water", day) === false;
     $("water-progress").value = progress;
     $("water-date").textContent = day === today() ? t("امروز") : formatShortDate(day);
     $("water-total").textContent = numbers.format(total);
@@ -178,7 +181,12 @@ export function installWater({ getState, selectedDay, today, actionDay, mutate, 
       .sort((a, b) => b.time.localeCompare(a.time));
     $("water-entries").replaceChildren(...(entries.length ? entries.map(entry => {
       const row = element("article", "", "entry-row");
-      row.append(element("span", t("{0} میلی‌لیتر · {1}", numbers.format(entry.amount), clockText(entry.time))), button(t("ویرایش"), () => openWater(entry)),
+      row.append(element("span", t("{0} میلی‌لیتر · {1}", numbers.format(entry.amount), clockText(entry.time))));
+      if (view) {
+        if (entry.recordedBy) row.append(element("small", t("ثبت‌کننده: {0}", entry.recordedBy), "family-stamp"));
+        return row;
+      }
+      row.append(button(t("ویرایش"), () => openWater(entry)),
         button(t("حذف ثبت"), () => {
           if (confirm(t("این ثبت آب حذف شود؟"))) void mutateWater(data => {
             data.water = data.water.filter(item => item.id !== entry.id);
