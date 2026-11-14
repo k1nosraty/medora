@@ -72,7 +72,10 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     else if (screen === "water") document.querySelector('[data-screen="water"]').prepend(dayControls);
     else $("today-dates").append(dayControls);
     $("today-story").hidden = $("today-dates").hidden = screen !== "today";
-    $("family-context").hidden = screen !== "today" && !view;
+    const familyContext = $("family-context");
+    if (screen === "insights" && view) $("insights-header").prepend(familyContext);
+    else $("today-story").before(familyContext);
+    familyContext.hidden = screen !== "today" && !view;
     $("app").dataset.activeScreen = screen;
     for (const view of document.querySelectorAll("[data-screen]")) view.hidden = view.dataset.screen !== screen;
     for (const item of document.querySelectorAll(".dock [data-destination]")) {

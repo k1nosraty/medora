@@ -27,7 +27,16 @@
   z-index: 3;
   inset-block-start: env(safe-area-inset-top, 0px);
 }
-.medora [data-family-member][data-active-screen="insights"] .family-context { margin-block-end: .92rem; }
+.medora [data-family-member] #insights-header {
+  position: sticky;
+  z-index: 3;
+  inset-block-start: env(safe-area-inset-top, 0px);
+  display: grid;
+  gap: .55rem;
+  padding-block: .24rem .65rem;
+  background: linear-gradient(var(--page) 90%, transparent);
+}
+.medora [data-family-member] #insights-header :is(.family-context, .insights-tabs) { margin: 0; }
 .family-context-copy { display: grid; flex: 1; gap: .06rem; min-inline-size: 0; text-align: start; }
 .family-context-copy strong { overflow-wrap: anywhere; line-height: 1.35; }
 .family-context .family-context-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .86rem; }
@@ -73,8 +82,10 @@
 .family-member-identity .family-avatar { inline-size: 2.03rem; block-size: 2.03rem; font-size: .72rem; }
 .medora .family-member-identity:disabled { opacity: 1; color: var(--ink); }
 .medora .family-home {
-  background: color-mix(in srgb, var(--glass) 62%, transparent);
-  border: 1px solid color-mix(in srgb, var(--glass-rim) 80%, transparent);
+  background: color-mix(in srgb, var(--action) 18%, var(--glass));
+  border: 1px solid color-mix(in srgb, var(--action) 19%, var(--glass-rim));
+  color: var(--action);
+  box-shadow: inset 0 1px 0 var(--glass-glint);
   border-radius: 100vw;
   padding: .2rem .58rem;
   flex: none;
@@ -82,7 +93,7 @@
   min-block-size: 2.75rem;
   font-size: .73rem;
 }
-.family-home svg { inline-size: 1.04rem; block-size: 1.04rem; }
+.medora .family-home svg { inline-size: 1.13rem; block-size: 1.13rem; }
 .medora [data-family-member] .program-grid {
   grid-template-columns: repeat(var(--family-program-columns, 2), minmax(0, 1fr));
 }
