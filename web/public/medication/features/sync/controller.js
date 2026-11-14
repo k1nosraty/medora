@@ -1,6 +1,7 @@
 import { $ } from "../../shared/ui/dom.js";
 import { t } from "../../shared/i18n/locale.js";
 import { accessCare, accessCareSettings } from "../../shared/storage.js";
+import { localZone } from "../../domain/care-plan.js";
 import { portable } from "../backups/web-format.js";
 import { applyPortable, mergeCare } from "./merge.js";
 
@@ -66,7 +67,7 @@ export function installCareSync({ reload, remindersChanged }) {
       if (!autoRestore && (!remote.records || !same(candidate, mergeCare(null, remote.records, null)))) {
         const uploaded = await fetch(path, {
           method: "PUT", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ owner: remote.owner, revision: remote.revision, records: candidate }),
+          body: JSON.stringify({ owner: remote.owner, revision: remote.revision, records: candidate, zone: localZone() }),
           signal: AbortSignal.timeout(12_000)
         });
         if (uploaded.status === 409) {

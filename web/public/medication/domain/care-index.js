@@ -7,9 +7,9 @@ export const timeText = minute => [Math.floor(minute / 60), minute % 60].map(par
 export const doseId = (medicine, day, minute) => `${medicine.id}|${day}|${minute}`;
 export const doseTime = (day, minute) => new Date(`${isoDay(day)}T${timeText(minute)}:00`).getTime();
 
-export function scheduledRoutinesOn(state, day, plans = Object.values(state.routines ?? {})) {
+export function scheduledRoutinesOn(state, day, plans = Object.values(state.routines ?? {}), timeOf = doseTime) {
   const entries = new Map();
-  const scheduledAt = plan => doseTime(day, plan.minute ?? 1439);
+  const scheduledAt = plan => timeOf(day, plan.minute ?? 1439);
   for (const { plan, until } of state.scheduleHistory?.routines ?? []) {
     if (routineOccurs(plan, day) && scheduledAt(plan) < until && scheduledAt(plan) >= (plan.scheduleFrom ?? -Infinity)) {
       entries.set(plan.id, { ...plan, historical: true });
@@ -54,7 +54,7 @@ function groupByDay(records, dayOf) {
   return days;
 }
 
-export function createCareIndex(state, engine, zone, today = Math.floor(localWall(Date.now(), timezone(zone)) / dayMs)) {
+export function createCareIndex(state, engine, zone, today = Math.floor(localWall(Date.now(), timezone(zone)) / dayMs), timeOf = doseTime) {
   let recorded;
   let active;
   let visits;
@@ -84,10 +84,10 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
   function slotsOn({ medicine, phases, dates, until }, day) {
     if (dates && !dates.has(day)) return [];
     const from = Math.max(medicine.effectiveFrom ?? 0, medicine.scheduleFrom ?? 0);
-    if ((until !== undefined && doseTime(day, 0) >= until) || (from && doseTime(day, 1439) < from)) return [];
+    if ((until !== undefined && timeOf(day, 0) >= until) || (from && timeOf(day, 1439) < from)) return [];
     const slots = engine.medicationSlots(phases, day);
     return from || until !== undefined ? slots.filter(slot => {
-      const at = doseTime(day, slot.minuteOfDay);
+      const at = timeOf(day, slot.minuteOfDay);
       return (!from || at >= from) && (until === undefined || at < until);
     }) : slots;
   }
@@ -164,7 +164,7 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
         if (dose.status === "taken") taken++;
         else if (dose.status === "skipped") skipped++;
         else {
-          const due = dose.status === "snoozed" && dose.snoozeUntil ? dose.snoozeUntil : doseTime(day, dose.minute);
+          const due = dose.status === "snoozed" && dose.snoozeUntil ? dose.snoozeUntil : timeOf(day, dose.minute);
           if (due <= now) unrecorded++;
         }
       }
@@ -182,7 +182,7 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
 
   function calendarRoutinesOn(day) {
     if (routineCalendar.has(day)) return routineCalendar.get(day);
-    const entries = scheduledRoutinesOn(state, day, plans);
+    const entries = scheduledRoutinesOn(state, day, plans, timeOf);
     for (const [id, entry] of Object.entries(state.routineLogs?.[day] ?? {})) entries.set(id, { ...entry, id });
     const result = [...entries.values()].sort((a, b) => (a.minute ?? 1440) - (b.minute ?? 1440));
     routineCalendar.set(day, result);
@@ -200,7 +200,7 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
       for (const entry of calendarRoutinesOn(day)) {
         if (routineComplete(entry)) completed++;
         else if (Object.hasOwn(logs, entry.id)) partial++;
-        else if (day < today || (entry.minute != null && doseTime(day, entry.minute) <= now)) scheduled++;
+        else if (day < today || (entry.minute != null && timeOf(day, entry.minute) <= now)) scheduled++;
       }
     }
     return { completed, partial, unrecorded: scheduled, activeDays };

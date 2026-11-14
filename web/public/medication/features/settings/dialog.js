@@ -3,14 +3,15 @@ import { $, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { integer } from "../../shared/ui/input-values.js";
 import { appointmentDefaults, waterDefaults } from "../../domain/care-plan.js";
 import { accentOf, accentLabel } from "../../styles/theme.js";
-import { canEnableCycle, cycleIsEnabled, finishOf, genders } from "../../domain/profile.js";
+import { canEnableCycle, cycleIsEnabled, finishOf, genders, ageAt, validPersonalProfile } from "../../domain/profile.js";
 
 const numbers = new Intl.NumberFormat(locale);
+const profileInputs = { firstName: "profile-first-name", lastName: "profile-last-name", birthDate: "profile-birth-date", heightCm: "profile-height", weightKg: "profile-weight" };
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 
 export function installSettings({ getState, mutate, refreshFields }) {
   const settingsPanels = {
-    "profile-settings": [t("پروفایل"), t("جنسیت و نمایش چرخه")],
+    "profile-settings": [t("پروفایل"), t("اطلاعات شخصی و چرخه")],
     "display-settings": [t("ظاهر و زبان"), t("تم، تقویم و زبان برنامه")],
     "notification-settings": [t("اعلان‌های این دستگاه"), t("یادآوری دارو، آب، قرار و روتین")],
     "water-settings": [t("آب"), t("هدف روزانه و زمان یادآوری")],
@@ -27,6 +28,11 @@ export function installSettings({ getState, mutate, refreshFields }) {
   const snoozePresets = [...document.querySelectorAll('[name="snooze-preset"]')];
   const gender = $("profile-gender");
   const cycle = $("profile-cycle-enabled");
+  function updateProfileAge() {
+    const age = ageAt($("profile-birth-date").value, new Date());
+    $("profile-age").textContent = age === null ? "—" : t("{0} سال", numbers.format(age));
+  }
+  $("profile-birth-date").addEventListener("input", updateProfileAge);
   function updateCycleControl() {
     cycle.disabled = !canEnableCycle({ gender: gender.value });
     if (cycle.disabled) cycle.checked = false;
@@ -85,6 +91,9 @@ export function installSettings({ getState, mutate, refreshFields }) {
       $("app-language").value = language;
     }
     if (panel === "profile-settings") {
+      for (const [key, id] of Object.entries(profileInputs)) $(id).value = data.personalProfile?.[key] ?? "";
+      $("profile-birth-date").max = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      updateProfileAge();
       gender.value = genders.includes(data.gender) ? data.gender : "";
       cycle.checked = cycleIsEnabled(data);
       updateCycleControl();
@@ -275,9 +284,19 @@ export function installSettings({ getState, mutate, refreshFields }) {
   gender.addEventListener("change", updateCycleControl);
   $("profile-form").addEventListener("submit", async event => {
     event.preventDefault();
+    const profile = Object.fromEntries(Object.entries(profileInputs).flatMap(([key, id]) => {
+      const input = $(id);
+      const value = input.value.trim();
+      return value ? [[key, input.type === "number" ? input.valueAsNumber : value]] : [];
+    }));
+    if (!validPersonalProfile(profile)) {
+      settingsFeedback(t("نام، تاریخ تولد، قد و وزن را بررسی کنید."), "error");
+      return;
+    }
     const selectedGender = genders.includes(gender.value) ? gender.value : "";
     const enabled = cycle.checked && canEnableCycle({ gender: selectedGender });
     await saveSettings(event.submitter ?? $("profile-form").querySelector('[type="submit"]'), state => {
+      state.personalProfile = profile;
       state.gender = selectedGender;
       state.cycleEnabled = enabled;
       loadedSettings.delete("display-settings");

@@ -1,5 +1,21 @@
       <section id="profile-settings" class="settings-panel" hidden>
-        <form id="profile-form">
+        <form id="profile-form" class="medora-profile-form">
+          <div class="family-hero">
+            <img src="/design/optical-glass/control-user.webp" data-art="control-user" alt="" width="86" height="86">
+            <h3>پروفایل من</h3>
+          </div>
+          <div class="family-field-pair">
+            <label>نام<input id="profile-first-name" maxlength="60" autocomplete="given-name" dir="auto"></label>
+            <label>نام خانوادگی<input id="profile-last-name" maxlength="60" autocomplete="family-name" dir="auto"></label>
+          </div>
+          <div class="family-field-pair">
+            <label>تاریخ تولد<input id="profile-birth-date" type="date" autocomplete="bday"></label>
+            <p class="family-age"><span>سن</span><output id="profile-age" for="profile-birth-date">—</output></p>
+          </div>
+          <div class="family-field-pair">
+            <label>قد (سانتی‌متر)<input id="profile-height" type="number" inputmode="decimal" min="0.1" max="300" step="0.1" dir="ltr"></label>
+            <label>وزن (کیلوگرم)<input id="profile-weight" type="number" inputmode="decimal" min="0.1" max="650" step="0.1" dir="ltr"></label>
+          </div>
           <label>جنسیت (اختیاری)
             <select id="profile-gender">
               <option value="">انتخاب نشده</option>

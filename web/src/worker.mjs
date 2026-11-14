@@ -1,5 +1,6 @@
 import { handleMigration } from "./operations/migration.mjs";
 import { handleBackupParts } from "./operations/backup-parts.mjs";
+import { handleFamily } from "./family/routes.mjs";
 import { handleCareSync } from "./sync/routes.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { vapidHeaders } from "@block65/webcrypto-web-push";
@@ -10,6 +11,7 @@ import { handleAdminAccounts, handleEmailAuth } from "./accounts/email-auth.mjs"
 import { handleOperations } from "./operations/routes.mjs";
 import { handlePromotions } from "./promotions/routes.mjs";
 
+export { Families } from "./family/routes.mjs";
 export { MedicationReminders } from "./reminders/medication-reminders.mjs";
 export { EmailAccount } from "./accounts/email-auth.mjs";
 export { Credentials } from "./accounts/credentials.mjs";
@@ -50,6 +52,7 @@ export default {
       return reply({ version, status: await env.OPERATIONS.getByName("operations").publishRelease(version) });
     }
     if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url, ctx);
+    if (url.pathname === "/api/family") return handleFamily(request, env, url);
     if (url.pathname === "/api/account/care") return handleCareSync(request, env, url);
     if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url, ctx);
     if (["/api/promotion", "/api/admin/promotion"].some(path => url.pathname === path || url.pathname.startsWith(path + "/"))) {

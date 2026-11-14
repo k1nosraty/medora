@@ -1,7 +1,7 @@
 import { decryptBackup, encryptBackup, hasBackupMagic } from "./crypto.js";
 import { maxRoutineAmount, maxRoutineSteps } from "../../domain/routine-plan.js";
 import { availableAccents } from "../../styles/theme.js";
-import { finishes, genders } from "../../domain/profile.js";
+import { finishes, genders, validPersonalProfile } from "../../domain/profile.js";
 import { timezone } from "../../domain/wall-clock.js";
 
 const magic = new Uint8Array([77, 69, 68, 79, 82, 65, 87, 1]);
@@ -33,6 +33,7 @@ const settings = {
   accent: value => availableAccents(true).some(accent => accent.id === value),
   finish: value => finishes.includes(value),
   gender: value => genders.includes(value),
+  personalProfile: validPersonalProfile,
   cycleEnabled: flag,
   calendar: value => ["persian", "gregory"].includes(value),
   waterGoal: value => integer(value, 1, 20000),

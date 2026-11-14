@@ -1,0 +1,32 @@
+<dialog id="family-dialog" class="sheet family-dialog" aria-labelledby="family-title">
+  <div class="sheet-header family-header">
+    <button id="family-back" class="icon-button" type="button" aria-label="بازگشت" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+    <h2 id="family-title" tabindex="-1">خانواده</h2>
+    <button class="icon-button" type="button" data-close="family-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+  </div>
+  <div class="sheet-body family-body">
+    <p id="family-status" role="status" hidden></p>
+    <div id="family-content" class="family-content"></div>
+  </div>
+</dialog>
+<template id="family-share-template">
+  <form class="family-content">
+    <p data-recipient class="family-target"></p>
+    <fieldset class="family-choice">
+      <legend>مشاهده</legend>
+      <label><input type="radio" name="view" value="all" checked>مشاهدهٔ همه</label>
+      <label><input type="radio" name="view" value="custom">انتخاب بخش‌ها</label>
+      <p class="quiet" data-scope>پروفایل، دارو، وضعیت مصرف، قرار، روتین، آب، چرخه و یادداشت‌ها</p>
+      <div data-sections hidden></div>
+    </fieldset>
+    <fieldset class="family-choice">
+      <legend>اجازهٔ ثبت و افزودن</legend>
+      <label><input type="checkbox" name="record" role="switch">ثبت به‌نمایندگی</label>
+      <label><input type="checkbox" name="add" role="switch">افزودن برنامه</label>
+    </fieldset>
+    <label>اعتبار دسترسی
+      <select name="days"><option value="">تا زمان لغو</option><option value="7">۷ روز</option><option value="30">۳۰ روز</option><option value="90">۹۰ روز</option></select>
+    </label>
+    <button type="submit" class="block-action">اعطای دسترسی</button>
+  </form>
+</template>

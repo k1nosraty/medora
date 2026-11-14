@@ -2,6 +2,7 @@ import { careSession } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
 import { portable, validatePortable } from "../../public/medication/features/backups/web-format.js";
 import { compilePhases } from "../../public/medication/domain/care-index.js";
+import { timezone } from "../../public/medication/domain/wall-clock.js";
 import * as engine from "../../public/medication/domain/medication-rules.js";
 
 export const syncLimit = 4 * 1024 * 1024;
@@ -34,7 +35,11 @@ export async function handleCareSync(request, env, url) {
   } catch {
     return reply({ error: "invalid_sync" }, 400);
   }
-  const saved = await client.saveCareSnapshot(data.revision, records, scope[2] ?? "", token);
+  let zone;
+  if (typeof data.zone === "string" && data.zone.length <= 64) {
+    try { timezone(data.zone); zone = data.zone; } catch {}
+  }
+  const saved = await client.saveCareSnapshot(data.revision, records, scope[2] ?? "", token, zone);
   if (saved?.signedOut) return reply({ error: "sign_in" }, 401);
   return saved ? reply({ owner: data.owner, ...saved }) : reply({ error: "conflict" }, 409);
 }

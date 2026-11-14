@@ -13,6 +13,7 @@ import { changeReminderRevision, initializeReminders, syncReminders } from "../f
 import { installMedicineEditor } from "../features/medicines/editor.js";
 import { installMedicineView } from "../features/medicines/view.js";
 import { installAccount } from "../features/account/dialog.js";
+import { installFamily } from "../features/family/panel.js";
 import { installSupport, loadOperations, reportDailyOpen } from "../features/operations.js";
 import { installPromotion } from "../features/promotions/dialog.js";
 import { installRoutines } from "../features/routines/view.js";
@@ -99,6 +100,7 @@ function currentIndex() {
 
 function render() {
   if (!care || !$("day").value) return;
+  family.updateLabel();
   const day = selectedDay();
   const index = currentIndex();
   const screen = dashboard.screen();
@@ -183,6 +185,11 @@ const openAccount = installAccount({
     if (panel === "backup-settings") document.querySelector('[data-settings-panel="backup-settings"]').click();
   }
 });
+const family = installFamily({ getState, openAccount, openProfile: () => {
+  dashboard.show("settings");
+  document.querySelector('[data-settings-panel="profile-settings"]').click();
+} });
+$("account-dialog").addEventListener("close", family.openInvitation);
 const params = new URLSearchParams(location.search);
 const view = params.get("view");
 if (view === "account") void openAccount();
@@ -210,6 +217,7 @@ try {
   }
   if (!location.search) void reportDailyOpen();
   installPromotion(loadOperations);
+  family.openInvitation();
   void initializeReminders();
 } catch {
   $("boot-status").textContent = t("موتور برنامهٔ دارو یا فضای ذخیرهٔ محلی در دسترس نیست.");

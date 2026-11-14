@@ -25,7 +25,8 @@
       { "name": "EMAIL_ACCOUNTS", "class_name": "EmailAccount" },
       { "name": "CREDENTIALS", "class_name": "Credentials" },
       { "name": "PROMOTIONS", "class_name": "Promotions" },
-      { "name": "OPERATIONS", "class_name": "Operations" }
+      { "name": "OPERATIONS", "class_name": "Operations" },
+      { "name": "FAMILIES", "class_name": "Families" }
     ]
   },
   "migrations": [
@@ -34,6 +35,7 @@
     { "tag": "v3", "new_sqlite_classes": ["EmailAccount"] },
     { "tag": "v4", "new_sqlite_classes": ["Promotions"] },
     { "tag": "v5", "new_sqlite_classes": ["Credentials"] },
-    { "tag": "v6", "new_sqlite_classes": ["Operations"] }
+    { "tag": "v6", "new_sqlite_classes": ["Operations"] },
+    { "tag": "v7", "new_sqlite_classes": ["Families"] }
   ]
 }

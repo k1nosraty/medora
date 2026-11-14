@@ -1,0 +1,71 @@
+.medora .family-switcher {
+  display: inline-flex;
+  justify-self: start;
+  inline-size: fit-content;
+  min-block-size: 2.75rem;
+  align-items: center;
+  gap: .55rem;
+  margin-block-start: .3rem;
+  padding: .35rem .8rem;
+  border-radius: 100vw;
+  border: 1px solid var(--glass-rim);
+  background: color-mix(in srgb, var(--glass) 76%, var(--stage));
+  color: var(--action);
+}
+.family-switcher svg { inline-size: 1.1rem; block-size: 1.1rem; }
+.family-switch-separator { block-size: 1.05rem; border-inline-start: 1px solid var(--outline); }
+.medora .family-dialog { max-inline-size: min(100%, 33rem); }
+.family-header { align-items: center; display: flex; justify-content: space-between; gap: .7rem; }
+.family-header h2 { margin: 0; flex: 1; }
+.family-content, .family-body, .medora-profile-form { display: grid; gap: .8rem; min-inline-size: 0; }
+.family-content > :is(h3, p), .family-hero > :is(h3, p), .family-content fieldset { margin: 0; }
+.family-hero, .family-target {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  min-inline-size: 0;
+  padding: .75rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--glass-rim);
+  background: color-mix(in srgb, var(--action) 13%, var(--glass));
+  box-shadow: inset 0 1px 0 var(--glass-glint);
+}
+.family-hero img { object-fit: contain; inline-size: 5.2rem; block-size: 5.2rem; flex: none; }
+.family-hero div { min-inline-size: 0; overflow-wrap: anywhere; }
+.family-hero :is(h3,p) { margin: 0; }
+.family-card, .family-choice, .family-age {
+  padding: .75rem;
+  border-radius: 1.1rem;
+  border: 1px solid var(--glass-rim);
+  background: color-mix(in srgb, var(--glass) 84%, var(--stage));
+  box-shadow: inset 0 1px 0 var(--glass-glint);
+  overflow-wrap: anywhere;
+}
+.family-content .family-card > :is(p,h3,h4) { margin: 0 0 .25rem; }
+.family-card .buttons { margin-block-start: .45rem; }
+.family-card summary { cursor: pointer; font-weight: 700; min-block-size: 2.4rem; }
+.family-list { display: grid; gap: .6rem; }
+.family-choice, .family-choice [data-sections] { display: grid; gap: .45rem; }
+.family-choice [hidden] { display: none; }
+.family-choice label { display: flex; align-items: center; gap: .55rem; min-block-size: 2.5rem; }
+.family-choice :is(input[type="radio"], input[type="checkbox"]) { inline-size: 1.1rem; block-size: 1.1rem; accent-color: var(--action); }
+.family-field-pair { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .6rem; }
+.family-field-pair label { min-inline-size: 0; }
+.family-field-pair input { inline-size: 100%; min-inline-size: 0; }
+.family-age { display: flex; align-items: center; justify-content: space-between; margin: 0; color: var(--action); }
+.family-stamp { color: var(--muted); font-size: .86em; }
+.medora #family-status { margin: 0; padding: .55rem .7rem; color: var(--action); background: var(--stage); border-radius: .75rem; }
+.medora #family-status[data-error] { color: var(--danger); }
+.family-content .family-danger { color: var(--danger); }
+@media (max-width: 340px) {
+  .family-content .family-field-pair { grid-template-columns: 1fr; }
+}
+.family-record-row { display: grid; gap: .25rem; padding-block: .55rem; }
+.family-record-row + .family-record-row { border-block-start: 1px solid var(--glass-rim); }
+.family-record-row button { justify-self: start; margin-block-start: .25rem; }
+.medora .family-content > section.family-card { padding: .8rem 1rem; }
+.family-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem .8rem; margin: .6rem 0 0; }
+.family-facts dt { color: var(--muted); font-size: .8em; }
+.family-facts dd { margin: 0; font-weight: 650; }
+.family-date-label { display: flex; justify-content: space-between; gap: .6rem; }
+.family-date { color: var(--action); }

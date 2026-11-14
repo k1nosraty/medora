@@ -1,6 +1,7 @@
 import { operations, logOperation } from "../operations/routes.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { scryptSync } from "node:crypto";
+import { applyFamilyChange } from "../family/care.mjs";
 import { smallJson } from "../http/validation.mjs";
 
 const cookieName = "__Host-medora_session";
@@ -38,7 +39,7 @@ function configured(env) {
 function canSendCode(env) {
   return Boolean(configured(env) && env.RESEND_API_KEY && env.EMAIL_FROM);
 }
-function normalizeEmail(email) {
+export function normalizeEmail(email) {
   if (typeof email !== "string") return "";
   email = email.trim().toLowerCase();
   return email.length <= 254 && email.split("@")[0].length <= 64 && emailPattern.test(email) ? email : "";
@@ -75,7 +76,8 @@ export async function signedInEmail(request, env) {
 export async function careSession(request, env) {
   if (!configured(env)) return null;
   const session = await readSession(request, env.EMAIL_AUTH_SECRET);
-  return session && await credentials(env).usernameFor(session.id) ? session : null;
+  const username = session && await credentials(env).usernameFor(session.id);
+  return username ? { ...session, username } : null;
 }
 export function isAdminEmail(email, env) {
   return Boolean(email && email === env.ADMIN_EMAIL?.trim().toLowerCase());
@@ -361,7 +363,7 @@ export class EmailAccount extends DurableObject {
       await this.ctx.storage.transaction(async storage => {
         this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM reset_challenge; DELETE FROM deliveries; DELETE FROM password_attempts;");
         this.sql.exec("INSERT OR REPLACE INTO account_reset VALUES (1, ?)", hex(crypto.getRandomValues(new Uint8Array(16))));
-        await storage.delete("care-sync");
+        await storage.delete(["care-sync", "care-zone"]);
       });
       await this.ctx.storage.deleteAlarm();
       return index.remove(username, emailId, salt);
@@ -388,6 +390,38 @@ export class EmailAccount extends DurableObject {
     }));
   }
 
+  async exportFamilyCare(knownRevision) {
+    return this.ctx.storage.transaction(async storage => {
+      const care = await storage.get("care-sync") ?? { revision: 0, records: null };
+      const epoch = this.epoch();
+      if (knownRevision === care.revision) return { epoch, unchanged: true };
+      return { epoch, care, zone: await storage.get("care-zone") };
+    });
+  }
+
+  async familyIdentity(token) {
+    const hash = await sessionHash(token);
+    const email = this.activeSessionEmail(hash);
+    return email ? { email, epoch: this.epoch() } : null;
+  }
+
+  async changeFamilyCare(epoch, data, actor, label) {
+    const entryId = crypto.randomUUID();
+    return this.ctx.storage.transaction(async storage => {
+      if (this.epoch() !== epoch) return { error: "forbidden" };
+      const key = ["family-operation", epoch, actor, data.group, data.operation].join(":");
+      if (await storage.get(key)) return { replay: true };
+      const current = await storage.get("care-sync") ?? { revision: 0, records: null };
+      if (!current.records) return { error: "sync_required" };
+      const records = applyFamilyChange(current.records, { ...data, id: data.action === "add" || data.kind === "water"
+        ? entryId : data.id }, label, await storage.get("care-zone") ?? "Asia/Tehran");
+      if (typeof records === "string") return { error: records };
+      await storage.put("care-sync", { revision: current.revision + 1, records });
+      await storage.put(key, Date.now());
+      return { ok: true };
+    });
+  }
+
   async readCareForSession(token) {
     const hash = await sessionHash(token);
     return this.ctx.storage.transaction(async storage => {
@@ -397,7 +431,7 @@ export class EmailAccount extends DurableObject {
     });
   }
 
-  async saveCareSnapshot(revision, records, generation, token) {
+  async saveCareSnapshot(revision, records, generation, token, zone) {
     const hash = await sessionHash(token);
     return this.ctx.storage.transaction(async storage => {
       if (!this.activeSessionEmail(hash)) return { signedOut: true };
@@ -406,6 +440,7 @@ export class EmailAccount extends DurableObject {
       if (current.revision !== revision) return null;
       const next = { revision: revision + 1, records };
       await storage.put("care-sync", next);
+      if (zone) await storage.put("care-zone", zone);
       return next;
     });
   }
