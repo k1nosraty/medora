@@ -242,6 +242,8 @@ test("routine targets preserve logged history and only suppress the completed oc
   const index = (today = start) => createCareIndex(state, {}, "UTC", today);
   const next = () => nextCareReminder(validSchedule(scheduleForPush(state, "UTC", start, now)), now);
 
+  assert.equal(index(start + 1).routinesOn(start)[0].id, id);
+  assert.equal(index(start + 1).routinesOn(start - 1).length, 0);
   state.routineLogs[start][id] = routineLog(plan, [1, 1, 2]);
   assert.equal(routineComplete(index().routinesOn(start)[0]), false);
   assert.deepEqual(next().kinds, ["routine"]);

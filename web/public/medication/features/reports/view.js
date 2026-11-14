@@ -85,7 +85,7 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
     })),
     ...index.calendarRoutinesOn(day).map(entry => ({
       key: `routine:${entry.id}`, minute: entry.minute ?? Infinity,
-      render: () => renderRoutine(entry, day, { dayCard: true, calendar: true, readOnly: Boolean(entry.historical) })
+      render: () => renderRoutine(entry, day, { dayCard: true, calendar: true, readOnly: day >= today && Boolean(entry.historical) })
     })),
     ...(water.length ? [{ key: "water", minute: water.reduce((first, entry) => Math.min(first, timeMinutes(entry.time)), Infinity),
       render: () => waterCard(water, index.waterTotal(day), openWaterHistory, addWater) }] : [])

@@ -7,6 +7,20 @@ export const timeText = minute => [Math.floor(minute / 60), minute % 60].map(par
 export const doseId = (medicine, day, minute) => `${medicine.id}|${day}|${minute}`;
 export const doseTime = (day, minute) => new Date(`${isoDay(day)}T${timeText(minute)}:00`).getTime();
 
+export function scheduledRoutinesOn(state, day, plans = Object.values(state.routines ?? {})) {
+  const entries = new Map();
+  const scheduledAt = plan => doseTime(day, plan.minute ?? 1439);
+  for (const { plan, until } of state.scheduleHistory?.routines ?? []) {
+    if (routineOccurs(plan, day) && scheduledAt(plan) < until && scheduledAt(plan) >= (plan.scheduleFrom ?? -Infinity)) {
+      entries.set(plan.id, { ...plan, historical: true });
+    }
+  }
+  for (const plan of plans) {
+    if (routineOccurs(plan, day) && (!plan.scheduleFrom || scheduledAt(plan) >= plan.scheduleFrom)) entries.set(plan.id, plan);
+  }
+  return entries;
+}
+
 export function trackSchedule(state, kind, previous, next, at) {
   if (!previous) return;
   const fields = kind === "medicines" ? ["phases", "dates", "paused"] :
@@ -159,6 +173,7 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
   }
 
   function routinesOn(day) {
+    if (day < today) return calendarRoutinesOn(day);
     if (!routineDays.has(day)) {
       routineDays.set(day, routineEntriesOn(state, day, today, plans));
     }
@@ -167,18 +182,9 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
 
   function calendarRoutinesOn(day) {
     if (routineCalendar.has(day)) return routineCalendar.get(day);
-    const entries = new Map();
-    const scheduledAt = plan => doseTime(day, plan.minute ?? 1439);
-    for (const { plan, until } of state.scheduleHistory?.routines ?? []) {
-      if (routineOccurs(plan, day) && scheduledAt(plan) < until && scheduledAt(plan) >= (plan.scheduleFrom ?? -Infinity)) {
-        entries.set(plan.id, { ...plan, historical: true });
-      }
-    }
-    for (const plan of plans) {
-      if (routineOccurs(plan, day) && (!plan.scheduleFrom || scheduledAt(plan) >= plan.scheduleFrom)) entries.set(plan.id, plan);
-    }
+    const entries = scheduledRoutinesOn(state, day, plans);
     for (const [id, entry] of Object.entries(state.routineLogs?.[day] ?? {})) entries.set(id, { ...entry, id });
-    const result = [...entries.values()];
+    const result = [...entries.values()].sort((a, b) => (a.minute ?? 1440) - (b.minute ?? 1440));
     routineCalendar.set(day, result);
     return result;
   }

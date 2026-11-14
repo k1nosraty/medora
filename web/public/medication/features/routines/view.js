@@ -1,7 +1,7 @@
 import { appearanceColors } from "../medicines/appearance.js";
 import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
-import { isoDay, timeText, trackSchedule } from "../../domain/care-index.js";
+import { isoDay, scheduledRoutinesOn, timeText, trackSchedule } from "../../domain/care-index.js";
 import { clockMinute } from "../../domain/care-plan.js";
 import { integer as readAmount } from "../../shared/ui/input-values.js";
 import { dayMs } from "../../domain/wall-clock.js";
@@ -284,18 +284,23 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
 
   async function saveLog({ entry, day, plan, recorded }, result) {
     return mutate(state => {
-      if (day !== today()) throw new Error(t("این روز گذشته است. سوابق را در بخش روتین‌ها ببینید."));
+      const currentDay = today();
+      if (day > currentDay) throw new Error(t("ثبت این نوبت بسته است."));
       ensureCurrent(state, plan);
       const records = state.routineLogs[day];
       const previous = records[entry.id];
-      if (JSON.stringify(previous) !== JSON.stringify(recorded) || (!previous && !routineOccurs(plan, day))) throw changed();
-      const latest = previous ?? plan;
+      if (JSON.stringify(previous) !== JSON.stringify(recorded)) throw changed();
+      const currentPlan = state.routines[entry.id];
+      const scheduled = day < currentDay ? scheduledRoutinesOn(state, day).get(entry.id) :
+        routineOccurs(currentPlan, day) ? currentPlan : null;
+      const latest = previous ?? scheduled;
+      if (!latest) throw changed();
       const updated = routineLog(latest, result);
       if (updated) {
         if (routineComplete(updated)) updated.resolvedAt = previous?.resolvedAt ?? Date.now();
         records[entry.id] = updated;
       } else delete records[entry.id];
-    }, t("پیشرفت روتین ذخیره شد."), Boolean(plan?.reminder), day);
+    }, t("پیشرفت روتین ذخیره شد."), day === today() && Boolean(plan?.reminder), day);
   }
 
   function openLog(activity) {
@@ -342,7 +347,7 @@ export function installRoutines({ getState, today, mutate, render, formatDay, re
     const state = getState();
     const plan = state.routines?.[entry.id];
     const recorded = state.routineLogs[day]?.[entry.id];
-    openLog({ entry, day, plan, recorded, readOnly: day !== today() || !plan || routineComplete(entry) });
+    openLog({ entry, day, plan, recorded, readOnly: day > today() || !plan || routineComplete(entry) });
   }
 
   fields("log-form").addEventListener("submit", async event => {

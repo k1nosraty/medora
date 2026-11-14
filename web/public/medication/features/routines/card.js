@@ -54,7 +54,7 @@ export function routineCard({ getState, today, colorOf, labelFor, days, formatDa
       const edit = button(t("ویرایش"), () => openEditor(entry));
       edit.setAttribute("aria-label", t("ویرایش روتین {0}", entry.name));
       row.append(edit);
-    } else if (!readOnly && isToday && plan) {
+    } else if (!readOnly && day <= today() && plan) {
       const activity = { entry, day, plan, recorded: state.routineLogs[day]?.[entry.id] };
       logAction = entry.mode === "done" ?
         button(completed ? t(dayCard ? "برگشت ثبت" : "انجام شد") : t(dayCard ? "انجام دادم" : "ثبت انجام"), async () => {
