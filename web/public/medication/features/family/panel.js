@@ -90,9 +90,9 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   function page(title, parent) {
     generation++;
-    dialog.removeAttribute("data-roster");
     returnTo = parent;
     back.hidden = !parent;
+    $("family-mark").hidden = Boolean(parent);
     $("family-title").textContent = t(title);
     content.replaceChildren();
     message();
@@ -156,9 +156,17 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   function showHome() {
     page("گروه‌ها و اعضا");
-    dialog.setAttribute("data-roster", "");
     const selected = groupInView();
     if (selected) {
+      const banner = element("div", "", "wizard-visual family-group-hero");
+      const label = element("p");
+      const name = element("strong", selected.name);
+      name.dir = "auto";
+      label.append(element("small", t("گروه فعال")), name);
+      const artwork = element("span", "", "family-group-art");
+      artwork.append(glassObject("control-user", "control"), glassObject("control-user", "control"));
+      banner.append(label, artwork);
+      content.append(banner);
       const groups = element("div", "", "family-group-tabs");
       groups.setAttribute("role", "group");
       groups.setAttribute("aria-label", t("انتخاب گروه فعال"));
@@ -197,7 +205,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
         if (open) row.append(icon("expand", "family-row-arrow"));
         roster.append(row);
       }
-      content.append(groups, element("h3", t("اعضای {0}", selected.name), "family-roster-title"), roster);
+      content.append(groups, element("h3", t("اعضا"), "family-roster-title"), roster);
       groups.querySelector('[aria-pressed="true"]').scrollIntoView({ block: "nearest", inline: "nearest" });
     } else content.append(hero(t("خانواده"), t("برای دیدن برنامهٔ اعضا، گروه بساز یا دعوتی را بپذیر.")));
     const controls = element("div", "", "family-group-links");

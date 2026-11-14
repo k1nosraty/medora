@@ -2,7 +2,7 @@ export default {
   "گروه‌ها و اعضا": "Groups and members",
   "گروه فعال": "Active group",
   "انتخاب گروه فعال": "Choose active group",
-  "اعضای {0}": "Members of {0}",
+  "اعضا": "Members",
   "هنوز دسترسی نداری": "Access hasn’t been shared",
   "فقط مشاهده": "View only",
   "برای دیدن برنامهٔ اعضا، گروه بساز یا دعوتی را بپذیر.": "Create a group or accept an invitation to see family schedules.",

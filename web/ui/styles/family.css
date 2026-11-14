@@ -34,7 +34,9 @@
   display: grid;
   gap: .55rem;
   padding-block: .24rem .65rem;
-  background: linear-gradient(var(--page) 90%, transparent);
+  border-radius: 1.1rem;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 .medora [data-family-member] #insights-header :is(.family-context, .insights-tabs) { margin: 0; }
 .family-context-copy { display: grid; flex: 1; gap: .06rem; min-inline-size: 0; text-align: start; }
@@ -82,10 +84,10 @@
 .family-member-identity .family-avatar { inline-size: 2.03rem; block-size: 2.03rem; font-size: .72rem; }
 .medora .family-member-identity:disabled { opacity: 1; color: var(--ink); }
 .medora .family-home {
-  background: color-mix(in srgb, var(--action) 18%, var(--glass));
-  border: 1px solid color-mix(in srgb, var(--action) 19%, var(--glass-rim));
+  background: transparent;
+  border: 0;
   color: var(--action);
-  box-shadow: inset 0 1px 0 var(--glass-glint);
+  box-shadow: none;
   border-radius: 100vw;
   padding: .2rem .58rem;
   flex: none;
@@ -195,30 +197,28 @@
   color: var(--action);
   font-size: .79rem;
 }
-.medora .family-dialog { max-inline-size: min(100%, 33rem); }
-.medora #family-dialog[data-roster] {
-  background: radial-gradient(ellipse at 90% 0%, color-mix(in srgb, var(--action) 12%, transparent), transparent 58%),
-    linear-gradient(145deg, color-mix(in srgb, var(--glass-glint) 52%, transparent), transparent 70%),
-    color-mix(in srgb, var(--page) 84%, transparent);
-  border: 1px solid var(--glass-rim);
-  box-shadow: inset 0 1px 0 var(--glass-glint), 0 -.5rem 2rem var(--glass-shadow);
-  -webkit-backdrop-filter: blur(24px) saturate(145%);
-  backdrop-filter: blur(24px) saturate(145%);
-}
-.medora #family-dialog[data-roster] .family-header { background: transparent; padding-inline: .22rem; }
-.medora #family-dialog[data-roster] .family-header h2 { font-size: 1.13rem; }
-.medora #family-dialog[data-roster] .family-header [data-close] {
-  background: color-mix(in srgb, var(--glass) 45%, transparent);
-  border: 1px solid var(--glass-rim);
-  border-radius: 50%;
-}
-.medora[data-finish="matte"] :is(.family-switcher, .family-member-bar, #family-dialog[data-roster]) {
+.medora[data-finish="matte"] :is(.family-switcher, .family-member-bar) {
   background: var(--stage);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.family-header { align-items: center; display: flex; justify-content: space-between; gap: .7rem; }
-.family-header h2 { margin: 0; flex: 1; }
+.medora .wizard-visual.family-group-hero {
+  min-block-size: 6.7rem;
+  align-items: center;
+}
+.medora .family-group-hero > p {
+  display: grid;
+  gap: .18rem;
+  max-inline-size: 62%;
+  overflow-wrap: anywhere;
+}
+.family-group-hero small { font-size: .76rem; font-weight: 500; }
+.family-group-hero > .family-group-art {
+  position: absolute;
+  inset-inline-end: 16%;
+  transform: scale(2.35);
+}
+.medora .family-group-hero .family-group-art img { z-index: auto; inset-block-end: auto; transform: none; }
 .family-content, .family-body, .medora-profile-form { display: grid; gap: .8rem; min-inline-size: 0; }
 .family-content > :is(h3, p), .family-hero > :is(h3, p), .family-content fieldset { margin: 0; }
 .family-hero, .family-target {
@@ -288,7 +288,6 @@
 .medora .dock:has(#open-quick[hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .medora .dock:has([data-destination="insights"][hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .medora .dock:has(#open-quick[hidden]):has([data-destination="insights"][hidden]) { grid-template-columns: minmax(0, 1fr); }
-.medora #family-dialog::backdrop { background: rgb(19 23 48 / .24); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 @media (max-width: 360px) {
   .family-member-bar { gap: .4rem; padding-inline: .5rem; }
   .medora .family-home { padding-inline: .45rem; }
