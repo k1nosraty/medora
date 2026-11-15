@@ -54,6 +54,13 @@ function validPassword(password) {
 }
 const accountId = (env, email) => hmac(env.EMAIL_AUTH_SECRET, "account-v1", email);
 const credentials = env => env.CREDENTIALS.getByName("medora-credentials-v1");
+export async function inviteContact(env, value) {
+  const email = normalizeEmail(value);
+  const username = usernameOf(value);
+  if (email) return credentials(env).contactForInvite({ emailId: await accountId(env, email) });
+  return username ? credentials(env).contactForInvite({ username }) : null;
+}
+
 async function passwordProof(secret, password, salt) {
   const peppered = await hmac(secret, "password-v1", password);
   return hex(scryptSync(peppered, salt, 32, { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }));
@@ -406,8 +413,12 @@ export class EmailAccount extends DurableObject {
     if (!email) return null;
     const epoch = this.epoch();
     if (!withName) return { email, epoch };
+    return { email, epoch, displayName: await this.inviteProfileName() };
+  }
+
+  async inviteProfileName() {
     const snapshot = await this.ctx.storage.get("care-sync");
-    return { email, epoch, displayName: profileName(snapshot?.records?.settings?.personalProfile) };
+    return profileName(snapshot?.records?.settings?.personalProfile);
   }
 
   async changeFamilyCare(epoch, data, actor, label, displayName) {

@@ -27,8 +27,15 @@ export function calendarFormat(calendar) {
     return day - Number(dayIndex.formatToParts(day * dayMs).find(part => part.type === "day").value) + 1;
   }
 
+  function yearStart(day) {
+    const label = year.format(day * dayMs);
+    let start = monthStart(day);
+    while (year.format((start - 1) * dayMs) === label) start = monthStart(start - 1);
+    return start;
+  }
+
   return {
-    formatDay,
+    formatDay, yearStart,
     monthStart,
     month: day => month.format(day * dayMs),
     dayNumber: day => dayNumber.format(day * dayMs),

@@ -1,7 +1,8 @@
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
-import { language, t } from "../../shared/i18n/locale.js";
+import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { profileName } from "../../domain/profile.js";
+import { groupIconOf, groupIcons } from "../../domain/group-icons.js";
 import { familySections } from "../../domain/family.js";
 import { localWall, timezone } from "../../domain/wall-clock.js";
 import { quantityFromText } from "../../domain/medication-rules.js";
@@ -32,6 +33,25 @@ function icon(id, className = "") {
   use.setAttribute("href", `#i-${id}`);
   svg.append(use);
   return svg;
+}
+
+function groupArt(value) {
+  const art = element("span", "", "family-group-art");
+  art.setAttribute("aria-hidden", "true");
+  const design = groupIconOf(value);
+  if (design === "group") art.append(glassObject("control-user", "control"), glassObject("control-user", "control"));
+  else art.append(glassObject(design, "control"));
+  return art;
+}
+
+function groupBanner(title, caption, art) {
+  const banner = element("div", "", "wizard-visual family-group-hero");
+  const label = element("p");
+  const name = element("strong", title);
+  name.dir = "auto";
+  label.append(element("small", t(caption)), name);
+  banner.append(label, groupArt(art));
+  return banner;
 }
 
 function submitButton(label, ...values) {
@@ -69,8 +89,25 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   const personalName = () => getState()?.personalProfile?.firstName || overview?.label || t("من");
   const groupInView = () => overview?.groups.find(item => item.id === activeGroup) ?? overview?.groups[0];
+  function renderInboxBadge(invitations) {
+    const count = invitations.length;
+    const text = localDigits(count);
+    $("care-inbox-count").textContent = text;
+    $("open-care-inbox").setAttribute("aria-label", t("{0} دعوت دریافتی", text));
+    $("family-invite-count").textContent = text;
+    $("family-invite-badge").setAttribute("aria-label", t("{0} دعوت دریافتی", text));
+    $("open-care-inbox").hidden = $("family-invite-badge").hidden = !count;
+  }
+
   function updateGroup() {
     const group = groupInView();
+    renderInboxBadge(overview?.invitations ?? []);
+    const art = $("family-switch-art");
+    const design = groupIconOf(group?.icon);
+    if (art.dataset.icon !== design) {
+      art.replaceChildren(...groupArt(design).children);
+      art.dataset.icon = design;
+    }
     $("family-group-name").textContent = group?.name ?? t("گروه‌های مراقبت");
     $("family-group-caption").textContent = t(group ? "گروه فعال" : "گروه‌ها و اعضا");
     $("family-group-avatars").replaceChildren(...(group?.members ?? []).filter(member => !member.self).slice(0, 3)
@@ -93,7 +130,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     generation++;
     returnTo = parent;
     back.hidden = !parent;
-    $("family-mark").hidden = Boolean(parent);
+    $("family-mark").toggleAttribute("hidden", Boolean(parent));
     $("family-title").textContent = t(title);
     content.replaceChildren();
     message();
@@ -159,15 +196,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     page("گروه‌ها و اعضا");
     const selected = groupInView();
     if (selected) {
-      const banner = element("div", "", "wizard-visual family-group-hero");
-      const label = element("p");
-      const name = element("strong", selected.name);
-      name.dir = "auto";
-      label.append(element("small", t("گروه فعال")), name);
-      const artwork = element("span", "", "family-group-art");
-      artwork.append(glassObject("control-user", "control"), glassObject("control-user", "control"));
-      banner.append(label, artwork);
-      content.append(banner);
+      content.append(groupBanner(selected.name, "گروه فعال", selected.icon));
       const groups = element("div", "", "family-group-tabs");
       groups.setAttribute("role", "group");
       groups.setAttribute("aria-label", t("انتخاب گروه فعال"));
@@ -222,11 +251,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     profile.prepend(icon("user"));
     controls.append(profile);
     content.append(controls);
-    if (overview.invitations.length) content.append(section("دعوت‌های دریافتی", overview.invitations.map(item => {
-      const card = element("article", "", "family-card");
-      card.append(element("h4", item.name), button(t("بررسی دعوت"), () => reviewInvite(item)));
-      return card;
-    })));
+    if (overview.invitations.length) content.append(invitationList(showHome));
     if (invite) {
       const found = overview.invitations.find(item => item.id === invite);
       invite = null;
@@ -236,16 +261,52 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     }
   }
 
+  function invitationList(backTo) {
+    const invitations = overview?.invitations ?? [];
+    return section("دعوت‌های دریافتی", invitations.length ? invitations.map(item => {
+      const card = element("article", "", "family-card");
+      card.append(element("h4", item.name), element("p", t("دعوت از {0}", item.inviter), "quiet"),
+        button(t("بررسی دعوت"), () => reviewInvite(item, backTo)));
+      return card;
+    }) : [element("p", t("دعوت تازه‌ای نداری."), "quiet")]);
+  }
+
+  function showInbox() {
+    page("دعوت‌های دریافتی", showHome);
+    content.append(invitationList(showInbox));
+  }
+
   function createGroup() {
     page("ساخت گروه", showHome);
-    const form = element("form", "", "family-content");
+    const form = element("form", "", "family-content family-compose sheet-form");
     const name = field("نام گروه", "name", "text");
-    name.querySelector("input").maxLength = 60;
-    form.append(hero(t("گروه‌های مراقبت")), name, element("p", t("مدیر گروه: {0}", overview.label), "family-card"),
+    const nameInput = name.querySelector("input");
+    nameInput.maxLength = 60;
+    nameInput.placeholder = t("مثلاً مراقبت از مادر");
+    const banner = groupBanner(t("گروه تازه"), "پیش‌نمایش", "group");
+    const options = element("fieldset", "", "family-icon-options");
+    options.append(element("legend", t("آیکون گروه")));
+    const tiles = element("div", "", "family-icon-grid");
+    for (const [id, label] of Object.entries(groupIcons)) {
+      const tile = element("label");
+      tile.title = t(label);
+      const input = document.createElement("input");
+      Object.assign(input, { type: "radio", name: "icon", value: id, checked: id === "group" });
+      input.setAttribute("aria-label", t(label));
+      tile.append(input, groupArt(id));
+      tiles.append(tile);
+    }
+    options.append(tiles);
+    nameInput.addEventListener("input", () => {
+      banner.querySelector("strong").textContent = nameInput.value.trim() || t("گروه تازه");
+    });
+    options.addEventListener("change", event => banner.querySelector(".family-group-art").replaceWith(groupArt(event.target.value)));
+    const manager = profileName(getState()?.personalProfile) || overview.label;
+    form.append(banner, name, options, element("p", t("مدیر گروه: {0}", manager), "quiet"),
       element("p", t("هر عضو دسترسی‌های خودش را تعیین می‌کند."), "quiet"), submitButton("ساخت گروه"));
     formSubmit(form, async data => {
-      const result = await familyRequest("create", { name: data.get("name").trim() });
-      await refresh(result.group);
+      const result = await familyRequest("create", { name: data.get("name").trim(), icon: data.get("icon") });
+      await refresh(result.group, true);
     });
     content.append(form);
   }
@@ -288,17 +349,54 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   function inviteMember(group) {
     page("دعوت به گروه", () => showGroup(group));
-    const form = element("form", "", "family-content");
-    const email = field("ایمیل عضو", "email", "email");
-    email.querySelector("input").dir = "ltr";
-    form.append(hero(group.name, t("هر عضو دسترسی‌های خودش را تعیین می‌کند."), "notification"),
-      email, submitButton("ارسال دعوت"));
-    formSubmit(form, async data => {
-      const { delivered } = await familyRequest("invite", { group: group.id, email: data.get("email"), language });
-      const next = await familyRequest();
-      overview = next;
-      inviteMember(next.groups.find(item => item.id === group.id));
+    const form = element("form", "", "family-content family-compose sheet-form");
+    const lookup = field("ایمیل یا نام کاربری", "query", "text");
+    const input = lookup.querySelector("input");
+    Object.assign(input, { dir: "ltr", autocapitalize: "none", spellcheck: false, maxLength: 254 });
+    const results = element("div", "", "family-search-result");
+    results.setAttribute("aria-live", "polite");
+    const find = submitButton("جست‌وجو");
+    input.addEventListener("input", () => { results.replaceChildren(); message(); });
+    form.append(groupBanner(group.name, "دعوت به گروه", group.icon), lookup, find, results);
+
+    async function send(fields) {
+      const request = generation;
+      const { delivered } = await familyRequest("invite", { group: group.id, ...fields, language });
+      if (!dialog.open || generation !== request) return;
+      await refreshGroup();
+      if (!dialog.open || generation !== request) return;
+      const updated = overview?.groups.find(item => item.id === group.id);
+      if (!updated) return;
+      inviteMember(updated);
       message(delivered ? "دعوت با ایمیل فرستاده شد." : "دعوت ثبت شد. برای فرستادن، لینک دعوت را کپی کنید.");
+    }
+
+    formSubmit(form, async data => {
+      const query = String(data.get("query")).trim();
+      const request = generation;
+      results.replaceChildren();
+      const { person } = await familyRequest("invite-lookup", { group: group.id, query });
+      if (!dialog.open || request !== generation || input.value.trim() !== query) return;
+      if (!person) {
+        results.append(element("p", t("حسابی پیدا نشد."), "quiet"));
+        if (query.includes("@")) results.append(action("دعوت برای ثبت‌نام", () => send({ email: query })));
+        else results.append(element("p", t("برای دعوت به ثبت‌نام، ایمیل را وارد کن."), "quiet"));
+        return;
+      }
+      const contact = button("", () => {
+        if (contact.getAttribute("aria-pressed") === "true") return;
+        contact.setAttribute("aria-pressed", "true");
+        const invite = action("ارسال دعوت", () => send({ username: person.username }));
+        invite.classList.add("block-action");
+        results.append(invite);
+        invite.focus();
+      });
+      contact.className = "family-roster-row";
+      contact.setAttribute("aria-pressed", "false");
+      const copy = element("span", "", "family-context-copy");
+      copy.append(element("strong", person.name || person.username), element("small", "@" + person.username));
+      contact.append(avatar(person.name || person.username), copy, icon("check", "family-access-icon"));
+      results.append(contact);
     });
     content.append(form, section("دعوت‌های در انتظار", group.pending.map(item => {
       const row = element("article", "", "family-card");
@@ -320,13 +418,13 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
         overview = await familyRequest();
         inviteMember(overview.groups.find(next => next.id === group.id));
       }));
-      row.append(element("h4", item.email), options);
+      row.append(element("h4", item.recipient ?? item.email), options);
       return row;
     })));
   }
 
-  function reviewInvite(item) {
-    page("دعوت به گروه", showHome);
+  function reviewInvite(item, backTo = showHome) {
+    page("دعوت به گروه", backTo);
     content.append(hero(item.name, t("دعوت از {0}", item.inviter), "notification"),
       action("پذیرش عضویت", async () => {
         const { group } = await familyRequest("accept", { invite: item.id });
@@ -611,6 +709,27 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     content.replaceChildren();
     returnTo = null;
   });
+  async function refreshInbox() {
+    if (!overview || document.hidden || !navigator.onLine) return;
+    const previous = overview;
+    try {
+      const { invitations } = await familyRequest("inbox");
+      if (previous !== overview) return;
+      overview.invitations = invitations;
+      renderInboxBadge(invitations);
+    } catch (reason) {
+      if (reason.message === "sign_in" && previous === overview) { overview = null; updateGroup(); }
+    }
+  }
+  setInterval(() => void refreshInbox(), 30000);
+  window.addEventListener("online", () => void refreshInbox());
+  $("open-care-inbox").addEventListener("click", () => {
+    if (!dialog.open) dialog.showModal();
+    showInbox();
+    fit();
+    const request = generation;
+    void refreshInbox().then(() => { if (dialog.open && generation === request) showInbox(); });
+  });
   $("open-family").addEventListener("click", () => void open());
   $("settings-open-family").addEventListener("click", () => {
     $("settings-dialog").close();
@@ -624,7 +743,10 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   });
   $("family-member-identity").addEventListener("click", () => getFamilyView()?.profile?.());
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && getFamilyView()) void checkAccess();
+    if (!document.hidden) {
+      void refreshInbox();
+      if (getFamilyView()) void checkAccess();
+    }
   });
   $("open-quick").addEventListener("click", () => quick.showModal());
   quick.addEventListener("click", event => {

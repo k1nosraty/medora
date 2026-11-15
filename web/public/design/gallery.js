@@ -44,7 +44,7 @@ const sample = { getState: () => state, today, render: noAction, mutate: noSave,
 const calendarPreview = installCalendarPreview(dates, now);
 const pickers = installPickers({ selectedDay: calendarPreview.selected, today, dashboard: {
   dateLimit: () => Infinity, chooseDay: calendarPreview.choose,
-  formatDay, formatMonth: dates.month, formatDayNumber: dates.dayNumber, monthStart: dates.monthStart
+  formatDay, formatMonth: dates.month, formatYear: dates.year, yearStart: dates.yearStart, formatShortMonth: dates.shortMonth, formatDayNumber: dates.dayNumber, monthStart: dates.monthStart
 } });
 const refreshFields = pickers.refresh;
 const openMedicine = installMedicineEditor({ ...sample, isBusy: () => false, removeMedicine: noAction, pickers });

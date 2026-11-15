@@ -21,6 +21,11 @@ export class Credentials extends DurableObject {
     return this.sql.exec("SELECT email_id, email, salt, proof FROM credentials_v1 WHERE username = ?", username).toArray()[0] ?? null;
   }
 
+  contactForInvite({ emailId, username }) {
+    return (emailId ? this.sql.exec("SELECT username,email,email_id FROM credentials_v1 WHERE email_id = ?", emailId) :
+      this.sql.exec("SELECT username,email,email_id FROM credentials_v1 WHERE username = ?", username)).toArray()[0] ?? null;
+  }
+
   list(after, query) {
     return this.sql.exec(`SELECT username, email, email_id, salt, created_at FROM credentials_v1
       WHERE username > ? AND (instr(username, ?) > 0 OR instr(email, ?) > 0)

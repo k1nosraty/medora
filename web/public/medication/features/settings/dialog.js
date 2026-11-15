@@ -95,6 +95,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
     if (panel === "profile-settings") {
       for (const [key, id] of Object.entries(profileInputs)) $(id).value = data.personalProfile?.[key] ?? "";
       $("profile-birth-date").max = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      refreshFields($("profile-form"));
       updateProfileAge();
       gender.value = genders.includes(data.gender) ? data.gender : "";
       cycle.checked = cycleIsEnabled(data);

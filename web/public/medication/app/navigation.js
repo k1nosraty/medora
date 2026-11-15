@@ -233,7 +233,10 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
         const start = monthStart(calendarSelection);
         renderCalendar(state, index, {
           day: calendarSelection, start, end: monthStart(start + 32) - 1, today: today(),
-          formatMonth: day => dates.month(day), formatDay, dateButton, selectDay: selectCalendarDay,
+          formatMonth: day => dates.month(day),
+    formatYear: day => dates.year(day),
+    yearStart: day => dates.yearStart(day),
+    formatShortMonth: day => dates.shortMonth(day), formatDay, dateButton, selectDay: selectCalendarDay,
           renderDose, renderRoutine, visitCard: appointments.visitCard,
           openWaterHistory: () => show("water"), canAddWater: !view || view.canRecord("water", calendarSelection),
           addWater: () => view ? view.record({ kind: "water", day: calendarSelection }) : water.openWater(null)
@@ -303,6 +306,9 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     screen: () => screen,
     formatDay,
     formatMonth: day => dates.month(day),
+    formatYear: day => dates.year(day),
+    yearStart: day => dates.yearStart(day),
+    formatShortMonth: day => dates.shortMonth(day),
     formatDayNumber: day => dates.dayNumber(day),
     dateLimit: () => screen === "water" ? today() : Infinity
   };

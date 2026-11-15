@@ -1,7 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
-import { careSession, normalizeEmail } from "../accounts/email-auth.mjs";
+import { careSession, inviteContact, normalizeEmail } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
 import { familySections, sharedCare } from "../../public/medication/domain/family.js";
+import { groupIconOf } from "../../public/medication/domain/group-icons.js";
 import { clean, idPattern } from "./care.mjs";
 
 const oneDay = 86_400_000;
@@ -22,15 +23,36 @@ export async function handleFamily(request, env, url) {
   if (!identity) return reply(failure("sign_in"), 401);
   const actor = { ...identity, person: session.id + (identity.epoch ? "." + identity.epoch : ""), label: session.username };
   const store = env.FAMILIES.getByName("care-groups");
-  if (request.method === "GET") return reply(await store.overview(actor));
+  if (request.method === "GET") {
+    return reply(url.searchParams.has("inbox") ? { invitations: await store.invitations(actor) } : await store.overview(actor));
+  }
   if (!data) return reply(failure("invalid"), 400);
   let result;
   switch (data.action) {
-    case "create": result = await store.create(actor, clean(data.name, 60)); break;
+    case "create": result = await store.create(actor, clean(data.name, 60), groupIconOf(data.icon)); break;
+    case "invite-lookup": {
+      if (!idPattern.test(data.group) || !await store.managesGroup(actor.person, data.group)) return reply(failure("forbidden"), 403);
+      const query = clean(data.query, 254).replace(/^@(?=[a-z0-9_]+$)/i, "");
+      if (!normalizeEmail(query) && !/^[a-z0-9_]{3,32}$/i.test(query)) return reply(failure("invalid"), 400);
+      const limit = await env.EMAIL_AUTH_LIMIT.limit({ key: "care-invite:" + session.id });
+      if (!limit.success) return reply(failure("limit"), 429);
+      const contact = await inviteContact(env, query);
+      const person = contact && contact.email !== actor.email ? {
+        username: contact.username,
+        name: await env.EMAIL_ACCOUNTS.getByName(contact.email_id).inviteProfileName()
+      } : null;
+      return reply({ person });
+    }
     case "invite": {
-      const email = normalizeEmail(data.email);
+      if (!idPattern.test(data.group) || !await store.managesGroup(actor.person, data.group)) return reply(failure("forbidden"), 403);
+      if (data.username && !(await env.EMAIL_AUTH_LIMIT.limit({ key: "care-send-invite:" + session.id })).success) {
+        return reply(failure("limit"), 429);
+      }
+      const contact = typeof data.username === "string" ? await inviteContact(env, data.username) : null;
+      if (data.username && !contact) return reply(failure("missing"), 404);
+      const email = contact?.email ?? normalizeEmail(data.email);
       if (!email || email === actor.email || !idPattern.test(data.group)) return reply(failure("invalid"), 400);
-      result = await store.invite(actor, data.group, email);
+      result = await store.invite(actor, data.group, email, contact?.username ?? null);
       if (result.invite && env.EMAIL_FROM && env.RESEND_API_KEY) {
         const link = new URL("/medication/#family-invite=" + result.invite, url.origin);
         try {
@@ -39,8 +61,9 @@ export async function handleFamily(request, env, url) {
             method: "POST", signal: AbortSignal.timeout(8000),
             headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
             body: JSON.stringify({ from: env.EMAIL_FROM, to: [email],
-              subject: english ? "Medora family invitation" : "دعوت به گروه خانوادگی مدورا",
-              text: english ? `Open this link to review the invitation: ${link}` : `برای بررسی دعوت، این پیوند را باز کنید: ${link}` })
+              subject: english ? "Medora care group invitation" : "دعوت به گروه مراقبت در مدورا",
+              text: english ? `Open this link to review the invitation: ${link}\nIf you do not have an account, sign up with this email address.` :
+                `برای بررسی دعوت، این پیوند را باز کنید: ${link}\nاگر حساب مدورا ندارید، با همین ایمیل ثبت‌نام کنید.` })
           });
           result.delivered = sent.ok;
           await sent.body?.cancel();
@@ -70,14 +93,14 @@ export class Families extends DurableObject {
     super(ctx, env);
     this.sql = ctx.storage.sql;
     this.sql.exec(`
-      CREATE TABLE IF NOT EXISTS family_groups (id TEXT PRIMARY KEY, name TEXT NOT NULL, owner TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS family_groups (id TEXT PRIMARY KEY, name TEXT NOT NULL, owner TEXT NOT NULL, icon TEXT NOT NULL DEFAULT 'group');
       CREATE TABLE IF NOT EXISTS family_members (
         id TEXT PRIMARY KEY, group_id TEXT NOT NULL REFERENCES family_groups(id), person TEXT NOT NULL, label TEXT NOT NULL,
         UNIQUE(group_id, person));
       CREATE INDEX IF NOT EXISTS family_members_person ON family_members(person, group_id);
       CREATE TABLE IF NOT EXISTS family_invites (
         id TEXT PRIMARY KEY, group_id TEXT NOT NULL REFERENCES family_groups(id), email TEXT NOT NULL,
-        created INTEGER NOT NULL, expires INTEGER NOT NULL, status TEXT NOT NULL);
+        created INTEGER NOT NULL, expires INTEGER NOT NULL, status TEXT NOT NULL, recipient_label TEXT);
       CREATE INDEX IF NOT EXISTS family_invites_email ON family_invites(email, status, expires);
       CREATE INDEX IF NOT EXISTS family_invites_group ON family_invites(group_id, status, expires);
       CREATE TABLE IF NOT EXISTS family_grants (
@@ -88,6 +111,12 @@ export class Families extends DurableObject {
       CREATE TABLE IF NOT EXISTS family_audit (
         id INTEGER PRIMARY KEY, group_id TEXT NOT NULL, actor TEXT NOT NULL, subject TEXT NOT NULL, action TEXT NOT NULL, time INTEGER NOT NULL);
     `);
+    if (!this.sql.exec("PRAGMA table_info(family_invites)").toArray().some(column => column.name === "recipient_label")) {
+      this.sql.exec("ALTER TABLE family_invites ADD COLUMN recipient_label TEXT");
+    }
+    if (!this.sql.exec("PRAGMA table_info(family_groups)").toArray().some(column => column.name === "icon")) {
+      this.sql.exec("ALTER TABLE family_groups ADD COLUMN icon TEXT NOT NULL DEFAULT 'group'");
+    }
   }
 
   audit(group, actor, subject, action) {
@@ -100,7 +129,7 @@ export class Families extends DurableObject {
 
   overview(actor) {
     const now = Date.now();
-    const groups = this.sql.exec(`SELECT g.id,g.name,(g.owner=?) AS manager FROM family_groups g
+    const groups = this.sql.exec(`SELECT g.id,g.name,g.icon,(g.owner=?) AS manager FROM family_groups g
       JOIN family_members m ON m.group_id=g.id WHERE m.person=? ORDER BY g.name`, actor.person, actor.person).toArray();
     for (const group of groups) {
       group.members = this.sql.exec(`SELECT m.id,m.label,(m.person=?) AS self,s.policy AS given,s.expires AS givenExpires,
@@ -109,37 +138,45 @@ export class Families extends DurableObject {
         LEFT JOIN family_grants r ON r.group_id=m.group_id AND r.owner=m.person AND r.recipient=? AND (r.expires IS NULL OR r.expires>?)
         WHERE m.group_id=? ORDER BY m.label`, actor.person, actor.person, now, actor.person, now, group.id).toArray()
         .map(row => ({ ...row, given: row.given && JSON.parse(row.given), received: row.received && JSON.parse(row.received) }));
-      group.pending = group.manager ? this.sql.exec(`SELECT id,email,expires FROM family_invites
+      group.pending = group.manager ? this.sql.exec(`SELECT id,COALESCE(recipient_label,email) AS recipient,expires FROM family_invites
         WHERE group_id=? AND status='pending' AND expires>? ORDER BY expires DESC`, group.id, now).toArray() : [];
     }
-    const invitations = this.sql.exec(`SELECT i.id,i.expires,g.name,m.label AS inviter FROM family_invites i
-      JOIN family_groups g ON g.id=i.group_id JOIN family_members m ON m.group_id=g.id AND m.person=g.owner
-      WHERE i.email=? AND i.status='pending' AND i.expires>? ORDER BY i.expires DESC`, actor.email, now).toArray();
-    return { groups, invitations, label: actor.label };
+    return { groups, invitations: this.invitations(actor), label: actor.label };
   }
 
-  create(actor, name) {
+  invitations(actor) {
+    return this.sql.exec(`SELECT i.id,i.expires,g.name,m.label AS inviter FROM family_invites i
+      JOIN family_groups g ON g.id=i.group_id JOIN family_members m ON m.group_id=g.id AND m.person=g.owner
+      WHERE i.email=? AND i.status='pending' AND i.expires>? ORDER BY i.expires DESC`, actor.email, Date.now()).toArray();
+  }
+
+  managesGroup(person, group) {
+    return this.sql.exec("SELECT 1 FROM family_groups WHERE id=? AND owner=?", group, person).toArray().length > 0;
+  }
+
+  create(actor, name, icon) {
     if (!name) return failure("invalid");
     return this.ctx.storage.transactionSync(() => {
       if (this.sql.exec("SELECT count(*) n FROM family_members WHERE person=?", actor.person).one().n >= 40) return failure("limit");
       const id = crypto.randomUUID();
-      this.sql.exec("INSERT INTO family_groups VALUES(?,?,?)", id, name, actor.person);
+      this.sql.exec("INSERT INTO family_groups (id,name,owner,icon) VALUES(?,?,?,?)", id, name, actor.person, icon);
       this.sql.exec("INSERT INTO family_members VALUES(?,?,?,?)", crypto.randomUUID(), id, actor.person, actor.label);
       this.audit(id, actor.person, actor.person, "create");
       return { group: id };
     });
   }
 
-  invite(actor, group, email) {
+  invite(actor, group, email, recipient) {
     return this.ctx.storage.transactionSync(() => {
-      if (!this.sql.exec("SELECT 1 FROM family_groups WHERE id=? AND owner=?", group, actor.person).toArray().length) return failure("forbidden");
+      if (!this.managesGroup(actor.person, group)) return failure("forbidden");
       const now = Date.now();
       const existing = this.sql.exec(`SELECT 1 FROM family_invites WHERE group_id=? AND email=? AND
         status='pending' AND expires>?`, group, email, now).toArray();
       if (existing.length) return failure("conflict");
       if (this.sql.exec("SELECT count(*) n FROM family_invites WHERE group_id=? AND created>?", group, now - oneDay).one().n >= 20) return failure("limit");
       const id = crypto.randomUUID();
-      this.sql.exec("INSERT INTO family_invites VALUES(?,?,?,?,?,'pending')", id, group, email, now, now + 3 * oneDay);
+      this.sql.exec("INSERT INTO family_invites (id,group_id,email,created,expires,status,recipient_label) VALUES(?,?,?,?,?,'pending',?)",
+        id, group, email, now, now + 3 * oneDay, recipient);
       this.audit(group, actor.person, actor.person, "invite");
       return { invite: id };
     });

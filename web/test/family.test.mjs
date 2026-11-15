@@ -72,9 +72,28 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.equal((await family()).status, 401);
     const a = await signup("family_a");
     const b = await signup("family_b");
-    const { group } = await (await family(a, { action: "create", name: "Family" })).json();
+    const { group } = await (await family(a, { action: "create", name: "Family", icon: "heart" })).json();
     const { group: otherGroup } = await (await family(a, { action: "create", name: "Other family" })).json();
-    await invite(a, b, group, "family_b@example.com");
+    const lookup = { action: "invite-lookup", group, query: "family_b" };
+    assert.equal((await family(b, lookup)).status, 403);
+    for (const query of ["family_b", "@family_b", "family_b@example.com"]) {
+      assert.deepEqual(await (await family(a, { ...lookup, query })).json(), { person: { username: "family_b", name: "" } });
+    }
+    assert.deepEqual(await (await family(a, { ...lookup, query: "new_member@example.com" })).json(), { person: null });
+    const existingInvite = await (await family(a, { action: "invite", group, username: "family_b" })).json();
+    assert.equal(existingInvite.delivered, true);
+    const overview = (await (await family(a)).json()).groups.find(item => item.id === group);
+    assert.equal(overview.icon, "heart");
+    assert.equal(overview.pending[0].recipient, "family_b");
+    assert.equal(JSON.stringify(overview).includes("family_b@example.com"), false);
+    const inbox = await (await call("family?inbox=1", null, b)).json();
+    assert.equal(inbox.invitations[0].id, existingInvite.invite);
+    assert.equal((await family(b, { action: "accept", invite: existingInvite.invite })).status, 200);
+    assert.deepEqual(await (await call("family?inbox=1", null, b)).json(), { invitations: [] });
+    const newInvite = await (await family(a, { action: "invite", group, email: "new_member@example.com" })).json();
+    assert.equal(newInvite.delivered, true);
+    const newcomer = await signup("new_member");
+    assert.equal((await family(newcomer, { action: "accept", invite: newInvite.invite })).status, 200);
     await invite(a, b, otherGroup, "family_b@example.com");
     const [aId, bId, otherA] = await Promise.all([
       membership(a, group, true), membership(b, group, true), membership(a, otherGroup, true)

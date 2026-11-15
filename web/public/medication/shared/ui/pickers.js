@@ -15,9 +15,29 @@ export function installPickers({ today, selectedDay, dashboard }) {
   let dateLimit;
   let onPickDate;
   let timeField;
+  const birthJump = $("picker-birth-jump");
+  const birthYear = $("picker-birth-year");
+  const birthMonth = $("picker-birth-month");
+
+  function setBirthMonths() {
+    const year = dashboard.yearStart(shownMonth);
+    birthYear.value = year;
+    const months = [];
+    for (let month = year; months.length < 12 && month <= dateLimit; month = dashboard.monthStart(month + 32)) {
+      months.push(new Option(dashboard.formatShortMonth(month), month));
+    }
+    birthMonth.replaceChildren(...months);
+    birthMonth.value = shownMonth;
+  }
+
+  for (const control of [birthYear, birthMonth]) control.addEventListener("change", () => {
+    shownMonth = Number(control.value);
+    drawDate();
+  });
 
   function drawDate() {
     $("picker-month").textContent = dashboard.formatMonth(shownMonth);
+    if (!birthJump.hidden) setBirthMonths();
     const leading = weekIndex(shownMonth);
     const end = dashboard.monthStart(shownMonth + 32);
     const heading = shortWeek.map(label => {
@@ -44,14 +64,23 @@ export function installPickers({ today, selectedDay, dashboard }) {
       return control;
     });
     $("picker-days").replaceChildren(...heading, ...cells);
-    $("picker-date-confirm").disabled = pickedDay > dateLimit;
+    $("picker-date-confirm").disabled = pickedDay > dateLimit || (!birthJump.hidden && dashboard.monthStart(pickedDay) !== shownMonth);
+    $("picker-next-month").disabled = !birthJump.hidden && end > dateLimit;
   }
 
-  function openDate(day, max, select, optional = false) {
+  function openDate(day, max, select, optional = false, birthday = false) {
     pickedDay = day;
     shownMonth = dashboard.monthStart(day);
     dateLimit = max;
     onPickDate = select;
+    birthJump.hidden = !birthday;
+    if (birthday) {
+      const years = [];
+      for (let start = dashboard.yearStart(max); years.length <= 131; start = dashboard.yearStart(start - 1)) {
+        years.push(new Option(dashboard.formatYear(start), start));
+      }
+      birthYear.replaceChildren(...years);
+    }
     $("picker-clear-date").hidden = !optional;
     drawDate();
     dateSheet.showModal();
@@ -135,7 +164,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
           } else {
             const max = Number.isInteger(dayNumber(field.max)) ? dayNumber(field.max) : Infinity;
             openDate(Number.isInteger(dayNumber(field.value)) ? dayNumber(field.value) : today(), max,
-              day => setValue(field, day === null ? "" : isoDay(day)), !field.required);
+              day => setValue(field, day === null ? "" : isoDay(day)), !field.required, field.id === "profile-birth-date");
           }
         });
         field.hidden = true;
