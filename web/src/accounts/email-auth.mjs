@@ -1,14 +1,17 @@
-import { operations, logOperation } from "../operations/routes.mjs";
+import { codeKey, identityKey, passwordKey, passwordVersion, sessionKey, validAuthKeys } from "./keys.mjs";
+import { operations, logOperation } from "../operations/audit.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { scryptSync } from "node:crypto";
 import { applyFamilyChange } from "../family/care.mjs";
 import { profileName } from "../../public/medication/domain/profile.js";
 import { smallJson } from "../http/validation.mjs";
+import { careSnapshotFits, careVersion } from "../../public/medication/domain/care-records.js";
 
 const cookieName = "__Host-medora_session";
 const minute = 60_000;
 const day = 24 * 60 * minute;
 const sessionAge = 30 * day;
+const familyReplayAge = 7 * day;
 const encoder = new TextEncoder();
 const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
 const sessionPattern = /^([a-f0-9]{64})\.([a-f0-9]{64})\.([a-f0-9]{64})$/;
@@ -35,7 +38,7 @@ function randomCode() {
 }
 function configured(env) {
   return Boolean(env.EMAIL_ACCOUNTS && env.CREDENTIALS && env.EMAIL_AUTH_LIMIT &&
-    /^[a-f0-9]{64}$/i.test(env.EMAIL_AUTH_SECRET ?? ""));
+    validAuthKeys(env));
 }
 function canSendCode(env) {
   return Boolean(configured(env) && env.RESEND_API_KEY && env.EMAIL_FROM);
@@ -52,15 +55,11 @@ function usernameOf(username) {
 function validPassword(password) {
   return typeof password === "string" && password.length <= 128 && [...password].length >= 15;
 }
-const accountId = (env, email) => hmac(env.EMAIL_AUTH_SECRET, "account-v1", email);
-const credentials = env => env.CREDENTIALS.getByName("medora-credentials-v1");
-export async function inviteContact(env, value) {
-  const email = normalizeEmail(value);
-  const username = usernameOf(value);
-  if (email) return credentials(env).contactForInvite({ emailId: await accountId(env, email) });
-  return username ? credentials(env).contactForInvite({ username }) : null;
+const accountScope = (id, epoch) => epoch ? id + "." + epoch : id;
+async function accountId(env, email) {
+  return await credentials(env).accountIdFor(email) ?? await hmac(identityKey(env), "account-v1", email);
 }
-
+const credentials = env => env.CREDENTIALS.getByName("medora-credentials-v1");
 async function passwordProof(secret, password, salt) {
   const peppered = await hmac(secret, "password-v1", password);
   return hex(scryptSync(peppered, salt, 32, { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }));
@@ -78,12 +77,12 @@ async function readSession(request, secret) {
 }
 export async function signedInEmail(request, env) {
   if (!configured(env)) return null;
-  const session = await readSession(request, env.EMAIL_AUTH_SECRET);
+  const session = await readSession(request, sessionKey(env));
   return session ? env.EMAIL_ACCOUNTS.getByName(session.id).session(session.token) : null;
 }
 export async function careSession(request, env) {
   if (!configured(env)) return null;
-  const session = await readSession(request, env.EMAIL_AUTH_SECRET);
+  const session = await readSession(request, sessionKey(env));
   const username = session && await credentials(env).usernameFor(session.id);
   return username ? { ...session, username } : null;
 }
@@ -99,7 +98,7 @@ function reply(data, status = 200, setCookie) {
   return Response.json(data, { status, headers });
 }
 
-const deletionTag = (env, record) => hmac(env.EMAIL_AUTH_SECRET, "delete-account-v1", `${record.email_id}:${record.salt}`);
+const deletionTag = (env, record) => hmac(sessionKey(env), "delete-account-v1", `${record.email_id}:${record.salt}`);
 
 export async function handleAdminAccounts(request, env, url, ctx) {
   if (!["GET", "DELETE", "PATCH"].includes(request.method)) return reply({ error: "method" }, 405);
@@ -135,7 +134,7 @@ export async function handleAdminAccounts(request, env, url, ctx) {
     const audit = logOperation(env, actor, revoke ? "sessions_revoked" : "account_removed");
     if (audit) ctx.waitUntil(audit);
   }
-  return removed ? reply({}) : reply({ error: "account_changed" }, 409);
+  return removed ? reply(revoke ? {} : { cleanup: await client.removalStatus() }) : reply({ error: "account_changed" }, 409);
 }
 
 export async function handleEmailAuth(request, env, url, ctx) {
@@ -148,7 +147,7 @@ export async function handleEmailAuth(request, env, url, ctx) {
   if (request.method !== "POST" || !authRoutes.includes(route)) return reply({ error: "not_found" }, 404);
   if (request.headers.get("Origin") !== url.origin) return reply({ error: "forbidden" }, 403);
   if (route === "logout") {
-    const session = await readSession(request, env.EMAIL_AUTH_SECRET);
+    const session = await readSession(request, sessionKey(env));
     if (env.EMAIL_ACCOUNTS && session) await env.EMAIL_ACCOUNTS.getByName(session.id).logout(session.token);
     return reply({}, 200, cookie("", 0));
   }
@@ -178,11 +177,11 @@ export async function handleEmailAuth(request, env, url, ctx) {
     const username = usernameOf(body?.username);
     if (!username) return reply({ error: "username" }, 400);
     if (!validPassword(body?.password)) return reply({ error: "password" }, 400);
-    const session = body?.grant ? null : await readSession(request, env.EMAIL_AUTH_SECRET);
+    const session = body?.grant ? null : await readSession(request, sessionKey(env));
     const email = body?.grant ? normalizeEmail(body.email) :
       session && await env.EMAIL_ACCOUNTS.getByName(session.id).session(session.token);
     if (!email) return reply({ error: "setup_expired" }, 401);
-    const id = await accountId(env, email);
+    const id = session?.id ?? await accountId(env, email);
     const grant = body.grant ? await readGrant(env, id, body.grant) : null;
     if (body.grant && !grant) return reply({ error: "setup_expired" }, 401);
     const client = env.EMAIL_ACCOUNTS.getByName(id);
@@ -192,7 +191,7 @@ export async function handleEmailAuth(request, env, url, ctx) {
   }
   const email = normalizeEmail(body?.email);
   if (!email) return reply({ error: "email" }, 400);
-  const secret = env.EMAIL_AUTH_SECRET;
+  const secret = codeKey(env);
   const id = await accountId(env, email);
   const client = env.EMAIL_ACCOUNTS.getByName(id);
   if (route === "reset-code") {
@@ -237,13 +236,13 @@ async function readGrant(env, id, value) {
   const match = typeof value === "string" && value.match(grantPattern);
   if (!match || Number(match[1]) <= Date.now()) return null;
   const proof = value.slice(0, value.lastIndexOf("."));
-  if (!equal(match[3], await hmac(env.EMAIL_AUTH_SECRET, "enrollment-v1", `${id}.${proof}`))) return null;
+  if (!equal(match[3], await hmac(codeKey(env), "enrollment-v1", `${id}.${proof}`))) return null;
   return { expires: Number(match[1]), epoch: match[2] ?? "" };
 }
 
 async function signedIn(env, email, username, id, token) {
   const value = `${id}.${token}`;
-  const signature = await hmac(env.EMAIL_AUTH_SECRET, "session-v1", value);
+  const signature = await hmac(sessionKey(env), "session-v1", value);
   return reply(account(email, env, username), 200, cookie(`${value}.${signature}`, sessionAge / 1000));
 }
 
@@ -258,13 +257,15 @@ export class EmailAccount extends DurableObject {
       CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS password_attempts (id INTEGER PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS account_reset (id INTEGER PRIMARY KEY, epoch TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS family_operations (operation TEXT PRIMARY KEY, expires INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS family_operations_expiry ON family_operations(expires);
     `);
   }
 
   async start(email, language, id = crypto.randomUUID(), reset = false) {
     const table = reset ? "reset_challenge" : "challenge";
     const code = randomCode();
-    const proof = await hmac(this.env.EMAIL_AUTH_SECRET, reset ? "reset-code-v1" : "code-v1", `${id}:${code}`);
+    const proof = await hmac(codeKey(this.env), reset ? "reset-code-v1" : "code-v1", `${id}:${code}`);
     const now = Date.now();
     this.prune(now);
     const recent = this.sql.exec("SELECT sent FROM deliveries ORDER BY sent DESC").toArray();
@@ -306,7 +307,7 @@ export class EmailAccount extends DurableObject {
 
   async takeCode(challenge, code, reset = false) {
     const table = reset ? "reset_challenge" : "challenge";
-    const proof = await hmac(this.env.EMAIL_AUTH_SECRET, reset ? "reset-code-v1" : "code-v1", `${challenge}:${code}`);
+    const proof = await hmac(codeKey(this.env), reset ? "reset-code-v1" : "code-v1", `${challenge}:${code}`);
     const row = this.sql.exec(`SELECT proof, attempts FROM ${table} WHERE id = ? AND expires > ?`, challenge, Date.now()).toArray()[0];
     if (!row) return false;
     if (!equal(proof, row.proof)) {
@@ -326,9 +327,9 @@ export class EmailAccount extends DurableObject {
     return this.ctx.blockConcurrencyWhile(async () => {
       if (!await this.takeCode(challenge, code, true)) return false;
       const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-      const proof = await passwordProof(this.env.EMAIL_AUTH_SECRET, password, salt);
+      const proof = await passwordProof(passwordKey(this.env), password, salt);
       this.sql.exec("DELETE FROM sessions; DELETE FROM password_attempts; DELETE FROM reset_challenge;");
-      return credentials(this.env).replacePassword(id, salt, proof);
+      return credentials(this.env).replacePassword(id, salt, proof, passwordVersion(this.env));
     });
   }
 
@@ -338,12 +339,13 @@ export class EmailAccount extends DurableObject {
 
   async register(username, id, email, password, grant, sessionToken) {
     return this.ctx.blockConcurrencyWhile(async () => {
+      if (await this.ctx.storage.get("account-deletion")) return { error: "setup_expired" };
       const verified = grant ? grant.epoch === this.epoch() && grant.expires > Date.now() :
         sessionToken && await this.session(sessionToken) === email;
       if (!verified) return { error: "setup_expired" };
       const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-      const proof = await passwordProof(this.env.EMAIL_AUTH_SECRET, password, salt);
-      const error = await credentials(this.env).register(username, id, email, salt, proof);
+      const proof = await passwordProof(passwordKey(this.env), password, salt);
+      const error = await credentials(this.env).register(username, id, email, salt, proof, passwordVersion(this.env));
       return error ? { error } : { token: await this.createSession(email) };
     });
   }
@@ -352,12 +354,20 @@ export class EmailAccount extends DurableObject {
     return this.ctx.blockConcurrencyWhile(async () => {
       const record = await credentials(this.env).find(username);
       if (record?.email_id !== emailId) return { error: "credentials" };
+      if (await this.ctx.storage.get("account-deletion")) return { error: "credentials" };
       const now = Date.now();
       const attempts = this.sql.exec("SELECT count, expires FROM password_attempts WHERE id = 1 AND expires > ?", now).toArray()[0];
       if (attempts?.count >= 10) return { error: "rate_limit" };
       this.sql.exec("INSERT OR REPLACE INTO password_attempts VALUES (1, ?, ?)",
         (attempts?.count ?? 0) + 1, attempts?.expires ?? now + 15 * minute);
-      if (!equal(record.proof, await passwordProof(this.env.EMAIL_AUTH_SECRET, password, record.salt))) return { error: "credentials" };
+      const currentVersion = passwordVersion(this.env);
+      const key = passwordKey(this.env, record.password_key);
+      if (!key || !equal(record.proof, await passwordProof(key, password, record.salt))) return { error: "credentials" };
+      if (record.password_key !== currentVersion) {
+        const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+        const proof = await passwordProof(passwordKey(this.env), password, salt);
+        await credentials(this.env).replacePassword(emailId, salt, proof, currentVersion);
+      }
       this.sql.exec("DELETE FROM password_attempts WHERE id = 1");
       return { token: await this.createSession(record.email) };
     });
@@ -369,24 +379,84 @@ export class EmailAccount extends DurableObject {
       const record = await index.find(username);
       if (record?.email_id !== emailId || record.salt !== salt || isAdminEmail(record.email, this.env)) return false;
       await this.ctx.storage.transaction(async storage => {
-        this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM reset_challenge; DELETE FROM deliveries; DELETE FROM password_attempts;");
+        if (await storage.get("account-deletion")) return;
+        const job = { username, emailId, salt, email: record.email, owner: accountScope(emailId, this.epoch()),
+          devices: await storage.get("reminder-devices") ?? [], at: Date.now() + 100,
+          counts: { familyRows: 0, devices: 0, operationKeys: this.sql.exec("SELECT count(*) AS n FROM family_operations").one().n } };
+        this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM reset_challenge; DELETE FROM deliveries; DELETE FROM password_attempts; DELETE FROM family_operations;");
         this.sql.exec("INSERT OR REPLACE INTO account_reset VALUES (1, ?)", hex(crypto.getRandomValues(new Uint8Array(16))));
-        await storage.delete(["care-sync", "care-zone"]);
+        await storage.delete(["care-sync", "care-zone", "reminder-devices", "reminder-update"]);
+        await storage.put("account-deletion", job);
+        await storage.setAlarm(job.at);
       });
-      await this.ctx.storage.deleteAlarm();
-      return index.remove(username, emailId, salt);
+      // The alarm retries if a dependency fails after access has been revoked.
+      await this.finishRemoval(false);
+      return true;
     });
   }
 
-  async restoreCare(snapshot, epoch) {
+  async finishRemoval(dueOnly = true) {
+    const { storage } = this.ctx;
+    const job = await storage.get("account-deletion");
+    if (!job || (dueOnly && job.at > Date.now())) return;
+    try {
+      if (!job.familyDone) {
+        job.counts.familyRows += await this.env.FAMILIES?.getByName("care-groups").eraseAccount(job.owner, job.email) ?? 0;
+        job.familyDone = true;
+        await storage.put("account-deletion", job);
+      }
+      const batch = job.devices.slice(0, 15);
+      for (const device of batch) {
+        await this.env.REMINDERS.getByName(device).detachAccountPlan(job.owner);
+        job.counts.devices++;
+        job.devices = job.devices.slice(1);
+        await storage.put("account-deletion", job);
+      }
+      const keys = await storage.list({ prefix: "family-operation:", limit: 128 });
+      job.counts.operationKeys += keys.size;
+      await storage.transaction(async txn => {
+        if (keys.size) await txn.delete([...keys.keys()]);
+        await txn.put("account-deletion", { ...job, at: Date.now() + 250 });
+      });
+      if (keys.size === 128 || job.devices.length) {
+        return;
+      }
+      await credentials(this.env).remove(job.username, job.emailId, job.salt);
+      await storage.transaction(async txn => {
+        await txn.put("account-deletion-summary", { ...job.counts, expires: Date.now() + day });
+        await txn.delete("account-deletion");
+      });
+    } catch {
+      await storage.put("account-deletion", { ...job, at: Date.now() + 30_000 });
+    } finally {
+      await this.scheduleCleanup();
+    }
+  }
+
+  async removalStatus() {
+    const job = await this.ctx.storage.get("account-deletion");
+    if (job) return { status: "pending", ...job.counts, remainingDevices: job.devices.length, familyPending: !job.familyDone };
+    const summary = await this.ctx.storage.get("account-deletion-summary");
+    if (!summary) return { status: "complete" };
+    const { expires, ...counts } = summary;
+    return { status: "complete", ...counts };
+  }
+
+  async restoreCare(snapshot, epoch, zone, devices) {
     return this.ctx.storage.transaction(async storage => {
       const currentEpoch = this.epoch();
       const current = await storage.get("care-sync");
+      const currentZone = await storage.get("care-zone");
+      const registered = await storage.get("reminder-devices");
       if ((currentEpoch && currentEpoch !== epoch) || (current && JSON.stringify(current) !== JSON.stringify(snapshot))) {
         return false;
       }
+      if ((zone !== undefined && currentZone && currentZone !== zone) ||
+          (devices && registered && JSON.stringify(registered) !== JSON.stringify(devices))) return false;
       if (epoch) this.sql.exec("INSERT OR IGNORE INTO account_reset VALUES (1, ?)", epoch);
+      if (zone) await storage.put("care-zone", zone);
       if (snapshot.records && !current) await storage.put("care-sync", snapshot);
+      if (devices?.length) await storage.put("reminder-devices", devices);
       return true;
     });
   }
@@ -394,7 +464,9 @@ export class EmailAccount extends DurableObject {
   async exportCare() {
     return this.ctx.storage.transaction(async storage => ({
       care: await storage.get("care-sync") ?? { revision: 0, records: null },
-      epoch: this.epoch()
+      epoch: this.epoch(),
+      zone: await storage.get("care-zone") ?? null,
+      devices: await storage.get("reminder-devices") ?? []
     }));
   }
 
@@ -421,33 +493,45 @@ export class EmailAccount extends DurableObject {
     return profileName(snapshot?.records?.settings?.personalProfile);
   }
 
-  async changeFamilyCare(epoch, data, actor, label, displayName) {
+  async changeFamilyCare(epoch, data, actor, label, displayName, account) {
     const entryId = crypto.randomUUID();
     return this.ctx.storage.transaction(async storage => {
       if (this.epoch() !== epoch) return { error: "forbidden" };
       const key = ["family-operation", epoch, actor, data.group, data.operation].join(":");
-      if (await storage.get(key)) return { replay: true };
+      const now = Date.now();
+      if (this.sql.exec("SELECT 1 FROM family_operations WHERE operation=? AND expires>?", key, now).toArray().length ||
+          (await storage.get(key) ?? 0) + familyReplayAge > now) return { replay: true };
       const current = await storage.get("care-sync") ?? { revision: 0, records: null };
       if (!current.records) return { error: "sync_required" };
+      const zone = await storage.get("care-zone") ?? "Asia/Tehran";
       const records = applyFamilyChange(current.records, { ...data, id: data.action === "add" || data.kind === "water"
-        ? entryId : data.id }, label, await storage.get("care-zone") ?? "Asia/Tehran", Date.now(), displayName);
+        ? entryId : data.id }, label, zone, now, displayName);
       if (typeof records === "string") return { error: records };
+      const owner = accountScope(account, epoch);
+      if (!careSnapshotFits(owner, current.revision + 1, records, zone)) {
+        return { error: "care_too_large" };
+      }
       await storage.put("care-sync", { revision: current.revision + 1, records });
-      await storage.put(key, Date.now());
+      this.sql.exec("INSERT OR REPLACE INTO family_operations VALUES (?,?)", key, now + familyReplayAge);
+      await this.queueReminderUpdate(storage, owner);
+      const alarm = await storage.getAlarm();
+      if (alarm === null || alarm > now + familyReplayAge) await storage.setAlarm(now + familyReplayAge);
       return { ok: true };
     });
   }
 
-  async readCareForSession(token) {
+  async readCareForSession(token, owner, known) {
     const hash = await sessionHash(token);
     return this.ctx.storage.transaction(async storage => {
       if (!this.activeSessionEmail(hash)) return null;
       const snapshot = await storage.get("care-sync") ?? { revision: 0, records: null };
-      return { epoch: this.epoch(), ...snapshot };
+      const epoch = this.epoch();
+      if (known && known === careVersion(accountScope(owner, epoch), snapshot.revision)) return { unchanged: known };
+      return { epoch, ...snapshot };
     });
   }
 
-  async saveCareSnapshot(revision, records, generation, token, zone) {
+  async saveCareSnapshot(revision, records, generation, token, zone, id) {
     const hash = await sessionHash(token);
     return this.ctx.storage.transaction(async storage => {
       if (!this.activeSessionEmail(hash)) return { signedOut: true };
@@ -455,9 +539,78 @@ export class EmailAccount extends DurableObject {
       const current = await storage.get("care-sync") ?? { revision: 0 };
       if (current.revision !== revision) return null;
       const next = { revision: revision + 1, records };
+      const owner = accountScope(id, generation);
+      if (!careSnapshotFits(owner, next.revision, records, zone ?? await storage.get("care-zone") ?? "Asia/Tehran")) {
+        return { tooLarge: true };
+      }
       await storage.put("care-sync", next);
       if (zone) await storage.put("care-zone", zone);
+      await this.queueReminderUpdate(storage, owner);
       return next;
+    });
+  }
+
+  async reminderScope(token, id) {
+    const hash = await sessionHash(token);
+    return this.ctx.storage.transaction(async storage => {
+      if (!this.activeSessionEmail(hash)) return null;
+      const snapshot = await storage.get("care-sync");
+      return snapshot?.records ? { owner: accountScope(id, this.epoch()), revision: snapshot.revision } : null;
+    });
+  }
+
+  async registerReminderDevice(token, id, owner, device) {
+    const hash = await sessionHash(token);
+    return this.ctx.storage.transaction(async storage => {
+      if (!this.activeSessionEmail(hash) || accountScope(id, this.epoch()) !== owner || !this.env.REMINDERS) return false;
+      const devices = await storage.get("reminder-devices") ?? [];
+      if (!devices.includes(device)) await storage.put("reminder-devices", [...devices, device]);
+      await this.queueReminderUpdate(storage, owner);
+      return true;
+    });
+  }
+
+  async resumeReminderDevice(id, owner, device) {
+    return this.ctx.storage.transaction(async storage => {
+      if (accountScope(id, this.epoch()) !== owner || !(await storage.get("reminder-devices"))?.includes(device) ||
+          !(await storage.get("care-sync"))?.records) return false;
+      await this.queueReminderUpdate(storage, owner);
+      return true;
+    });
+  }
+
+  async queueReminderUpdate(storage, owner) {
+    if (!(await storage.get("reminder-devices"))?.length) return;
+    const at = Date.now() + 100;
+    await storage.put("reminder-update", { owner, at, id: crypto.randomUUID() });
+    const alarm = await storage.getAlarm();
+    if (alarm === null || alarm > at) await storage.setAlarm(at);
+  }
+
+  async updateReminders() {
+    const { storage } = this.ctx;
+    const [job, snapshot, devices] = await storage.transaction(async txn => [
+      await txn.get("reminder-update"), await txn.get("care-sync"), await txn.get("reminder-devices") ?? []
+    ]);
+    if (!job || !snapshot?.records || job.at > Date.now()) return;
+    let failed = false;
+    const unlinked = new Set();
+    if (this.env.MEDORA_MAINTENANCE === "true" || this.env.MEDORA_PAUSE_PUSH === "true") failed = true;
+    else for (let i = 0; i < devices.length; i += 3) {
+      const batch = devices.slice(i, i + 3);
+      const results = await Promise.allSettled(batch.map(device =>
+        this.env.REMINDERS.getByName(device).replaceAccountPlan(job.owner, snapshot.revision, snapshot.records)));
+      failed ||= results.some(result => result.status === "rejected");
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled" && result.value === "unlinked") unlinked.add(batch[index]);
+      });
+    }
+    await storage.transaction(async txn => {
+      const current = await txn.get("reminder-update");
+      if (current?.id !== job.id) return;
+      if (unlinked.size) await txn.put("reminder-devices", devices.filter(device => !unlinked.has(device)));
+      if (failed) await txn.put("reminder-update", { ...job, at: Date.now() + 30_000 });
+      else await txn.delete("reminder-update");
     });
   }
 
@@ -501,15 +654,47 @@ export class EmailAccount extends DurableObject {
     this.sql.exec("DELETE FROM challenge WHERE expires <= ?", now);
     this.sql.exec("DELETE FROM reset_challenge WHERE expires <= ?", now);
     this.sql.exec("DELETE FROM sessions WHERE expires <= ?", now);
+    this.sql.exec("DELETE FROM family_operations WHERE expires <= ?", now);
+  }
+
+  async migrateLegacyFamilyOperations() {
+    const { storage } = this.ctx;
+    if (await storage.get("family-operations-migrated")) return;
+    await storage.transaction(async txn => {
+      const keys = await txn.list({ prefix: "family-operation:", limit: 100 });
+      const now = Date.now();
+      for (const [key, recorded] of keys) {
+        const expires = recorded + familyReplayAge;
+        if (Number.isSafeInteger(expires) && expires > now) {
+          this.sql.exec("INSERT OR IGNORE INTO family_operations VALUES (?,?)", key, expires);
+        }
+      }
+      if (keys.size) await txn.delete([...keys.keys()]);
+      if (keys.size < 100) await txn.put("family-operations-migrated", true);
+    });
   }
 
   async scheduleCleanup() {
-    const { next } = this.sql.exec("SELECT MIN(value) AS next FROM (SELECT sent + ? AS value FROM deliveries UNION ALL SELECT expires FROM challenge UNION ALL SELECT expires FROM reset_challenge UNION ALL SELECT expires FROM sessions)", day).one();
-    if (next !== null) await this.ctx.storage.setAlarm(next);
+    await this.ctx.storage.transaction(async storage => {
+      const { next } = this.sql.exec("SELECT MIN(value) AS next FROM (SELECT sent + ? AS value FROM deliveries UNION ALL SELECT expires FROM challenge UNION ALL SELECT expires FROM reset_challenge UNION ALL SELECT expires FROM sessions UNION ALL SELECT expires FROM family_operations)", day).one();
+      const job = await storage.get("reminder-update");
+      const deletion = await storage.get("account-deletion");
+      const summary = await storage.get("account-deletion-summary");
+      const legacy = await storage.get("family-operations-migrated") ? Infinity : Date.now() + 250;
+      const alarm = Math.min(next ?? Infinity, job?.at ?? Infinity, deletion?.at ?? Infinity, summary?.expires ?? Infinity, legacy);
+      if (Number.isFinite(alarm)) await storage.setAlarm(alarm);
+    });
   }
 
   async alarm() {
     this.prune(Date.now());
+    if ((await this.ctx.storage.get("account-deletion-summary"))?.expires <= Date.now()) {
+      await this.ctx.storage.delete("account-deletion-summary");
+    }
+    if (await this.ctx.storage.get("account-deletion")) {
+      await this.ctx.blockConcurrencyWhile(() => this.finishRemoval());
+    } else await this.migrateLegacyFamilyOperations();
+    await this.updateReminders();
     await this.scheduleCleanup();
   }
 }

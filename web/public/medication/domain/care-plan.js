@@ -82,23 +82,25 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
     excluded.set(dose.medicineId, items);
   }
   const rules = Object.values(state.medicines).filter(medicine => !medicine.paused && !medicine.archived)
-    .flatMap(medicine => medicine.phases.map(phase => {
+    .flatMap(medicine => medicine.phases.flatMap(phase => {
       const suppressed = (excluded.get(medicine.id) ?? []).filter(({ day, minute }) =>
         day >= phase.start && (phase.end === null || day < phase.end) && phase.slots.some(slot => slot.minute === minute));
-      return {
+      const snoozes = suppressed.filter(dose => dose.status === "snoozed" && dose.snoozeUntil > now)
+        .map(dose => [dose.day, dose.minute, dose.snoozeUntil]);
+      const days = medicine.dates?.length ? medicine.dates.filter(day => day >= phase.start &&
+        (phase.end === null || day < phase.end) && (day >= today || snoozes.some(([snoozed]) => snoozed === day))) : null;
+      if (!snoozes.length && ((phase.end !== null && phase.end <= today) || (days && !days.length))) return [];
+      return [{
         start: phase.start, end: phase.end, interval: phase.interval, mask: phase.mask,
-        ...(medicine.dates?.length ? { days: medicine.dates.filter(day => day >= phase.start && (
-          day >= today || suppressed.some(dose => dose.day === day && dose.status === "snoozed" && dose.snoozeUntil > now)
-        )) } : {}),
+        ...(days && { days }),
         ...(medicine.effectiveFrom ? { notBefore: medicine.effectiveFrom } : {}),
         ...(details ? {
           name: reminderLabel(medicine.name, 80), unit: reminderLabel(medicine.unit, 24),
           amounts: phase.slots.map(slot => slot.amount == null ? null : slot.amount / 1000)
         } : {}),
         minutes: phase.slots.map(slot => slot.minute), skip: suppressed.map(dose => [dose.day, dose.minute]),
-        snoozes: suppressed.filter(dose => dose.status === "snoozed" && dose.snoozeUntil > now)
-          .map(dose => [dose.day, dose.minute, dose.snoozeUntil])
-      };
+        snoozes
+      }];
     }));
   const appointments = new Map();
   const visitSettings = state.appointmentReminders ?? appointmentDefaults;

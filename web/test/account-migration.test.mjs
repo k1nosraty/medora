@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { createECDH, createHmac, createHash, scryptSync } from "node:crypto";
+import { createECDH, createHmac, createHash, randomUUID, scryptSync } from "node:crypto";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -10,6 +10,9 @@ import test from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
 import { subscriptionId } from "../public/medication/features/reminders/subscription-id.js";
+import { advanceHash, emptyHash, openPart } from "../src/operations/backup-parts-format.mjs";
+import { dayMs, localWall, timezone } from "../public/medication/domain/wall-clock.js";
+import { decryptBackup, encryptBackup } from "../public/medication/features/backups/crypto.js";
 import { mergeCare } from "../public/medication/features/sync/merge.js";
 
 const require = createRequire(import.meta.url);
@@ -28,6 +31,31 @@ test("account merge preserves independent edits and propagates deletions", () =>
   assert.deepEqual(mergeCare(null, { water: [a] }, { water: [b] }).water, [a, b]);
 });
 
+test("merges stock movements and dose records as one change", () => {
+  const medicine = { id: "m", name: "Sample", unit: "tablet", stock: 10, threshold: 1 };
+  const base = { medicines: { m: medicine }, doses: {} };
+  const dose = (id, debit = 1) => ({ medicineId: "m", id, debit, unit: "tablet" });
+  const morning = { medicines: { m: { ...medicine, stock: 9, name: "New name" } }, doses: { morning: dose("morning") } };
+  const evening = { medicines: { m: { ...medicine, stock: 9, threshold: 2 } }, doses: { evening: dose("evening") } };
+  for (const [local, remote] of [[morning, evening], [evening, morning]]) {
+    const merged = mergeCare(base, local, remote);
+    assert.deepEqual(merged.medicines.m, { ...medicine, name: "New name", threshold: 2, stock: 8 });
+    assert.equal(Object.keys(merged.doses).length, 2);
+    assert.deepEqual(mergeCare(merged, merged, merged), merged);
+  }
+  assert.equal(mergeCare(base, morning, morning).medicines.m.stock, 9);
+  const restock = { ...base, medicines: { m: { ...medicine, stock: 15 } } };
+  assert.equal(mergeCare(base, morning, restock).medicines.m.stock, 14);
+  const correction = { ...morning, medicines: { m: { ...medicine, stock: 8 } }, doses: { morning: dose("morning", 2) } };
+  const secondDose = { ...morning, medicines: { m: { ...medicine, stock: 8 } },
+    doses: { ...morning.doses, evening: dose("evening") } };
+  assert.equal(mergeCare(morning, correction, secondDose).medicines.m.stock, 7);
+  assert.equal(mergeCare(base, morning, { ...base, medicines: {} }).medicines.m, undefined);
+  const newUnit = { ...base, medicines: { m: { ...medicine, unit: "mL", stock: 20, stockTrackedFrom: 100 } } };
+  assert.equal(mergeCare(base, morning, newUnit).medicines.m.stock, 20);
+  assert.equal(mergeCare(base, morning, newUnit).doses.morning.unit, "tablet");
+});
+
 test("encrypted migration restores existing login, account history and a pending push", { timeout: 150_000 }, async () => {
   const { outputFiles } = await build({
     absWorkingDir: fileURLToPath(new URL("..", import.meta.url)),
@@ -43,7 +71,7 @@ test("encrypted migration restores existing login, account history and a pending
     modules: true, script: outputFiles[0].text, compatibilityDate: "2026-10-29", unsafeTriggerHandlers: true,
     compatibilityFlags: ["nodejs_compat"],
     durableObjects: Object.fromEntries(Object.entries({ EMAIL_ACCOUNTS: "EmailAccount", CREDENTIALS: "Credentials",
-      PROMOTIONS: "Promotions", OPERATIONS: "Operations", REMINDERS: "MedicationReminders", PILOT: "PushPilot" })
+      PROMOTIONS: "Promotions", OPERATIONS: "Operations", REMINDERS: "MedicationReminders", PILOT: "PushPilot", FAMILIES: "Families" })
       .map(([key, className]) => [key, { className, useSQLite: true }])),
     ratelimits: { EMAIL_AUTH_LIMIT: { namespace_id: "750503", simple: { limit: 8, period: 60 } } },
     bindings: { EMAIL_AUTH_SECRET: secret, MIGRATION_TOKEN: migrationToken, VAPID_PUBLIC_KEY: publicKey,
@@ -79,8 +107,8 @@ test("encrypted migration restores existing login, account history and a pending
     const proof = scryptSync(hmac("password-v1", password), salt, 32,
       { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }).toString("hex");
     await (await stub(source, "CREDENTIALS", "medora-credentials-v1")).register(username, owner, email, salt, proof);
-    const login = async worker => {
-      const response = await api(worker, "/api/auth/login", "POST", {}, { username, password });
+    const login = async (worker, name = username) => {
+      const response = await api(worker, "/api/auth/login", "POST", {}, { username: name, password });
       assert.equal(response.status, 200, await response.clone().text());
       return { Cookie: response.headers.get("Set-Cookie").split(";")[0] };
     };
@@ -97,9 +125,34 @@ test("encrypted migration restores existing login, account history and a pending
         start, interval: 1, mask: 127, minute: 540 } }, routineLogs: {},
       cycleRecords: { [start]: { end: null, flow: "", note: "" } },
       water: [{ id: "water-1", day: start, time: "12:00", amount: 250 }] };
-    const update = { owner, revision: 0, records };
+    const update = { owner, revision: 0, records, zone: "America/Toronto" };
     assert.equal((await api(source, carePath, "PUT", session, update)).status, 200);
     assert.equal((await api(source, carePath, "PUT", session, update)).status, 409);
+    assert.equal((await api(source, carePath, "GET", { ...session, "If-None-Match": `"${owner}:1"` })).status, 304);
+    assert.equal((await api(source, carePath, "GET", { "If-None-Match": `"${owner}:1"` })).status, 401);
+    assert.equal((await api(source, carePath, "PUT", session, { ...update, padding: "x".repeat(4 * 1024 * 1024) })).status, 413);
+    const caregiverEmail = "caregiver@example.test";
+    const caregiver = hmac("account-v1", caregiverEmail);
+    await (await stub(source, "CREDENTIALS", "medora-credentials-v1")).register("caregiver", caregiver, caregiverEmail, salt, proof);
+    const group = randomUUID(), ownerMember = randomUUID(), caregiverMember = randomUUID();
+    const nowFamily = Date.now();
+    const permission = JSON.stringify({ sections: ["water"], record: true, add: false });
+    const familyRows = {
+      groups: [{ id: group, name: "Care circle", owner, icon: "group" }],
+      members: [{ id: ownerMember, group_id: group, person: owner, label: username },
+        { id: caregiverMember, group_id: group, person: caregiver, label: "caregiver" }],
+      invites: [{ id: randomUUID(), group_id: group, email: "pending@example.test", created: nowFamily,
+        expires: nowFamily + 86_400_000, status: "pending", recipient_label: null }],
+      grants: [{ group_id: group, owner, recipient: caregiver, policy: permission, expires: null },
+        { group_id: group, owner: caregiver, recipient: owner, policy: permission, expires: nowFamily - 1000 }],
+      audit: [{ id: 1, group_id: group, actor: owner, subject: caregiver, action: "share", time: nowFamily }]
+    };
+    const familyCounts = Object.fromEntries(Object.entries(familyRows).map(([table, rows]) => [table, rows.length]));
+    const seedFamily = async worker => {
+      const hub = await stub(worker, "FAMILIES", "care-groups");
+      for (const [table, rows] of Object.entries(familyRows)) await hub.restoreFamilyPage(table, rows);
+    };
+    await seedFamily(source);
     const formerSession = await login(source);
     assert.equal((await api(source, "/api/auth/logout", "POST", formerSession)).status, 200);
     assert.equal((await api(source, carePath, "GET", formerSession)).status, 401);
@@ -158,7 +211,22 @@ test("encrypted migration restores existing login, account history and a pending
     assert.equal(verifyResponse.status, 200);
     const report = await verifyResponse.json();
     assert.match(report.sha256, /^[a-f0-9]{64}$/);
-    assert.deepEqual({ ...report, sha256: null }, { sha256: null, accounts: 1, media: 1, reminders: 2 });
+    assert.deepEqual({ ...report, sha256: null }, { sha256: null, accounts: 2, media: 1, reminders: 2, family: familyCounts, accountTimezones: 1, accountsWithTimezoneField: 2 });
+    const legacyMagic = new TextEncoder().encode("MEDSRV01");
+    const legacy = await decryptBackup(bytes, backupPassword, legacyMagic);
+    legacy.version = 1;
+    delete legacy.family;
+    for (const account of legacy.accounts) {
+      delete account.zone;
+      delete account.devices;
+      delete account.row.password_key;
+    }
+    const oldArchive = await encryptBackup(legacy, backupPassword, legacyMagic);
+    const oldVerify = await verify(oldArchive);
+    assert.equal(oldVerify.status, 200);
+    const oldReport = await oldVerify.json();
+    assert.equal(oldReport.family, null);
+    assert.equal(oldReport.accountsWithTimezoneField, 0);
     assert.deepEqual(await (await stub(target, "CREDENTIALS", "medora-credentials-v1")).backupAccounts(""), []);
     const keyMismatch = await api(incompatible, "/api/migration/verify", "POST", auth, requestBody(bytes));
     assert.equal(keyMismatch.status, 400);
@@ -179,7 +247,7 @@ test("encrypted migration restores existing login, account history and a pending
     await targetOperations.releaseRestore(job.id, null, false);
     const restored = await restore(bytes);
     assert.equal(restored.status, 200, await restored.clone().text());
-    assert.deepEqual(await restored.json(), { accounts: 1, media: 1, reminders: 0 });
+    assert.deepEqual(await restored.json(), { accounts: 2, media: 1, reminders: 0, family: familyCounts, accountTimezones: 1, accountsWithTimezoneField: 2 });
     const secondArchive = await api(source, "/api/migration/backup", "POST", auth, { password: backupPassword });
     assert.equal(secondArchive.status, 200);
     assert.equal((await restore(new Uint8Array(await secondArchive.arrayBuffer()))).status, 409);
@@ -192,8 +260,8 @@ test("encrypted migration restores existing login, account history and a pending
     sourceStopped = true;
     const resumed = await restore(bytes, true);
     assert.equal(resumed.status, 200, await resumed.clone().text());
-    assert.deepEqual(await resumed.json(), { accounts: 1, media: 1, reminders: 2 });
-    assert.deepEqual(await (await restore(bytes, true)).json(), { accounts: 1, media: 1, reminders: 2 });
+    assert.deepEqual(await resumed.json(), { accounts: 2, media: 1, reminders: 2, family: familyCounts, accountTimezones: 1, accountsWithTimezoneField: 2 });
+    assert.deepEqual(await (await restore(bytes, true)).json(), { accounts: 2, media: 1, reminders: 2, family: familyCounts, accountTimezones: 1, accountsWithTimezoneField: 2 });
     assert.equal((await (await stub(target, "REMINDERS", disabledId)).status()).enabled, false);
     assert.equal((await (await stub(target, "OPERATIONS", "operations")).tickets(email))[0].message, "A support message");
     assert.equal(outbound.length, 0, "restore must leave the target paused");
@@ -201,9 +269,25 @@ test("encrypted migration restores existing login, account history and a pending
     assert.equal((await api(target, carePath, "GET", session)).status, 401);
     const newSession = await login(target);
     assert.deepEqual(await (await api(target, carePath, "GET", newSession)).json(), { owner, revision: 1, records });
+    const caregiverSession = await login(target, "caregiver");
+    const view = (session, targetId) => api(target, "/api/family", "POST", session, { action: "view", group, target: targetId });
+    const { zone } = await (await view(caregiverSession, ownerMember)).json();
+    assert.equal(zone, "America/Toronto");
+    assert.equal((await view(newSession, caregiverMember)).status, 403);
+    const { groups } = await (await api(target, "/api/family", "GET", newSession)).json();
+    assert.equal(groups[0].pending[0].id, familyRows.invites[0].id);
+    const torontoDay = Math.floor(localWall(Date.now(), timezone("America/Toronto")) / dayMs);
+    assert.equal((await api(target, "/api/family", "POST", caregiverSession, {
+      action: "record", group, target: ownerMember, operation: randomUUID(), kind: "water", day: torontoDay, time: "23:58", amount: 100
+    })).status, 200);
     const largeSource = new Miniflare(options({ MEDORA_EXPORT_CONTINUITY: "true", MIGRATION_TOKEN_EXPIRES_AT: String(Date.now() + 600_000) }));
     const largeTarget = new Miniflare(options(maintenance));
     try {
+      const largeCredentials = await stub(largeSource, "CREDENTIALS", "medora-credentials-v1");
+      await largeCredentials.register(username, owner, email, salt, proof);
+      await largeCredentials.register("caregiver", caregiver, caregiverEmail, salt, proof);
+      await (await stub(largeSource, "EMAIL_ACCOUNTS", owner)).restoreCare({ revision: 1, records }, "", update.zone);
+      await seedFamily(largeSource);
       const sourceAds = await stub(largeSource, "PROMOTIONS", "home");
       const payload = Buffer.alloc(5 * 1024 * 1024, 7);
       gif.copy(payload);
@@ -222,8 +306,38 @@ test("encrypted migration restores existing login, account history and a pending
       await command("backup", sourceAddress, archivePath);
       assert.ok((await stat(archivePath)).size > 16 * 1024 * 1024);
       await command("verify", targetAddress, archivePath);
+      // Simulate a stopped client after the first family table, then resume with the CLI.
+      const archive = await readFile(archivePath);
+      const archiveId = archive.toString("ascii", 8, 44);
+      const key = scryptSync(backupPassword, archive.subarray(44, 60), 32, { N: 65536, r: 8, p: 1, maxmem: 96 * 1024 * 1024 });
+      const frames = [];
+      let chain = emptyHash;
+      for (let offset = 60; offset < archive.length;) {
+        const length = archive.readUInt32BE(offset);
+        offset += 4;
+        const frame = archive.subarray(offset, offset + length);
+        frames.push(frame);
+        offset += length;
+        chain = await advanceHash(chain, frame);
+      }
+      for (const [index, frame] of frames.entries()) {
+        const before = await openPart(frame, key.toString("hex"), archiveId, index);
+        const result = await api(largeTarget, "/api/migration/parts/restore", "POST", {
+          ...auth, "X-Medora-Archive": archiveId, "X-Medora-Index": String(index), "X-Medora-Total": String(frames.length),
+          "X-Medora-Digest": chain, "X-Medora-Phase": "data"
+        }, Buffer.concat([key, frame]));
+        assert.equal(result.status, 200);
+        if (before.type === "family" && before.table === "groups") break;
+      }
+      const partialHub = await stub(largeTarget, "FAMILIES", "care-groups");
+      assert.equal((await partialHub.exportFamilyPage("groups", 0)).length, 1);
+      assert.equal((await partialHub.exportFamilyPage("members", 0)).length, 0);
       await command("restore", targetAddress, archivePath);
       await command("restore", targetAddress, archivePath);
+      const restoredFamily = await stub(largeTarget, "FAMILIES", "care-groups");
+      for (const [table, rows] of Object.entries(familyRows)) {
+        assert.deepEqual((await restoredFamily.exportFamilyPage(table, 0)).length, rows.length);
+      }
       const targetAds = await stub(largeTarget, "PROMOTIONS", "home");
       assert.deepEqual((await targetAds.library()).map(({ id }) => id), assetIds);
       for (const id of assetIds) {
@@ -248,6 +362,28 @@ test("encrypted migration restores existing login, account history and a pending
     await sleep(1300);
     assert.deepEqual(await (await queue()).json(), { version: release, status: "complete" });
     assert.equal(outbound.length, 2, "the same deployed revision is only announced once");
+    const largeRecords = structuredClone(records);
+    const nearLimit = { owner: caregiver, revision: 0, zone: "UTC", records: largeRecords };
+    largeRecords.medicines.m.instructions = "";
+    const overhead = Buffer.byteLength(JSON.stringify(nearLimit));
+    largeRecords.medicines.m.instructions = "x".repeat(4 * 1024 * 1024 - overhead - 100);
+    assert.equal((await api(target, carePath, "PUT", caregiverSession, nearLimit)).status, 200);
+    const compact = await api(target, carePath, "GET", { ...caregiverSession, "If-None-Match": `"${caregiver}:1"` });
+    assert.equal(compact.status, 304);
+    assert.equal(await compact.text(), "");
+    const directAccess = (await (await api(target, carePath, "GET", caregiverSession)).json()).records;
+    assert.equal(directAccess.medicines.m.instructions.length, largeRecords.medicines.m.instructions.length);
+    assert.equal((await api(target, "/api/family", "POST", caregiverSession, {
+      action: "share", group, target: ownerMember, sections: ["water"], record: true, add: false, days: null
+    })).status, 200);
+    const excess = await api(target, "/api/family", "POST", newSession, {
+      action: "record", group, target: caregiverMember, operation: randomUUID(), kind: "water",
+      day: Math.floor(Date.now() / dayMs), time: "12:00", amount: 100
+    });
+    assert.equal(excess.status, 413);
+    assert.deepEqual(await excess.json(), { error: "care_too_large" });
+    assert.equal((await api(target, carePath, "GET", { ...caregiverSession, "If-None-Match": `"${caregiver}:1"` })).status, 304);
+
   } finally {
     await Promise.all([sourceStopped ? null : source.dispose(), target.dispose(), occupied.dispose(), incompatible.dispose(),
       rm(backupDir, { recursive: true, force: true })]);

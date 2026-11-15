@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { isAdminEmail, signedInEmail } from "../accounts/email-auth.mjs";
-import { logOperation } from "../operations/routes.mjs";
+import { logOperation } from "../operations/audit.mjs";
 import { smallJson } from "../http/validation.mjs";
 import { mediaIdPattern, mediaResponse, readMedia } from "./media.mjs";
 

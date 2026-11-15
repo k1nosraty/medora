@@ -1,6 +1,6 @@
 import { handleMigration } from "./operations/migration.mjs";
 import { handleBackupParts } from "./operations/backup-parts.mjs";
-import { handleFamily } from "./family/routes.mjs";
+import { familyStore, handleFamily } from "./family/routes.mjs";
 import { handleCareSync } from "./sync/routes.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { vapidHeaders } from "@block65/webcrypto-web-push";
@@ -28,6 +28,7 @@ function reply(data, status = 200) {
 
 export default {
   async scheduled(_event, env) {
+    if (env.MEDORA_MAINTENANCE !== "true") await familyStore(env)?.pruneAudit();
     if (/^[a-f0-9]{40}$/.test(env.MEDORA_RELEASE ?? "")) {
       await env.OPERATIONS.getByName("operations").publishRelease(env.MEDORA_RELEASE);
     }

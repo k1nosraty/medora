@@ -1,3 +1,5 @@
+import { familyTableNames } from "../family/archive.mjs";
+import { familyStore } from "../family/routes.mjs";
 import { encryptBackup, decryptBackup, maxBackupBytes } from "../../public/medication/features/backups/crypto.js";
 import { smallJson } from "../http/validation.mjs";
 import { assertBackup, decodeMedia, digest, fingerprint, pushFingerprint, validate } from "./backup-validation.mjs";
@@ -87,8 +89,40 @@ async function collect(env, store, credentials, promotion) {
   }
   const operations = await store.exportData();
   checkSize(operations);
-  return { version: 1, accounts, reminders, operations, ads, media,
+  let family;
+  if (env.FAMILIES) {
+    const book = familyStore(env);
+    family = {};
+    for (const table of familyTableNames) {
+      const all = family[table] = [];
+      for (let offset = 0; ; offset += 100) {
+        const page = await book.exportFamilyPage(table, offset);
+        checkSize(page);
+        all.push(...page);
+        if (page.length < 100) break;
+      }
+    }
+  }
+  return { version: family ? 2 : 1, accounts, reminders, operations, ads, media, ...(family && { family }),
     keyFingerprint: await fingerprint(env), pushFingerprint: await pushFingerprint(env) };
+}
+
+const coverage = data => ({
+  family: data.family ? Object.fromEntries(familyTableNames.map(table => [table, data.family[table].length])) : null,
+  accountTimezones: data.accounts.filter(account => account.zone != null).length,
+  accountsWithTimezoneField: data.accounts.filter(account => Object.hasOwn(account, "zone")).length
+});
+
+export async function restoreReminder(env, id, state) {
+  const device = env.REMINDERS.getByName(id);
+  if (state.plan && state.link) {
+    const { owner } = state.link;
+    const account = owner.split(".")[0];
+    if (!await env.EMAIL_ACCOUNTS.getByName(account).resumeReminderDevice(account, owner, id)) {
+      state = { ...state, plan: null, next: null, link: null, accountPlanError: null };
+    }
+  }
+  if (!await device.restoreReminder(state)) throw new Error("reminder_conflict");
 }
 
 async function restore(data, hash, env, store, credentials, promotion, enableReminders) {
@@ -101,30 +135,30 @@ async function restore(data, hash, env, store, credentials, promotion, enableRem
   let result;
   try {
     if (!job.prepared) {
-      const [accounts, adsEmpty, opsEmpty] = await Promise.all([
-        credentials.backupAccounts(""), promotion.migrationTargetEmpty(), store.migrationTargetEmpty()
+      const [accounts, adsEmpty, opsEmpty, familyEmpty] = await Promise.all([
+        credentials.backupAccounts(""), promotion.migrationTargetEmpty(), store.migrationTargetEmpty(), familyStore(env)?.migrationTargetEmpty() ?? true
       ]);
-      if (accounts.length || !adsEmpty || !opsEmpty) throw new Error("target_not_empty");
+      if (accounts.length || !adsEmpty || !opsEmpty || !familyEmpty) throw new Error("target_not_empty");
       await store.prepareRestore(job.id);
     }
     if (!job.done) {
-      for (const { row, care, epoch } of data.accounts) {
+      for (const { row, care, epoch, zone, devices } of data.accounts) {
         if (!await credentials.restoreAccount(row)) throw new Error("account_conflict");
-        if (!await env.EMAIL_ACCOUNTS.getByName(row.email_id).restoreCare(care, epoch)) throw new Error("account_conflict");
+        if (!await env.EMAIL_ACCOUNTS.getByName(row.email_id).restoreCare(care, epoch, zone, devices)) throw new Error("account_conflict");
       }
       for (const { asset, data: encoded } of data.media) await promotion.restoreMedia(asset, decodeMedia(encoded));
       await promotion.restoreCampaigns(data.ads);
       await store.restoreData(data.operations);
+      if (data.family) for (const table of familyTableNames) await familyStore(env).restoreFamilyPage(table, data.family[table]);
     }
     let resumed = 0;
     if (enableReminders) for (const { id, state } of data.reminders) {
       // Index first so an interrupted migration can detect and include the device.
       await store.registerReminder(id);
-      const restored = await env.REMINDERS.getByName(id).restoreReminder(state);
-      if (!restored) throw new Error("reminder_conflict");
+      await restoreReminder(env, id, state);
       resumed++;
     }
-    result = { accounts: data.accounts.length, media: data.media.length, reminders: resumed };
+    result = { accounts: data.accounts.length, media: data.media.length, reminders: resumed, ...coverage(data) };
     return result;
   } finally {
     await store.releaseRestore(job.id, result, enableReminders);
@@ -186,15 +220,16 @@ export async function handleMigration(request, env, url) {
       archive = input.archive;
       data = await decryptBackup(archive, input.password, magic);
       await validate(data, env);
+      if (data.family && !env.FAMILIES) throw new Error("incompatible_backup");
     } catch (error) {
       return reply({ error: error.message === "incompatible_backup" ? error.message : "invalid_backup" }, 400);
     }
     const hash = await digest(archive);
-    if (verify) return reply({ sha256: hash, accounts: data.accounts.length, media: data.media.length, reminders: data.reminders.length });
+    if (verify) return reply({ sha256: hash, accounts: data.accounts.length, media: data.media.length, reminders: data.reminders.length, ...coverage(data) });
     return reply(await restore(data, hash, env, store, credentials, promotion,
       request.headers.get("X-Medora-Restore-Reminders") === "yes"));
   } catch (error) {
-    const conflicts = ["account_conflict", "reminder_conflict", "target_not_empty", "archive_conflict", "restore_in_progress"];
+    const conflicts = ["account_conflict", "reminder_conflict", "family_conflict", "target_not_empty", "archive_conflict", "restore_in_progress"];
     if (error.message === "backup_too_large") return reply({ error: error.message }, 413);
     if (conflicts.includes(error.message)) return reply({ error: error.message }, 409);
     return reply({ error: url.pathname.endsWith("/backup") ? "backup_failed" : "restore_failed" }, 500);

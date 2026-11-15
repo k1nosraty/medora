@@ -1,10 +1,13 @@
+import { familyPageSize, familyTables, familyTableNames, validFamilyRows } from "./archive.mjs";
 import { DurableObject } from "cloudflare:workers";
-import { careSession, inviteContact, normalizeEmail } from "../accounts/email-auth.mjs";
+import { careSession, normalizeEmail } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
 import { familySections, sharedCare } from "../../public/medication/domain/family.js";
 import { groupIconOf, groupIcons } from "../../public/medication/domain/group-icons.js";
 import { clean, idPattern } from "./care.mjs";
 
+export const familyStore = env => env.FAMILIES?.getByName("care-groups");
+const familyGroup = (env, group) => env.FAMILIES.getByName("group:" + group);
 const oneDay = 86_400_000;
 const sectionsFor = { medicine: "medicines", visit: "visits", routine: "routines", water: "water", cycle: "cycle" };
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
@@ -22,7 +25,7 @@ export async function handleFamily(request, env, url) {
     data?.action === "record" || data?.action === "add");
   if (!identity) return reply(failure("sign_in"), 401);
   const actor = { ...identity, person: session.id + (identity.epoch ? "." + identity.epoch : ""), label: session.username };
-  const store = env.FAMILIES.getByName("care-groups");
+  const store = familyStore(env);
   if (request.method === "GET") {
     return reply(url.searchParams.has("inbox") ? { invitations: await store.invitations(actor) } : await store.overview(actor));
   }
@@ -37,7 +40,7 @@ export async function handleFamily(request, env, url) {
       break;
     case "delete-group":
       result = typeof data.group === "string" && idPattern.test(data.group)
-        ? await store.deleteGroup(actor, data.group) : failure("invalid");
+        ? await familyGroup(env, data.group).groupRequest(actor, data) : failure("invalid");
       break;
     case "invite-lookup": {
       if (!idPattern.test(data.group) || !await store.managesGroup(actor.person, data.group)) return reply(failure("forbidden"), 403);
@@ -45,23 +48,16 @@ export async function handleFamily(request, env, url) {
       if (!normalizeEmail(query) && !/^[a-z0-9_]{3,32}$/i.test(query)) return reply(failure("invalid"), 400);
       const limit = await env.EMAIL_AUTH_LIMIT.limit({ key: "care-invite:" + session.id });
       if (!limit.success) return reply(failure("limit"), 429);
-      const contact = await inviteContact(env, query);
-      const person = contact && contact.email !== actor.email ? {
-        username: contact.username,
-        name: await env.EMAIL_ACCOUNTS.getByName(contact.email_id).inviteProfileName()
-      } : null;
-      return reply({ person });
+      return reply({ person: null });
     }
     case "invite": {
       if (!idPattern.test(data.group) || !await store.managesGroup(actor.person, data.group)) return reply(failure("forbidden"), 403);
-      if (data.username && !(await env.EMAIL_AUTH_LIMIT.limit({ key: "care-send-invite:" + session.id })).success) {
+      const email = normalizeEmail(data.email);
+      if (!email || email === actor.email) return reply(failure("invalid"), 400);
+      if (!(await env.EMAIL_AUTH_LIMIT.limit({ key: "care-send-invite:" + session.id })).success) {
         return reply(failure("limit"), 429);
       }
-      const contact = typeof data.username === "string" ? await inviteContact(env, data.username) : null;
-      if (data.username && !contact) return reply(failure("missing"), 404);
-      const email = contact?.email ?? normalizeEmail(data.email);
-      if (!email || email === actor.email || !idPattern.test(data.group)) return reply(failure("invalid"), 400);
-      result = await store.invite(actor, data.group, email, contact?.username ?? null);
+      result = await store.invite(actor, data.group, email);
       if (result.invite && env.EMAIL_FROM && env.RESEND_API_KEY) {
         const link = new URL("/medication/#family-invite=" + result.invite, url.origin);
         try {
@@ -85,21 +81,22 @@ export async function handleFamily(request, env, url) {
       break;
     case "share": case "revoke":
       result = idPattern.test(data.group) && (data.target === "all" || idPattern.test(data.target))
-        ? await store.share(actor, data) : failure("invalid");
+        ? await familyGroup(env, data.group).groupRequest(actor, data) : failure("invalid");
       break;
     case "view": case "record": case "add":
       result = idPattern.test(data.group) && idPattern.test(data.target)
-        ? await store.access(actor, data) : failure("invalid");
+        ? await familyGroup(env, data.group).groupRequest(actor, data) : failure("invalid");
       break;
     default: result = failure("invalid");
   }
-  const statuses = { invalid: 400, missing: 404, forbidden: 403, expired: 410, limit: 429, sync_required: 409, already_recorded: 409, conflict: 409 };
+  const statuses = { invalid: 400, missing: 404, forbidden: 403, expired: 410, limit: 429, sync_required: 409, already_recorded: 409, conflict: 409, care_too_large: 413 };
   return reply(result, result.error ? statuses[result.error] ?? 400 : 200);
 }
 
 export class Families extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
+    if (ctx.id.name?.startsWith("group:")) return;
     this.sql = ctx.storage.sql;
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS family_groups (id TEXT PRIMARY KEY, name TEXT NOT NULL, owner TEXT NOT NULL, icon TEXT NOT NULL DEFAULT 'group');
@@ -119,6 +116,7 @@ export class Families extends DurableObject {
         FOREIGN KEY (group_id, recipient) REFERENCES family_members(group_id, person));
       CREATE TABLE IF NOT EXISTS family_audit (
         id INTEGER PRIMARY KEY, group_id TEXT NOT NULL, actor TEXT NOT NULL, subject TEXT NOT NULL, action TEXT NOT NULL, time INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS family_audit_time ON family_audit(time);
     `);
     if (!this.sql.exec("PRAGMA table_info(family_invites)").toArray().some(column => column.name === "recipient_label")) {
       this.sql.exec("ALTER TABLE family_invites ADD COLUMN recipient_label TEXT");
@@ -128,8 +126,40 @@ export class Families extends DurableObject {
     }
   }
 
+  migrationTargetEmpty() {
+    return familyTableNames.every(table => !this.sql.exec(`SELECT 1 FROM family_${table} LIMIT 1`).toArray().length);
+  }
+
+  exportFamilyPage(table, offset, limit = familyPageSize) {
+    if (!Object.hasOwn(familyTables, table) || !Number.isSafeInteger(offset) || offset < 0) throw new Error("invalid_backup");
+    const { primary } = familyTables[table];
+    return this.sql.exec(`SELECT * FROM family_${table} ORDER BY ${primary.join(",")} LIMIT ? OFFSET ?`, limit, offset).toArray();
+  }
+
+  restoreFamilyPage(table, rows) {
+    if (!validFamilyRows(table, rows)) throw new Error("invalid_backup");
+    const { primary, columns } = familyTables[table];
+    const names = Object.keys(columns);
+    this.ctx.storage.transactionSync(() => {
+      for (const row of rows) {
+        const current = this.sql.exec(`SELECT * FROM family_${table} WHERE ${primary.map(key => key + "=?").join(" AND ")}`,
+          ...primary.map(key => row[key])).toArray()[0];
+        if (current) {
+          if (names.some(key => row[key] !== current[key])) throw new Error("family_conflict");
+          continue;
+        }
+        this.sql.exec(`INSERT INTO family_${table} (${names.join(",")}) VALUES (${names.map(() => "?").join(",")})`,
+          ...names.map(key => row[key]));
+      }
+    });
+  }
+
   audit(group, actor, subject, action) {
     this.sql.exec("INSERT INTO family_audit(group_id,actor,subject,action,time) VALUES(?,?,?,?,?)", group, actor, subject, action, Date.now());
+  }
+
+  auditAccess(group, actor, subject, action) {
+    if (this.member(group, actor) && this.member(group, subject)) this.audit(group, actor, subject, action);
   }
 
   member(group, person) {
@@ -188,16 +218,38 @@ export class Families extends DurableObject {
   deleteGroup(actor, group) {
     return this.ctx.storage.transactionSync(() => {
       if (!this.managesGroup(actor.person, group)) return failure("forbidden");
-      this.sql.exec("DELETE FROM family_grants WHERE group_id=?", group);
-      this.sql.exec("DELETE FROM family_invites WHERE group_id=?", group);
-      this.sql.exec("DELETE FROM family_members WHERE group_id=?", group);
-      this.sql.exec("DELETE FROM family_groups WHERE id=?", group);
+      this.#eraseGroup(group);
       this.audit(group, actor.person, actor.person, "delete-group");
       return { ok: true };
     });
   }
 
-  invite(actor, group, email, recipient) {
+  #eraseGroup(group) {
+    return ["grants", "invites", "members", "groups"].reduce((count, table) =>
+      count + this.#deleteFamilyRows(table, table === "groups" ? "id=?" : "group_id=?", group), 0);
+  }
+
+  #deleteFamilyRows(table, condition, ...params) {
+    this.sql.exec(`DELETE FROM family_${table} WHERE ${condition}`, ...params);
+    return this.sql.exec("SELECT changes() AS count").one().count;
+  }
+
+  eraseAccount(person, email) {
+    return this.ctx.storage.transactionSync(() => {
+      let count = 0;
+      for (const { id } of this.sql.exec("SELECT id FROM family_groups WHERE owner=?", person).toArray()) count += this.#eraseGroup(id);
+      count += this.#deleteFamilyRows("grants", "owner=? OR recipient=?", person, person);
+      count += this.#deleteFamilyRows("members", "person=?", person);
+      count += this.#deleteFamilyRows("invites", "email=?", email);
+      return count + this.#deleteFamilyRows("audit", "actor=? OR subject=?", person, person);
+    });
+  }
+
+  pruneAudit() {
+    this.sql.exec("DELETE FROM family_audit WHERE time<?", Date.now() - 90 * oneDay);
+  }
+
+  invite(actor, group, email) {
     return this.ctx.storage.transactionSync(() => {
       if (!this.managesGroup(actor.person, group)) return failure("forbidden");
       const now = Date.now();
@@ -207,7 +259,7 @@ export class Families extends DurableObject {
       if (this.sql.exec("SELECT count(*) n FROM family_invites WHERE group_id=? AND created>?", group, now - oneDay).one().n >= 20) return failure("limit");
       const id = crypto.randomUUID();
       this.sql.exec("INSERT INTO family_invites (id,group_id,email,created,expires,status,recipient_label) VALUES(?,?,?,?,?,'pending',?)",
-        id, group, email, now, now + 3 * oneDay, recipient);
+        id, group, email, now, now + 3 * oneDay, null);
       this.audit(group, actor.person, actor.person, "invite");
       return { invite: id };
     });
@@ -260,15 +312,23 @@ export class Families extends DurableObject {
     });
   }
 
-  async access(actor, data) {
-    // Keep the authorization decision and cross-object mutation ordered against revocation.
+  accessGrant(person, group, target) {
+    const membership = this.member(group, person);
+    if (!membership) return null;
+    const row = this.sql.exec(`SELECT m.person,m.label,g.policy FROM family_members m JOIN family_grants g
+      ON g.group_id=m.group_id AND g.owner=m.person WHERE m.id=? AND m.group_id=? AND g.recipient=?
+      AND (g.expires IS NULL OR g.expires>?)`, target, group, person, Date.now()).toArray()[0];
+    return row ? { row, membership } : null;
+  }
+
+  async groupRequest(actor, data) {
+    const store = familyStore(this.env);
+    // Serialize the decision with grant changes on this group's coordinator.
     return this.ctx.blockConcurrencyWhile(async () => {
       const { group, target, action } = data;
-      const membership = this.member(group, actor.person);
-      if (!membership) return failure("forbidden");
-      const row = this.sql.exec(`SELECT m.person,m.label,g.policy FROM family_members m JOIN family_grants g
-        ON g.group_id=m.group_id AND g.owner=m.person WHERE m.id=? AND m.group_id=? AND g.recipient=?
-        AND (g.expires IS NULL OR g.expires>?)`, target, group, actor.person, Date.now()).toArray()[0];
+      if (action === "delete-group") return store.deleteGroup(actor, group);
+      if (action === "share" || action === "revoke") return store.share(actor, data);
+      const { row, membership } = await store.accessGrant(actor.person, group, target) ?? {};
       if (!row) return failure("forbidden");
       const [account, epoch = ""] = row.person.split(".");
       const owner = this.env.EMAIL_ACCOUNTS.getByName(account);
@@ -278,7 +338,7 @@ export class Families extends DurableObject {
         const snapshot = await owner.exportFamilyCare(known);
         if (snapshot.epoch !== epoch) return failure("forbidden");
         if (snapshot.unchanged) return { unchanged: true };
-        this.audit(group, actor.person, row.person, action);
+        await store.auditAccess(group, actor.person, row.person, action);
         return { revision: snapshot.care.revision, label: row.label, policy, records: sharedCare(snapshot.care.records, policy.sections),
           synced: snapshot.care.records !== null, zone: snapshot.zone ?? "Asia/Tehran" };
       }
@@ -287,9 +347,9 @@ export class Families extends DurableObject {
           (action === "record" && data.kind === "medicine" && !policy.sections.includes("doses"))) return failure("forbidden");
       if (typeof data.operation !== "string" || !idPattern.test(data.operation) || (data.id !== undefined &&
           (typeof data.id !== "string" || !data.id || data.id.length > 512 || Object.hasOwn(Object.prototype, data.id)))) return failure("invalid");
-      const result = await owner.changeFamilyCare(epoch, data, actor.person, membership.label, actor.displayName);
+      const result = await owner.changeFamilyCare(epoch, data, actor.person, membership.label, actor.displayName, account);
       if (result.error) return result;
-      if (!result.replay) this.audit(group, actor.person, row.person, action + ":" + data.kind);
+      if (!result.replay) await store.auditAccess(group, actor.person, row.person, action + ":" + data.kind);
       return { ok: true };
     });
   }

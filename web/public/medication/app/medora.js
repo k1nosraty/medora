@@ -197,7 +197,10 @@ const accountSync = installCareSync({
 });
 const openAccount = installAccount({
   onSignIn: () => { void accountSync.refresh(); accountSync.signedIn(); void family.refreshGroup(); },
-  onSignOut: () => void family.refreshGroup(),
+  onSignOut: () => {
+    void accountSync.signedOut();
+    void family.refreshGroup();
+  },
   onShortcut: panel => {
     dashboard.show("settings", panel === "notification-settings");
     if (panel === "backup-settings") document.querySelector('[data-settings-panel="backup-settings"]').click();

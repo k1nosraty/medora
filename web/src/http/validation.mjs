@@ -54,7 +54,7 @@ export async function validSubscriptionKey(subscription) {
   }
 }
 
-export async function smallJson(request, limit = 4096) {
+export async function smallJson(request, limit = 4096, { onLimit = () => null } = {}) {
   if (!request.headers.get("content-type")?.startsWith("application/json") || !request.body) return null;
   const reader = request.body.getReader();
   const buffer = new Uint8Array(limit);
@@ -65,7 +65,7 @@ export async function smallJson(request, limit = 4096) {
       if (done) break;
       if (size + value.length > buffer.length) {
         await reader.cancel();
-        return null;
+        return onLimit();
       }
       buffer.set(value, size);
       size += value.length;

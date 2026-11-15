@@ -1,21 +1,24 @@
+import { authKeyNames } from "../accounts/keys.mjs";
+import { familyPageSize, familyTableNames, validFamilyRows } from "../family/archive.mjs";
+import { familyStore } from "../family/routes.mjs";
 import { Buffer } from "node:buffer";
 import { smallJson } from "../http/validation.mjs";
 import { mediaIdPattern } from "../promotions/media.mjs";
-import { authorizeMigration, headers, reply } from "./migration.mjs";
+import { authorizeMigration, headers, reply, restoreReminder } from "./migration.mjs";
 import { assertBackup, decodeMedia, fingerprint, pushFingerprint, validateAccounts, validateCampaigns,
   validateFingerprint, validateMedia, validateOperations, validateReminders } from "./backup-validation.mjs";
 import { advanceHash, isHash, isIndex, maxPartBytes, openPart, sealPart } from "./backup-parts-format.mjs";
 
-const stages = ["start", "accounts", "reminders", "media", "operations", "end"];
+const stages = ["start", "accounts", "reminders", "media", "operations", "family", "end"];
 const conflicts = ["archive_conflict", "account_conflict", "reminder_conflict", "restore_data_first",
-  "part_out_of_order", "target_not_empty", "restore_in_progress"];
-const continuityNames = ["EMAIL_AUTH_SECRET", "VAPID_PRIVATE_KEY", "VAPID_PUBLIC_KEY", "VAPID_SUBJECT", "REMINDER_SIGNING_KEY"];
+  "part_out_of_order", "family_conflict", "target_not_empty", "restore_in_progress"];
+const continuityNames = ["VAPID_PRIVATE_KEY", "VAPID_PUBLIC_KEY", "VAPID_SUBJECT", "REMINDER_SIGNING_KEY"];
 
 async function nextRecord(cursor, env, store, credentials, promotion) {
   const stage = cursor?.stage ?? "start";
   const after = cursor?.after ?? "";
   assertBackup(stages.includes(stage) && typeof after === "string" && after.length <= 64);
-  if (stage === "start") return { type: "start", consistent: env.MEDORA_MAINTENANCE === "true" && env.MEDORA_PAUSE_PUSH === "true",
+  if (stage === "start") return { type: "start", schema: 3, includesFamily: Boolean(env.FAMILIES), consistent: env.MEDORA_MAINTENANCE === "true" && env.MEDORA_PAUSE_PUSH === "true",
     keys: { keyFingerprint: await fingerprint(env),
     pushFingerprint: await pushFingerprint(env) }, next: { stage: "accounts" } };
   if (stage === "accounts") {
@@ -52,7 +55,17 @@ async function nextRecord(cursor, env, store, credentials, promotion) {
     const cursor = after === "" ? 0 : Number(after);
     assertBackup(isIndex(cursor));
     const { operations, complete } = await store.exportOperationPage(cursor);
-    return { type: stage, operations, next: complete ? { stage: "end" } : { stage, after: String(cursor + 100) } };
+    return { type: stage, operations, next: complete ? { stage: env.FAMILIES ? "family" : "end" } : { stage, after: String(cursor + 100) } };
+  }
+  if (stage === "family") {
+    const tableIndex = cursor?.table ?? 0;
+    const offset = after === "" ? 0 : Number(after);
+    const table = familyTableNames[tableIndex];
+    assertBackup(isIndex(tableIndex) && table && isIndex(offset));
+    const rows = await familyStore(env).exportFamilyPage(table, offset);
+    const next = rows.length === familyPageSize ? { stage, table: tableIndex, after: String(offset + familyPageSize) } :
+      tableIndex + 1 < familyTableNames.length ? { stage, table: tableIndex + 1 } : { stage: "end" };
+    return { type: stage, table, rows, next };
   }
   return { type: "end", next: null };
 }
@@ -60,12 +73,17 @@ async function nextRecord(cursor, env, store, credentials, promotion) {
 async function validatePart(record, env) {
   assertBackup(record && typeof record.type === "string");
   switch (record.type) {
-    case "start": await validateFingerprint(record.keys, env); break;
+    case "start":
+      assertBackup(record.schema === undefined || (record.schema === 3 && typeof record.includesFamily === "boolean"));
+      if (record.includesFamily && !env.FAMILIES) throw new Error("incompatible_backup");
+      await validateFingerprint(record.keys, env);
+      break;
     case "accounts": validateAccounts(record.accounts); break;
     case "reminders": await validateReminders(record.reminders); break;
     case "media": validateMedia(record.asset, decodeMedia(record.data)); break;
     case "ads": validateCampaigns(record.ads, new Map(record.ads.assets.map(asset => [asset.id, asset]))); break;
     case "operations": validateOperations(record.operations); break;
+    case "family": assertBackup(env.FAMILIES && validFamilyRows(record.table, record.rows) && record.rows.length <= familyPageSize); break;
     case "end": break;
     default: assertBackup(false);
   }
@@ -75,12 +93,12 @@ async function writePart(record, env, store, credentials, promotion, phase) {
   if (phase === "reminders") {
     if (record.type === "reminders") for (const { id, state } of record.reminders) {
       await store.registerReminder(id);
-      if (!await env.REMINDERS.getByName(id).restoreReminder(state)) throw new Error("reminder_conflict");
+      await restoreReminder(env, id, state);
     }
     return;
   }
-  if (record.type === "accounts") for (const { row, care, epoch } of record.accounts) {
-    if (!await env.EMAIL_ACCOUNTS.getByName(row.email_id).restoreCare(care, epoch) ||
+  if (record.type === "accounts") for (const { row, care, epoch, zone, devices } of record.accounts) {
+    if (!await env.EMAIL_ACCOUNTS.getByName(row.email_id).restoreCare(care, epoch, zone, devices) ||
         !await credentials.restoreAccount(row)) throw new Error("account_conflict");
   }
   if (record.type === "media") await promotion.restoreMedia(record.asset, decodeMedia(record.data));
@@ -90,6 +108,7 @@ async function writePart(record, env, store, credentials, promotion, phase) {
     await promotion.restoreCampaigns(record.ads);
   }
   if (record.type === "operations") await store.restoreData(record.operations);
+  if (record.type === "family") await familyStore(env).restoreFamilyPage(record.table, record.rows);
 }
 
 async function readPart(request) {
@@ -116,8 +135,8 @@ export async function handleBackupParts(request, env, url) {
           expires <= Date.now() || expires - Date.now() > 15 * 60_000) return reply({ error: "key_export_disabled" }, 403);
       const { id, key } = await smallJson(request, 1024) ?? {};
       assertBackup(mediaIdPattern.test(id) && isHash(key) &&
-        continuityNames.every(name => typeof env[name] === "string" && env[name].length > 0));
-      const continuity = Object.fromEntries(continuityNames.map(name => [name, env[name]]));
+        continuityNames.every(name => typeof env[name] === "string" && env[name].length > 0) && (env.EMAIL_AUTH_SECRET || env.EMAIL_ACCOUNT_ID_KEY));
+      const continuity = Object.fromEntries([...continuityNames, ...authKeyNames].filter(name => typeof env[name] === "string").map(name => [name, env[name]]));
       return new Response(await sealPart({ type: "keys", continuity }, key, id, 0), {
         headers: { ...headers, "Content-Type": "application/octet-stream" }
       });
@@ -162,10 +181,10 @@ export async function handleBackupParts(request, env, url) {
       const updatedChain = await advanceHash(job.chain, part);
       assertBackup(index !== total - 1 || updatedChain === hash);
       if (!job.prepared) {
-        const [accounts, adsEmpty, opsEmpty] = await Promise.all([
-          credentials.backupAccounts("", 1), promotion.migrationTargetEmpty(), store.migrationTargetEmpty()
+        const [accounts, adsEmpty, opsEmpty, familyEmpty] = await Promise.all([
+          credentials.backupAccounts("", 1), promotion.migrationTargetEmpty(), store.migrationTargetEmpty(), familyStore(env)?.migrationTargetEmpty() ?? true
         ]);
-        if (accounts.length || !adsEmpty || !opsEmpty) throw new Error("target_not_empty");
+        if (accounts.length || !adsEmpty || !opsEmpty || !familyEmpty) throw new Error("target_not_empty");
         await store.prepareRestore(job.id);
       }
       await writePart(record, env, store, credentials, promotion, phase);

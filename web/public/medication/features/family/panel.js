@@ -13,7 +13,7 @@ import { avatar, sharedContext } from "./context.js";
 const errors = { sign_in: "برای همکاری خانوادگی وارد حساب شوید.", offline: "برای دیدن سوابق خانواده به اینترنت وصل شوید.",
   expired: "این دعوت دیگر معتبر نیست.", forbidden: "این دسترسی فعال نیست.", missing: "این مورد دیگر در دسترس نیست.",
   already_recorded: "این نوبت قبلاً ثبت شده است.", conflict: "برای این ایمیل قبلاً دعوت فرستاده شده است.",
-  sync_required: "صاحب برنامه باید اول همگام‌سازی حساب را فعال کند.", limit: "سقف گروه یا دعوت‌ها پر شده است.", invalid: "اطلاعات واردشده را بررسی کنید." };
+  care_too_large: "حجم سوابق از ظرفیت همگام‌سازی بیشتر است.", sync_required: "صاحب برنامه باید اول همگام‌سازی حساب را فعال کند.", limit: "سقف گروه یا دعوت‌ها پر شده است.", invalid: "اطلاعات واردشده را بررسی کنید." };
 const inviteHash = /^#family-invite=([a-f0-9-]{36})$/;
 
 function hero(title, subtitle, art = "control-user") {
@@ -417,18 +417,14 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   function inviteMember(group) {
     page("دعوت به گروه", () => showGroup(group));
     const form = element("form", "", "family-content family-compose sheet-form");
-    const lookup = field("ایمیل یا نام کاربری", "query", "text");
-    const input = lookup.querySelector("input");
-    Object.assign(input, { dir: "ltr", autocapitalize: "none", spellcheck: false, maxLength: 254 });
-    const results = element("div", "", "family-search-result");
-    results.setAttribute("aria-live", "polite");
-    const find = submitButton("جست‌وجو");
-    input.addEventListener("input", () => { results.replaceChildren(); message(); });
-    form.append(groupBanner(group.name, "دعوت به گروه", group.icon), lookup, find, results);
+    const address = field("ایمیل", "email", "email");
+    Object.assign(address.querySelector("input"), { dir: "ltr", autocapitalize: "none", spellcheck: false, maxLength: 254, required: true });
+    form.append(groupBanner(group.name, "دعوت به گروه", group.icon), address, submitButton("ارسال دعوت"));
 
-    async function send(fields) {
+    formSubmit(form, async data => {
       const request = generation;
-      const { delivered } = await familyRequest("invite", { group: group.id, ...fields, language });
+      const email = String(data.get("email")).trim();
+      const { delivered } = await familyRequest("invite", { group: group.id, email, language });
       if (!dialog.open || generation !== request) return;
       await refreshGroup();
       if (!dialog.open || generation !== request) return;
@@ -436,34 +432,6 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       if (!updated) return;
       inviteMember(updated);
       message(delivered ? "دعوت با ایمیل فرستاده شد." : "دعوت ثبت شد. برای فرستادن، لینک دعوت را کپی کنید.");
-    }
-
-    formSubmit(form, async data => {
-      const query = String(data.get("query")).trim();
-      const request = generation;
-      results.replaceChildren();
-      const { person } = await familyRequest("invite-lookup", { group: group.id, query });
-      if (!dialog.open || request !== generation || input.value.trim() !== query) return;
-      if (!person) {
-        results.append(element("p", t("ui.no-accounts-found"), "quiet"));
-        if (query.includes("@")) results.append(action("دعوت برای ثبت‌نام", () => send({ email: query })));
-        else results.append(element("p", t("ui.enter-an-email-to-send-a-signup-invitation"), "quiet"));
-        return;
-      }
-      const contact = button("", () => {
-        if (contact.getAttribute("aria-pressed") === "true") return;
-        contact.setAttribute("aria-pressed", "true");
-        const invite = action("ارسال دعوت", () => send({ username: person.username }));
-        invite.classList.add("block-action");
-        results.append(invite);
-        invite.focus();
-      });
-      contact.className = "family-roster-row";
-      contact.setAttribute("aria-pressed", "false");
-      const copy = element("span", "", "family-context-copy");
-      copy.append(element("strong", person.name || person.username), element("small", "@" + person.username));
-      contact.append(avatar(person.name || person.username), copy, icon("check", "family-access-icon"));
-      results.append(contact);
     });
     content.append(form, section("دعوت‌های در انتظار", group.pending.map(item => {
       const row = element("article", "", "family-card");

@@ -15,6 +15,23 @@ import { createCareIndex, doseTime, trackSchedule } from "../public/medication/d
 const day = iso => Date.parse(`${iso}T00:00:00Z`) / 86_400_000;
 const instant = iso => Date.parse(iso);
 
+test("push capacity excludes ended phases without dropping a pending snooze", () => {
+  const now = instant("2026-11-15T10:00:00Z");
+  const today = day("2026-11-15");
+  const phase = { start: today - 2, end: today, interval: 1, mask: 127, slots: [{ minute: 480, amount: 1000 }] };
+  const medicines = Object.fromEntries(Array.from({ length: 101 }, (_, id) => [id, { id, phases: [phase] }]));
+  const until = now + 60_000;
+  const doses = { snooze: { medicineId: 0, day: today - 1, minute: 480, status: "snoozed", snoozeUntil: until } };
+  const compact = scheduleForPush({ medicines, doses }, "UTC", today, now);
+  assert.equal(compact.rules.length, 1);
+  assert.equal(nextCareReminder(validSchedule(compact), now).at, until);
+  for (const medicine of Object.values(medicines)) medicine.phases = [{ ...phase, end: null }];
+  delete medicines[100];
+  assert.ok(validSchedule(scheduleForPush({ medicines, doses }, "UTC", today, now)));
+  medicines[100] = { id: 100, phases: [{ ...phase, end: null }] };
+  assert.equal(validSchedule(scheduleForPush({ medicines, doses }, "UTC", today, now)), null);
+});
+
 test("calendar index keeps exact-date plans and historical or removed doses visible", () => {
   const start = day("2026-11-09");
   const state = {

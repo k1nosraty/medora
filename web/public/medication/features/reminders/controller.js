@@ -1,6 +1,7 @@
 import { defaultCalendar, language, listSeparator, locale, t } from "../../shared/i18n/locale.js";
 import { accessCare, accessCareSettings } from "../../shared/storage.js";
 import { scheduleForPush, localZone } from "../../domain/care-plan.js";
+import { validSchedule, reminderRequestLimit } from "../../domain/reminder-schedule.js";
 import { matchesSubscriptionId } from "./subscription-id.js";
 
 export { scheduleForPush };
@@ -8,7 +9,7 @@ export { scheduleForPush };
 const $ = id => document.getElementById(id);
 const api = "/api/reminders";
 const dayMs = 86_400_000;
-const planVersion = 6;
+const planVersion = 7;
 let registration;
 let subscription;
 let publicKey;
@@ -49,7 +50,7 @@ function serialize(action) {
 async function request(path, method, token, body) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   if (body) headers["Content-Type"] = "application/json";
-  const response = await fetch(path, { method, headers, body: body && JSON.stringify(body), cache: "no-store" });
+  const response = await fetch(path, { method, headers, body: body && JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(12_000) });
   if (!response.ok) {
     const { error } = await response.json().catch(() => ({}));
     throw new Error(error || "server");
@@ -79,7 +80,7 @@ function deliveryText(result) {
 async function sync(check = false, snapshot) {
   let state = await accessCareSettings();
   let settings = state.reminders;
-  $("push-show-details").checked = state.reminderDetails === true;
+  $("push-show-details").checked = settings?.details ?? (state.reminderDetails === true);
   controls(settings);
   if (!settings?.token) return;
   const zone = localZone();
@@ -95,6 +96,7 @@ async function sync(check = false, snapshot) {
         reminder.zone = zone;
         reminder.planVersion = planVersion;
         reminder.language = language;
+        reminder.details ??= current.reminderDetails === true;
         reminder.revision += 1;
         if (!validSubscription) reminder.enabled = false;
       });
@@ -112,9 +114,17 @@ async function sync(check = false, snapshot) {
       if (settings.enabled) {
         const current = await accessCare(undefined, { snapshot });
         if (current.reminders?.token !== settings.token || current.reminders.revision !== settings.revision) return;
-        plan = { ...scheduleForPush(current, zone, localDay()), language, subscription: subscription.toJSON() };
+        const details = settings.details ?? (current.reminderDetails === true);
+        plan = { ...scheduleForPush({ ...current, reminderDetails: details }, zone, localDay()), language, subscription: subscription.toJSON() };
+        const link = current.accountCare;
+        if (link?.enabled && link.sessionValid !== false && link.owner && link.revision > 0) {
+          plan.account = { owner: link.owner, revision: link.revision, details };
+        }
       }
-      remote = await request(api, "PUT", settings.token, { revision: settings.revision, enabled: settings.enabled, ...plan });
+      const body = { revision: settings.revision, enabled: settings.enabled, ...plan };
+      if (settings.enabled && (!validSchedule(body) ||
+          new TextEncoder().encode(JSON.stringify(body)).length > reminderRequestLimit)) throw new Error("bad_schedule");
+      remote = await request(api, "PUT", settings.token, body);
       latest = (await accessCareSettings(current => {
         const reminder = current.reminders;
         if (reminder?.token === settings.token) reminder.synced = Math.max(reminder.synced ?? 0, settings.revision);
@@ -145,6 +155,9 @@ async function sync(check = false, snapshot) {
       });
       controls(updated.reminders);
       status(t("ui.the-notification-subscription-expired-enable-notification"));
+    } else if (remote.accountPlanError) {
+      status(t("ui.could-not-save-the-schedule-check-your-stages-and-upcomin"));
+      settingsBadge(t("اعلان‌ها به‌روز نیستند"));
     } else if (remote.enabled) {
       const nextKind = kindText(remote.nextKinds);
       const next = remote.next ? t("ui.next-reminder-value-value", nextKind ? nextKind + " · " : "", formatDate.format(remote.next)) : t("ui.notifications-are-on-nothing-is-scheduled");
@@ -157,6 +170,7 @@ async function sync(check = false, snapshot) {
       ? t("ui.could-not-save-the-schedule-check-your-stages-and-upcomin")
       : t("ui.could-not-sync-reminders-reconnect-and-select-check-statu"));
     controls((await accessCareSettings()).reminders);
+    if (settings.enabled && settings.revision > (settings.synced ?? 0)) settingsBadge(t("اعلان‌ها به‌روز نیستند"));
   }
 }
 
@@ -182,6 +196,7 @@ $("push-show-details")?.addEventListener("change", async event => {
   try {
     await accessCareSettings(state => {
       state.reminderDetails = showDetails;
+      if (state.reminders) state.reminders.details = showDetails;
       changeReminderRevision(state);
     });
     void syncReminders();
@@ -195,7 +210,7 @@ $("push-show-details")?.addEventListener("change", async event => {
 
 export async function initializeReminders() {
   const state = await accessCareSettings().catch(() => null);
-  if (state) $("push-show-details").checked = state.reminderDetails === true;
+  if (state) $("push-show-details").checked = state.reminders?.details ?? (state.reminderDetails === true);
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (isIOS && !matchMedia("(display-mode: standalone)").matches && navigator.standalone !== true) {
     settingsBadge(t("ui.installation-required"));
@@ -254,7 +269,8 @@ $("push-enable").addEventListener("click", () => {
       const updated = await accessCareSettings(state => {
         const previous = state.reminders;
         const revision = Math.max(previous?.token === token ? previous.revision : 0, remote.revision) + 1;
-        state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion, language };
+        state.reminders = { token, revision, synced: 0, enabled: true, zone: localZone(), planVersion, language,
+          details: previous?.details ?? (state.reminderDetails === true) };
       });
       controls(updated.reminders);
       await sync();

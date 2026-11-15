@@ -6,11 +6,19 @@ export class Credentials extends DurableObject {
     this.sql = ctx.storage.sql;
     this.sql.exec(`CREATE TABLE IF NOT EXISTS credentials_v1 (
       username TEXT PRIMARY KEY, email_id TEXT NOT NULL UNIQUE, email TEXT NOT NULL,
-      salt TEXT NOT NULL, proof TEXT NOT NULL, created_at INTEGER
+      salt TEXT NOT NULL, proof TEXT NOT NULL, created_at INTEGER, password_key TEXT NOT NULL DEFAULT 'legacy'
     )`);
     if (!this.sql.exec("PRAGMA table_info(credentials_v1)").toArray().some(column => column.name === "created_at")) {
       this.sql.exec("ALTER TABLE credentials_v1 ADD COLUMN created_at INTEGER");
     }
+    if (!this.sql.exec("PRAGMA table_info(credentials_v1)").toArray().some(column => column.name === "password_key")) {
+      this.sql.exec("ALTER TABLE credentials_v1 ADD COLUMN password_key TEXT NOT NULL DEFAULT 'legacy'");
+    }
+    this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS credentials_email ON credentials_v1(email)");
+  }
+
+  accountIdFor(email) {
+    return this.sql.exec("SELECT email_id FROM credentials_v1 WHERE email = ?", email).toArray()[0]?.email_id ?? null;
   }
 
   usernameFor(emailId) {
@@ -18,12 +26,7 @@ export class Credentials extends DurableObject {
   }
 
   find(username) {
-    return this.sql.exec("SELECT email_id, email, salt, proof FROM credentials_v1 WHERE username = ?", username).toArray()[0] ?? null;
-  }
-
-  contactForInvite({ emailId, username }) {
-    return (emailId ? this.sql.exec("SELECT username,email,email_id FROM credentials_v1 WHERE email_id = ?", emailId) :
-      this.sql.exec("SELECT username,email,email_id FROM credentials_v1 WHERE username = ?", username)).toArray()[0] ?? null;
+    return this.sql.exec("SELECT email_id, email, salt, proof, password_key FROM credentials_v1 WHERE username = ?", username).toArray()[0] ?? null;
   }
 
   list(after, query) {
@@ -43,12 +46,12 @@ export class Credentials extends DurableObject {
   }
 
   restoreAccount(row) {
-    const inserted = this.sql.exec("INSERT OR IGNORE INTO credentials_v1 VALUES (?, ?, ?, ?, ?, ?) RETURNING username",
-      row.username, row.email_id, row.email, row.salt, row.proof, row.created_at).toArray().length;
+    const inserted = this.sql.exec("INSERT OR IGNORE INTO credentials_v1 (username,email_id,email,salt,proof,created_at,password_key) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING username",
+      row.username, row.email_id, row.email, row.salt, row.proof, row.created_at, row.password_key ?? "legacy").toArray().length;
     if (inserted) return true;
     const current = this.find(row.username);
     return current?.email_id === row.email_id && current.email === row.email &&
-      current.salt === row.salt && current.proof === row.proof;
+      current.salt === row.salt && current.proof === row.proof && current.password_key === (row.password_key ?? "legacy");
   }
 
   remove(username, emailId, salt) {
@@ -56,17 +59,17 @@ export class Credentials extends DurableObject {
       username, emailId, salt).toArray().length > 0;
   }
 
-  replacePassword(emailId, salt, proof) {
-    return this.sql.exec("UPDATE credentials_v1 SET salt = ?, proof = ? WHERE email_id = ? RETURNING username",
-      salt, proof, emailId).toArray().length > 0;
+  replacePassword(emailId, salt, proof, version = "legacy") {
+    return this.sql.exec("UPDATE credentials_v1 SET salt = ?, proof = ?, password_key = ? WHERE email_id = ? RETURNING username",
+      salt, proof, version, emailId).toArray().length > 0;
   }
 
-  register(username, emailId, email, salt, proof) {
+  register(username, emailId, email, salt, proof, version = "legacy") {
     const inserted = this.sql.exec(
-      "INSERT OR IGNORE INTO credentials_v1 VALUES (?, ?, ?, ?, ?, ?) RETURNING username",
-      username, emailId, email, salt, proof, Date.now()
+      "INSERT OR IGNORE INTO credentials_v1 (username,email_id,email,salt,proof,created_at,password_key) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING username",
+      username, emailId, email, salt, proof, Date.now(), version
     ).toArray().length;
     if (inserted) return null;
-    return this.usernameFor(emailId) ? "already_registered" : "username_taken";
+    return this.accountIdFor(email) ? "already_registered" : "username_taken";
   }
 }

@@ -1,16 +1,10 @@
 import { careSession } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
-import { portable, validatePortable } from "../../public/medication/features/backups/web-format.js";
-import { compilePhases } from "../../public/medication/domain/care-index.js";
+import { careSyncLimit, careVersion, portable, validateCareRecords } from "../../public/medication/domain/care-records.js";
 import { timezone } from "../../public/medication/domain/wall-clock.js";
-import * as engine from "../../public/medication/domain/medication-rules.js";
 
-export const syncLimit = 4 * 1024 * 1024;
-const reply = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
-
-export function validateCareRecords(records) {
-  return validatePortable(records, phases => engine.validMedicationPhases(compilePhases(engine, phases)));
-}
+const privateHeaders = { "Cache-Control": "private, no-store" };
+const reply = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { ...privateHeaders, ...headers } });
 
 export async function handleCareSync(request, env, url) {
   const method = request.method;
@@ -21,12 +15,16 @@ export async function handleCareSync(request, env, url) {
   const { id: owner, token } = session;
   const client = env.EMAIL_ACCOUNTS.getByName(owner);
   if (method === "GET") {
-    const snapshot = await client.readCareForSession(token);
+    const snapshot = await client.readCareForSession(token, owner, request.headers.get("If-None-Match"));
     if (!snapshot) return reply({ error: "sign_in" }, 401);
+    if (snapshot.unchanged) return new Response(null, { status: 304, headers: { ...privateHeaders, ETag: snapshot.unchanged } });
     const { epoch, ...current } = snapshot;
-    return reply({ owner: epoch ? owner + "." + epoch : owner, ...current });
+    const scope = epoch ? owner + "." + epoch : owner;
+    return reply({ owner: scope, ...current }, 200, { ETag: careVersion(scope, current.revision) });
   }
-  const data = await smallJson(request, syncLimit);
+  if (Number(request.headers.get("Content-Length")) > careSyncLimit) return reply({ error: "care_too_large" }, 413);
+  const data = await smallJson(request, careSyncLimit, { onLimit: () => ({ tooLarge: true }) });
+  if (data?.tooLarge) return reply({ error: "care_too_large" }, 413);
   const scope = typeof data?.owner === "string" && /^([a-f0-9]{64})(?:\.([a-f0-9]{32}))?$/.exec(data.owner);
   if (!scope || scope[1] !== owner || !Number.isSafeInteger(data.revision) || data.revision < 0) return reply({ error: "invalid_sync" }, 400);
   let records;
@@ -39,7 +37,8 @@ export async function handleCareSync(request, env, url) {
   if (typeof data.zone === "string" && data.zone.length <= 64) {
     try { timezone(data.zone); zone = data.zone; } catch {}
   }
-  const saved = await client.saveCareSnapshot(data.revision, records, scope[2] ?? "", token, zone);
+  const saved = await client.saveCareSnapshot(data.revision, records, scope[2] ?? "", token, zone, owner);
   if (saved?.signedOut) return reply({ error: "sign_in" }, 401);
+  if (saved?.tooLarge) return reply({ error: "care_too_large" }, 413);
   return saved ? reply({ owner: data.owner, ...saved }) : reply({ error: "conflict" }, 409);
 }

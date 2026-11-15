@@ -1,6 +1,6 @@
 import { loadOperations, loadTickets } from "./operations.js";
 import { $, button, element } from "/medication/shared/ui/dom.js";
-import { localizeMarkup, t } from "/medication/shared/i18n/locale.js";
+import { localDigits, localizeMarkup, t } from "/medication/shared/i18n/locale.js";
 import { applyDisplay } from "/medication/styles/display.js";
 import { accessCareSettings } from "/medication/shared/storage.js";
 import { renderCreative } from "/medication/features/promotions/creative.js";
@@ -230,7 +230,13 @@ confirm.addEventListener("click", async () => {
       return;
     }
     confirmation.close();
-    await loadAccounts(false, "حساب حذف شد.");
+    const cleanup = result.cleanup;
+    const message = cleanup?.status === "pending"
+      ? t("دسترسی حساب قطع شد. پاک‌سازی ادامه دارد. دستگاه‌های باقی‌مانده {0}", localDigits(cleanup.remainingDevices))
+      : Number.isInteger(cleanup?.familyRows)
+        ? t("حساب و {0} رکورد وابستهٔ خانوادگی حذف شدند.", localDigits(cleanup.familyRows))
+        : "حساب حذف شد.";
+    await loadAccounts(false, message);
     if (!panel.hidden) search.elements.query.focus({ preventScroll: true });
   } catch {
     status("admin-delete-status", "حذف حساب انجام نشد. دوباره تلاش کنید.", true);

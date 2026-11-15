@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createECDH, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { setTimeout as sleep } from "node:timers/promises";
+import { scheduleForPush } from "../public/medication/domain/care-plan.js";
+import { subscriptionId } from "../public/medication/features/reminders/subscription-id.js";
 import { emptyCareRecords } from "../public/medication/domain/family.js";
 import { ageAt, validPersonalProfile } from "../public/medication/domain/profile.js";
 
@@ -19,20 +22,78 @@ test("family invitations, sharing and revocation are directional and group scope
   const { Miniflare, Response, convertV4MiniflareOptions } = require("miniflare");
   const { build } = require("esbuild");
   const { outputFiles } = await build({
-    absWorkingDir: fileURLToPath(new URL("..", import.meta.url)), entryPoints: ["src/worker.mjs"],
+    absWorkingDir: fileURLToPath(new URL("..", import.meta.url)),
+    stdin: { resolveDir: fileURLToPath(new URL("..", import.meta.url)), contents: `
+      export { default, Credentials, Operations } from "./src/worker.mjs";
+      import { EmailAccount, Families, MedicationReminders } from "./src/worker.mjs";
+      export class TestFamilies extends Families {
+        failNextRemoval() { this.failRemoval = true; }
+        eraseAccount(...args) {
+          if (this.failRemoval) {
+            this.failRemoval = false;
+            throw new Error("temporary cleanup failure");
+          }
+          return super.eraseAccount(...args);
+        }
+      }
+      export class TestAccount extends EmailAccount {
+        async removalJob() { return await this.ctx.storage.get("account-deletion") ?? null; }
+        async retryRemoval() { await this.finishRemoval(false); }
+        pauseViews() { this.waitForView = new Promise(resolve => this.resume = resolve); }
+        resumeViews() { this.resume?.(); this.waitForView = null; }
+        viewStarted() { return this.started === true; }
+        async exportFamilyCare(revision) {
+          if (this.waitForView) {
+            this.started = true;
+            await this.waitForView;
+          }
+          return super.exportFamilyCare(revision);
+        }
+        async reminderJob() { return await this.ctx.storage.get("reminder-update") ?? null; }
+        async retryReminderJob() {
+          const job = await this.reminderJob();
+          if (job) await this.ctx.storage.put("reminder-update", { ...job, at: Date.now() });
+          await this.alarm();
+        }
+      }
+      export class TestReminders extends MedicationReminders {
+        failOnce() { this.failNext = true; }
+        async replaceAccountPlan(...args) {
+          if (this.failNext) {
+            this.failNext = false;
+            throw new Error("temporary test failure");
+          }
+          return super.replaceAccountPlan(...args);
+        }
+      }
+    ` },
     bundle: true, platform: "browser", format: "esm", external: ["cloudflare:workers", "node:crypto", "node:buffer"], write: false
   });
   const mail = new Map();
   const origin = "https://medora.test";
+  const vapid = createECDH("prime256v1");
+  const vapidPublic = vapid.generateKeys().toString("base64url");
+  const vapidSecret = Buffer.alloc(32);
+  const privateKey = vapid.getPrivateKey();
+  privateKey.copy(vapidSecret, vapidSecret.length - privateKey.length);
   const mf = new Miniflare(convertV4MiniflareOptions({
     cf: false, modules: true, script: outputFiles[0].text, compatibilityDate: "2026-10-29", compatibilityFlags: ["nodejs_compat"],
     durableObjects: {
-      EMAIL_ACCOUNTS: { className: "EmailAccount", useSQLite: true },
+      EMAIL_ACCOUNTS: { className: "TestAccount", useSQLite: true },
       CREDENTIALS: { className: "Credentials", useSQLite: true },
-      FAMILIES: { className: "Families", useSQLite: true }
+      FAMILIES: { className: "TestFamilies", useSQLite: true },
+      OPERATIONS: { className: "Operations", useSQLite: true },
+      REMINDERS: { className: "TestReminders", useSQLite: true }
     },
-    ratelimits: { EMAIL_AUTH_LIMIT: { namespace_id: "750505", simple: { limit: 8, period: 60 } } },
-    bindings: { EMAIL_AUTH_SECRET: "b".repeat(64), EMAIL_FROM: "login@medora.example", RESEND_API_KEY: "test" },
+    ratelimits: {
+      EMAIL_AUTH_LIMIT: { namespace_id: "750505", simple: { limit: 8, period: 60 } },
+      PUSH_ENROLL_LIMIT: { namespace_id: "750501", simple: { limit: 8, period: 60 } },
+      PUSH_DEVICE_LIMIT: { namespace_id: "750502", simple: { limit: 60, period: 60 } }
+    },
+    bindings: { EMAIL_AUTH_SECRET: "b".repeat(64), EMAIL_FROM: "login@medora.example", RESEND_API_KEY: "test",
+      ADMIN_EMAIL: "admin@example.com", VAPID_PUBLIC_KEY: vapidPublic, VAPID_PRIVATE_KEY: vapidSecret.toString("base64url"),
+      VAPID_SUBJECT: "mailto:push@medora.test", REMINDER_SIGNING_KEY: "c".repeat(64)
+    },
     outboundService: async request => {
       assert.equal(request.url, "https://api.resend.com/emails");
       const message = await request.json();
@@ -41,9 +102,9 @@ test("family invitations, sharing and revocation are directional and group scope
     }
   }));
 
-  function call(path, data, cookie, method = data ? "POST" : "GET") {
+  function call(path, data, cookie, method = data ? "POST" : "GET", extra = {}) {
     return mf.dispatchFetch(origin + "/api/" + path, { method, headers: {
-      Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": "192.0.2.6", ...(cookie && { Cookie: cookie })
+      Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": "192.0.2.6", ...(cookie && { Cookie: cookie }), ...extra
     }, body: data && JSON.stringify(data) });
   }
   async function signup(username) {
@@ -54,6 +115,14 @@ test("family invitations, sharing and revocation are directional and group scope
     const response = await call("auth/register", { email, grant, username, password: "family login sample" });
     assert.equal(response.status, 200, await response.clone().text());
     return response.headers.get("Set-Cookie").split(";")[0];
+  }
+  const stub = async (binding, name) => (await mf.getDurableObjectNamespace(binding)).getByName(name);
+  async function until(check) {
+    for (let i = 0; i < 50; i++) {
+      if (await check()) return;
+      await sleep(50);
+    }
+    assert.fail("condition did not become true");
   }
   const family = (cookie, data) => call("family", data, cookie);
   async function membership(cookie, group, self) {
@@ -77,15 +146,14 @@ test("family invitations, sharing and revocation are directional and group scope
     const lookup = { action: "invite-lookup", group, query: "family_b" };
     assert.equal((await family(b, lookup)).status, 403);
     for (const query of ["family_b", "@family_b", "family_b@example.com"]) {
-      assert.deepEqual(await (await family(a, { ...lookup, query })).json(), { person: { username: "family_b", name: "" } });
+      assert.deepEqual(await (await family(a, { ...lookup, query })).json(), { person: null });
     }
     assert.deepEqual(await (await family(a, { ...lookup, query: "new_member@example.com" })).json(), { person: null });
-    const existingInvite = await (await family(a, { action: "invite", group, username: "family_b" })).json();
+    const existingInvite = await (await family(a, { action: "invite", group, email: "family_b@example.com" })).json();
     assert.equal(existingInvite.delivered, true);
     const overview = (await (await family(a)).json()).groups.find(item => item.id === group);
     assert.equal(overview.icon, "heart");
-    assert.equal(overview.pending[0].recipient, "family_b");
-    assert.equal(JSON.stringify(overview).includes("family_b@example.com"), false);
+    assert.equal(overview.pending[0].recipient, "family_b@example.com");
     const inbox = await (await call("family?inbox=1", null, b)).json();
     assert.equal(inbox.invitations[0].id, existingInvite.invite);
     const edit = { action: "update-group", group, name: "Care circle", icon: "sprout" };
@@ -167,6 +235,61 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.deepEqual(savedPlan.phases, scheduled.plan.phases);
     assert.deepEqual((await (await call("account/care", null, a)).json()).records.medicines, {});
 
+    const minute = 480;
+    const day = today - 1;
+    const originalDue = Date.now() + 90_000;
+    const linkedSnapshot = await (await call("account/care", null, b)).json();
+    const linkedRecords = linkedSnapshot.records;
+    linkedRecords.medicines.postponed = { id: "postponed", name: "Postponed", unit: "tablet", stock: null,
+      phases: [{ start: day, end: day + 1, interval: 1, mask: 127, slots: [{ minute, amount: 1000 }] }] };
+    linkedRecords.doses[`postponed|${day}|${minute}`] = { medicineId: "postponed", day, minute,
+      planned: 1000, actual: null, debit: 0, status: "snoozed", snoozeUntil: originalDue };
+    for (const row of Object.values(linkedRecords.medicines)) if (row.id !== "postponed") row.paused = true;
+    const saved = await (await call("account/care", { ...linkedSnapshot, records: linkedRecords, zone: "UTC" }, b, "PUT")).json();
+    const subscription = { endpoint: "https://web.push.apple.com/family-test-endpoint",
+      keys: { p256dh: createECDH("prime256v1").generateKeys().toString("base64url"), auth: Buffer.alloc(16).toString("base64url") } };
+    const { token } = await (await call("reminders/enroll", { subscription })).json();
+    const headers = { Authorization: "Bearer " + token };
+    const plan = { ...scheduleForPush({ ...linkedRecords.settings, ...linkedRecords }, "UTC", today),
+      enabled: true, revision: 1, subscription, language: "en",
+      account: { owner, revision: saved.revision, details: false } };
+    assert.equal((await call("reminders", plan, a, "PUT", headers)).status, 401);
+    assert.equal((await (await call("reminders", plan, b, "PUT", headers)).json()).next, originalDue);
+    const account = await stub("EMAIL_ACCOUNTS", owner);
+    const device = await stub("REMINDERS", await subscriptionId(subscription));
+    await until(async () => !(await account.reminderJob()));
+    await device.failOnce();
+    assert.equal((await family(a, { action: "record", group, target: bId, operation: randomUUID(), kind: "medicine",
+      id: "postponed", day, minute, status: "taken" })).status, 200);
+    await until(async () => (await account.reminderJob())?.at > Date.now() + 20_000);
+    assert.equal((await device.status()).next, originalDue);
+    await account.retryReminderJob();
+    assert.equal((await device.status()).next, null);
+    assert.equal(await device.replaceAccountPlan(owner, saved.revision, linkedRecords), "current");
+    assert.equal((await (await call("reminders", { ...plan, revision: 2 }, b, "PUT", headers)).json()).next, null);
+    assert.equal((await family(a, { action: "add", group, target: bId, operation: randomUUID(), kind: "visit",
+      day: today + 2, time: "14:00", name: "A future visit" })).status, 200);
+    await until(async () => (await device.status()).nextKinds.includes("appointment"));
+
+    await account.pauseViews();
+    const pendingView = view(a, bId);
+    await until(() => account.viewStarted());
+    assert.equal((await family(a, { action: "share", group: otherGroup, target: "all", sections: ["water"],
+      record: false, add: false, days: null })).status, 200);
+    let revoked = false;
+    const waitingRevoke = family(b, { action: "revoke", group, target: aId }).then(response => {
+      revoked = true;
+      return response;
+    });
+    await sleep(50);
+    assert.equal(revoked, false);
+    await account.resumeViews();
+    assert.equal((await pendingView).status, 200);
+    assert.equal((await waitingRevoke).status, 200);
+    assert.equal((await view(a, bId)).status, 403);
+    assert.equal((await family(a, record)).status, 403);
+    assert.equal((await share(b, aId, { all: true, record: true, add: true })).status, 200);
+
     assert.equal((await family(a, { action: "revoke", group, target: bId })).status, 200);
     assert.equal((await view(b, aId)).status, 403);
     assert.equal((await view(a, bId)).status, 200);
@@ -189,5 +312,31 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.equal((await family(a, { action: "cancel", invite: pending })).status, 404);
     assert.equal((await view(a, bId)).status, 403);
     assert.deepEqual((await (await call("account/care", null, b)).json()).records, savedBeforeDeletion);
+    const admin = await signup("admin");
+    async function removeAccount(username) {
+      const { users } = await (await call("admin/accounts?q=" + username, null, admin)).json();
+      const { tag } = users.find(user => user.username === username);
+      const response = await call("admin/accounts", { username, tag }, admin, "DELETE");
+      assert.equal(response.status, 200);
+      return (await response.json()).cleanup;
+    }
+    const hub = await stub("FAMILIES", "care-groups");
+    await hub.failNextRemoval();
+    assert.equal((await removeAccount("family_b")).status, "pending");
+    assert.equal((await family(b)).status, 401);
+    assert.ok(await account.removalJob());
+    await account.retryRemoval();
+    assert.equal(await account.removalJob(), null);
+    const removal = await account.removalStatus();
+    assert.equal(removal.status, "complete");
+    assert.ok(removal.familyRows > 0);
+    assert.equal(removal.devices, 1);
+    assert.equal((await device.status()).enabled, false);
+    assert.equal((await (await family(a)).json()).groups[0].members.length, 1);
+    assert.equal((await hub.exportFamilyPage("audit", 0)).some(row => row.actor === owner || row.subject === owner), false);
+    await removeAccount("family_a");
+    assert.deepEqual(await hub.exportFamilyPage("groups", 0), []);
+    const recreated = await signup("family_b");
+    assert.deepEqual((await (await family(recreated)).json()).groups, []);
   } finally { await mf.dispose(); }
 });

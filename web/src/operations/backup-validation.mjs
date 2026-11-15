@@ -1,10 +1,13 @@
+import { passwordKey, passwordVersion } from "../accounts/keys.mjs";
+import { familyTableNames, validFamilyRows } from "../family/archive.mjs";
+import { timezone } from "../../public/medication/domain/wall-clock.js";
 import { Buffer } from "node:buffer";
 import { validSubscription, validSubscriptionKey } from "../http/validation.mjs";
 import { matchesSubscriptionId } from "../../public/medication/features/reminders/subscription-id.js";
 import { validSchedule } from "../reminders/medication-schedule.mjs";
 import { identify, mediaIdPattern } from "../promotions/media.mjs";
 import { validatedPromotion } from "../promotions/routes.mjs";
-import { validateCareRecords } from "../sync/routes.mjs";
+import { validateCareRecords } from "../../public/medication/domain/care-records.js";
 
 export async function digest(bytes) {
   const hash = await crypto.subtle.digest("SHA-256", bytes);
@@ -12,7 +15,10 @@ export async function digest(bytes) {
 }
 
 export function fingerprint(env) {
-  return digest(encoder.encode(JSON.stringify([env.EMAIL_AUTH_SECRET, env.VAPID_PUBLIC_KEY ?? "", env.REMINDER_SIGNING_KEY ?? ""])));
+  const config = [env.EMAIL_AUTH_SECRET, env.VAPID_PUBLIC_KEY ?? "", env.REMINDER_SIGNING_KEY ?? ""];
+  if (env.EMAIL_PASSWORD_KEY) config.push(passwordVersion(env), passwordKey(env),
+    env.EMAIL_PREVIOUS_PASSWORD_KEY_ID, env.EMAIL_PREVIOUS_PASSWORD_KEY, passwordKey(env, "legacy"));
+  return digest(encoder.encode(JSON.stringify(config)));
 }
 
 export function assertBackup(valid) {
@@ -27,10 +33,11 @@ const unique = values => new Set(values).size === values.length;
 export const decodeMedia = encoded => Buffer.from(encoded, "base64");
 
 export async function validate(data, env) {
-  assertBackup(data?.version === 1 && [data.accounts, data.reminders, data.media, data.ads?.assets,
+  assertBackup([1, 2].includes(data?.version) && [data.accounts, data.reminders, data.media, data.ads?.assets,
     data.ads?.campaigns, data.operations?.counters, data.operations?.audit, data.operations?.tickets].every(Array.isArray));
   await validateFingerprint(data, env);
   validateAccounts(data.accounts);
+  if (data.version === 2) assertBackup(data.family && familyTableNames.every(table => validFamilyRows(table, data.family[table])));
   await validateReminders(data.reminders);
   const assets = new Map();
   for (const { asset, data: encoded } of data.media) {
@@ -55,11 +62,17 @@ export async function validateFingerprint(keys, env) {
 }
 
 export function validateAccounts(accounts) {
-  for (const { row, care, epoch } of accounts) {
+  for (const { row, care, epoch, zone, devices } of accounts) {
     assertBackup(row && /^[a-z0-9_]{3,32}$/.test(row.username) && hex(row.email_id, 64) &&
       hex(row.salt, 32) && hex(row.proof, 64) && text(row.email) && row.email.length <= 254 &&
       (row.created_at === null || count(row.created_at)) && (epoch === "" || hex(epoch, 32)) &&
       count(care?.revision) && (care.revision === 0 ? care.records === null : care.records !== null));
+    assertBackup(row.password_key === undefined || (typeof row.password_key === "string" && /^[a-z0-9-]{1,32}$/.test(row.password_key)));
+    if (zone != null) {
+      assertBackup(typeof zone === "string" && zone.length <= 64);
+      try { timezone(zone); } catch { assertBackup(false); }
+    }
+    if (devices !== undefined) assertBackup(Array.isArray(devices) && devices.every(id => hex(id, 32)) && unique(devices));
     if (care.records !== null) validateCareRecords(care.records);
   }
   assertBackup(unique(accounts.map(({ row }) => row.username)) && unique(accounts.map(({ row }) => row.email_id)));
@@ -68,6 +81,10 @@ export function validateAccounts(accounts) {
 export async function validateReminders(reminders) {
   for (const { id, state } of reminders) {
     assertBackup(hex(id, 32) && count(state?.revision) && state.revision > 0);
+    if (state.link != null) {
+      assertBackup(typeof state.link.owner === "string" && /^[a-f0-9]{64}(?:\.[a-f0-9]{32})?$/.test(state.link.owner) &&
+        count(state.link.revision) && typeof state.link.details === "boolean");
+    }
     const next = state?.next;
     if (state.plan === null) {
       assertBackup(next === null);

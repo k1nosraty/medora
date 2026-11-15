@@ -2,7 +2,7 @@ import { $ } from "../../shared/ui/dom.js";
 import { t } from "../../shared/i18n/locale.js";
 import { accessCare, accessCareSettings } from "../../shared/storage.js";
 import { localZone } from "../../domain/care-plan.js";
-import { portable } from "../backups/web-format.js";
+import { careSnapshotFits, careVersion, portable } from "../../domain/care-records.js";
 import { applyPortable, mergeCare } from "./merge.js";
 
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
@@ -45,13 +45,18 @@ export function installCareSync({ reload, remindersChanged }) {
       const local = await accessCare();
       const binding = local.accountCare;
       if (!activate && !signedIn && !binding?.enabled) { message = ""; return; }
-      const response = await fetch(path, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
+      const known = binding?.base && binding.owner && Number.isSafeInteger(binding.revision);
+      const response = await fetch(path, {
+        cache: "no-store", signal: AbortSignal.timeout(12_000),
+        ...(known && { headers: { "If-None-Match": careVersion(binding.owner, binding.revision) } })
+      });
       if (response.status === 401) {
         message = "برای ادامهٔ همگام‌سازی دوباره وارد حساب شوید.";
+        await signedOut();
         return;
       }
-      if (!response.ok) throw new Error();
-      const remote = await response.json();
+      if (response.status !== 304 && !response.ok) throw new Error();
+      const remote = response.status === 304 ? { owner: binding.owner, revision: binding.revision, records: binding.base } : await response.json();
       if (binding?.owner && binding.owner !== remote.owner) {
         message = "سوابق این مرورگر به حساب دیگری متصل‌اند. برای حساب جدید از نمایهٔ جداگانهٔ مرورگر استفاده کنید.";
         return;
@@ -65,9 +70,11 @@ export function installCareSync({ reload, remindersChanged }) {
       const candidate = autoRestore ? remote.records : mergeCare(binding?.base, original, remote.records);
       let confirmed = remote;
       if (!autoRestore && (!remote.records || !same(candidate, mergeCare(null, remote.records, null)))) {
+        const zone = localZone();
+        if (!careSnapshotFits(remote.owner, remote.revision, candidate, zone)) throw new Error("care_too_large");
         const uploaded = await fetch(path, {
           method: "PUT", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ owner: remote.owner, revision: remote.revision, records: candidate, zone: localZone() }),
+          body: JSON.stringify({ owner: remote.owner, revision: remote.revision, records: candidate, zone }),
           signal: AbortSignal.timeout(12_000)
         });
         if (uploaded.status === 409) {
@@ -75,11 +82,12 @@ export function installCareSync({ reload, remindersChanged }) {
           else schedule();
           return;
         }
-        if (!uploaded.ok) throw new Error();
+        if (!uploaded.ok) throw new Error(uploaded.status === 413 ? "care_too_large" : "sync_failed");
         confirmed = await uploaded.json();
       }
       let edited = false;
       let changed = false;
+      let linkChanged = false;
       await accessCare(state => {
         const current = state.accountCare;
         if ((current?.owner && current.owner !== remote.owner) ||
@@ -89,18 +97,23 @@ export function installCareSync({ reload, remindersChanged }) {
         const result = mergeCare(original, snapshot, confirmed.records);
         edited = !same(result, mergeCare(null, confirmed.records, null));
         changed = !same(result, mergeCare(null, snapshot, null));
+        linkChanged = !current?.enabled || current.sessionValid === false || current.owner !== remote.owner;
         if (changed) {
           applyPortable(state, result);
-          remindersChanged(state);
           state.intro = "done";
         }
+        if (changed || linkChanged) remindersChanged(state);
         state.accountCare = { owner: remote.owner, enabled: true, revision: confirmed.revision,
-          base: confirmed.records, syncedAt: Date.now() };
+          base: confirmed.records, syncedAt: Date.now(), sessionValid: true };
       }, { snapshot: local });
-      await reload(changed);
+      await reload(changed || linkChanged);
       message = "سوابق با حساب همگام شدند.";
       if (edited) schedule();
-    } catch {
+    } catch (error) {
+      if (error.message === "care_too_large") {
+        message = "حجم سوابق از ظرفیت همگام‌سازی بیشتر است. سوابق روی دستگاه باقی ماندند.";
+        return;
+      }
       message = "همگام‌سازی انجام نشد. سوابق روی دستگاه باقی ماندند.";
       if (!activate) schedule(30_000);
     } finally {
@@ -136,12 +149,27 @@ export function installCareSync({ reload, remindersChanged }) {
   });
   disable.addEventListener("click", async () => {
     if (running) return;
-    await accessCare(state => { if (state.accountCare) state.accountCare.enabled = false; });
+    await accessCareSettings(state => {
+      if (!state.accountCare?.enabled) return;
+      state.accountCare.enabled = false;
+      remindersChanged(state);
+    });
+    await reload(true);
     message = "همگام‌سازی این دستگاه متوقف شد.";
     await refresh();
   });
+  async function signedOut() {
+    let changed = false;
+    await accessCareSettings(state => {
+      if (!state.accountCare?.enabled || state.accountCare.sessionValid === false) return;
+      state.accountCare.sessionValid = false;
+      remindersChanged(state);
+      changed = true;
+    });
+    if (changed) await reload(true);
+  }
   window.addEventListener("online", () => schedule(0));
   window.addEventListener("focus", () => schedule(0));
   setInterval(() => { if (!document.hidden) schedule(0); }, 30_000);
-  return { refresh, schedule, signedIn: () => void sync(false, true) };
+  return { refresh, schedule, signedOut, signedIn: () => void sync(false, true) };
 }

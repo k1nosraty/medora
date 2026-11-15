@@ -1,3 +1,4 @@
+import { familyTableNames, validFamilyRows } from "../src/family/archive.mjs";
 import { randomBytes, randomUUID, scryptSync } from "node:crypto";
 import { link, open, readFile, unlink } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -99,7 +100,7 @@ async function* frames(handle, header, size) {
   }
 }
 
-const rank = new Map(["start", "accounts", "reminders", "media", "ads", "operations", "end"].map((type, index) => [type, index]));
+const rank = new Map(["start", "accounts", "reminders", "media", "ads", "operations", "family", "end"].map((type, index) => [type, index]));
 
 async function withArchive(handle, process) {
   const { size } = await handle.stat();
@@ -114,16 +115,24 @@ async function withArchive(handle, process) {
   let consistent = false;
   let previousAccount = "", previousReminder = "";
   const assets = new Map();
-  const stats = { accounts: 0, media: 0, reminders: 0 };
+  const stats = { accounts: 0, media: 0, reminders: 0, accountTimezones: 0, accountsWithTimezoneField: 0 };
+  let includesFamily = false;
+  let familyTable = -1;
+  const family = Object.fromEntries(familyTableNames.map(table => [table, 0]));
   for await (const { record, frame, index, last } of frames(handle, header, size)) {
     const position = rank.get(record.type);
     check(position !== undefined && position >= previousRank && !final && ((index === 0) === (record.type === "start")));
-    if (index === 0) consistent = record.consistent === true;
-    if (position === previousRank) check(["accounts", "reminders", "media", "operations"].includes(record.type));
-    if (record.type === "accounts") for (const { row } of record.accounts) {
+    if (index === 0) {
+      consistent = record.consistent === true;
+      includesFamily = record.includesFamily === true;
+    }
+    if (position === previousRank) check(["accounts", "reminders", "media", "operations", "family"].includes(record.type));
+    if (record.type === "accounts") for (const { row, zone } of record.accounts) {
       check(row.username > previousAccount);
       previousAccount = row.username;
       stats.accounts++;
+      if (zone !== undefined) stats.accountsWithTimezoneField++;
+      if (zone != null) stats.accountTimezones++;
     }
     if (record.type === "reminders") for (const { id } of record.reminders) {
       check(id > previousReminder);
@@ -141,8 +150,15 @@ async function withArchive(handle, process) {
         assets.get(id)?.size === size && assets.get(id)?.type === type));
     }
     if (record.type === "operations") check([rank.get("ads"), rank.get("operations")].includes(previousRank));
+    if (record.type === "family") {
+      const table = familyTableNames.indexOf(record.table);
+      check(includesFamily && table >= 0 && table >= familyTable && table <= familyTable + 1 && validFamilyRows(record.table, record.rows));
+      familyTable = table;
+      family[record.table] += record.rows.length;
+    }
     if (record.type === "end") {
-      check(last && previousRank === rank.get("operations"));
+      check(last && previousRank === rank.get(includesFamily ? "family" : "operations") &&
+        (!includesFamily || familyTable === familyTableNames.length - 1));
       final = true;
     }
     hash = await advanceHash(hash, frame);
@@ -150,7 +166,7 @@ async function withArchive(handle, process) {
     total++;
   }
   check(final && total >= 4);
-  const info = { chainSha256: hash, parts: total, bytes: size, consistent, ...stats };
+  const info = { chainSha256: hash, parts: total, bytes: size, consistent, family: includesFamily ? family : null, ...stats };
   if (process) await process(header, size, info);
   return info;
 }

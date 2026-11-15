@@ -9,11 +9,7 @@ const tehranDay = () => Math.floor((Date.now() + 12_600_000) / day);
 const result = (data, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 const clean = (value, max) => typeof value === "string" && value.trim().length <= max ? value.trim() : "";
 const flagNames = ["promotions", "support"];
-export const operations = env => env.OPERATIONS?.getByName("operations");
-
-export function logOperation(env, actor, action) {
-  return operations(env)?.audit(actor, action).catch(() => {});
-}
+import { operations, logOperation } from "./audit.mjs";
 
 export async function handleOperations(request, env, url, ctx) {
   const store = operations(env);

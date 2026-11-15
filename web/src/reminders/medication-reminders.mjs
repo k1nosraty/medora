@@ -1,6 +1,9 @@
-import { operations } from "../operations/routes.mjs";
+import { operations } from "../operations/audit.mjs";
+import { careSession } from "../accounts/email-auth.mjs";
 import { DurableObject } from "cloudflare:workers";
-import { nextCareReminder, validSchedule } from "./medication-schedule.mjs";
+import { nextCareReminder, validSchedule, reminderRequestLimit } from "./medication-schedule.mjs";
+import { scheduleForPush } from "../../public/medication/domain/care-plan.js";
+import { dayMs, localWall, timezone } from "../../public/medication/domain/wall-clock.js";
 import { smallJson, validSubscription, validSubscriptionKey } from "../http/validation.mjs";
 import { reminderCopy } from "./copy.mjs";
 import { sendPush } from "./push.mjs";
@@ -43,11 +46,13 @@ export async function handleMedicationReminders(request, env, url) {
   if (testing) return reply(await device.test());
   if (request.method === "GET") return reply(await device.status());
 
-  const body = await smallJson(request, 96 * 1024);
+  const body = await smallJson(request, reminderRequestLimit);
   if (!Number.isSafeInteger(body?.revision) || body.revision < 1 || typeof body.enabled !== "boolean") {
     return reply({ error: "bad_request" }, 400);
   }
   let plan = null;
+  let link = null;
+  let account;
   if (body.enabled) {
     const schedule = validSchedule(body);
     const subscription = validSubscription(body.subscription);
@@ -55,16 +60,35 @@ export async function handleMedicationReminders(request, env, url) {
       return reply({ error: "bad_schedule" }, 400);
     }
     plan = { ...schedule, subscription, language: body.language === "en" ? "en" : "fa" };
+    if (body.account != null) {
+      const { owner, revision, details } = body.account;
+      if (typeof owner !== "string" || !/^[a-f0-9]{64}(?:\.[a-f0-9]{32})?$/.test(owner) ||
+          !Number.isSafeInteger(revision) || revision < 0 || typeof details !== "boolean") return reply({ error: "bad_request" }, 400);
+      const session = await careSession(request, env);
+      if (!session || session.id !== owner.split(".")[0]) return reply({ error: "sign_in" }, 401);
+      const client = env.EMAIL_ACCOUNTS.getByName(session.id);
+      const care = await client.reminderScope(session.token, session.id);
+      if (care?.owner !== owner || revision > care.revision) return reply({ error: "sign_in" }, 401);
+      link = { owner, revision, details };
+      account = { client, session };
+    }
     // A registered device must be discoverable by backup even if this request is interrupted.
     if (operations(env)) await operations(env).registerReminder(match[1]);
   }
-  return reply(await device.replace(body.revision, plan));
+  const saved = await device.replace(body.revision, plan, link);
+  if (account && saved.revision === body.revision &&
+      !await account.client.registerReminderDevice(account.session.token, account.session.id, link.owner, match[1])) {
+    await device.detachAccountPlan(link.owner, body.revision);
+    return reply({ error: "sign_in" }, 401);
+  }
+  return reply(saved);
 }
 
 function publicState(state) {
   return {
     revision: state?.revision ?? 0, enabled: Boolean(state?.plan), next: state?.next?.at ?? null,
     nextKinds: state?.next ? state.next.kinds ?? ["dose"] : [],
+    ...(state?.accountPlanError && { accountPlanError: state.accountPlanError }),
     last: state?.last ?? null
   };
 }
@@ -146,14 +170,48 @@ export class MedicationReminders extends DurableObject {
     }, 120, async () => (await this.ctx.storage.get("state"))?.revision === target.revision);
   }
 
-  async replace(revision, plan) {
+  async replace(revision, plan, link = null) {
     return this.ctx.storage.transaction(async storage => {
       const previous = await storage.get("state");
       if (revision <= (previous?.revision ?? 0)) return publicState(previous);
+      if (link && previous?.link?.owner === link.owner && previous.link.revision > link.revision && previous.plan) {
+        const state = { ...previous, revision };
+        await saveState(storage, state, await storage.getAlarm());
+        return publicState(state);
+      }
       const next = plan ? nextCareReminder(plan, Date.now()) : null;
-      const state = { revision, plan, next, last: previous?.last?.status === "gone" ? null : previous?.last ?? null, attempts: 0 };
+      const state = { revision, plan, next, link, last: previous?.last?.status === "gone" ? null : previous?.last ?? null, attempts: 0 };
       await saveState(storage, state);
       return publicState(state);
+    });
+  }
+
+  async replaceAccountPlan(owner, revision, records) {
+    return this.ctx.storage.transaction(async storage => {
+      const state = await storage.get("state");
+      if (!state?.plan || state.link?.owner !== owner) return "unlinked";
+      if (state.link.revision >= revision) return "current";
+      const now = Date.now();
+      const { zone, subscription, language } = state.plan;
+      const today = Math.floor(localWall(now, timezone(zone)) / dayMs);
+      const raw = scheduleForPush({ ...records.settings, ...records, reminderDetails: state.link.details }, zone, today, now);
+      const plan = validSchedule(raw);
+      const link = { ...state.link, revision };
+      if (!plan || encoder.encode(JSON.stringify({ ...raw, subscription, language })).length > reminderRequestLimit) {
+        await storage.put("state", { ...state, link, accountPlanError: "bad_schedule" });
+        return "invalid";
+      }
+      await saveState(storage, { ...state, link, plan: { ...plan, subscription, language },
+        next: nextCareReminder(plan, now), attempts: 0, accountPlanError: null });
+      return "updated";
+    });
+  }
+
+  async detachAccountPlan(owner, revision) {
+    return this.ctx.storage.transaction(async storage => {
+      const state = await storage.get("state");
+      if (state?.link?.owner !== owner || (revision !== undefined && state.revision !== revision)) return;
+      await saveState(storage, { ...state, plan: null, next: null, link: null, accountPlanError: null });
     });
   }
 
@@ -173,7 +231,8 @@ export class MedicationReminders extends DurableObject {
     const dueKinds = (state.next.kinds ?? ["dose"]).filter(kind => kind !== "appointment" || now < state.next.appointmentExpires);
     const singleRoutine = dueKinds.length === 1 && dueKinds[0] === "routine";
     const tag = `${dueKinds.length === 1 ? dueKinds[0] : "care"}-${due.toString(36)}`;
-    const currentIs = current => current?.revision === state.revision && current?.next?.at === due;
+    const currentIs = current => current?.revision === state.revision && current?.next?.at === due &&
+      current.link?.revision === state.link?.revision;
     const result = dueKinds.length && now - due < sendWindow ? await sendPush(this.env, state.plan.subscription, {
       ...reminderCopy(state.next, dueKinds, state.plan.language, state.plan.zone, now),
       kind: dueKinds.length === 1 ? dueKinds[0] : undefined, tag,

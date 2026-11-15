@@ -16,7 +16,7 @@ test("registration, password recovery and account deletion preserve authorizatio
   });
   const deliveries = [];
   let delivered;
-  const mf = new Miniflare(convertV4MiniflareOptions({
+  const options = (bindings = {}) => convertV4MiniflareOptions({
     modules: true, script: outputFiles[0].text, compatibilityDate: "2026-10-29",
     compatibilityFlags: ["nodejs_compat"],
     durableObjects: {
@@ -28,7 +28,7 @@ test("registration, password recovery and account deletion preserve authorizatio
     ratelimits: { EMAIL_AUTH_LIMIT: { namespace_id: "750503", simple: { limit: 8, period: 60 } } },
     bindings: {
       EMAIL_AUTH_SECRET: "d".repeat(64), EMAIL_FROM: "login@medora.example", RESEND_API_KEY: "test",
-      ADMIN_EMAIL: "Me@Example.com", SUPPORT_EMAILS: "english@example.com"
+      ADMIN_EMAIL: "Me@Example.com", SUPPORT_EMAILS: "english@example.com", ...bindings
     },
     outboundService: async request => {
       assert.equal(request.url, "https://api.resend.com/emails");
@@ -36,7 +36,8 @@ test("registration, password recovery and account deletion preserve authorizatio
       delivered?.(deliveries.at(-1));
       return new Response(null, { status: 200 });
     }
-  }));
+  });
+  const mf = new Miniflare(options());
   const origin = "https://medora.test";
   const auth = (route, body, cookie, ip = "192.0.2.2", requestOrigin = origin) =>
     mf.dispatchFetch(`${origin}/api/auth/${route}`, {
@@ -333,6 +334,28 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.deepEqual(registrations.map(result => result.status).sort(), [200, 409]);
     assert.deepEqual(await registrations.find(result => !result.ok).json(), { error: "username_taken" });
     assert.equal((await registrations.find(result => result.ok).json()).username, "shared_name");
+    const rotatingEmail = "rotate-code@example.com";
+    const rotatingDelivery = deliveries.length;
+    const rotatingCode = await (await auth("register-code", { email: rotatingEmail }, null, "192.0.2.60")).json();
+    const priorCode = { email: rotatingEmail, challenge: rotatingCode.challenge, code: readCode(rotatingDelivery) };
+    const beforeRotation = await login("legacy", nextPassword, "192.0.2.60");
+    const legacyOwner = cookieOf(beforeRotation).split("=")[1].split(".")[0];
+    const splitKeys = { EMAIL_ACCOUNT_ID_KEY: "a".repeat(64), EMAIL_SESSION_KEY: "b".repeat(64),
+      EMAIL_CODE_KEY: "c".repeat(64), EMAIL_PASSWORD_KEY_ID: "test-v1", EMAIL_PASSWORD_KEY: "e".repeat(64) };
+    await mf.setOptions(options(splitKeys));
+    assert.equal((await auth("confirm-email", priorCode, null, "192.0.2.60")).status, 400);
+    assert.equal((await (await auth("session", null, cookieOf(beforeRotation))).json()).email, null);
+    const afterRotation = await login("legacy", nextPassword, "192.0.2.60");
+    assert.equal(afterRotation.status, 200);
+    assert.equal(cookieOf(afterRotation).split("=")[1].split(".")[0], legacyOwner);
+    const index = (await mf.getDurableObjectNamespace("CREDENTIALS")).getByName("medora-credentials-v1");
+    assert.equal((await index.find("legacy")).password_key, "test-v1");
+    await mf.setOptions(options({ ...splitKeys, EMAIL_SESSION_KEY: "f".repeat(64), EMAIL_CODE_KEY: "1".repeat(64),
+      EMAIL_AUTH_SECRET: null, EMAIL_ALLOW_LEGACY_PASSWORDS: "false" }));
+    assert.equal((await (await auth("session", null, cookieOf(afterRotation))).json()).email, null);
+    assert.equal((await login("legacy", nextPassword, "192.0.2.60")).status, 200);
+    const finalLogin = await login("legacy", nextPassword, "192.0.2.61");
+    assert.equal((await (await auth("session", null, cookieOf(finalLogin))).json()).username, "legacy");
   } finally {
     await mf.dispose();
   }
