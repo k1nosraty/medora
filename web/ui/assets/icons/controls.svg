@@ -28,6 +28,7 @@
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 4v5h-5M4 20v-5h5M5.3 9a7 7 0 0 1 11.7-2.8L20 9M4 15l3 2.8A7 7 0 0 0 18.7 15"/></symbol>
     <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.4"/></symbol>
     <symbol id="i-pen" viewBox="0 0 24 24"><path d="m4 16 11-11a2.8 2.8 0 0 1 4 4L8 20l-5 1 1-5Zm9-9 4 4"/></symbol>

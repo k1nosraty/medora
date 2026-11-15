@@ -208,7 +208,8 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     const time = snoozedTime ? new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(snoozedTime) : localDigits(timeText(dose.minute));
     const layout = dayCard ? mountDayCard(card, {
       kind: "medicine", label: t("ui.medicine"), image: medicationBadge(plan?.icon ?? dose.icon, color),
-      title: heading, time, dateTime: snoozedTime ? new Date(snoozedTime).toISOString() : timeText(dose.minute), featured
+      title: heading, time, dateTime: snoozedTime ? new Date(snoozedTime).toISOString() : timeText(dose.minute),
+      summary: featured ? planned : "", featured
     }) : null;
     const info = layout?.details ?? element("div", "", "dose-info");
     if (!layout) {
@@ -220,7 +221,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     const result = element("div");
     result.className = "dose-result";
     if (!featured && (!view || view.has("doses"))) result.append(badge);
-    if (planned) result.append(element("p", planned));
+    if (planned && !featured) result.append(element("p", planned));
     if (instructions) result.append(element("p", instructions));
     if (result.childElementCount) info.append(result);
     if (view) {
@@ -303,7 +304,9 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
         if (!pending) controls.prepend(taken);
         layout.addActions(options, ...(pending ? [taken] : []));
       } else {
-        layout.addActions(taken, ...(pending && canSnooze ? [snooze()] : []), options);
+        const postpone = pending && canSnooze ? snooze() : null;
+        postpone?.classList.add("day-card-snooze");
+        layout.addActions(taken, ...(postpone ? [postpone] : []), options);
       }
     } else {
       const actual = element("details", "", "dose-options");
