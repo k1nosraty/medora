@@ -314,6 +314,25 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal((await (await auth("session", null, cookieOf(legacyLogin))).json()).email, null);
     assert.equal((await login("legacy", password, "192.0.2.40")).status, 401);
     assert.equal((await login("legacy", nextPassword, "192.0.2.40")).status, 200);
+
+    const contenders = [];
+    for (const [index, username] of ["Shared_Name", " SHARED_NAME "].entries()) {
+      const email = `contender${index}@example.com`;
+      const ip = `192.0.2.${50 + index}`;
+      const delivery = deliveries.length;
+      const sent = await auth("register-code", { email }, null, ip);
+      assert.equal(sent.status, 202);
+      const { challenge } = await sent.json();
+      const verified = await auth("confirm-email", { email, challenge, code: readCode(delivery) }, null, ip);
+      assert.equal(verified.status, 200);
+      const { grant } = await verified.json();
+      contenders.push({ email, grant, username, ip });
+    }
+    const registrations = await Promise.all(contenders.map(({ ip, ...user }) =>
+      auth("register", { ...user, password }, null, ip)));
+    assert.deepEqual(registrations.map(result => result.status).sort(), [200, 409]);
+    assert.deepEqual(await registrations.find(result => !result.ok).json(), { error: "username_taken" });
+    assert.equal((await registrations.find(result => result.ok).json()).username, "shared_name");
   } finally {
     await mf.dispose();
   }
