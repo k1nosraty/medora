@@ -46,6 +46,7 @@
   border-inline-start: 2px solid var(--outline);
 }
 .medora #timeline-title { margin-block-end: .45rem; }
+.medora .daily-sheet #doses { display: grid; gap: .55rem; }
 .medora .daily-sheet .timeline article::before {
   content: "";
   position: absolute;
@@ -110,7 +111,7 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
   .day-focus-enter { animation: none; }
 }
 .medora .day-queue-done {
-  margin-block-start: .85rem;
+  margin-block-start: .35rem;
   padding-block-start: .55rem;
   border-block-start: 1px solid var(--outline);
 }
