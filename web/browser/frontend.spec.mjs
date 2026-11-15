@@ -24,13 +24,15 @@ async function open(page, { language = "fa", theme = "light", medicine = false, 
 
 test("narrow English header fits including the invite badge", async ({ page }) => {
   await open(page, { language: "en", width: 320, height: 640 });
-  const overflow = () => page.locator(".app-bar button:visible, .app-bar summary:visible").evaluateAll(nodes => {
+  const overflow = () => page.locator(".app-bar button:visible").evaluateAll(nodes => {
     const header = document.querySelector(".app-bar-inner").getBoundingClientRect();
     return nodes.filter(node => {
       const rect = node.getBoundingClientRect();
       return rect.left < header.left - .5 || rect.right > header.right + .5;
     }).map(node => node.id || node.getAttribute("aria-label") || node.textContent.trim());
   });
+  await expect(page.getByRole("button", { name: "Update app", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "تغییر زبان به فارسی", exact: true })).toBeVisible();
   expect(await overflow()).toEqual([]);
   await page.context().addCookies([{ name: "test-family", value: "1", url: "http://127.0.0.1:8872" }]);
   await page.reload();
@@ -39,12 +41,6 @@ test("narrow English header fits including the invite badge", async ({ page }) =
     await page.evaluate(value => { document.documentElement.style.fontSize = value; }, size);
     expect(await overflow(), `Header controls at ${size} text size`).toEqual([]);
   }
-  await page.locator("#header-menu summary").focus();
-  await page.keyboard.press("Enter");
-  await expect(page.locator("#header-menu")).toHaveAttribute("open", "");
-  expect(await overflow()).toEqual([]);
-  await page.keyboard.press("Escape");
-  await expect(page.locator("#header-menu summary")).toBeFocused();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.locator("#settings-dialog")).toBeVisible();
 });
@@ -82,6 +78,13 @@ test("refreshing local records keeps the selected day focused", async ({ page })
 
 test("the next dose and its action fit the first mobile view", async ({ page }) => {
   await open(page, { medicine: true });
+  const calendar = page.locator("#today-dates");
+  await expect(calendar).toBeVisible();
+  expect(await calendar.evaluate(node => {
+    const top = node.getBoundingClientRect().top;
+    return top < document.querySelector("#today-story").getBoundingClientRect().bottom &&
+      top > document.querySelector(".story-copy").getBoundingClientRect().bottom;
+  })).toBe(true);
   const action = page.locator("#today-focus .day-card-actions button").first();
   await expect(action).toBeVisible();
   expect(await action.evaluate(node => node.getBoundingClientRect().bottom <= document.querySelector(".dock").getBoundingClientRect().top)).toBe(true);

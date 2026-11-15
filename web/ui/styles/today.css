@@ -125,11 +125,4 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora #today-dates .day-week button[aria-current="date"]:focus-visible { outline-color: var(--on-action); }
 .medora #today-dates .day-week button[aria-current="date"] span { color: inherit; }
 .medora .daily-sheet { margin-block-start: .75rem; }
-
-
-/* Put the day’s work within reach before summary cards. */
-.medora .today-story { min-block-size: 7rem; padding-block: .55rem; border-radius: 1.35rem; }
-.medora .today-story .story-art { max-block-size: 5.7rem; inline-size: 100%; margin: 0; }
-.medora .story-copy h2 { font-size: clamp(1.22rem, 4.7vw, 2rem); }
-.medora #today-dates { margin-block: .4rem 0; }
 .medora .today-state button { margin-block-start: .6rem; min-block-size: 2.75rem; }

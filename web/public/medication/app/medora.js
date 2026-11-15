@@ -142,16 +142,6 @@ async function reload() {
 
 $("day").addEventListener("change", render);
 
-const tools = $("header-menu");
-tools.addEventListener("keydown", event => {
-  if (event.key !== "Escape" || !tools.open) return;
-  event.stopPropagation();
-  tools.open = false;
-  tools.querySelector("summary").focus();
-});
-document.addEventListener("click", event => {
-  if (tools.open && !tools.contains(event.target)) tools.open = false;
-});
 const nextLanguage = language === "fa" ? "en" : "fa";
 for (const control of document.querySelectorAll("[data-language-switch]")) {
   control.lang = nextLanguage;

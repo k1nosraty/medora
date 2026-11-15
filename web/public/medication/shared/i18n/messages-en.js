@@ -758,7 +758,6 @@ export default {
   "ui.add": "Add",
   "ui.back-home": "Back home",
   "ui.medora": "Medora",
-  "ui.tools": "Tools",
   "ui.received-invitations": "Received invitations",
   "ui.account": "Account",
   "ui.settings": "Settings",

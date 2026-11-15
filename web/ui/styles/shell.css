@@ -53,37 +53,6 @@ html[dir="ltr"] .medora :is(#picker-next-month, #report-chart-next) svg { transf
 .medora .header-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; margin-inline-start: auto;
   max-inline-size: 100%; gap: .25rem clamp(.2rem, 1vw, .55rem); }
 .wordmark { flex: 1 1 0; font-size: 1.2rem; font-weight: 850; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.header-menu { position: relative; }
-.header-menu summary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .25rem;
-  min-inline-size: 2.75rem;
-  min-block-size: 2.75rem;
-  padding-inline: .4rem;
-  border: 1px solid var(--glass-rim);
-  border-radius: 1rem;
-  background: var(--panel);
-  color: var(--action);
-  font-size: .75rem;
-  font-weight: 750;
-  cursor: pointer;
-  list-style: none;
-}
-.header-menu summary::-webkit-details-marker { display: none; }
-.header-menu-panel {
-  position: absolute;
-  inset-block-start: calc(100% + .35rem);
-  inset-inline-end: 0;
-  display: flex;
-  gap: .4rem;
-  padding: .45rem;
-  background: var(--panel);
-  border: 1px solid var(--outline);
-  border-radius: 1rem;
-  box-shadow: 0 .3rem 1rem var(--glass-shadow);
-}
 html { scroll-padding-block-end: max(5rem, env(safe-area-inset-bottom)); }
 @media (max-width: 480px) {
   .medora .app-bar-inner {

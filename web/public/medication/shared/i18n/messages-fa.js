@@ -758,7 +758,6 @@ export default {
   "ui.add": "افزودن",
   "ui.back-home": "بازگشت به خانه",
   "ui.medora": "مدورا",
-  "ui.tools": "ابزارها",
   "ui.received-invitations": "دعوت‌های دریافتی",
   "ui.account": "حساب کاربری",
   "ui.settings": "تنظیمات",
