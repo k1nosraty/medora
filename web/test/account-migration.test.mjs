@@ -10,6 +10,7 @@ import test from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
 import { subscriptionId } from "../public/medication/features/reminders/subscription-id.js";
+import { careSyncLimit } from "../public/medication/domain/care-records.js";
 import { advanceHash, emptyHash, openPart } from "../src/operations/backup-parts-format.mjs";
 import { dayMs, localWall, timezone } from "../public/medication/domain/wall-clock.js";
 import { decryptBackup, encryptBackup } from "../public/medication/features/backups/crypto.js";
@@ -130,7 +131,16 @@ test("encrypted migration restores existing login, account history and a pending
     assert.equal((await api(source, carePath, "PUT", session, update)).status, 409);
     assert.equal((await api(source, carePath, "GET", { ...session, "If-None-Match": `"${owner}:1"` })).status, 304);
     assert.equal((await api(source, carePath, "GET", { "If-None-Match": `"${owner}:1"` })).status, 401);
-    assert.equal((await api(source, carePath, "PUT", session, { ...update, padding: "x".repeat(4 * 1024 * 1024) })).status, 413);
+    // Use a chunked upload so the server detects the limit at the end of the body.
+    // Rejecting a known length up front can close the socket while Miniflare is still uploading.
+    const oversized = await source.dispatchFetch(origin + carePath, {
+      method: "PUT",
+      headers: { Origin: origin, "Content-Type": "application/json", ...session },
+      body: new Blob([JSON.stringify({ padding: "x".repeat(careSyncLimit) })]).stream(),
+      duplex: "half"
+    });
+    assert.equal(oversized.status, 413);
+    assert.deepEqual(await oversized.json(), { error: "care_too_large" });
     const caregiverEmail = "caregiver@example.test";
     const caregiver = hmac("account-v1", caregiverEmail);
     await (await stub(source, "CREDENTIALS", "medora-credentials-v1")).register("caregiver", caregiver, caregiverEmail, salt, proof);
