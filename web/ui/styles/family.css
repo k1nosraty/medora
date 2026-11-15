@@ -395,6 +395,3 @@
 }
 .medora #picker-birth-jump { margin-block-end: .52rem; }
 .medora #picker-birth-jump label { display: grid; gap: .22rem; }
-@media (max-width: 365px) {
-  .app-bar-inner:has(#open-care-inbox:not([hidden])) .wordmark { display: none; }
-}

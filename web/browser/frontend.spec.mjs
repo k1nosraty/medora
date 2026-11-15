@@ -24,17 +24,25 @@ async function open(page, { language = "fa", theme = "light", medicine = false, 
 
 test("narrow English header fits including the invite badge", async ({ page }) => {
   await open(page, { language: "en", width: 320, height: 640 });
-  const overflow = () => page.locator(".app-bar button:visible, .app-bar summary:visible").evaluateAll(nodes =>
-    nodes.map(node => node.getBoundingClientRect()).filter(rect => rect.left < 0 || rect.right > innerWidth + .5).length);
-  expect(await overflow()).toBe(0);
+  const overflow = () => page.locator(".app-bar button:visible, .app-bar summary:visible").evaluateAll(nodes => {
+    const header = document.querySelector(".app-bar-inner").getBoundingClientRect();
+    return nodes.filter(node => {
+      const rect = node.getBoundingClientRect();
+      return rect.left < header.left - .5 || rect.right > header.right + .5;
+    }).map(node => node.id || node.getAttribute("aria-label") || node.textContent.trim());
+  });
+  expect(await overflow()).toEqual([]);
   await page.context().addCookies([{ name: "test-family", value: "1", url: "http://127.0.0.1:8872" }]);
   await page.reload();
   await expect(page.locator("#open-care-inbox")).toBeVisible();
-  await page.evaluate(() => document.documentElement.style.fontSize = "125%");
-  expect(await overflow()).toBe(0);
+  for (const size of ["125%", "200%"]) {
+    await page.evaluate(value => { document.documentElement.style.fontSize = value; }, size);
+    expect(await overflow(), `Header controls at ${size} text size`).toEqual([]);
+  }
   await page.locator("#header-menu summary").focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("#header-menu")).toHaveAttribute("open", "");
+  expect(await overflow()).toEqual([]);
   await page.keyboard.press("Escape");
   await expect(page.locator("#header-menu summary")).toBeFocused();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
