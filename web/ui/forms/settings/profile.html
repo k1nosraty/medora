@@ -2,33 +2,33 @@
         <form id="profile-form" class="medora-profile-form">
           <div class="family-hero">
             <img src="/design/optical-glass/control-user.webp" data-art="control-user" alt="" width="86" height="86">
-            <h3>پروفایل من</h3>
+            <h3>{{msg:ui.my-profile}}</h3>
           </div>
           <div class="family-field-pair">
             <label>نام<input id="profile-first-name" maxlength="60" autocomplete="given-name" dir="auto"></label>
-            <label>نام خانوادگی<input id="profile-last-name" maxlength="60" autocomplete="family-name" dir="auto"></label>
+            <label>{{msg:ui.last-name}}<input id="profile-last-name" maxlength="60" autocomplete="family-name" dir="auto"></label>
           </div>
           <div class="family-field-pair">
-            <label>تاریخ تولد<input id="profile-birth-date" type="date" autocomplete="bday"></label>
-            <p class="family-age"><span>سن</span><output id="profile-age" for="profile-birth-date">—</output></p>
+            <label>{{msg:ui.date-of-birth}}<input id="profile-birth-date" type="date" autocomplete="bday"></label>
+            <p class="family-age"><span>{{msg:ui.age}}</span><output id="profile-age" for="profile-birth-date">—</output></p>
           </div>
           <div class="family-field-pair">
-            <label>قد (سانتی‌متر)<input id="profile-height" type="number" inputmode="decimal" min="0.1" max="300" step="0.1" dir="ltr"></label>
-            <label>وزن (کیلوگرم)<input id="profile-weight" type="number" inputmode="decimal" min="0.1" max="650" step="0.1" dir="ltr"></label>
+            <label>{{msg:ui.height-cm}}<input id="profile-height" type="number" inputmode="decimal" min="0.1" max="300" step="0.1" dir="ltr"></label>
+            <label>{{msg:ui.weight-kg}}<input id="profile-weight" type="number" inputmode="decimal" min="0.1" max="650" step="0.1" dir="ltr"></label>
           </div>
-          <label>جنسیت (اختیاری)
+          <label>{{msg:ui.gender-optional}}
             <select id="profile-gender">
-              <option value="">انتخاب نشده</option>
-              <option value="female">خانم</option>
-              <option value="male">آقا</option>
-              <option value="undisclosed">ترجیح می‌دهم نگویم</option>
+              <option value="">{{msg:ui.not-selected}}</option>
+              <option value="female">{{msg:ui.woman}}</option>
+              <option value="male">{{msg:ui.man}}</option>
+              <option value="undisclosed">{{msg:ui.prefer-not-to-say}}</option>
             </select>
           </label>
           <label class="feature-head editor-switch settings-switch profile-cycle-switch">
-            چرخهٔ قاعدگی
+            {{msg:ui.menstrual-cycle}}
             <input id="profile-cycle-enabled" type="checkbox" role="switch" aria-describedby="profile-cycle-hint">
           </label>
           <p id="profile-cycle-hint" class="quiet"></p>
-          <button type="submit" class="block-action">ذخیرهٔ پروفایل</button>
+          <button type="submit" class="block-action">{{msg:ui.save-profile}}</button>
         </form>
       </section>

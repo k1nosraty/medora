@@ -94,19 +94,19 @@ export function installBackupRestore(mutate, validatePhases) {
     const submit = $("android-restore-submit");
     if (submit.disabled) return;
     if (!file) {
-      backupFeedback(t("یک فایل پشتیبان با حجم حداکثر ۱۶ مگابایت انتخاب کنید."), "error");
+      backupFeedback(t("ui.choose-a-backup-file-no-larger-than-16-mb"), "error");
       return;
     }
     const password = field.value;
     field.value = "";
     const isCurrent = () => backupOpen() && backupInput.files[0] === file;
     submit.disabled = true;
-    backupFeedback(t("در حال بررسی فایل…"), "busy");
+    backupFeedback(t("ui.checking-the-backup"), "busy");
     try {
       const { maxBackupBytes } = await import("./crypto.js");
       if (!isCurrent()) return;
       if (file.size > maxBackupBytes) {
-        backupFeedback(t("یک فایل پشتیبان با حجم حداکثر ۱۶ مگابایت انتخاب کنید."), "error");
+        backupFeedback(t("ui.choose-a-backup-file-no-larger-than-16-mb"), "error");
         return;
       }
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -126,16 +126,16 @@ export function installBackupRestore(mutate, validatePhases) {
         if (web) delete state.cycleRecords;
         delete state.scheduleHistory;
         Object.assign(state, backup);
-      }, t("سوابق بازیابی شدند."), true);
+      }, t("ui.records-restored"), true);
       if (!isCurrent()) return;
       if (success) {
         backupForm.reset();
-        backupFeedback(t("سوابق بازیابی شدند. اعلان‌ها را در تنظیمات دوباره فعال کنید."), "success");
+        backupFeedback(t("ui.records-restored-turn-on-reminders-again-in-settings"), "success");
       } else {
-        backupFeedback(t("ذخیرهٔ سوابق انجام نشد. دوباره تلاش کنید."), "error");
+        backupFeedback(t("ui.could-not-save-your-records-try-again"), "error");
       }
     } catch {
-      if (isCurrent()) backupFeedback(t("فایل یا رمز معتبر نیست، یا این نسخه از فایل پشتیبانی نمی‌شود."), "error");
+      if (isCurrent()) backupFeedback(t("ui.the-file-or-password-is-invalid-or-the-backup-version-is"), "error");
     } finally {
       submit.disabled = false;
     }

@@ -1,29 +1,29 @@
       <section id="display-settings" class="settings-panel" hidden>
         <form id="display-form">
-          <label>سبک طراحی<select name="finish" id="settings-finish"><option value="glass">شیشه‌ای</option><option value="matte">سه‌بعدی مات</option></select></label>
+          <label>{{msg:ui.design-style}}<select name="finish" id="settings-finish"><option value="glass">{{msg:ui.glass}}</option><option value="matte">{{msg:ui.matte-3d}}</option></select></label>
           <fieldset class="settings-themes">
-            <legend>ظاهر</legend>
-            <label><input type="radio" name="theme" value="system" checked><span class="theme-sample" data-theme-sample="system" aria-hidden="true"></span><span>مطابق گوشی</span></label>
-            <label><input type="radio" name="theme" value="light"><span class="theme-sample" data-theme-sample="light" aria-hidden="true"></span><span>روشن</span></label>
-            <label><input type="radio" name="theme" value="dark"><span class="theme-sample" data-theme-sample="dark" aria-hidden="true"></span><span>تیره</span></label>
+            <legend>{{msg:ui.appearance}}</legend>
+            <label><input type="radio" name="theme" value="system" checked><span class="theme-sample" data-theme-sample="system" aria-hidden="true"></span><span>{{msg:ui.system}}</span></label>
+            <label><input type="radio" name="theme" value="light"><span class="theme-sample" data-theme-sample="light" aria-hidden="true"></span><span>{{msg:ui.light}}</span></label>
+            <label><input type="radio" name="theme" value="dark"><span class="theme-sample" data-theme-sample="dark" aria-hidden="true"></span><span>{{msg:ui.dark}}</span></label>
           </fieldset>
           <fieldset class="settings-themes settings-accents">
-            <legend>رنگ تأکیدی</legend>
-            <label><input type="radio" name="accent" value="blue" checked><span class="accent-sample" data-accent-sample="blue" aria-hidden="true"></span><span>آبی</span></label>
-            <label><input type="radio" name="accent" value="green"><span class="accent-sample" data-accent-sample="green" aria-hidden="true"></span><span>سبز</span></label>
-            <label><input type="radio" name="accent" value="lilac"><span class="accent-sample" data-accent-sample="lilac" aria-hidden="true"></span><span>یاسی</span></label>
-            <label><input type="radio" name="accent" value="coral"><span class="accent-sample" data-accent-sample="coral" aria-hidden="true"></span><span>مرجانی</span></label>
-            <label id="settings-berry-choice" hidden><input type="radio" name="accent" value="berry" disabled><span class="accent-sample" data-accent-sample="berry" aria-hidden="true"></span><span>اناری</span></label>
+            <legend>{{msg:ui.accent-color}}</legend>
+            <label><input type="radio" name="accent" value="blue" checked><span class="accent-sample" data-accent-sample="blue" aria-hidden="true"></span><span>{{msg:ui.blue}}</span></label>
+            <label><input type="radio" name="accent" value="green"><span class="accent-sample" data-accent-sample="green" aria-hidden="true"></span><span>{{msg:ui.green}}</span></label>
+            <label><input type="radio" name="accent" value="lilac"><span class="accent-sample" data-accent-sample="lilac" aria-hidden="true"></span><span>{{msg:ui.lilac}}</span></label>
+            <label><input type="radio" name="accent" value="coral"><span class="accent-sample" data-accent-sample="coral" aria-hidden="true"></span><span>{{msg:ui.coral}}</span></label>
+            <label id="settings-berry-choice" hidden><input type="radio" name="accent" value="berry" disabled><span class="accent-sample" data-accent-sample="berry" aria-hidden="true"></span><span>{{msg:ui.berry}}</span></label>
           </fieldset>
-          <label>تقویم<select id="calendar-setting"><option value="persian">شمسی</option><option value="gregory">میلادی</option></select></label>
-          <label>زبان برنامه<select id="app-language"><option value="fa" lang="fa">فارسی</option><option value="en" lang="en">English</option></select></label>
-          <label>جای نوار گروه فعال
+          <label>{{msg:ui.calendar}}<select id="calendar-setting"><option value="persian">{{msg:ui.solar-hijri}}</option><option value="gregory">{{msg:ui.gregorian}}</option></select></label>
+          <label>{{msg:ui.app-language}}<select id="app-language"><option value="fa" lang="fa">فارسی</option><option value="en" lang="en">English</option></select></label>
+          <label>{{msg:ui.active-group-bar-placement}}
             <select id="settings-family-placement">
-              <option value="top">بالای صفحهٔ امروز</option>
-              <option value="bottom">پایین صفحهٔ امروز</option>
-              <option value="hidden" selected>پنهان</option>
+              <option value="top">{{msg:ui.top-of-today}}</option>
+              <option value="bottom">{{msg:ui.bottom-of-today}}</option>
+              <option value="hidden" selected>{{msg:ui.hidden}}</option>
             </select>
           </label>
-          <button type="submit" class="block-action">ذخیرهٔ تغییرات</button>
+          <button type="submit" class="block-action">{{msg:ui.save-changes}}</button>
         </form>
       </section>

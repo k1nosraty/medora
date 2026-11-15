@@ -1,14 +1,14 @@
       <div data-screen="appointments" hidden>
         <div class="visit-toolbar glass-toolbar">
           <div class="section-heading" id="visits-heading">
-            <h2 id="visits-title">قرارهای من</h2>
-            <button id="visit-add" type="button" data-open-visit><svg aria-hidden="true"><use href="#i-plus"/></svg>قرار جدید</button>
+            <h2 id="visits-title">{{msg:ui.my-visits}}</h2>
+            <button id="visit-add" type="button" data-open-visit><svg aria-hidden="true"><use href="#i-plus"/></svg>{{msg:ui.new-appointment}}</button>
           </div>
-          <div class="segmented" id="visit-filters" role="group" aria-label="بازهٔ قرارها">
-            <button type="button" data-visit-filter="all" aria-pressed="true">همه</button>
-            <button type="button" data-visit-filter="upcoming" aria-pressed="false">پیش‌رو</button>
-            <button type="button" data-visit-filter="past" aria-pressed="false">گذشته و لغوشده</button>
+          <div class="segmented" id="visit-filters" role="group" aria-label="{{msg:ui.appointment-filter}}">
+            <button type="button" data-visit-filter="all" aria-pressed="true">{{msg:ui.all}}</button>
+            <button type="button" data-visit-filter="upcoming" aria-pressed="false">{{msg:ui.upcoming}}</button>
+            <button type="button" data-visit-filter="past" aria-pressed="false">{{msg:ui.past-and-cancelled}}</button>
           </div>
         </div>
-        <div id="visits"></div>
+        <div id="visits" data-context-list></div>
       </div>

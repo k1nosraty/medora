@@ -27,7 +27,7 @@ export function installDeletion(mutate) {
         $("delete-dialog").close();
         if (parent) $(parent).close();
       } else {
-        $("delete-error").textContent = t("حذف انجام نشد. دوباره تلاش کنید.");
+        $("delete-error").textContent = t("ui.could-not-delete-try-again");
       }
     } finally {
       confirm.disabled = cancel.disabled = false;

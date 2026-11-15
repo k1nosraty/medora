@@ -34,9 +34,9 @@ export function profileFacts(profile) {
   for (const [label, value] of [
     ["نام و نام خانوادگی", [profile.firstName, profile.lastName].filter(Boolean).join(" ")],
     ["تاریخ تولد", profile.birthDate && date.format(new Date(profile.birthDate + "T00:00Z"))],
-    ["سن", age !== null && t("{0} سال", numbers.format(age))],
-    ["قد", profile.heightCm && numbers.format(profile.heightCm) + " " + t("سانتی‌متر")],
-    ["وزن", profile.weightKg && numbers.format(profile.weightKg) + " " + t("کیلوگرم")],
+    ["سن", age !== null && t("ui.value-years-old", numbers.format(age))],
+    ["قد", profile.heightCm && numbers.format(profile.heightCm) + " " + t("ui.cm")],
+    ["وزن", profile.weightKg && numbers.format(profile.weightKg) + " " + t("ui.kg")],
     ["جنسیت", gender && t(gender)]
   ]) if (value) {
     const row = element("div");

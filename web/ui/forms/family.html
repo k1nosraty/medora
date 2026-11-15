@@ -1,9 +1,9 @@
 <dialog id="family-dialog" class="sheet" aria-labelledby="family-title">
   <div class="sheet-header">
     <svg id="family-mark" aria-hidden="true"><use href="#i-mark"/></svg>
-    <button id="family-back" class="icon-button" type="button" aria-label="بازگشت" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
-    <h2 id="family-title" tabindex="-1">گروه‌های مراقبت</h2>
-    <button class="icon-button" type="button" data-close="family-dialog" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+    <button id="family-back" class="icon-button" type="button" aria-label="{{msg:ui.back}}" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+    <h2 id="family-title" tabindex="-1">{{msg:ui.care-groups}}</h2>
+    <button class="icon-button" type="button" data-close="family-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
   </div>
   <div class="sheet-body family-body">
     <p id="family-status" role="status" hidden></p>
@@ -14,20 +14,20 @@
   <form class="family-content">
     <p data-recipient class="family-target"></p>
     <fieldset class="family-choice">
-      <legend>مشاهده</legend>
-      <label><input type="radio" name="view" value="all" checked>مشاهدهٔ همه</label>
-      <label><input type="radio" name="view" value="custom">انتخاب بخش‌ها</label>
-      <p class="quiet" data-scope>پروفایل، دارو، وضعیت مصرف، قرار، روتین، آب، چرخه و یادداشت‌ها</p>
+      <legend>{{msg:ui.view}}</legend>
+      <label><input type="radio" name="view" value="all" checked>{{msg:ui.view-everything}}</label>
+      <label><input type="radio" name="view" value="custom">{{msg:ui.choose-sections}}</label>
+      <p class="quiet" data-scope>{{msg:ui.profile-medication-dose-history-appointments-routines-wat}}</p>
       <div data-sections hidden></div>
     </fieldset>
     <fieldset class="family-choice">
-      <legend>اجازهٔ ثبت و افزودن</legend>
-      <label><input type="checkbox" name="record" role="switch">ثبت به‌نمایندگی</label>
-      <label><input type="checkbox" name="add" role="switch">افزودن برنامه</label>
+      <legend>{{msg:ui.recording-and-scheduling-permissions}}</legend>
+      <label><input type="checkbox" name="record" role="switch">{{msg:ui.record-on-their-behalf}}</label>
+      <label><input type="checkbox" name="add" role="switch">{{msg:ui.add-a-schedule}}</label>
     </fieldset>
-    <label>اعتبار دسترسی
-      <select name="days"><option value="">تا زمان لغو</option><option value="7">۷ روز</option><option value="30">۳۰ روز</option><option value="90">۹۰ روز</option></select>
+    <label>{{msg:ui.access-duration}}
+      <select name="days"><option value="">{{msg:ui.until-revoked}}</option><option value="7">{{msg:ui.7-days}}</option><option value="30">{{msg:ui.30-days}}</option><option value="90">{{msg:ui.90-days}}</option></select>
     </label>
-    <button type="submit" class="block-action">اعطای دسترسی</button>
+    <button type="submit" class="block-action">{{msg:ui.grant-access}}</button>
   </form>
 </template>

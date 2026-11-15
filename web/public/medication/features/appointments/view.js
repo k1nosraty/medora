@@ -30,16 +30,17 @@ export function appointmentView({
     const dayCard = compactDay || variant === "day-featured";
     const card = element("article", "", "visit visit-card");
     const category = categoryOf(visit.category);
+    card.dataset.focusScope = "visit:" + visit.id;
     card.dataset.ink = colorOf(visit.color);
     if (variant !== "compact") {
       card.classList.add(...(dayCard ? ["day-card", "visit-day-card"] : ["visit-shelf-card"]));
       const banner = element("div", "", "visit-banner");
       if (dayCard) banner.classList.add("day-card-art");
       banner.append(visitIllustration(category, card.dataset.ink));
-      if (dayCard) banner.append(element("span", calendar && language === "en" ? "Visit" : t("قرار"), "day-card-kind"));
+      if (dayCard) banner.append(element("span", calendar && language === "en" ? "Visit" : t("ui.appointment"), "day-card-kind"));
       if (variant === "next") {
         card.classList.add("visit-featured");
-        banner.append(element("span", t("نزدیک‌ترین قرار"), "visit-eyebrow"));
+        banner.append(element("span", t("ui.next-appointment"), "visit-eyebrow"));
       }
       card.append(banner);
     }
@@ -65,23 +66,23 @@ export function appointmentView({
     if (dayCard) details.classList.add("day-card-content");
     details.append(header);
     if (visit.zone && visit.zone !== zone) {
-      details.append(element("p", t("ساعت مطب {0}، {1} ({2})", formatDay(visit.day), clockText(visit.time), visit.zone), "quiet"));
+      details.append(element("p", t("ui.clinic-time-value-value-value", formatDay(visit.day), clockText(visit.time), visit.zone), "quiet"));
     }
-    if (visit.place) details.append(element("p", t("مکان: {0}", visit.place), "quiet"));
-    if (visit.cancelled) details.append(element("p", t("قرار لغو شده"), "badge"));
-    else if (visit.completed) details.append(element("p", t("حضور ثبت شد"), "badge visit-attended"));
+    if (visit.place) details.append(element("p", t("ui.location-value", visit.place), "quiet"));
+    if (visit.cancelled) details.append(element("p", t("ui.cancelled-appointment"), "badge"));
+    else if (visit.completed) details.append(element("p", t("ui.attended"), "badge visit-attended"));
     else if (calendar) details.append(element("p", t(local.instant > Date.now() ? "برنامه‌ریزی‌شده" : "بدون ثبت حضور"), "badge"));
     const notes = [
       ...((visit.note || visit.notes) ? [element("p", visit.note || visit.notes)] : []),
-      ...(visit.contact ? [element("p", t("تماس: {0}", visit.contact), "quiet")] : [])
+      ...(visit.contact ? [element("p", t("ui.contact-value", visit.contact), "quiet")] : [])
     ];
     if (!calendar) details.append(...notes);
     if (details !== card) card.append(details);
     const view = getFamilyView();
     if (view) {
-      if (visit.recordedBy) details.append(element("small", t("ثبت‌کننده: {0}", view.authorName(visit)), "family-stamp"));
+      if (visit.recordedBy) details.append(element("small", t("ui.recorded-by-value", view.authorName(visit)), "family-stamp"));
       const options = element("div", "", dayCard ? "day-card-actions" : "buttons");
-      if (calendar && notes.length) options.append(dayCardOptions(t("گزینه‌های قرار"), ...notes));
+      if (calendar && notes.length) options.append(dayCardOptions(t("ui.appointment-options"), ...notes));
       if (view.canRecord("visit", local.day) && !visit.completed && !visit.cancelled) {
         options.append(recordAction("ثبت حضور", () => view.record({ kind: "visit", day: local.day, id: visit.id, title: visit.name })));
       }
@@ -92,20 +93,20 @@ export function appointmentView({
       const controls = element("div", "", dayCard ? "day-card-actions" : "buttons");
       let attendance;
       if (!visit.cancelled && local.day <= today()) {
-        attendance = button(visit.completed ? t("برگشت ثبت حضور") : t(dayCard ? "حضور یافتم" : "ثبت حضور"), () => {
+        attendance = button(visit.completed ? t("ui.undo-attendance") : t(dayCard ? "حضور یافتم" : "ثبت حضور"), () => {
           void mutate(state => {
             const saved = state.visits?.[visit.id];
             if (!saved || saved.cancelled) return;
             saved.completed = !visit.completed;
             if (saved.completed) saved.resolvedAt ??= Date.now();
             else delete saved.resolvedAt;
-          }, t("وضعیت قرار ذخیره شد."), true);
+          }, t("ui.appointment-status-saved"), true);
         });
         attendance.setAttribute("aria-pressed", String(Boolean(visit.completed)));
         if (!visit.completed) attendance.classList.add("care-record-action");
       }
-      const edit = button(t("ویرایش"), () => openVisit(visit));
-      const cancel = button(visit.cancelled ? t("فعال‌کردن قرار") : t("لغو قرار"), () => {
+      const edit = button(t("ui.edit"), () => openVisit(visit));
+      const cancel = button(visit.cancelled ? t("ui.reinstate-appointment") : t("ui.cancel-appointment"), () => {
         void mutate(state => {
           const saved = state.visits[visit.id];
           if (saved) {
@@ -115,18 +116,18 @@ export function appointmentView({
               delete saved.resolvedAt;
             }
           }
-        }, t("وضعیت قرار ذخیره شد."), true);
+        }, t("ui.appointment-status-saved"), true);
       });
-      const remove = button(t("حذف قرار"), () => deleteVisit(visit.id));
+      const remove = button(t("ui.delete-appointment"), () => deleteVisit(visit.id));
       remove.className = "text-button danger-link";
       if (compactDay) {
         const actions = attendance && visit.completed ? [attendance, edit, cancel, remove] : [edit, cancel, remove];
-        controls.append(dayCardOptions(t("گزینه‌های قرار"), ...(calendar ? notes : []), ...actions));
+        controls.append(dayCardOptions(t("ui.appointment-options"), ...(calendar ? notes : []), ...actions));
         if (attendance && !visit.completed) controls.append(attendance);
         card.append(controls);
       } else if (dayCard) {
         if (attendance) controls.append(attendance);
-        controls.append(edit, dayCardOptions(t("گزینه‌های قرار"), cancel, remove));
+        controls.append(edit, dayCardOptions(t("ui.appointment-options"), cancel, remove));
         card.append(controls);
       } else {
         if (attendance) controls.append(attendance);
@@ -157,20 +158,20 @@ export function appointmentView({
     if (upcoming.length) {
       const [next, ...later] = upcoming.slice(0, visitLimit);
       content.push(visitCard(next, index.zone, true, "next"));
-      if (later.length) content.push(element("h2", t("قرارهای بعدی")),
+      if (later.length) content.push(element("h2", t("ui.later-appointments")),
         ...later.map(local => visitCard(local, index.zone, true, "shelf")));
     }
     if (past.length) {
-      if (visitFilter === "all") content.push(element("h2", t("گذشته و لغوشده")));
+      if (visitFilter === "all") content.push(element("h2", t("ui.past-and-cancelled")));
       content.push(...past.slice(0, visitLimit).map(local => visitCard(local, index.zone, true, "shelf")));
     }
     if (!content.length) {
       const card = element("div", "", "visit-card visit-empty");
-      card.append(element("h2", t("در این بخش قراری ندارید.")), visitIllustration());
+      card.append(element("h2", t("ui.no-appointments-in-this-view")), visitIllustration());
       content.push(card);
     }
     if (Math.max(upcoming.length, past.length) > visitLimit) {
-      const more = button(t("نمایش قرارهای بیشتر"), () => {
+      const more = button(t("ui.show-more-appointments"), () => {
         visitLimit += pageSize;
         render();
         ($("visits-more") ?? $("visits").lastElementChild.querySelector("button"))?.focus({ preventScroll: true });

@@ -1,0 +1,227 @@
+import { expect, test } from "@playwright/test";
+
+async function open(page, { language = "fa", theme = "light", medicine = false, width = 390, height = 844 } = {}) {
+  await page.setViewportSize({ width, height });
+  await page.goto("/medication/");
+  await expect(page.locator("#welcome-start")).toBeVisible();
+  await page.evaluate(async ({ language, theme, medicine }) => {
+    localStorage.setItem("medora-language", language);
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { today } = await import("/medication/shared/ui/dates.js");
+    await accessCare(state => {
+      state.intro = "done";
+      state.theme = theme;
+      if (medicine) state.medicines.sample = {
+        id: "sample", name: "Sample tablet", unit: "قرص", stock: 15000, threshold: 2000,
+        icon: "bottle", color: "purple", revision: 1,
+        phases: [{ start: today(), end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 1000 }] }]
+      };
+    });
+  }, { language, theme, medicine });
+  await page.reload();
+  await expect(page.locator("#app")).toBeVisible();
+}
+
+test("narrow English header fits including the invite badge", async ({ page }) => {
+  await open(page, { language: "en", width: 320, height: 640 });
+  const overflow = () => page.locator(".app-bar button:visible, .app-bar summary:visible").evaluateAll(nodes =>
+    nodes.map(node => node.getBoundingClientRect()).filter(rect => rect.left < 0 || rect.right > innerWidth + .5).length);
+  expect(await overflow()).toBe(0);
+  await page.context().addCookies([{ name: "test-family", value: "1", url: "http://127.0.0.1:8872" }]);
+  await page.reload();
+  await expect(page.locator("#open-care-inbox")).toBeVisible();
+  await page.evaluate(() => document.documentElement.style.fontSize = "125%");
+  expect(await overflow()).toBe(0);
+  await page.locator("#header-menu summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#header-menu")).toHaveAttribute("open", "");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#header-menu summary")).toBeFocused();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.locator("#settings-dialog")).toBeVisible();
+});
+
+test("navigation keeps browser history, the selected day and keyboard focus", async ({ page }) => {
+  await open(page);
+  await page.locator("#next-day").click();
+  const day = await page.locator("#day").inputValue();
+  await page.locator(".program-card[data-destination=medications]").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#app")).toHaveAttribute("data-active-screen", "medications");
+  await expect(page.locator("#screen-title")).toBeFocused();
+  await expect(page).toHaveURL(/view=medications/);
+  await page.goBack();
+  await expect(page.locator("#app")).toHaveAttribute("data-active-screen", "today");
+  await expect(page.locator("#day")).toHaveValue(day);
+  await page.goForward();
+  await expect(page.locator("#app")).toHaveAttribute("data-active-screen", "medications");
+});
+
+test("refreshing local records keeps the selected day focused", async ({ page }) => {
+  await open(page);
+  const selected = page.locator("#day-week [aria-current=date]");
+  await selected.focus();
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(selected).toBeFocused();
+  // A second request and an event loop pass allow the IndexedDB read to complete.
+  await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    await accessCare();
+    await new Promise(requestAnimationFrame);
+  });
+  await expect(selected).toBeFocused();
+});
+
+test("the next dose and its action fit the first mobile view", async ({ page }) => {
+  await open(page, { medicine: true });
+  const action = page.locator("#today-focus .day-card-actions button").first();
+  await expect(action).toBeVisible();
+  expect(await action.evaluate(node => node.getBoundingClientRect().bottom <= document.querySelector(".dock").getBoundingClientRect().top)).toBe(true);
+});
+
+test("first launch reaches the app without a permission detour", async ({ page }) => {
+  await page.goto("/medication/");
+  await page.locator("#welcome-start").click();
+  await expect(page.locator("#app")).toBeVisible();
+  await expect(page.locator("#permission-screen")).toBeHidden();
+  await page.locator("#today-focus [data-open-quick]").click();
+  await expect(page.locator("#quick-dialog")).toBeVisible();
+});
+
+test("date picker has one tab stop, supports RTL arrows and restores focus on cancel", async ({ page }) => {
+  await open(page);
+  const opener = page.locator("#pick-day");
+  const before = await page.locator("#day").inputValue();
+  await opener.focus();
+  await page.keyboard.press("Enter");
+  const current = page.locator('#picker-days button[tabindex="0"]');
+  await expect(current).toHaveCount(1);
+  await expect(current).toBeFocused();
+  const key = await current.getAttribute("data-focus-key");
+  await page.keyboard.press("ArrowLeft");
+  await expect(current).toBeFocused();
+  await expect(current).not.toHaveAttribute("data-focus-key", key);
+  await page.keyboard.press("Escape");
+  await expect(opener).toBeFocused();
+  await expect(page.locator("#day")).toHaveValue(before);
+});
+
+test("the medicine flow validates, preserves the draft and lets the user save", async ({ page }) => {
+  await open(page, { width: 320, height: 640, theme: "dark" });
+  await page.locator("#today-focus [data-open-quick]").click();
+  await page.locator('#quick-dialog [data-open-medication]').click();
+  await expect(page.locator("#editor-identity")).toBeFocused();
+  await page.locator("#editor-next").click();
+  await expect(page.locator("#name")).toBeFocused();
+  await page.locator("#name").fill("Sample dose");
+  await page.locator("#editor-next").click();
+  await expect(page.locator("#editor-schedule")).toBeFocused();
+  await page.locator("#editor-back").click();
+  await expect(page.locator("#name")).toHaveValue("Sample dose");
+  await page.locator("#editor-next").click();
+  await page.locator("#editor-next").click();
+  await expect(page.locator("#editor-confirm")).toBeFocused();
+  await page.locator("#editor-next").click();
+  await expect(page.locator("#medication-dialog")).toBeHidden();
+  await expect(page.locator("#today-focus")).toContainText("Sample dose");
+});
+
+test("English profile and calendar remain usable on desktop", async ({ page }) => {
+  await open(page, { language: "en", width: 1280, height: 900, theme: "dark", medicine: true });
+  await page.locator(".header-tools [data-destination=settings]").click();
+  await page.locator("[data-settings-panel=profile-settings]").click();
+  await expect(page.locator("#settings-subtitle")).toHaveText("Personal information and cycle");
+  await page.locator('[data-close="settings-dialog"]').click();
+  await page.locator(".dock [data-destination=insights]").click();
+  const date = page.locator('#calendar-days [tabindex="0"]');
+  await expect(date).toHaveCount(1);
+  const first = await date.getAttribute("data-focus-key");
+  await date.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(date).not.toHaveAttribute("data-focus-key", first);
+  await page.locator("[data-insight=reports]").click();
+  await expect(page.locator("#reports-panel")).toBeVisible();
+});
+
+test("the installed shell shows and records data offline", async ({ page, context }) => {
+  await open(page, { medicine: true });
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller) {
+      await new Promise(resolve => navigator.serviceWorker.addEventListener("controllerchange", resolve, { once: true }));
+    }
+  });
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator("#app")).toBeVisible();
+  await expect(page.locator("#today-focus")).toContainText("Sample tablet");
+  await page.locator("#today-water-quick").click();
+  await expect(page.locator("#today-water-feedback")).toBeVisible();
+  await page.reload();
+  await expect(page.locator("#today-water-total")).not.toHaveText("۰");
+});
+
+test("family entry controls respect view, record and add permissions", async ({ page, context }) => {
+  const origin = "http://127.0.0.1:8872";
+  const group = "32100000-0000-4000-8000-000000000001";
+  const target = "32100000-0000-4000-8000-000000000002";
+  const setPolicy = value => context.addCookies([{ name: "test-family-policy", value, url: origin }]);
+  const actions = async () => (await context.request.get(origin + "/__browser-test/actions")).json();
+  await context.addCookies([{ name: "test-family", value: "1", url: origin }]);
+  await setPolicy("read");
+  await open(page, { language: "en" });
+  async function selectMember() {
+    await page.locator(".header-tools [data-destination=settings]").click();
+    await page.locator("#settings-open-family").click();
+    await page.locator(".family-roster-row").filter({ hasText: "Alex" }).click();
+    await expect(page.locator("#family-home")).toBeVisible();
+  }
+  await selectMember();
+  await expect(page.locator("#open-quick")).toBeHidden();
+  await setPolicy("write");
+  await page.locator("#family-home").click();
+  await selectMember();
+  await expect(page.locator("#open-quick")).toBeVisible();
+  const count = (await actions()).length;
+  await page.locator("#today-water-quick").click();
+  await expect.poll(async () => (await actions()).length).toBe(count + 1);
+  expect((await actions()).at(-1)).toMatchObject({ action: "record", target, group, kind: "water", amount: 250 });
+  const personalWater = await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    return (await accessCare()).water;
+  });
+  expect(personalWater).toHaveLength(0);
+  await page.locator("#open-quick").click();
+  await page.locator('#quick-dialog [data-open-medication]').click();
+  await expect(page.locator("#medication-dialog")).toHaveAttribute("data-family-editor", "");
+  await setPolicy("revoked");
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(page.locator("#medication-dialog")).toBeHidden();
+  await expect(page.locator("#family-home")).toBeHidden();
+  await setPolicy("write");
+  await selectMember();
+  await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await expect(page.locator("#family-home")).toBeHidden();
+});
+
+test("notification deep links keep the requested date", async ({ page }) => {
+  await open(page);
+  const day = await page.locator("#day").inputValue();
+  await page.goto(`/medication/?view=routines&day=${day}`);
+  await expect(page.locator("#app")).toHaveAttribute("data-active-screen", "routines");
+  await expect(page.locator("#day")).toHaveValue(day);
+  await page.locator("#screen-back").click();
+  await expect(page.locator("#app")).toHaveAttribute("data-active-screen", "today");
+});
+
+test("design gallery opens shared forms", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto("/design/?lang=en");
+  await page.locator('[data-open-medication]').first().evaluate(button => button.click());
+  await expect(page.locator("#medication-dialog")).toBeVisible();
+  await page.locator('[data-close="medication-dialog"]').click();
+  await page.locator('[data-open-visit]').first().evaluate(button => button.click());
+  await expect(page.locator("#visit-dialog")).toBeVisible();
+  expect(errors).toEqual([]);
+});

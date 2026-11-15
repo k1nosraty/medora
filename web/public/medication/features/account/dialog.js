@@ -246,7 +246,7 @@ export function installAccount({ onSignIn = () => {}, onSignOut = () => {}, onSh
       const field = $(button.dataset.revealPassword);
       field.value = "";
       field.type = "password";
-      button.textContent = t("نمایش");
+      button.textContent = t("ui.show");
     }
   }
   dialog.addEventListener("close", clearPasswords);

@@ -106,11 +106,11 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     const time = $("visit-time").value;
     const existing = getState().visits?.[editingVisit];
     if (existing?.cancelled) {
-      summary.textContent = t("قرار لغو شده");
+      summary.textContent = t("ui.cancelled-appointment");
       return;
     }
     if (!visitReminderToggle.checked) {
-      summary.textContent = t("یادآوری این قرار خاموش است.");
+      summary.textContent = t("ui.reminders-are-off-for-this-appointment");
       return;
     }
     summary.textContent = "";
@@ -120,10 +120,10 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
       const visit = { day, time, zone, offsets: [...retainedVisitOffsets(existing), ...checkedVisitOffsets()] };
       const next = appointmentReminders(visit, getState().appointmentReminders ?? appointmentDefaults, localZone())
         .find(at => at > Date.now());
-      if (next === undefined) summary.textContent = t("برای این ساعت، یادآوری آینده‌ای باقی نمانده است.");
+      if (next === undefined) summary.textContent = t("ui.no-upcoming-reminder-falls-before-this-appointment");
       else {
         const wall = localWall(next, timezone(localZone()));
-        summary.textContent = t("اولین یادآوری این قرار: {0}، ساعت {1}",
+        summary.textContent = t("ui.first-upcoming-reminder-value-at-value",
           formatDay(Math.floor(wall / dayMs)), clockText(new Date(wall).toISOString().slice(11, 16)));
       }
     } catch { /* The form reports an invalid timezone when saved. */ }
@@ -137,8 +137,8 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     $("visit-dialog").toggleAttribute("data-family-editor", Boolean(target));
     editingVisit = visit?.id ?? null;
     $("delete-edited-visit").hidden = !visit;
-    $("visit-form-title").textContent = target ? t("افزودن برای {0}", target.name) : visit ? t("ویرایش قرار") : t("قرار جدید");
-    $("visit-editor").querySelector('[type="submit"]').textContent = target ? t("ذخیره برای {0}", target.name) : t("ذخیرهٔ قرار");
+    $("visit-form-title").textContent = target ? t("ui.add-for-value", target.name) : visit ? t("ui.edit-appointment") : t("ui.new-appointment");
+    $("visit-editor").querySelector('[type="submit"]').textContent = target ? t("ui.save-for-value", target.name) : t("ui.save-appointment");
     $("visit-name").value = visit?.name ?? "";
     $("visit-day").value = isoDay(visit?.day ?? target?.day ?? defaultDay());
     $("visit-time").value = visit?.time ?? localClock();
@@ -161,14 +161,13 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     refreshFields($("visit-dialog"));
     $("visit-dialog").showModal();
   }
-  for (const control of document.querySelectorAll("[data-open-visit]")) control.addEventListener("click", () => openVisit());
   function deleteVisit(id, parent) {
     const visit = getState().visits?.[id];
     if (!visit) return;
     requestDeletion({
-      title: t("حذف قرار"),
-      message: t("قرار «{0}» حذف شود؟ یادآوری‌های این قرار هم لغو می‌شوند.", visit.name),
-      success: t("قرار حذف شد."),
+      title: t("ui.delete-appointment"),
+      message: t("ui.delete-value-its-reminders-will-also-be-cancelled", visit.name),
+      success: t("ui.appointment-deleted"),
       parent,
       change(state) { delete state.visits?.[id]; }
     });
@@ -190,7 +189,7 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     const time = $("visit-time").value;
     if (!name || !Number.isInteger(day) || !time) {
       const field = !name ? $("visit-name") : $("visit-editor").querySelector(`[data-for="visit-${!Number.isInteger(day) ? "day" : "time"}"]`);
-      showVisitError(t("عنوان، تاریخ و ساعت قرار را کامل کنید."), field);
+      showVisitError(t("ui.enter-a-title-date-and-time"), field);
       return;
     }
     const existingId = editingVisit;
@@ -204,7 +203,7 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     const zone = $("visit-zone").value.trim() || localZone();
     try { timezone(zone); } catch {
       $("visit-extra").open = true;
-      showVisitError(t("منطقهٔ زمانی مطب را به‌شکل Asia/Tehran وارد کنید."), $("visit-zone"));
+      showVisitError(t("ui.enter-the-clinics-time-zone-in-a-format-like-asia-tehran"), $("visit-zone"));
       return;
     }
     const remindersOff = !visitReminderToggle.checked;
@@ -220,13 +219,13 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     }
     const saved = await mutate(state => {
       const visits = state.visits ??= {};
-      if (existingId && !visits[id]) throw new Error(t("این قرار حذف شده است."));
+      if (existingId && !visits[id]) throw new Error(t("ui.this-appointment-has-been-deleted"));
       const previous = visits[id];
       const offsets = [...retainedVisitOffsets(previous), ...chosenOffsets];
       const completed = previous?.completed && previous.day === day && previous.time === time && previous.zone === zone;
       visits[id] = { ...plan, offsets, cancelled: previous?.cancelled ?? false,
         ...(completed ? { completed, resolvedAt: previous.resolvedAt } : {}) };
-    }, t("قرار ذخیره شد."), true);
+    }, t("ui.appointment-saved"), true);
     submit.disabled = false;
     if (saved) $("visit-dialog").close();
     else {

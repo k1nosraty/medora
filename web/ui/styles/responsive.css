@@ -4,12 +4,13 @@
   .medora .daily-sheet {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "programs" "water" "daily" "reminders";
+    grid-template-areas: "daily" "reminders" "programs" "water" "timeline";
     gap: .7rem;
     align-items: start;
   }
-  .medora .daily-sheet:has(#today-water[hidden]) { grid-template-areas: "programs" "daily" "reminders"; }
+  .medora .daily-sheet:has(#today-water[hidden]) { grid-template-areas: "daily" "reminders" "programs" "timeline"; }
   .daily-main { grid-area: daily; }
+  .daily-timeline { grid-area: timeline; }
   .medora #today-water { grid-area: water; margin-block-end: 0; }
   .medora #today-reminders { grid-area: reminders; box-sizing: border-box; inline-size: var(--today-rail-width); margin: 0 auto; }
   #plans { grid-auto-columns: min(48%, 23rem); }
@@ -35,9 +36,6 @@
     padding-right: max(.7rem, env(safe-area-inset-right));
   }
   .medora .today-story { padding-inline: .85rem; }
-  .medora .story-copy h2 { font-size: 1.64rem; }
-  .medora .dock button { font-size: .68rem; }
-  .medora .header-tools { gap: .28rem; }
   .medora #calendar-entries .day-card { --day-art-width: 3.05rem; grid-template-columns: var(--day-art-width) minmax(0, 1fr) 4.65rem; }
   .medora #visit-add { font-size: .875rem; }
 }

@@ -1,17 +1,18 @@
       <div data-screen="water" hidden>
+        <div data-day-host="water"></div>
         <section class="feature water program-water water-history-card">
           <div id="water-summary" class="water-summary">
             <!-- include layout/water-glass.html -->
-            <div class="water-info"><strong id="water-date"></strong><p class="amount-line"><strong id="water-total">۰</strong> از <span id="water-goal-label">۲٬۰۰۰</span> میلی‌لیتر</p><progress class="water-progress" id="water-progress" max="1" value="0" aria-label="پیشرفت هدف آب"></progress><p class="quiet" id="water-remaining"></p></div>
+            <div class="water-info"><strong id="water-date"></strong><p class="amount-line"><strong id="water-total">{{msg:ui.0}}</strong> {{msg:ui.of}} <span id="water-goal-label">{{msg:ui.2-000}}</span> {{msg:ui.ml}}</p><progress class="water-progress" id="water-progress" max="1" value="0" aria-label="{{msg:ui.water-goal-progress}}"></progress><p class="quiet" id="water-remaining"></p></div>
           </div>
           <div id="water-entry">
             <div class="water-quick">
-              <button type="button" data-water-add="150"><b>+۱۵۰</b><small>میلی‌لیتر</small></button>
-              <button type="button" data-water-add="250"><b>+۲۵۰</b><small>میلی‌لیتر</small></button>
-              <button type="button" data-water-add="500"><b>+۵۰۰</b><small>میلی‌لیتر</small></button>
+              <button type="button" data-water-add="150"><b>{{msg:ui.150-2}}</b><small>{{msg:ui.ml}}</small></button>
+              <button type="button" data-water-add="250"><b>{{msg:ui.250-2}}</b><small>{{msg:ui.ml}}</small></button>
+              <button type="button" data-water-add="500"><b>{{msg:ui.500-2}}</b><small>{{msg:ui.ml}}</small></button>
             </div>
           </div>
         </section>
-        <button id="water-custom-action" type="button" class="block-action" data-open-water>مقدار دلخواه</button>
-        <section class="water-history-entries"><h2>مصرف این روز</h2><div id="water-entries"></div></section>
+        <button id="water-custom-action" type="button" class="block-action" data-open-water>{{msg:ui.custom-amount}}</button>
+        <section class="water-history-entries"><h2>{{msg:ui.water-log}}</h2><div id="water-entries" data-context-list></div></section>
       </div>

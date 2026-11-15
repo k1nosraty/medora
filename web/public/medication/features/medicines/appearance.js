@@ -4,12 +4,12 @@ import { glassObject } from "../../design/three-dimensional.js";
 export const defaultMedicineIcon = "bottle";
 const defaultMedicineColor = "purple";
 export const medicineShapes = {
-  bottle: t("بطری دارو"), tablet: language === "en" ? "Tablet" : "قرص", capsule: t("کپسول"), syrup: t("شربت"), injection: t("آمپول"),
-  ointment: t("پماد"), drops: t("قطره"), spray: t("اسپری"), sachet: t("ساشه"), powder: t("پودر")
+  bottle: t("ui.medicine-bottle"), tablet: language === "en" ? "Tablet" : "قرص", capsule: t("ui.capsule"), syrup: t("ui.syrup"), injection: t("ui.ampoule"),
+  ointment: t("ui.ointment"), drops: t("ui.drops"), spray: t("ui.spray"), sachet: t("ui.sachet"), powder: t("ui.powder")
 };
 export const appearanceColors = {
-  gold: t("طلایی"), peach: t("هلویی"), coral: t("مرجانی"), rose: t("صورتی"), purple: t("یاسی"),
-  indigo: t("نیلی"), blue: t("آبی"), green: t("سبزآبی"), pistachio: t("پسته‌ای"), slate: t("خاکستری")
+  gold: t("ui.gold"), peach: t("ui.peach"), coral: t("ui.coral"), rose: t("ui.pink"), purple: t("ui.lilac"),
+  indigo: t("ui.indigo"), blue: t("ui.blue"), green: t("ui.teal"), pistachio: t("ui.pistachio"), slate: t("ui.gray")
 };
 const knownShape = shape => Object.hasOwn(medicineShapes, shape) ? shape : defaultMedicineIcon;
 export const medicineColorOf = color => Object.hasOwn(appearanceColors, color) ? color : defaultMedicineColor;
@@ -52,8 +52,7 @@ export function installAppearance(onShapeChange) {
     const tile = $("medicine-appearance");
     tile.dataset.color = tile.dataset.ink = medicineColorOf(selectedColor);
     $("medicine-appearance-icon").replaceChildren(medicationBadge(type, selectedColor));
-    $("editor-banner").replaceChildren(medicationBanner(type, selectedColor));
-    tile.setAttribute("aria-label", t("ظاهر دارو (اختیاری)، {0}، {1}", medicineShapes[knownShape(type)], appearanceColors[medicineColorOf(selectedColor)]));
+    tile.setAttribute("aria-label", t("ui.appearance-optional-value-value", medicineShapes[knownShape(type)], appearanceColors[medicineColorOf(selectedColor)]));
   }
   function choice(id, title, pressed, click) {
     const option = document.createElement("button");

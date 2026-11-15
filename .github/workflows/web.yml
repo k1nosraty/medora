@@ -26,3 +26,5 @@ jobs:
       - run: npm test
       - run: npm run test:care
       - run: npm run test:alarms
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser

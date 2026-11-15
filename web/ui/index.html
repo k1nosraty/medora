@@ -8,10 +8,8 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/medora-icon-192.png">
-  <link rel="stylesheet" href="/style.css">
-  <!-- include layout/styles.html -->
+  <link rel="stylesheet" href="{{app-style}}">
   <link rel="modulepreload" href="/medication/app/medora.js">
-  <link rel="modulepreload" href="/medication/domain/medication-rules.js">
   <title>مدورا</title>
   <script type="module" src="/medication/bootstrap.js"></script>
 </head>
@@ -20,10 +18,10 @@
   <!-- include layout/onboarding.html -->
   <!-- include layout/header.html -->
   <main class="app-content">
-    <p id="boot-status" role="status">در حال بارگذاری مدورا…</p>
-    <button id="boot-retry" type="button" hidden>بارگذاری دوباره</button>
+    <p id="boot-status" role="status">{{msg:ui.loading-medora}}</p>
+    <button id="boot-retry" type="button" hidden>{{msg:ui.reload}}</button>
     <div id="app" hidden>
-      <div class="page-heading"><h1 id="screen-title">امروز</h1><p id="header-date"></p></div>
+      <div class="page-heading"><h1 id="screen-title" tabindex="-1">{{msg:ui.today}}</h1><p id="header-date"></p></div>
       <!-- include layout/family-context.html -->
       <!-- include layout/day-navigation.html -->
       <aside id="service-notice" class="feature" hidden><strong></strong><p dir="auto"></p></aside>

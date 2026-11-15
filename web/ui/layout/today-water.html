@@ -4,20 +4,20 @@
           </span>
           <div class="today-water-body">
             <div class="water-info">
-              <h2 id="today-water-label">مصرف آب</h2>
-              <p class="amount-line"><strong id="today-water-total">۰</strong> از <span class="today-water-target"><span id="today-water-goal">۲٬۰۰۰</span> میلی‌لیتر</span></p>
-              <progress class="water-progress" id="today-water-progress" aria-label="پیشرفت هدف آب" max="1" value="0"></progress>
+              <h2 id="today-water-label">{{msg:ui.water-intake}}</h2>
+              <p class="amount-line"><strong id="today-water-total">{{msg:ui.0}}</strong> {{msg:ui.of}} <span class="today-water-target"><span id="today-water-goal">{{msg:ui.2-000}}</span> {{msg:ui.ml}}</span></p>
+              <progress class="water-progress" id="today-water-progress" aria-label="{{msg:ui.water-goal-progress}}" max="1" value="0"></progress>
               <span id="today-water-percent" aria-hidden="true"></span>
             </div>
             <div class="today-water-actions">
-              <button type="button" data-open-water>ثبت آب</button>
-              <button type="button" class="secondary" id="today-water-quick" aria-label="ثبت سریع ۲۵۰ میلی‌لیتر آب"><bdi>+۲۵۰</bdi><small>میلی‌لیتر</small></button>
-              <button id="open-water-history" type="button" class="secondary" data-destination="water" aria-label="سوابق آب">سوابق</button>
+              <button type="button" data-open-water>{{msg:ui.log-water}}</button>
+              <button type="button" class="secondary" id="today-water-quick" aria-label="{{msg:ui.quick-log-250-ml-of-water}}"><bdi>{{msg:ui.250-2}}</bdi><small>{{msg:ui.ml}}</small></button>
+              <button id="open-water-history" type="button" class="secondary" data-destination="water" aria-label="{{msg:ui.water-history}}">{{msg:ui.history}}</button>
             </div>
             <div id="today-water-feedback" class="today-water-feedback" hidden>
               <span id="today-water-message"></span>
-              <button type="button" class="secondary" id="today-water-undo">برگشت ثبت</button>
-              <button type="button" class="icon-button" id="today-water-dismiss" aria-label="بستن"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+              <button type="button" class="secondary" id="today-water-undo">{{msg:ui.undo-log}}</button>
+              <button type="button" class="icon-button" id="today-water-dismiss" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
             </div>
           </div>
         </section>

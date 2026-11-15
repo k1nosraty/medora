@@ -45,32 +45,6 @@
   --category-water-ink: #c8d5ff;
   --category-water-bar: #679be5;
 }
-.medora .dock {
-  inset-inline: 0;
-  inline-size: min(calc(100% - 2rem), 14.75rem);
-  grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr);
-  gap: .12rem;
-  padding: .15rem;
-  background: color-mix(in srgb, var(--panel) 34%, transparent);
-  -webkit-backdrop-filter: blur(9px) saturate(160%);
-  backdrop-filter: blur(9px) saturate(160%);
-  box-shadow: inset 0 1px 1px var(--glass-glint), 0 .3rem 1rem var(--glass-shadow);
-}
-.medora .dock button {
-  min-block-size: 2.75rem;
-  grid-template-rows: auto auto;
-  place-content: center;
-  gap: .08rem;
-}
-.medora .dock button[aria-current="page"] { background: color-mix(in srgb, var(--dock-active) 34%, transparent); }
-.medora .dock button.dock-add {
-  inline-size: 2.75rem;
-  min-block-size: 2.75rem;
-  place-self: center;
-  grid-template-rows: 1fr;
-  border-radius: 50%;
-}
-.medora .dock .dock-add svg { inline-size: 1.35rem; block-size: 1.35rem; }
 .medora .program-medicine { --program-fill: var(--category-medicine-fill); --program-ink: var(--category-medicine-ink); --pill-base: var(--category-medicine-art); }
 .medora .program-visit { --program-fill: var(--program-visit-fill); --program-ink: var(--program-visit-ink); --pill-base: var(--category-visit-art); }
 .medora .program-routine { --program-fill: var(--routine-fill); --program-ink: var(--routine-ink); }

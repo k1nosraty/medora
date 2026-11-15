@@ -16,6 +16,6 @@ export function quantity(input, optional = false) {
   const fractionAmount = fraction ? Number(fraction[1]) * 1000 / Number(fraction[2]) : null;
   const amount = fraction ? (Number.isInteger(fractionAmount) ? quantityFromText(String(fractionAmount / 1000)) : null) :
     quantityFromText(text);
-  if (amount === null) throw new Error(t("مقدار را به‌صورت عدد با حداکثر سه رقم اعشار وارد کنید."));
+  if (amount === null) throw new Error(t("ui.enter-a-number-with-up-to-three-decimal-places"));
   return amount;
 }

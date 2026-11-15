@@ -6,3 +6,7 @@ public/medication/index.html
 public/medication/sw.js
 public/design/index.html
 public/medication/styles/app.css
+
+/test-results/
+/playwright-report/
+/public/medication/bundles/

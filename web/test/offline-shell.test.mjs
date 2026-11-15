@@ -10,6 +10,7 @@ test("the installed shell serves a coherent offline page and does not intercept 
   const listeners = new Map();
   const stored = new Map();
   const network = [];
+  const pastChunk = "/medication/bundles/chunk-ABCD1234.js";
   let skippedWaiting = false;
   const cache = {
     async addAll(requests) {
@@ -23,8 +24,12 @@ test("the installed shell serves a coherent offline page and does not intercept 
     Request: class extends Request {
       constructor(path, options) { super(new URL(path, origin), options); }
     },
-    caches: { open: async () => cache },
-    fetch: async request => { network.push(request.url); return new Response("network"); },
+    caches: { open: async () => cache, match: async path => path === pastChunk ? new Response("previous release") : undefined },
+    fetch: async request => {
+      network.push(request.url);
+      return new URL(request.url).pathname.endsWith("missing.webp")
+        ? new Response("missing", { status: 404 }) : new Response("network");
+    },
     self: { location: { origin }, addEventListener: (type, listener) => listeners.set(type, listener),
       skipWaiting() {
         assert.ok(stored.has("/medication/"));
@@ -42,7 +47,7 @@ test("the installed shell serves a coherent offline page and does not intercept 
   for (const path of stored.keys()) {
     if (!path.startsWith("/medication/") || !path.endsWith(".js")) continue;
     const module = await readFile(new URL(path.slice(1), publicDir), "utf8");
-    for (const match of module.matchAll(/(?:from\s+|import\(\s*)["'](\.{1,2}\/[^"']+|\/medication\/[^"']+)["']/g)) {
+    for (const match of module.matchAll(/(?:from\s*|import\(\s*)["'](\.{1,2}\/[^"']+|\/medication\/[^"']+)["']/g)) {
       assert.ok(stored.has(new URL(match[1], origin + path).pathname), `${path} loads an uncached module`);
     }
   }
@@ -55,16 +60,16 @@ test("the installed shell serves a coherent offline page and does not intercept 
     return response;
   }
   assert.equal(await (await fetchThroughWorker("/medication/?day=2026-11-09&view=water")).text(), "installed");
-  assert.equal(await (await fetchThroughWorker("/medication/shared/i18n/english.js")).text(), "installed");
+  assert.equal(await (await fetchThroughWorker(pastChunk)).text(), "previous release");
   assert.equal(fetchThroughWorker("/api/reminders"), undefined);
   assert.equal(fetchThroughWorker("/api/promotion"), undefined);
   assert.equal(fetchThroughWorker("/admin/"), undefined);
   assert.equal(fetchThroughWorker("/design/"), undefined);
-  for (const folder of ["optical-glass", "matte-3d"]) {
-    assert.equal(await (await fetchThroughWorker(`/design/${folder}/water.webp`)).text(), "installed");
-  }
   const dental = "/design/matte-3d/visit-dental.webp";
+  assert.equal(stored.has(dental), false);
   assert.equal(await (await fetchThroughWorker(dental)).text(), "network");
   assert.equal(await (await fetchThroughWorker(dental)).text(), "network");
-  assert.deepEqual(network, [origin + dental]);
+  const missing = "/design/matte-3d/missing.webp";
+  assert.equal((await fetchThroughWorker(missing)).status, 404);
+  assert.deepEqual(network, [origin + dental, origin + missing]);
 });

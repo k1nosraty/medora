@@ -98,8 +98,6 @@
 .medora .badge[data-status="skipped"] { color: var(--error); background: var(--error-bg); }
 .medora [data-warning="true"] { color: var(--warn); font-weight: 700; }
 .medora .app-status { min-block-size: 1.2rem; color: var(--muted); }
-.medora .dock { position: fixed; z-index: 2; left: max(.55rem, env(safe-area-inset-left)); right: max(.55rem, env(safe-area-inset-right)); inset-block-end: max(.45rem, env(safe-area-inset-bottom)); max-inline-size: 41rem; margin-inline: auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--outline); border-radius: 1.55rem; padding: .25rem; box-shadow: 0 .38rem 1.4rem var(--cast); }
-.medora .dock button { background: transparent; border: 0; color: var(--ink); padding: .27rem .1rem; font-size: .8rem; line-height: 1.3; display: grid; place-items: center; gap: .2rem; overflow-wrap: anywhere; }
 .medora .fields, .medora .weekdays { display: flex; flex-wrap: wrap; align-items: end; gap: .55rem; margin-block: .6rem; }
 .medora .fields label { flex: 1 1 9rem; min-inline-size: 0; }
 .medora .fields input { inline-size: 100%; }
@@ -107,7 +105,6 @@
 .medora .weekdays input { inline-size: 1.08rem; min-block-size: auto; }
 .medora form label { display: block; margin-block: .35rem; }
 @media (max-width: 340px) {
-  .medora .dock button { font-size: .72rem; }
   .section-heading { flex-wrap: wrap; }
 }
 
@@ -141,13 +138,9 @@
 .medora h2 { font-size: 1.1rem; }
 .medora h3 { margin-block: 0 .18rem; font-size: 1rem; }
 .medora .app-content { padding-block-start: .55rem; }
-.app-bar { background: var(--page); color: var(--ink); border-radius: 0 0 1.25rem 1.25rem; overflow: hidden; padding-block-start: env(safe-area-inset-top); }
-.app-bar-inner { display: flex; align-items: center; position: relative; box-sizing: border-box; max-inline-size: 43rem; margin-inline: auto; min-block-size: 3.5rem; padding: .55rem .85rem; gap: .45rem; }
 .brand-mark { display: grid; place-items: center; flex: none; inline-size: 1.9rem; block-size: 1.9rem; color: var(--action); }
 .medora .brand-mark svg { inline-size: 1.8rem; block-size: 1.8rem; }
 .medora h1 { font-size: 1.3rem; margin: 0; }
-.medora .app-bar p { margin: 0; color: var(--muted); font-size: .76rem; }
-.medora .app-bar p:empty { display: none; }
 .medora .icon-button, .medora .text-button { background: transparent; border: 0; color: inherit; }
 .medora .icon-button { display: inline-grid; place-items: center; padding: .3rem; min-inline-size: 2.75rem; min-block-size: 2.75rem; }
 .medora .text-button { color: var(--action); min-block-size: 2.75rem; padding-inline: .3rem; }
@@ -181,13 +174,6 @@
 .medora .water-quick button[data-water-preset] { border-color: var(--outline); }
 .medora .water-quick button[aria-pressed="true"] { background: var(--visit); border-color: var(--visit); }
 .medora .timeline { margin-block-start: .45rem; }
-.medora .dock { inset-inline: max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-left)); padding: .15rem .3rem; border-radius: 1.6rem; }
-.medora .dock button { min-block-size: 3.8rem; grid-template-rows: 2.25rem auto; gap: .08rem; color: var(--muted); }
-.medora .dock button svg { inline-size: 1.15rem; block-size: 1.15rem; }
-.medora .dock button[aria-current="page"] { background: transparent; color: var(--action); font-weight: 750; }
-.dock-mark { display: grid; place-items: center; border-radius: 50%; inline-size: 2.3rem; block-size: 2.3rem; color: var(--ink); }
-.medora .dock .dock-mark svg { inline-size: 1.55rem; block-size: 1.55rem; }
-.dock [aria-current="page"] .dock-mark { background: var(--action); color: var(--on-action); }
 .medora .progress-ring { inline-size: 4.5rem; background: conic-gradient(var(--action) calc(var(--percent, 0) * 1%), var(--outline) 0); }
 .medora .progress-ring span { background: var(--panel); color: var(--action); }
 .medora #plans-heading button { border-radius: 5rem; }
@@ -427,15 +413,9 @@
 
 /* Studio */
 .medora { background: radial-gradient(ellipse at 15% 0, color-mix(in srgb, var(--dock-active) 52%, transparent), transparent 32rem), var(--page); min-block-size: 100dvh; }
-.medora .app-bar { background: transparent; }
 .medora .app-content { max-inline-size: 46rem; }
-.app-bar-inner { max-inline-size: 46rem; padding: .65rem max(1rem, env(safe-area-inset-right)) .25rem max(1rem, env(safe-area-inset-left)); }
-.wordmark { font-size: 1.2rem; font-weight: 850; }
 .medora .brand-mark { border-radius: .62rem; background: var(--dock-active); }
 .medora .brand-mark svg { inline-size: 1.12rem; block-size: 1.12rem; }
-.medora .header-tools { margin-inline-start: auto; display: flex; gap: .55rem; }
-.medora .header-tools button { background: var(--panel); color: var(--action); border: 1px solid var(--field); border-radius: 50%; box-shadow: 0 .15rem .45rem var(--cast), inset 0 1px 0 var(--glass); }
-.medora .header-tools svg { inline-size: 1.18rem; block-size: 1.18rem; }
 .page-heading { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: .15rem 1rem; margin-block: .15rem .65rem; }
 .medora .page-heading h1 { font-size: clamp(1.8rem, 6.6vw, 2.55rem); font-weight: 880; line-height: 1.38; }
 .medora .page-heading p { color: var(--muted); font-size: .85rem; }
@@ -446,11 +426,6 @@
 .medora .day-week button { min-block-size: 2.7rem; }
 .medora .day-week button[aria-current="date"] { background: var(--dock-active); color: var(--action); }
 .medora #day-title, .medora #med-day-title { margin-block: .5rem .7rem; font-weight: 800; }
-.medora .dock { max-inline-size: 44rem; border-radius: 2.4rem; padding: .2rem; border-color: var(--glass); background: color-mix(in srgb, var(--glass) 82%, transparent); -webkit-backdrop-filter: blur(20px) saturate(145%); backdrop-filter: blur(20px) saturate(145%); box-shadow: 0 .35rem 1.2rem var(--cast), inset 0 0 .5rem var(--glass); }
-.medora .dock button { border-radius: 2.05rem; padding-inline: .08rem; }
-.medora .dock button[aria-current="page"] { background: var(--dock-active); box-shadow: inset 0 1px 0 var(--glass), 0 .1rem .38rem var(--cast); }
-.medora .dock [aria-current="page"] .dock-mark { background: transparent; color: var(--action); }
-.medora .dock .dock-add { color: var(--ink); }
 
 .medication-banner {
   --art-tilt: -12deg;

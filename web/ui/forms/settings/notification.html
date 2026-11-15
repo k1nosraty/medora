@@ -1,20 +1,20 @@
       <section id="notification-settings" class="settings-panel" hidden>
         <div class="settings-callout">
-          <h3>وضعیت اعلان این دستگاه</h3>
-          <p id="push-status" role="status">در حال آماده‌سازی اعلان…</p>
+          <h3>{{msg:ui.device-notification-status}}</h3>
+          <p id="push-status" role="status">{{msg:ui.setting-up-notifications}}</p>
         </div>
         <div class="settings-push-actions">
-          <button id="push-enable" type="button" disabled>فعال‌کردن اعلان</button>
-          <button id="push-test" type="button" disabled hidden>آزمایش همین دستگاه</button>
-          <button id="push-check" type="button" class="secondary" disabled hidden>بررسی وضعیت</button>
+          <button id="push-enable" type="button" disabled>{{msg:ui.enable-notifications}}</button>
+          <button id="push-test" type="button" disabled hidden>{{msg:ui.test-this-device}}</button>
+          <button id="push-check" type="button" class="secondary" disabled hidden>{{msg:ui.check-status}}</button>
         </div>
-        <label class="routine-check"><input id="push-show-details" type="checkbox" aria-describedby="push-privacy">نمایش نام و جزئیات در اعلان</label>
-        <p id="push-privacy" class="quiet">این جزئیات برای ارسال اعلان به سرور می‌روند و ممکن است روی صفحهٔ قفل دیده شوند.</p>
+        <label class="routine-check"><input id="push-show-details" type="checkbox" aria-describedby="push-privacy">{{msg:ui.show-names-and-details-in-notifications}}</label>
+        <p id="push-privacy" class="quiet">{{msg:ui.these-details-are-sent-to-the-notification-server-and-may}}</p>
         <p id="push-test-result" class="settings-message" role="status"></p>
         <details id="push-details" class="editor-options">
-          <summary>جزئیات ارسال اعلان</summary>
+          <summary>{{msg:ui.delivery-details}}</summary>
           <p id="push-delivery" class="quiet" role="status"></p>
-          <p class="quiet">برای ارسال اعلان، زمان‌بندی و وضعیت رسیدن به هدف آب به سرور می‌رسد. تغییر آفلاین پس از اتصال همگام می‌شود.</p>
+          <p class="quiet">{{msg:ui.medora-sends-your-schedule-and-whether-you-met-your-water}}</p>
         </details>
-        <button id="push-disable" type="button" class="text-button danger-link block-action" disabled hidden>خاموش‌کردن اعلان</button>
+        <button id="push-disable" type="button" class="text-button danger-link block-action" disabled hidden>{{msg:ui.turn-off-notifications}}</button>
       </section>

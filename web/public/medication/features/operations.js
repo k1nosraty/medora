@@ -35,7 +35,7 @@ export function installSupport() {
       const response = await fetch("/api/support", { cache: "no-store" });
       if (response.status === 401) {
         $("support-sign-in").hidden = false;
-        status.textContent = t("برای ارسال گزارش مشکل وارد حساب مدورا شوید.");
+        status.textContent = t("ui.sign-in-to-report-an-issue");
         return;
       }
       if (!response.ok) throw new Error();
@@ -47,7 +47,7 @@ export function installSupport() {
         history.append(row);
       }
     } catch {
-      status.textContent = t("پشتیبانی در دسترس نیست.");
+      status.textContent = t("ui.support-is-unavailable");
     }
   };
   $("open-support").addEventListener("click", () => {
@@ -74,14 +74,14 @@ export function installSupport() {
       const response = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (response.status === 401) {
         $("support-sign-in").hidden = false;
-        status.textContent = t("برای ارسال گزارش مشکل وارد حساب مدورا شوید.");
+        status.textContent = t("ui.sign-in-to-report-an-issue");
       } else if (response.ok) {
         form.reset();
         await show();
-        status.textContent = t("گزارش ارسال شد.");
+        status.textContent = t("ui.report-sent");
       } else status.textContent = t(response.status === 409 ? "سقف ارسال گزارش پر شده است." : "گزارش ارسال نشد.");
     } catch {
-      status.textContent = t("گزارش ارسال نشد.");
+      status.textContent = t("ui.report-could-not-be-sent");
     } finally {
       submit.disabled = false;
     }

@@ -8,9 +8,9 @@ import { defaultMedicineIcon, installAppearance, medicineColorOf } from "./appea
 import { amountText, doseUnit, quantity } from "./quantity.js";
 import { nextPlannedDose } from "./next-dose.js";
 
-const weekdays = [t("شنبه"), t("یکشنبه"), t("دوشنبه"), t("سه‌شنبه"), t("چهارشنبه"), t("پنجشنبه"), t("جمعه")];
+const weekdays = [t("ui.saturday"), t("ui.sunday"), t("ui.monday"), t("ui.tuesday"), t("ui.wednesday"), t("ui.thursday"), t("ui.friday")];
 const weekdayBits = [5, 6, 0, 1, 2, 3, 4];
-const editorChapters = [t("نام، شکل و رنگ"), t("برنامهٔ ساده یا چندمرحله‌ای"), t("مرور و ذخیره")];
+const editorChapters = [t("ui.name-form-and-color"), t("ui.simple-or-multi-stage-schedule"), t("ui.review-save")];
 
 export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine, pickers, formatDay }) {
   let editing;
@@ -22,7 +22,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
 
   function updateSlotLabels(container) {
     Array.from(container.children).forEach((row, index, rows) => {
-      row.querySelector(".slot-heading strong").textContent = t("نوبت {0}", localDigits(index + 1));
+      row.querySelector(".slot-heading strong").textContent = t("ui.dose-value", localDigits(index + 1));
       row.querySelector(".remove-slot").hidden = rows.length === 1;
     });
     container.nextElementSibling.querySelector(".add-slot").disabled = container.children.length >= 12;
@@ -45,7 +45,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
   function updatePhaseLabels() {
     const phases = Array.from($("phases").children);
     phases.forEach((field, index) => {
-      field.querySelector("legend").textContent = t("مرحلهٔ {0}", localDigits(index + 1));
+      field.querySelector("legend").textContent = t("ui.stage-value", localDigits(index + 1));
       field.querySelector(".remove-phase").hidden = phases.length === 1;
     });
     $("add-phase").disabled = phases.length >= 50;
@@ -114,13 +114,13 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     editing = medicine?.id;
     editingRevision = medicine?.revision;
     $("delete-edited-medication").hidden = !medicine;
-    $("editor-title").textContent = target ? t("افزودن برای {0}", target.name) : medicine ? t("ویرایش دارو") : t("داروی جدید");
+    $("editor-title").textContent = target ? t("ui.add-for-value", target.name) : medicine ? t("ui.edit-medicine") : t("ui.new-medicine");
     $("name").value = medicine?.name ?? "";
     $("instructions").value = medicine?.instructions ?? "";
     $("medicine-icon").value = medicine?.icon ?? defaultMedicineIcon;
     $("medicine-color").value = medicineColorOf(medicine?.color);
     updateAppearance();
-    $("unit").value = medicine?.unit ?? t("قرص");
+    $("unit").value = medicine?.unit ?? t("ui.tablet");
     $("unit").readOnly = medicine?.stock != null;
     $("stock").value = medicine?.stock == null ? "" : amountText(medicine.stock);
     $("stock").readOnly = medicine?.stock != null;
@@ -143,12 +143,12 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     updateEditorMode();
     showEditorStep(0, false);
     $("medication-dialog").showModal();
+    $("editor-identity").focus({ preventScroll: true });
   }
 
   function showEditorStep(step, focus = true) {
     editorStep = step;
     $("editor").dataset.step = String(step);
-    $("editor-chapter").textContent = editorChapters[step];
     for (const panel of document.querySelectorAll("[data-editor-step]")) panel.hidden = Number(panel.dataset.editorStep) !== step;
     Array.from($("editor-steps").children).forEach((label, index) => {
       label.dataset.complete = String(index < step);
@@ -156,7 +156,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       else label.removeAttribute("aria-current");
     });
     $("editor-back").hidden = step === 0;
-    $("editor-next").textContent = step === 2 ? delegation ? t("ذخیره برای {0}", delegation.name) : t("ذخیرهٔ دارو") : t("ادامه");
+    $("editor-next").textContent = step === 2 ? delegation ? t("ui.save-for-value", delegation.name) : t("ui.save-medicine") : t("ui.continue");
     $("editor-status").textContent = "";
     if (focus) {
       const panel = document.querySelector(`[data-editor-step="${step}"]`);
@@ -170,14 +170,14 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     title.dir = "auto";
     const list = element("ol");
     for (const [index, phase] of phases.entries()) {
-      const range = phase.end === null ? t("از {0}", formatDay(phase.start)) :
-        t("{0} تا {1}", formatDay(phase.start), formatDay(phase.end - 1));
+      const range = phase.end === null ? t("ui.from-value", formatDay(phase.start)) :
+        t("ui.value-to-value", formatDay(phase.start), formatDay(phase.end - 1));
       const days = weekdays.filter((_, index) => phase.mask & (1 << weekdayBits[index]));
       const repeat = dates.length ? dates.map(day => formatDay(day)).join(listSeparator) :
-        phase.interval > 1 ? t("هر {0} هفته", localDigits(phase.interval)) :
-          days.length === 7 ? t("هر روز") : t("هر هفته");
+        phase.interval > 1 ? t("ui.every-value-weeks", localDigits(phase.interval)) :
+          days.length === 7 ? t("ui.every-day") : t("ui.every-week");
       const row = element("li");
-      if (phased) row.append(element("h5", t("مرحلهٔ {0}", localDigits(index + 1))));
+      if (phased) row.append(element("h5", t("ui.stage-value", localDigits(index + 1))));
       if (!dates.length) row.append(element("p", range));
       row.append(element("strong", repeat));
       if (!dates.length && days.length < 7) row.append(element("p", days.join(listSeparator)));
@@ -193,14 +193,14 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     const review = $("editor-review");
     const notBefore = getState().medicines[editing]?.effectiveFrom ?? 0;
     const next = nextPlannedDose(phases, dates, notBefore);
-    const upcoming = element("p", next ? t("نوبت آینده: {0}، ساعت {1}", formatDay(next.day), localDigits(timeText(next.slot.minuteOfDay))) :
-      t("نوبت آینده‌ای در این برنامه نیست."));
+    const upcoming = element("p", next ? t("ui.next-scheduled-dose-value-at-value", formatDay(next.day), localDigits(timeText(next.slot.minuteOfDay))) :
+      t("ui.this-schedule-has-no-upcoming-doses"));
     upcoming.className = "review-upcoming";
     review.replaceChildren(title, upcoming, list);
     if (instructions) review.append(element("p", instructions));
     const thresholdUnit = doseUnit(unit, threshold);
-    if ($("stock").readOnly) review.append(element("p", t("هشدار موجودی در {0} {1}", amountText(threshold), thresholdUnit)));
-    else if (stock !== null) review.append(element("p", t("موجودی اولیه {0} {1} · هشدار در {2} {3}", amountText(stock), doseUnit(unit, stock), amountText(threshold), thresholdUnit)));
+    if ($("stock").readOnly) review.append(element("p", t("ui.low-stock-alert-at-value-value", amountText(threshold), thresholdUnit)));
+    else if (stock !== null) review.append(element("p", t("ui.initial-stock-value-value-alert-at-value-value", amountText(stock), doseUnit(unit, stock), amountText(threshold), thresholdUnit)));
   }
 
   function renderExactDates(fieldset) {
@@ -211,7 +211,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
         fieldset.querySelector(".add-exact-day").focus();
       });
       remove.className = "secondary";
-      remove.setAttribute("aria-label", t("حذف تاریخ {0}", formatDay(day)));
+      remove.setAttribute("aria-label", t("ui.remove-date-value", formatDay(day)));
       return remove;
     }));
   }
@@ -230,8 +230,8 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       if (repeat.value === "dates") renderExactDates(phase);
     }
     const warning = $("phase-mode-warning");
-    warning.textContent = phased && restoreExactMode ? t("تاریخ‌های انتخابی فقط در برنامهٔ ثابت استفاده می‌شوند.") :
-      !phased && phases.length > 1 ? t("با ذخیرهٔ برنامهٔ ثابت، فقط مرحلهٔ اول نگه داشته می‌شود.") : "";
+    warning.textContent = phased && restoreExactMode ? t("ui.selected-dates-apply-only-to-a-fixed-schedule") :
+      !phased && phases.length > 1 ? t("ui.saving-as-a-fixed-schedule-keeps-only-the-first-stage") : "";
     warning.hidden = !warning.textContent;
     updatePhaseLabels();
     updateDoseUnits();
@@ -241,7 +241,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
   function updateDoseUnits() {
     const unit = $("unit").value.trim();
     for (const link of $("phases").querySelectorAll(".dose-unit-link")) {
-      link.textContent = unit ? t("واحد: {0}", doseUnit(unit, 1000)) : t("تعیین واحد");
+      link.textContent = unit ? t("ui.unit-value", doseUnit(unit, 1000)) : t("ui.choose-a-unit");
     }
   }
 
@@ -277,39 +277,39 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     const active = phased ? Array.from($("phases").children) : [$("phases").firstElementChild];
     const exact = !phased && active[0].querySelector(".repeat").value === "dates";
     if (exact && !editorDates.length) {
-      invalidEditorField(active[0].querySelector(".add-exact-day"), t("حداقل یک تاریخ مصرف انتخاب کنید."));
+      invalidEditorField(active[0].querySelector(".add-exact-day"), t("ui.choose-at-least-one-date"));
     }
     const starts = active.map(fieldset => {
       if (exact) return editorDates[0];
       const field = fieldset.querySelector(".start");
-      if (!field.value) invalidEditorField(field, t("روز شروع برنامه را انتخاب کنید."));
+      if (!field.value) invalidEditorField(field, t("ui.choose-a-start-date"));
       return dayNumber(field.value);
     });
     const phases = active.map((fieldset, index) => {
       const field = name => fieldset.querySelector(name);
       const weekly = field(".repeat").value === "weekly";
       const checkedDays = [...fieldset.querySelectorAll(".weekdays input:checked")];
-      if (weekly && !checkedDays.length) invalidEditorField(field(".weekdays input"), t("حداقل یک روز هفته را انتخاب کنید."));
-      if (weekly && !field(".interval").validity.valid) invalidEditorField(field(".interval"), t("فاصلهٔ تکرار باید بین ۱ تا ۵۲ هفته باشد."));
+      if (weekly && !checkedDays.length) invalidEditorField(field(".weekdays input"), t("ui.choose-at-least-one-day-of-the-week"));
+      if (weekly && !field(".interval").validity.valid) invalidEditorField(field(".interval"), t("ui.the-interval-must-be-between-1-and-52-weeks"));
       const next = starts[index + 1] ?? null;
       const start = starts[index];
       const endValue = !exact ? field(".end").value : "";
       const end = endValue ? dayNumber(endValue) + 1 : next;
-      if (next !== null && next <= start) invalidEditorField(active[index + 1].querySelector(".start"), t("شروع این مرحله باید بعد از مرحلهٔ قبلی باشد."));
-      if (end !== null && end <= start) invalidEditorField(field(".end"), t("پایان نمی‌تواند قبل از شروع باشد."));
-      if (next !== null && end > next) invalidEditorField(field(".end"), t("پایان این مرحله با شروع مرحلهٔ بعد هم‌پوشانی دارد."));
+      if (next !== null && next <= start) invalidEditorField(active[index + 1].querySelector(".start"), t("ui.this-stage-must-start-after-the-previous-stage"));
+      if (end !== null && end <= start) invalidEditorField(field(".end"), t("ui.the-end-date-must-be-on-or-after-the-start-date"));
+      if (next !== null && end > next) invalidEditorField(field(".end"), t("ui.this-stage-overlaps-the-start-of-the-next-stage"));
       const seen = new Set();
       const slots = Array.from(field(".slots").children, row => {
         const time = row.querySelector(".time");
         const dose = row.querySelector(".amount");
-        if (!time.value) invalidEditorField(time, t("ساعت این نوبت را انتخاب کنید."));
+        if (!time.value) invalidEditorField(time, t("ui.choose-a-time-for-this-dose"));
         const minute = clockMinute(time.value);
-        if (seen.has(minute)) invalidEditorField(time, t("برای این ساعت یک نوبت دیگر ثبت شده است."));
+        if (seen.has(minute)) invalidEditorField(time, t("ui.another-dose-already-uses-this-time"));
         seen.add(minute);
         let amount;
         try { amount = quantity(dose, true); }
         catch (error) { invalidEditorField(dose, error.message); }
-        if (amount === 0) invalidEditorField(dose, t("مقدار نوبت باید بیشتر از صفر باشد."));
+        if (amount === 0) invalidEditorField(dose, t("ui.enter-a-dose-greater-than-zero"));
         return { minute, amount };
       }).sort((a, b) => a.minute - b.minute);
       return {
@@ -335,7 +335,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       if (editorStep === 0) {
         if (!name) {
           $("name").focus();
-          throw new Error(t("نام دارو را وارد کنید."));
+          throw new Error(t("ui.enter-the-medicine-name"));
         }
         showEditorStep(1);
         return;
@@ -343,11 +343,11 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       const phased = $("phased-mode").checked;
       const { phases, dates } = editorPhases();
       if (!engine.validMedicationPhases(compilePhases(engine, phases))) {
-        throw new Error(t("ترتیب تاریخ‌ها، هم‌پوشانی مرحله‌ها، روزهای هفته و ساعت‌های تکراری را بررسی کنید."));
+        throw new Error(t("ui.check-the-date-order-overlapping-stages-selected-days-and"));
       }
       const unit = $("unit").value.trim();
       if (!name || (!unit && phases.some(phase => phase.slots.some(slot => slot.amount !== null)))) {
-        invalidEditorField($("unit"), t("برای دوز عددی، واحد مصرف را مشخص کنید."));
+        invalidEditorField($("unit"), t("ui.enter-the-unit-for-the-dose-amount"));
       }
       let stock = null;
       let threshold = 2000;
@@ -358,7 +358,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
         catch (error) { invalidEditorField($("threshold"), error.message); }
         const active = phased ? $("phases") : $("phases").firstElementChild;
         const missing = [...active.querySelectorAll(".amount")].find(field => !field.value.trim());
-        if (missing) invalidEditorField(missing, t("برای پیگیری موجودی، مقدار همهٔ نوبت‌ها را مشخص کنید."));
+        if (missing) invalidEditorField(missing, t("ui.set-an-amount-for-each-dose-to-track-stock"));
       }
       const instructions = $("instructions").value.trim();
       if (editorStep === 1) {
@@ -378,7 +378,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       if (await mutate(state => {
         const saved = state.medicines[id];
         if (editing && (!saved || saved.revision !== editingRevision)) {
-          throw new Error(t("این برنامه در پنجرهٔ دیگری تغییر کرده است. دوباره آن را باز کنید."));
+          throw new Error(t("ui.this-schedule-changed-in-another-window-reopen-it-to-edit"));
         }
         state.medicines[id] = {
           ...saved,
@@ -387,7 +387,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
           revision: (saved?.revision ?? 0) + 1
         };
         trackSchedule(state, "medicines", saved, state.medicines[id], Date.now());
-      }, t("برنامهٔ دارو ذخیره شد."), true)) {
+      }, t("ui.medication-schedule-saved"), true)) {
         $("medication-dialog").close();
         editing = null;
       } else $("editor-status").textContent = $("status").textContent;
@@ -436,12 +436,11 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     clearEditorFieldError();
     $("editor-status").textContent = "";
   });
-  const defaultUnit = shape => shape === "sachet" ? t("ساشه") : shape === "powder" ? "" : t("قرص");
+  const defaultUnit = shape => shape === "sachet" ? t("ui.sachet") : shape === "powder" ? "" : t("ui.tablet");
   const updateAppearance = installAppearance((previous, shape) => {
     if (editing || $("unit").value !== defaultUnit(previous)) return;
     $("unit").value = defaultUnit(shape);
     updateDoseUnits();
   });
-  for (const control of document.querySelectorAll("[data-open-medication]")) control.addEventListener("click", () => openEditor());
   return openEditor;
 }

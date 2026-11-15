@@ -1,4 +1,5 @@
-import { listSeparator, locale, shortWeek, t, weekIndex } from "../../shared/i18n/locale.js";
+import { renderMonthGrid } from "../../shared/ui/month-grid.js";
+import { listSeparator, locale, t } from "../../shared/i18n/locale.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { cycleIsEnabled } from "../../domain/profile.js";
@@ -14,65 +15,51 @@ function waterCard(entries, total, openHistory, addWater) {
   const card = element("article", "", "water day-card calendar-water program-water");
   card.dataset.calendarState = "done";
   const art = element("div", "", "day-card-art");
-  art.append(glassObject("water", "water"), element("span", t("آب"), "day-card-kind"));
+  art.append(glassObject("water", "water"), element("span", t("ui.water"), "day-card-kind"));
   const copy = element("div", "", "day-card-content");
-  copy.append(element("h3", t("{0} میلی‌لیتر", number(total))), element("p",
-    entries.length === 1 ? t("۱ بار ثبت آب") : t("{0} بار ثبت آب", number(entries.length)), "quiet"));
+  copy.append(element("h3", t("ui.value-ml", number(total))), element("p",
+    entries.length === 1 ? t("ui.1-water-entry") : t("ui.value-water-entries", number(entries.length)), "quiet"));
   const actions = element("div", "", "day-card-actions");
-  actions.append(dayCardOptions(t("گزینه‌های ثبت آب"), button(t("سوابق"), openHistory)));
-  if (addWater) actions.append(button(t("ثبت آب"), addWater));
+  actions.append(dayCardOptions(t("ui.water-log-options"), button(t("ui.history"), openHistory)));
+  if (addWater) actions.append(button(t("ui.log-water"), addWater));
   card.append(art, copy, actions);
   return card;
 }
 
-export function renderCalendar(state, index, { day, start, end, today, formatMonth, formatDay, dateButton, selectDay,
+export function renderCalendar(state, index, { day, start, end, today, formatMonth, formatDay, formatNumber, selectDay,
   renderDose, renderRoutine, visitCard, openWaterHistory, canAddWater = true, addWater }) {
-  const slots = shortWeek.map(label => element("span", label, "quiet"));
   const cycleEnabled = cycleIsEnabled(state);
   const cycleRecords = cycleEnabled ? state.cycleRecords ?? {} : {};
   const periods = Object.entries(cycleRecords).map(([first, record]) => [Number(first), record.end ?? Number(first)]);
   const forecast = cycleEnabled ? cycleForecast(cycleRecords) : null;
   $("calendar-cycle-key").hidden = !cycleEnabled;
-  for (let offset = 0; offset < weekIndex(start); offset++) slots.push(element("span"));
-  for (let date = start; date <= end; date++) {
-    const control = dateButton(date, day, selected => selectDay(selected, true));
-    control.tabIndex = date === day ? 0 : -1;
-    control.setAttribute("aria-pressed", String(date === day));
-    if (date === today) control.classList.add("calendar-today");
-    else control.removeAttribute("aria-current");
-    if (date === today) control.setAttribute("aria-current", "date");
-    control.addEventListener("keydown", event => {
-      const rtl = document.documentElement.dir === "rtl";
-      const target = { ArrowLeft: date + (rtl ? 1 : -1), ArrowRight: date + (rtl ? -1 : 1),
-        ArrowUp: date - 7, ArrowDown: date + 7, Home: date - weekIndex(date), End: date + 6 - weekIndex(date) }[event.key];
-      if (target === undefined) return;
-      event.preventDefault();
-      selectDay(target, true);
-    });
-    const dots = element("span", "", "calendar-dots");
-    dots.setAttribute("aria-hidden", "true");
-    for (const [exists, kind, label] of [
-      [index.waterOn(date).length, "water", t("ثبت آب")], [index.dosesOn(date).length, "medicine", t("نوبت دارو")],
-      [index.visitsOn(date).length, "visit", t("قرار پزشکی")], [index.calendarRoutinesOn(date).length, "routine", t("روتین")]
-    ]) if (exists) {
-      dots.append(element("i", "", kind));
-      control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + label);
-    }
-    if (periods.some(([first, last]) => date >= first && date <= last)) {
-      control.dataset.cycleStatus = "recorded";
-      control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t("چرخهٔ ثبت‌شده"));
-    } else if (forecast && date >= Math.max(forecast.first, today) && date <= forecast.last) {
-      control.dataset.cycleStatus = "forecast";
-      control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t("شروع تخمینی چرخه"));
-    }
-    control.append(dots);
-    slots.push(control);
-  }
-  const grid = $("calendar-days");
-  const gridFocused = grid.contains(document.activeElement);
   $("calendar-month").textContent = formatMonth(start);
-  grid.replaceChildren(...slots);
-  if (gridFocused) grid.querySelector('[aria-pressed="true"]').focus({ preventScroll: true });
+  renderMonthGrid($("calendar-days"), {
+    start, end, selected: day, formatDay, formatNumber, onSelect: selectDay,
+    decorate(control, date) {
+      if (date === today) {
+        control.classList.add("calendar-today");
+        control.setAttribute("aria-current", "date");
+      }
+      const dots = element("span", "", "calendar-dots");
+      dots.setAttribute("aria-hidden", "true");
+      for (const [exists, kind, label] of [
+        [index.waterOn(date).length, "water", t("ui.log-water")], [index.dosesOn(date).length, "medicine", t("ui.medication-dose")],
+        [index.visitsOn(date).length, "visit", t("ui.medical-appointment")], [index.calendarRoutinesOn(date).length, "routine", t("ui.routine")]
+      ]) if (exists) {
+        dots.append(element("i", "", kind));
+        control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + label);
+      }
+      if (periods.some(([first, last]) => date >= first && date <= last)) {
+        control.dataset.cycleStatus = "recorded";
+        control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t("ui.logged-cycle"));
+      } else if (forecast && date >= Math.max(forecast.first, today) && date <= forecast.last) {
+        control.dataset.cycleStatus = "forecast";
+        control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t("ui.estimated-cycle-start"));
+      }
+      control.append(dots);
+    }
+  });
 
   const water = index.waterOn(day);
   const entries = [
@@ -100,6 +87,7 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
   const nodes = entries.map(entry => {
     const card = entry.render();
     card.dataset.agendaKey = entry.key;
+    card.dataset.focusScope = "agenda:" + entry.key;
     return card;
   });
   list.replaceChildren(...(nodes.length ? nodes : [element("p",
@@ -130,9 +118,9 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
   $("report-water-trend").dir = direction;
   const dateLabel = (bar, long = false) => {
     const format = long ? formatDay : formatShortDate;
-    return bar.start === bar.end ? format(bar.start) : t("از {0} تا {1}", format(bar.start), format(bar.end));
+    return bar.start === bar.end ? format(bar.start) : t("ui.from-value-to-value", format(bar.start), format(bar.end));
   };
-  const valueLabel = bar => bar.count ? t("{0} میلی‌لیتر", number(Math.round(bar.value))) : t("بدون ثبت");
+  const valueLabel = bar => bar.count ? t("ui.value-ml", number(Math.round(bar.value))) : t("ui.not-logged");
   const key = JSON.stringify([goal, groupByMonth, direction, bars.map(bar => [dateLabel(bar, true), bar.value, bar.count])]);
   if (chart.dataset.chartKey === key) return;
   chart.dataset.chartKey = key;
@@ -145,7 +133,7 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
   let selected = initial;
   const controls = bars.map((bar, i) => {
     const control = button("", () => select(i));
-    control.setAttribute("aria-label", t("{0}؛ {1}", dateLabel(bar, true), valueLabel(bar)));
+    control.setAttribute("aria-label", t("ui.value-value", dateLabel(bar, true), valueLabel(bar)));
     control.style.setProperty("--bar", `${bar.value / max * 100}%`);
     control.style.setProperty("--days", bar.end - bar.start + 1);
     control.dataset.logged = String(Boolean(bar.count));
@@ -171,7 +159,7 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
     const bar = bars[selected];
     selection.replaceChildren(element("span", dateLabel(bar)),
       element("strong", valueLabel(bar)),
-      ...(bar.end > bar.start && bar.count ? [element("small", t("میانگین در {0} روز دارای ثبت", number(bar.count)))] : []));
+      ...(bar.end > bar.start && bar.count ? [element("small", t("ui.average-across-value-logged-days", number(bar.count)))] : []));
     previous.setAttribute("aria-disabled", String(selected === 0));
     next.setAttribute("aria-disabled", String(selected === bars.length - 1));
   }
@@ -211,7 +199,7 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
   const waterDays = range.filter(Boolean).length;
   const totalWater = sum(range);
   const { taken, skipped, unrecorded } = index.doseTotals(first, last);
-  $("report-dates").textContent = t("از {0} تا {1}", formatDay(first), formatDay(last));
+  $("report-dates").textContent = t("ui.from-value-to-value", formatDay(first), formatDay(last));
   $("report-water-number").textContent = waterDays ? number(Math.round(totalWater / waterDays)) : "";
   $("report-average").hidden = $("report-water-value").hidden = $("report-water-details").hidden =
     $("report-water-trend").hidden = !waterDays;
@@ -219,11 +207,11 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
   if (waterDays) {
     reportStats("report-water-coverage", [
       ["کل آب (میلی‌لیتر)", number(totalWater)],
-      ["روزهای دارای ثبت", t("{0} از {1}", number(waterDays), number(range.length))],
+      ["روزهای دارای ثبت", t("ui.value-of-value", number(waterDays), number(range.length))],
       ["روزهای رسیدن به هدف", number(range.filter(amount => amount >= goal).length), "done"]
     ]);
   }
-  $("report-goal-label").textContent = t("هدف روزانهٔ فعلی، {0} میلی‌لیتر", number(goal));
+  $("report-goal-label").textContent = t("ui.current-daily-goal-value-ml", number(goal));
   const doses = taken + skipped + unrecorded;
   const hasDoses = doses > 0;
   const ratio = hasDoses ? taken / doses : 0;
@@ -232,8 +220,8 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
   $("report-dose-progress").value = ratio;
   $("report-dose-progress").hidden = !hasDoses;
   $("report-doses").textContent = hasDoses
-    ? t("{0} از {1} نوبت مصرف شد.", number(taken), number(doses))
-    : t("در این بازه نوبت موعدرسیده یا ثبت‌شده‌ای نیست.");
+    ? t("ui.value-of-value-doses-taken", number(taken), number(doses))
+    : t("ui.no-doses-are-due-or-logged-in-this-period");
   $("report-dose-breakdown").hidden = !hasDoses;
   if (hasDoses) reportStats("report-dose-breakdown", [
     ["مصرف‌شده", number(taken), "done"],
@@ -250,8 +238,8 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
   $("report-routine-progress").value = routineRatio;
   $("report-routine-progress").hidden = !hasRoutines;
   $("report-routines").textContent = hasRoutines
-    ? t("{0} از {1} نوبت روتین انجام شد.", number(routines.completed), number(routineCount))
-    : t("در این بازه نوبت روتین موعدرسیده یا ثبت‌شده‌ای نیست.");
+    ? t("ui.value-of-value-routine-occurrences-completed", number(routines.completed), number(routineCount))
+    : t("ui.no-routines-are-due-or-logged-in-this-period");
   $("report-routine-breakdown").hidden = !hasRoutines;
   if (hasRoutines) reportStats("report-routine-breakdown", [
     ["انجام‌شده", number(routines.completed), "done"],

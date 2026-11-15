@@ -1,3 +1,4 @@
+import { installEntryActions } from "../medication/app/entry-actions.js";
 import { $, button, element } from "../medication/shared/ui/dom.js";
 import { defaultCalendar, language, localDigits, localizeMarkup } from "../medication/shared/i18n/locale.js";
 import { applyDisplay } from "../medication/styles/display.js";
@@ -12,7 +13,6 @@ import { calendarFormat } from "../medication/shared/ui/calendar-format.js";
 import { today } from "../medication/shared/ui/dates.js";
 import { installCalendarPreview } from "./calendar.js";
 import { glassObject, medicineGlass, refreshArtwork, visitGlass, routineGlass } from "./glass.js";
-import { renderMedicineCover } from "./form-art.js";
 import { installPanelPreview } from "./panels.js";
 import { appearanceColors, complete, cycleArt, glass, heart, readCatalog } from "./catalog.js";
 
@@ -48,7 +48,7 @@ const pickers = installPickers({ selectedDay: calendarPreview.selected, today, d
 } });
 const refreshFields = pickers.refresh;
 const openMedicine = installMedicineEditor({ ...sample, isBusy: () => false, removeMedicine: noAction, pickers });
-installAppointments({
+const appointments = installAppointments({
   ...sample, defaultDay: today, refreshFields, formatDayNumber: dates.dayNumber, formatShortMonth: dates.shortMonth
 });
 const routines = installRoutines({ ...sample, refreshFields });
@@ -57,9 +57,16 @@ const openSettings = installSettings({ ...sample, refreshFields });
 for (const control of document.querySelectorAll("[data-close]")) {
   control.addEventListener("click", () => $(control.dataset.close).close());
 }
-for (const control of document.querySelectorAll("[data-quick-kind]")) {
-  control.addEventListener("click", () => $("quick-dialog").close(), { capture: true });
-}
+installEntryActions({
+  currentView: () => null, currentDay: today,
+  open(kind) {
+    if (kind === "medicine") openMedicine();
+    else if (kind === "visit") appointments.openVisit();
+    else if (kind === "routine") routines.openEditor();
+    else if (kind === "water") water.openWater();
+  },
+  addWater: water.addWater, quickWater: water.quickAddWater
+});
 for (const form of document.forms) form.addEventListener("submit", event => event.preventDefault());
 $("today-dates").append($("day-controls"));
 $("story-date").textContent = formatDay(now);
@@ -189,7 +196,6 @@ function renderPalette() {
   $("gallery-palettes").replaceChildren(grid);
 }
 function renderSurfaces() {
-  renderMedicineCover($("accent").value);
   const artByFeature = {
     medications: () => medicineGlass("bottle"), appointments: () => visitGlass("general"), routines: () => routineGlass("custom")
   };

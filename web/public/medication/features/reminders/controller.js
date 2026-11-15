@@ -25,7 +25,7 @@ function settingsBadge(text, enabled = false) {
   badge.textContent = text;
   badge.dataset.enabled = String(enabled);
 }
-const kindText = kinds => (kinds ?? []).map(kind => ({ dose: t("دارو"), water: t("آب"), appointment: t("قرار"), routine: t("روتین") })[kind]).filter(Boolean).join(t(" و "));
+const kindText = kinds => (kinds ?? []).map(kind => ({ dose: t("ui.medicine"), water: t("ui.water"), appointment: t("ui.appointment"), routine: t("ui.routine") })[kind]).filter(Boolean).join(t("ui.and"));
 
 function controls(settings) {
   const enabled = Boolean(settings?.enabled);
@@ -34,11 +34,11 @@ function controls(settings) {
   $("push-enable").disabled = !registration || !publicKey || enabled;
   $("push-disable").hidden = $("push-disable").disabled = !enabled;
   $("push-check").hidden = $("push-check").disabled = !canCheck;
-  $("push-check").textContent = t("بررسی وضعیت");
+  $("push-check").textContent = t("ui.check-status");
   $("push-test").hidden = $("push-test").disabled = !enabled;
-  settingsBadge(enabled ? t("فعال") : t("خاموش"), enabled);
+  settingsBadge(enabled ? t("ui.on") : t("ui.off"), enabled);
   const todayReminders = $("today-reminders");
-  if (todayReminders) todayReminders.hidden = Boolean(settings?.enabled);
+  if (todayReminders) todayReminders.hidden = !todayReminders.hasAttribute("data-eligible") || Boolean(settings?.enabled);
 }
 
 function serialize(action) {
@@ -65,14 +65,14 @@ function localDay() {
 function deliveryText(result) {
   const details = result.providerStatus ? ` (${new Intl.NumberFormat(locale).format(result.providerStatus)}${result.reason ? listSeparator + result.reason : ""})` : "";
   switch (result.status) {
-    case "accepted": return t("سرویس Push پیام را پذیرفت. نمایش را روی گوشی بررسی کنید.");
-    case "rejected": return t("سرویس Push پیام را رد کرد{0}.", details);
-    case "failed": return t("ارسال به سرویس Push انجام نشد.");
-    case "expired": return t("مهلت ارسال این نوبت گذشته بود.");
-    case "gone": return t("اشتراک اعلان منقضی شده است.");
-    case "rate_limit": return t("برای آزمایش بعدی یک دقیقه صبر کنید.");
-    case "superseded": return t("برنامه حین آزمایش تغییر کرد. دوباره بررسی کنید.");
-    default: return t("ابتدا اعلان نوبت‌ها را فعال کنید.");
+    case "accepted": return t("ui.the-push-service-accepted-the-message-check-your-device");
+    case "rejected": return t("ui.the-push-service-rejected-the-message-value", details);
+    case "failed": return t("ui.could-not-reach-the-push-service");
+    case "expired": return t("ui.the-delivery-window-for-this-reminder-has-passed");
+    case "gone": return t("ui.the-notification-subscription-has-expired");
+    case "rate_limit": return t("ui.wait-one-minute-before-testing-again");
+    case "superseded": return t("ui.the-schedule-changed-during-the-test-try-again");
+    default: return t("ui.turn-on-reminders-first");
   }
 }
 
@@ -106,8 +106,8 @@ async function sync(check = false, snapshot) {
     let remote;
     let latest;
     if (settings.revision > (settings.synced ?? 0)) {
-      status(t("در حال همگام‌سازی اعلان…"));
-      if (settings.enabled && !subscription) return status(t("در حال آماده‌سازی اشتراک اعلان…"));
+      status(t("ui.syncing-reminders"));
+      if (settings.enabled && !subscription) return status(t("ui.setting-up-the-notification-subscription"));
       let plan = {};
       if (settings.enabled) {
         const current = await accessCare(undefined, { snapshot });
@@ -130,10 +130,10 @@ async function sync(check = false, snapshot) {
     const formatDate = new Intl.DateTimeFormat(`${locale}-u-ca-${state.calendar ?? defaultCalendar}`, { dateStyle: "medium", timeStyle: "short" });
     const lastKind = kindText(remote.last?.kinds);
     $("push-delivery").textContent = remote.last
-      ? t("آخرین نوبت {0}{1} · {2}", lastKind ? lastKind + " " : "", formatDate.format(remote.last.at), deliveryText(remote.last))
-      : t("هنوز برای این اشتراک نتیجهٔ ارسال نوبت ثبت نشده است.");
+      ? t("ui.last-delivery-value-value-value", lastKind ? lastKind + " " : "", formatDate.format(remote.last.at), deliveryText(remote.last))
+      : t("ui.no-deliveries-recorded-for-this-subscription-yet");
     if (remote.revision > settings.revision) {
-      status(t("برنامهٔ جدیدتری روی سرور وجود دارد. اعلان را دوباره فعال کنید."));
+      status(t("ui.a-newer-schedule-is-on-the-server-enable-notifications-ag"));
       $("push-enable").hidden = false;
       $("push-enable").disabled = !registration || !publicKey;
       return;
@@ -144,18 +144,18 @@ async function sync(check = false, snapshot) {
         if (current.reminders.token === settings.token && current.reminders.revision === settings.revision) current.reminders.enabled = false;
       });
       controls(updated.reminders);
-      status(t("اشتراک اعلان منقضی شده است. دوباره اعلان را فعال کنید."));
+      status(t("ui.the-notification-subscription-expired-enable-notification"));
     } else if (remote.enabled) {
       const nextKind = kindText(remote.nextKinds);
-      const next = remote.next ? t("یادآوری بعدی {0}{1}", nextKind ? nextKind + " · " : "", formatDate.format(remote.next)) : t("اعلان فعال است. نوبت آینده‌ای در برنامه نیست.");
+      const next = remote.next ? t("ui.next-reminder-value-value", nextKind ? nextKind + " · " : "", formatDate.format(remote.next)) : t("ui.notifications-are-on-nothing-is-scheduled");
       status(next);
     } else {
-      status(t("اعلان نوبت‌ها خاموش است."));
+      status(t("ui.reminders-are-off"));
     }
   } catch (error) {
-    status(error.message === "rate_limit" ? t("تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره بررسی کنید.") : error.message === "bad_schedule"
-      ? t("زمان‌بندی روی سرور ثبت نشد. تعداد مرحله‌ها و نوبت‌های آینده را بررسی کنید.")
-      : t("همگام‌سازی اعلان انجام نشد. پس از اتصال، «بررسی وضعیت» را بزنید."));
+    status(error.message === "rate_limit" ? t("ui.too-many-requests-check-again-in-one-minute") : error.message === "bad_schedule"
+      ? t("ui.could-not-save-the-schedule-check-your-stages-and-upcomin")
+      : t("ui.could-not-sync-reminders-reconnect-and-select-check-statu"));
     controls((await accessCareSettings()).reminders);
   }
 }
@@ -171,7 +171,7 @@ export function syncReminders(check = false, snapshot) {
   queued.promise = serialize(() => {
     pendingSync = null;
     return sync(queued.check, queued.snapshot);
-  }).catch(() => status(t("خواندن وضعیت اعلان انجام نشد.")));
+  }).catch(() => status(t("ui.could-not-check-notification-status")));
   return queued.promise;
 }
 
@@ -187,7 +187,7 @@ $("push-show-details")?.addEventListener("change", async event => {
     void syncReminders();
   } catch {
     control.checked = !showDetails;
-    status(t("ذخیره انجام نشد. دوباره تلاش کنید."));
+    status(t("ui.could-not-save-try-again"));
   } finally {
     control.disabled = false;
   }
@@ -198,12 +198,12 @@ export async function initializeReminders() {
   if (state) $("push-show-details").checked = state.reminderDetails === true;
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (isIOS && !matchMedia("(display-mode: standalone)").matches && navigator.standalone !== true) {
-    settingsBadge(t("نیاز به نصب"));
-    return status(t("برای اعلان آیفون، مدورا را به صفحهٔ اصلی اضافه کنید و از آیکون آن وارد شوید."));
+    settingsBadge(t("ui.installation-required"));
+    return status(t("ui.for-iphone-notifications-add-medora-to-your-home-screen-a"));
   }
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-    settingsBadge(t("در دسترس نیست"));
-    return status(t("اعلان وب در این مرورگر در دسترس نیست."));
+    settingsBadge(t("ui.unavailable"));
+    return status(t("ui.web-notifications-are-unavailable-in-this-browser"));
   }
   try {
     const [root, config] = await Promise.all([navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }), fetch("/api/config")]);
@@ -227,11 +227,11 @@ export async function initializeReminders() {
     const settings = (await accessCareSettings()).reminders;
     controls(settings);
     if (settings?.token) await syncReminders(true);
-    else status(t("برای دریافت یادآوری، «فعال‌کردن اعلان» را بزنید و مجوز گوشی را تأیید کنید."));
+    else status(t("ui.select-enable-notifications-and-allow-them-on-your-device"));
   } catch {
-    settingsBadge(t("راه‌اندازی ناموفق"));
-    status(t("راه‌اندازی اعلان انجام نشد. اتصال را بررسی کنید و دوباره تلاش کنید."));
-    $("push-check").textContent = t("تلاش دوباره");
+    settingsBadge(t("ui.setup-failed"));
+    status(t("ui.notification-setup-failed-check-your-connection-and-try-a"));
+    $("push-check").textContent = t("ui.try-again");
     $("push-check").hidden = $("push-check").disabled = false;
   }
 }
@@ -239,7 +239,7 @@ export async function initializeReminders() {
 $("push-enable").addEventListener("click", () => {
   // Safari requires subscribe to start during the button's user gesture.
   if (!registration || !publicKey) return;
-  if (Notification.permission === "denied") return status(t("مجوز اعلان مدورا را در تنظیمات گوشی فعال کنید."));
+  if (Notification.permission === "denied") return status(t("ui.allow-medora-notifications-in-your-device-settings"));
   const ready = subscription ? Promise.resolve(subscription) : registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: publicKey });
   ready.catch(() => {});
   $("push-enable").disabled = true;
@@ -259,11 +259,11 @@ $("push-enable").addEventListener("click", () => {
       controls(updated.reminders);
       await sync();
     } catch (error) {
-      status(error.message === "rate_limit" ? t("تعداد درخواست‌ها زیاد است. یک دقیقه بعد دوباره تلاش کنید.") :
-        t("فعال‌کردن اعلان انجام نشد. اتصال و مجوز اعلان را بررسی کنید."));
+      status(error.message === "rate_limit" ? t("ui.too-many-requests-try-again-in-one-minute") :
+        t("ui.could-not-enable-notifications-check-your-connection-and"));
       controls((await accessCareSettings()).reminders);
     }
-  }).catch(() => status(t("فعال‌کردن اعلان انجام نشد.")));
+  }).catch(() => status(t("ui.could-not-enable-notifications")));
 });
 
 $("push-disable").addEventListener("click", () => {
@@ -274,7 +274,7 @@ $("push-disable").addEventListener("click", () => {
     });
     controls(state.reminders);
     await sync();
-  }).catch(() => status(t("خاموش‌کردن اعلان انجام نشد.")));
+  }).catch(() => status(t("ui.could-not-turn-off-notifications")));
 });
 
 $("push-check").addEventListener("click", () => {
@@ -286,14 +286,14 @@ $("push-check").addEventListener("click", () => {
 });
 $("push-test").addEventListener("click", () => {
   $("push-test").disabled = true;
-  $("push-test-result").textContent = t("در حال ارسال اعلان آزمایشی…");
+  $("push-test-result").textContent = t("ui.sending-a-test-notification");
   void serialize(async () => {
     try {
       const settings = (await accessCareSettings()).reminders;
       const result = await request(`${api}/test`, "POST", settings.token, {});
       $("push-test-result").textContent = deliveryText(result);
     } catch {
-      $("push-test-result").textContent = t("آزمون ارسال انجام نشد. اتصال را بررسی کنید.");
+      $("push-test-result").textContent = t("ui.could-not-send-the-test-check-your-connection");
     } finally {
       controls((await accessCareSettings()).reminders);
     }

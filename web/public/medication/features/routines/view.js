@@ -11,11 +11,11 @@ import { defaultRoutineColor, maxRoutineAmount, maxRoutines, maxRoutineSteps, ro
 import { routineCard } from "./card.js";
 import { routineIllustration as glyph } from "./illustration.js";
 
-const days = [t("دوشنبه"), t("سه‌شنبه"), t("چهارشنبه"), t("پنجشنبه"), t("جمعه"), t("شنبه"), t("یکشنبه")];
+const days = [t("ui.monday"), t("ui.tuesday"), t("ui.wednesday"), t("ui.thursday"), t("ui.friday"), t("ui.saturday"), t("ui.sunday")];
 const fields = id => $("routine-" + id);
 const labelFor = category => t(Object.hasOwn(routineLabels, category) ? routineLabels[category] : routineLabels.custom);
 const colorOf = color => Object.hasOwn(appearanceColors, color) ? color : defaultRoutineColor;
-const changed = () => new Error(t("روتین تغییر کرده است. دوباره آن را باز کنید."));
+const changed = () => new Error(t("ui.this-routine-changed-open-it-again"));
 
 function displayAmount(entry, amount) {
   return [localDigits(amount), entry.unit].filter(Boolean).join(" ");
@@ -45,7 +45,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     category = Object.hasOwn(routineLabels, key) ? key : "custom";
     fields("preview").replaceChildren(glyph(category, fields("preview").dataset.ink));
     fields("category-label").textContent = labelFor(category);
-    categoryOpen.setAttribute("aria-label", t("نوع روتین، {0}", labelFor(category)));
+    categoryOpen.setAttribute("aria-label", t("ui.routine-type-value", labelFor(category)));
     for (const control of fields("categories").querySelectorAll("button")) {
       control.setAttribute("aria-pressed", String(control.dataset.category === category));
     }
@@ -135,8 +135,8 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     editor.toggleAttribute("data-family-editor", Boolean(target));
     editing = plan;
     form.reset();
-    fields("editor-title").textContent = target ? t("افزودن برای {0}", target.name) : plan ? t("ویرایش روتین") : t("روتین جدید");
-    fields("save").textContent = target ? t("ذخیره برای {0}", target.name) : t("ذخیرهٔ روتین");
+    fields("editor-title").textContent = target ? t("ui.add-for-value", target.name) : plan ? t("ui.edit-routine") : t("ui.new-routine");
+    fields("save").textContent = target ? t("ui.save-for-value", target.name) : t("ui.save-routine");
     fields("name").value = plan?.name ?? "";
     const color = colorOf(plan?.color);
     for (const input of colors) input.checked = input.value === color;
@@ -156,7 +156,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     fields("notes").value = plan?.notes ?? "";
     fields("options").open = Boolean(plan && (plan.start !== today() || plan.minute !== null || plan.mode !== "done" || plan.notes));
     fields("management").hidden = !plan;
-    fields("pause").textContent = plan?.paused ? t("ازسرگیری روتین") : t("توقف موقت");
+    fields("pause").textContent = plan?.paused ? t("ui.resume-routine") : t("ui.pause-routine");
     fields("editor-status").textContent = "";
     updateFields();
     refreshFields(editor);
@@ -164,9 +164,6 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     fitEditor();
   }
 
-  for (const control of document.querySelectorAll("[data-open-routine]")) {
-    control.addEventListener("click", () => openEditor());
-  }
   form.addEventListener("change", updateFields);
   form.addEventListener("input", () => { fields("editor-status").textContent = ""; });
   fields("reminder").addEventListener("change", () => {
@@ -180,23 +177,23 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     const name = fields("name").value.trim();
     if (!name) {
       fields("name").focus();
-      throw new Error(t("نام روتین را وارد کنید."));
+      throw new Error(t("ui.enter-a-routine-name"));
     }
     const start = Date.parse(fields("start").value + "T00:00:00Z") / dayMs;
     const date = fields("start").value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(start) || isoDay(start) !== date) {
       fields("options").open = true;
-      throw new Error(t("تاریخ را کامل وارد کنید."));
+      throw new Error(t("ui.enter-a-complete-date"));
     }
     const weekly = fields("repeat").value === "weekly";
     const mask = weekly ? weekdayFields.reduce((bits, input) => bits | (input.checked ? Number(input.value) : 0), 0) : 127;
-    if (!mask) throw new Error(t("حداقل یک روز را انتخاب کنید."));
+    if (!mask) throw new Error(t("ui.select-at-least-one-day"));
     const time = fields("time").value;
     const minute = time ? clockMinute(time) : null;
     const reminder = fields("reminder").checked;
     if (reminder && minute === null) {
       fields("options").open = true;
-      throw new Error(t("برای اعلان، ساعت روتین را وارد کنید."));
+      throw new Error(t("ui.enter-a-routine-time-to-get-a-reminder"));
     }
     const mode = fields("mode").value;
     const target = readAmount(fields("target").value);
@@ -204,12 +201,12 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     if (mode === "quantity" && (!Number.isInteger(target) || target < 1 || target > maxRoutineAmount)) {
       fields("options").open = true;
       fields("target").focus();
-      throw new Error(t("مقدار هدف را از ۱ تا ۹۹٬۹۹۹ وارد کنید."));
+      throw new Error(t("ui.enter-a-target-from-1-to-99-999"));
     }
     if (mode === "steps" && (!steps.length || steps.length > maxRoutineSteps || steps.some(step => step.length > 70))) {
       fields("options").open = true;
       fields("steps").focus();
-      throw new Error(t("۱ تا ۱۲ مرحله وارد کنید. هر مرحله حداکثر ۷۰ نویسه."));
+      throw new Error(t("ui.enter-1-to-12-steps-of-up-to-70-characters-each"));
     }
     return {
       id: editing?.id ?? crypto.randomUUID(), name, category, color: colorOf(colors.find(input => input.checked)?.value), start, mask,
@@ -245,12 +242,12 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
       const ok = await mutate(state => {
         const routines = state.routines ??= {};
         if (previous) ensureCurrent(state, previous);
-        else if (Object.keys(routines).length >= maxRoutines) throw new Error(t("حداکثر {0} روتین می‌توانید داشته باشید.", localDigits(maxRoutines)));
+        else if (Object.keys(routines).length >= maxRoutines) throw new Error(t("ui.you-can-have-up-to-value-routines", localDigits(maxRoutines)));
         trackSchedule(state, "routines", routines[plan.id], plan, Date.now());
         routines[plan.id] = plan;
-      }, t("روتین ذخیره شد."), plan.reminder || Boolean(previous?.reminder), today());
+      }, t("ui.routine-saved"), plan.reminder || Boolean(previous?.reminder), today());
       if (ok) editor.close();
-      else fields("editor-status").textContent = $("status").textContent || t("ذخیره انجام نشد. دوباره تلاش کنید.");
+      else fields("editor-status").textContent = $("status").textContent || t("ui.could-not-save-try-again");
     } catch (error) {
       fields("editor-status").textContent = error.message;
     } finally {
@@ -270,7 +267,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
         const next = { ...current, paused: !current.paused, revision: current.revision + 1 };
         trackSchedule(state, "routines", current, next, Date.now());
         state.routines[plan.id] = next;
-      }, plan.paused ? t("روتین از سر گرفته شد.") : t("روتین موقتاً متوقف شد."), plan.reminder, today());
+      }, plan.paused ? t("ui.routine-resumed") : t("ui.routine-paused"), plan.reminder, today());
       if (ok) editor.close();
       else fields("editor-status").textContent = $("status").textContent;
     } finally {
@@ -282,20 +279,20 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     const plan = editing;
     if (!plan) return;
     requestDeletion({
-      title: t("حذف روتین"), message: t("روتین «{0}» حذف شود؟ سوابق آن حفظ می‌شوند.", plan.name),
+      title: t("ui.delete-routine"), message: t("ui.delete-value-its-history-will-be-kept", plan.name),
       change: state => {
         ensureCurrent(state, plan);
         trackSchedule(state, "routines", state.routines[plan.id], null, Date.now());
         delete state.routines[plan.id];
       },
-      success: t("روتین حذف شد."), parent: editor.id
+      success: t("ui.routine-deleted"), parent: editor.id
     });
   });
 
   async function saveLog({ entry, day, plan, recorded }, result) {
     return mutate(state => {
       const currentDay = today();
-      if (day > currentDay) throw new Error(t("ثبت این نوبت بسته است."));
+      if (day > currentDay) throw new Error(t("ui.this-occurrence-can-no-longer-be-logged"));
       ensureCurrent(state, plan);
       const records = state.routineLogs[day];
       const previous = records[entry.id];
@@ -310,7 +307,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
         if (routineComplete(updated)) updated.resolvedAt = previous?.resolvedAt ?? Date.now();
         records[entry.id] = updated;
       } else delete records[entry.id];
-    }, t("پیشرفت روتین ذخیره شد."), day === today() && Boolean(plan?.reminder), day);
+    }, t("ui.routine-progress-saved"), day === today() && Boolean(plan?.reminder), day);
   }
 
   function openLog(activity) {
@@ -326,7 +323,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     const quantity = entry.mode === "quantity";
     fields("amount-field").hidden = !quantity || readOnly === true;
     fields("amount").value = entry.amount ?? "";
-    fields("log-goal").textContent = quantity ? t("هدف: {0}", displayAmount(entry, entry.target)) : "";
+    fields("log-goal").textContent = quantity ? t("ui.goal-value", displayAmount(entry, entry.target)) : "";
     const save = fields("log-save");
     save.hidden = readOnly === true;
     save.textContent = t(entry.mode === "done" ? "انجام دادم" : "ذخیرهٔ پیشرفت");
@@ -342,7 +339,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
       label.append(control, text);
       return label;
     }));
-    if (readOnly && !routineComplete(entry)) fields("log-steps").append(element("p", t("ثبت این نوبت بسته است."), "quiet"));
+    if (readOnly && !routineComplete(entry)) fields("log-steps").append(element("p", t("ui.this-occurrence-can-no-longer-be-logged"), "quiet"));
     logDialog.showModal();
     fitLog();
     if (!readOnly && quantity) fields("amount").focus();
@@ -351,7 +348,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
 
   function openReminder(entry, day) {
     if (!entry) {
-      $("status").textContent = t("این نوبت روتین دیگر در دسترس نیست.");
+      $("status").textContent = t("ui.this-routine-occurrence-is-no-longer-available");
       return;
     }
     const state = getState();
@@ -368,7 +365,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     const result = logging.entry.mode === "done" ? true : quantity ? readAmount(fields("amount").value) :
       [...fields("log-steps").querySelectorAll("input:checked")].map(input => Number(input.value));
     if (quantity && !Number.isInteger(result)) {
-      fields("log-status").textContent = t("مقدار را از ۰ تا ۹۹٬۹۹۹ وارد کنید. صفر، ثبت را پاک می‌کند.");
+      fields("log-status").textContent = t("ui.enter-0-to-99-999-zero-clears-the-entry");
       fields("amount").focus();
       return;
     }
@@ -400,11 +397,11 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     const entries = index.routinesOn(day);
     const done = entries.filter(routineComplete).length;
     fields("progress").textContent = entries.length
-      ? t("{0} از {1} روتین انجام شد", localDigits(done), localDigits(entries.length))
-      : t("برای این روز روتینی ثبت نشده است.");
+      ? t("ui.value-of-value-routines-done", localDigits(done), localDigits(entries.length))
+      : t("ui.no-routines-for-this-day");
     fields("meter").value = entries.length ? done / entries.length : 0;
     fields("meter").hidden = !entries.length;
-    document.querySelector('[data-routine-filter="today"]').textContent = day === today() ? t("امروز") : t("این روز");
+    document.querySelector('[data-routine-filter="today"]').textContent = day === today() ? t("ui.today") : t("ui.this-day");
     fields("search-wrap").hidden = filter === "today" ||
       (filter === "all" ? !plans.length : !Object.keys(state.routineLogs).length);
     fields("first").hidden = plans.length > 0 || getFamilyView()?.canAdd("routine") === false;
@@ -416,7 +413,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     if (filter === "all") {
       rows = plans.filter(matches)
         .sort((a, b) => Number(a.paused) - Number(b.paused)).map(plan => card(plan, day, { manage: true }));
-      empty = plans.length ? t("روتینی با این نام پیدا نشد.") : t(getFamilyView() ? "روتینی ثبت نشده است." : "اولین روتین خودتان را بسازید.");
+      empty = plans.length ? t("ui.no-matching-routines") : t(getFamilyView() ? "روتینی ثبت نشده است." : "اولین روتین خودتان را بسازید.");
     } else if (filter === "history") {
       const history = Object.entries(state.routineLogs).map(([date, records]) =>
         [Number(date), Object.entries(records).filter(([, entry]) => matches(entry))])
@@ -429,7 +426,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
       empty = t(search ? "روتینی با این نام پیدا نشد." : "هنوز پیشرفت روتینی ثبت نشده است.");
     } else {
       rows = entries.map(entry => card(entry, day));
-      empty = plans.length ? t("برای این روز روتینی ثبت نشده است.") : t(getFamilyView() ? "روتینی ثبت نشده است." : "اولین روتین خودتان را بسازید.");
+      empty = plans.length ? t("ui.no-routines-for-this-day") : t(getFamilyView() ? "روتینی ثبت نشده است." : "اولین روتین خودتان را بسازید.");
     }
     fields("list").replaceChildren(...(rows.length ? rows : [element("p", empty, "empty")]));
   }

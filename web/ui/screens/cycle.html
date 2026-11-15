@@ -1,11 +1,11 @@
       <div data-screen="cycle" hidden>
         <section class="cycle-banner program-cycle">
-          <div><h2>شروع بعدی چرخه</h2><p id="cycle-forecast" aria-live="polite"></p></div>
+          <div><h2>{{msg:ui.next-cycle-start}}</h2><p id="cycle-forecast" aria-live="polite"></p></div>
           <span data-surface-art="cycle"></span>
         </section>
-        <button id="cycle-add" class="block-action" type="button">ثبت شروع پریود</button>
+        <button id="cycle-add" class="block-action" type="button">{{msg:ui.log-period-start}}</button>
         <section class="feature cycle-history" aria-labelledby="cycle-history-title">
-          <h2 id="cycle-history-title">سوابق چرخه</h2>
-          <div id="cycle-history"></div>
+          <h2 id="cycle-history-title">{{msg:ui.cycle-history}}</h2>
+          <div id="cycle-history" data-context-list></div>
         </section>
       </div>

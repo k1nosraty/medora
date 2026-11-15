@@ -1,4 +1,5 @@
-import { listSeparator, localDigits, shortWeek, t, weekIndex } from "../i18n/locale.js";
+import { renderMonthGrid } from "./month-grid.js";
+import { listSeparator, localDigits, t } from "../i18n/locale.js";
 const $ = id => document.getElementById(id);
 const dayMs = 86_400_000;
 const dayNumber = iso => Date.parse(`${iso}T00:00:00Z`) / dayMs;
@@ -12,6 +13,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
   const timeInputs = [$("keyboard-hour"), $("keyboard-minute")];
   let shownMonth;
   let pickedDay;
+  let focusedDay;
   let dateLimit;
   let onPickDate;
   let timeField;
@@ -38,38 +40,28 @@ export function installPickers({ today, selectedDay, dashboard }) {
   function drawDate() {
     $("picker-month").textContent = dashboard.formatMonth(shownMonth);
     if (!birthJump.hidden) setBirthMonths();
-    const leading = weekIndex(shownMonth);
     const end = dashboard.monthStart(shownMonth + 32);
-    const heading = shortWeek.map(label => {
-      const cell = document.createElement("span");
-      cell.className = "quiet";
-      cell.textContent = label;
-      return cell;
+    const grid = $("picker-days");
+    renderMonthGrid(grid, {
+      start: shownMonth, end: end - 1, selected: pickedDay, active: focusedDay, last: dateLimit, minCells: 42,
+      formatDay: dashboard.formatDay, formatNumber: dashboard.formatDayNumber,
+      onSelect(day) {
+        pickedDay = focusedDay = day;
+        drawDate();
+      },
+      onMove(day) {
+        focusedDay = day;
+        shownMonth = dashboard.monthStart(day);
+        drawDate();
+        grid.querySelector('button[tabindex="0"]')?.focus({ preventScroll: true });
+      }
     });
-    const cells = Array.from({ length: 42 }, (_, index) => {
-      const day = shownMonth + index - leading;
-      if (day < shownMonth || day >= end) return document.createElement("span");
-      const control = document.createElement("button");
-      control.type = "button";
-      control.textContent = dashboard.formatDayNumber(day);
-      control.disabled = day > dateLimit;
-      control.setAttribute("aria-label", dashboard.formatDay(day));
-      control.setAttribute("aria-pressed", String(day === pickedDay));
-      control.addEventListener("click", () => {
-        pickedDay = day;
-        $("picker-days").querySelector('[aria-pressed="true"]')?.setAttribute("aria-pressed", "false");
-        control.setAttribute("aria-pressed", "true");
-        $("picker-date-confirm").disabled = false;
-      });
-      return control;
-    });
-    $("picker-days").replaceChildren(...heading, ...cells);
     $("picker-date-confirm").disabled = pickedDay > dateLimit || (!birthJump.hidden && dashboard.monthStart(pickedDay) !== shownMonth);
     $("picker-next-month").disabled = !birthJump.hidden && end > dateLimit;
   }
 
   function openDate(day, max, select, optional = false, birthday = false) {
-    pickedDay = day;
+    pickedDay = focusedDay = day;
     shownMonth = dashboard.monthStart(day);
     dateLimit = max;
     onPickDate = select;
@@ -84,7 +76,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
     $("picker-clear-date").hidden = !optional;
     drawDate();
     dateSheet.showModal();
-    $("picker-days").querySelector('[aria-pressed="true"]:enabled')?.focus({ preventScroll: true });
+    $("picker-days").querySelector('button[tabindex="0"]')?.focus({ preventScroll: true });
   }
 
   $("picker-previous-month").addEventListener("click", () => {
@@ -96,7 +88,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
     drawDate();
   });
   $("picker-today").addEventListener("click", () => {
-    pickedDay = Math.min(today(), dateLimit);
+    pickedDay = focusedDay = Math.min(today(), dateLimit);
     shownMonth = dashboard.monthStart(pickedDay);
     drawDate();
   });
@@ -132,7 +124,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
     timeInputs.forEach((input, index) => input.setAttribute("aria-invalid", String(invalid[index])));
     const firstError = invalid.indexOf(true);
     if (firstError !== -1) {
-      $("time-error").textContent = t("ساعت و دقیقه را بررسی کنید.");
+      $("time-error").textContent = t("ui.check-the-hour-and-minute");
       timeInputs[firstError].focus();
       timeInputs[firstError].select();
       return;
@@ -178,7 +170,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
         localDigits(field.value.slice(0, 5)));
       const caption = label.textContent.trim();
       control.textContent = formatted || t(field.type === "date" ? "انتخاب تاریخ" : "انتخاب ساعت");
-      control.setAttribute("aria-label", formatted ? caption + listSeparator + formatted : caption);
+      control.setAttribute("aria-label", caption + listSeparator + control.textContent);
     }
   }
 

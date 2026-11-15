@@ -11,7 +11,6 @@
 }
 .medora .cabinet-search input { flex: 1; min-inline-size: 0; max-inline-size: none; min-block-size: 2.65rem; border: 0; background: transparent; }
 .medora .cabinet-search svg { inline-size: 1.15rem; block-size: 1.15rem; }
-.medora #editor:not([data-step="0"]) .wizard-visual { display: none; }
 .medora #medication-dialog { scroll-padding-block-end: 5.5rem; }
 .editor-footer {
   position: sticky;
@@ -84,3 +83,6 @@
   .medora .slot-fields { gap: .35rem; }
   .medora .slot-fields .picker-field { min-block-size: 2.75rem; }
 }
+
+.medora .phase .plan-dates { align-items: stretch; }
+.medora .phase .plan-dates .picker-control { display: grid; grid-template-rows: auto auto; align-content: start; gap: .25rem; }

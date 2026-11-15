@@ -123,14 +123,14 @@ export function installCareSync({ reload, remindersChanged }) {
       badge.textContent = t(accountCare?.enabled ? "روشن" : "فقط روی دستگاه");
       const last = $("account-sync-last");
       last.hidden = !accountCare?.syncedAt;
-      last.textContent = last.hidden ? "" : t("آخرین همگام‌سازی: {0}", new Date(accountCare.syncedAt).toLocaleString(document.documentElement.lang));
+      last.textContent = last.hidden ? "" : t("ui.last-synced-value", new Date(accountCare.syncedAt).toLocaleString(document.documentElement.lang));
       status.textContent = message ? t(message) : "";
     } catch {}
   }
 
   enable.addEventListener("click", () => {
     void accessCare().then(state => {
-      if (!state.accountCare?.enabled && !confirm(t("سوابق موجود روی این دستگاه به حساب فعلی اضافه شوند؟"))) return;
+      if (!state.accountCare?.enabled && !confirm(t("ui.add-this-devices-records-to-the-current-account"))) return;
       void sync(!state.accountCare?.enabled);
     });
   });

@@ -9,7 +9,7 @@ export function presentPromotion(dialog, promotion, onClick) {
   link.hidden = !promotion.url;
   if (promotion.url) link.href = promotion.url;
   else link.removeAttribute("href");
-  link.textContent = promotion.linkLabel || t("مشاهدهٔ جزئیات");
+  link.textContent = promotion.linkLabel || t("ui.view-details");
   const creative = find("[data-promotion-creative]");
   renderCreative(creative, promotion);
   if (onClick) {

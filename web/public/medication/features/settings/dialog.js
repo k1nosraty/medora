@@ -12,13 +12,13 @@ function clockText(value) { return value.replace(/\d/g, digit => numbers.format(
 
 export function installSettings({ getState, mutate, refreshFields }) {
   const settingsPanels = {
-    "profile-settings": [t("پروفایل"), t("اطلاعات شخصی و چرخه")],
-    "display-settings": [t("ظاهر و زبان"), t("تم، تقویم و زبان برنامه")],
-    "notification-settings": [t("اعلان‌های این دستگاه"), t("یادآوری دارو، آب، قرار و روتین")],
-    "water-settings": [t("آب"), t("هدف روزانه و زمان یادآوری")],
-    "snooze-settings": [t("تعویق یادآوری دارو"), t("مدت تعویق اعلان دارو")],
-    "appointment-settings": [t("یادآوری قرارها"), t("زمان شروع و تکرار یادآوری")],
-    "backup-settings": [t("پشتیبان‌گیری"), t("ساخت و بازیابی فایل رمزدار")]
+    "profile-settings": [t("ui.profile"), t("ui.personal-information-and-cycle")],
+    "display-settings": [t("ui.appearance-and-language"), t("ui.theme-calendar-and-app-language")],
+    "notification-settings": [t("ui.notifications-on-this-device"), t("ui.medicine-water-appointment-and-routine-reminders")],
+    "water-settings": [t("ui.water"), t("ui.daily-goal-and-reminder-times")],
+    "snooze-settings": [t("ui.medication-reminder-snooze"), t("ui.medication-snooze-duration")],
+    "appointment-settings": [t("ui.appointment-reminders"), t("ui.reminder-start-and-interval")],
+    "backup-settings": [t("ui.backups"), t("ui.create-or-restore-an-encrypted-backup")]
   };
   const settings = $("settings-dialog");
   const settingsLinks = [...settings.querySelectorAll("[data-settings-panel]")];
@@ -31,7 +31,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
   const cycle = $("profile-cycle-enabled");
   function updateProfileAge() {
     const age = ageAt($("profile-birth-date").value, new Date());
-    $("profile-age").textContent = age === null ? "—" : t("{0} سال", numbers.format(age));
+    $("profile-age").textContent = age === null ? "—" : t("ui.value-years-old", numbers.format(age));
   }
   $("profile-birth-date").addEventListener("input", updateProfileAge);
   function updateCycleControl() {
@@ -45,7 +45,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
     const select = $(id);
     for (const option of select.querySelectorAll("[data-restored]")) option.remove();
     if (![...select.options].some(option => Number(option.value) === value)) {
-      const option = new Option(t("{0} دقیقه", numbers.format(value)), value);
+      const option = new Option(t("ui.value-min", numbers.format(value)), value);
       option.dataset.restored = "";
       select.add(option);
     }
@@ -58,14 +58,14 @@ export function installSettings({ getState, mutate, refreshFields }) {
   }
   function refreshSettingsHome(data) {
     const water = data.waterReminders ?? waterDefaults;
-    const waterStatus = !water.enabled ? t("یادآوری خاموش") : water.pauseUntil > Date.now() ? t("یادآوری متوقف") : t("یادآوری فعال");
-    $("settings-water-summary").textContent = t("هدف {0} میلی‌لیتر", numbers.format(data.waterGoal ?? 2000)) + " · " + waterStatus;
-    $("settings-snooze-summary").textContent = t("{0} دقیقه", numbers.format(data.medicationSnoozeMinutes ?? 10));
+    const waterStatus = !water.enabled ? t("ui.reminders-off") : water.pauseUntil > Date.now() ? t("ui.reminders-paused") : t("ui.reminders-on");
+    $("settings-water-summary").textContent = t("ui.goal-value-ml", numbers.format(data.waterGoal ?? 2000)) + " · " + waterStatus;
+    $("settings-snooze-summary").textContent = t("ui.value-min", numbers.format(data.medicationSnoozeMinutes ?? 10));
     const appointment = data.appointmentReminders ?? appointmentDefaults;
-    $("settings-appointment-summary").textContent = t("از ساعت {0} · {1}", clockText(appointment.start),
-      appointment.interval === 60 ? t("هر ساعت") : t("هر دو ساعت"));
-    const theme = { system: t("مطابق گوشی"), light: t("روشن"), dark: t("تیره") }[data.theme] ?? t("مطابق گوشی");
-    const calendar = (data.calendar ?? defaultCalendar) === "persian" ? t("شمسی") : t("میلادی");
+    $("settings-appointment-summary").textContent = t("ui.from-value-value", clockText(appointment.start),
+      appointment.interval === 60 ? t("ui.every-hour") : t("ui.every-two-hours"));
+    const theme = { system: t("ui.system"), light: t("ui.light"), dark: t("ui.dark") }[data.theme] ?? t("ui.system");
+    const calendar = (data.calendar ?? defaultCalendar) === "persian" ? t("ui.solar-hijri") : t("ui.gregorian");
     const finish = t(finishOf(data.finish) === "glass" ? "شیشه‌ای" : "سه‌بعدی مات");
     $("settings-display-summary").textContent = [theme, t(accentLabel(accentOf(data.accent, cycleIsEnabled(data)))), calendar, language === "fa" ? "فارسی" : "English", finish].join(" · ");
   }
@@ -124,7 +124,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
     settings.dataset.panel = panel;
     $("settings-back").hidden = !panel;
     $("settings-home").hidden = Boolean(panel);
-    const [title, subtitle] = settingsPanels[panel] ?? [t("تنظیمات مدورا"), t("ظاهر، یادآوری‌ها و داده‌ها")];
+    const [title, subtitle] = settingsPanels[panel] ?? [t("ui.medora-settings"), t("ui.appearance-reminders-and-data")];
     $("settings-title").textContent = title;
     $("settings-subtitle").textContent = subtitle;
     settingsFeedback();
@@ -172,7 +172,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
       const saved = await mutate(change, success, scheduleChanged);
       const active = settings.open && settingsSession === session && settings.dataset.panel === panel;
       if (active) {
-        settingsFeedback(saved ? success : t("ذخیره انجام نشد. دوباره تلاش کنید."), saved ? "success" : "error");
+        settingsFeedback(saved ? success : t("ui.could-not-save-try-again"), saved ? "success" : "error");
         control.scrollIntoView({ block: "nearest" });
       }
       if (saved && settings.open && !settings.dataset.panel) refreshSettingsHome(getState());
@@ -188,10 +188,10 @@ export function installSettings({ getState, mutate, refreshFields }) {
     const remaining = pauseUntil - Date.now();
     const paused = remaining > 0;
     $("water-pause-card").hidden = !enabled;
-    $("water-reminders-pause").textContent = paused ? t("ازسرگیری یادآوری") : t("توقف برای یک ساعت");
+    $("water-reminders-pause").textContent = paused ? t("ui.resume-reminders") : t("ui.pause-for-one-hour");
     $("water-pause-status").textContent = paused
-      ? t("یادآوری آب تا ساعت {0} متوقف است.", new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(pauseUntil))
-      : t("یادآوری آب بعد از یک ساعت خودکار از سر گرفته می‌شود.");
+      ? t("ui.water-reminders-are-paused-until-value", new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(pauseUntil))
+      : t("ui.water-reminders-resume-automatically-after-one-hour");
     if (enabled && paused && settings.open) waterPauseTimer = setTimeout(() => {
       updateWaterPause();
       if (!settings.dataset.panel) refreshSettingsHome(getState());
@@ -206,14 +206,14 @@ export function installSettings({ getState, mutate, refreshFields }) {
     await saveSettings(event.currentTarget, state => {
       if (!state.waterReminders?.enabled) throw new Error("water reminders disabled");
       state.waterReminders.pauseUntil = paused ? 0 : now + 3_600_000;
-    }, paused ? t("یادآوری آب از سر گرفته شد.") : t("یادآوری آب برای یک ساعت متوقف شد."), true);
+    }, paused ? t("ui.water-reminders-resumed") : t("ui.water-reminders-paused-for-one-hour"), true);
     updateWaterPause();
   });
   $("water-goal-form").addEventListener("submit", async event => {
     event.preventDefault();
     const goal = integer($("water-goal").value);
     if (!(goal >= 1 && goal <= 20000)) {
-      settingsFeedback(t("هدف آب باید از ۱ تا ۲۰٬۰۰۰ میلی‌لیتر باشد."), "error");
+      settingsFeedback(t("ui.enter-a-water-goal-from-1-to-20-000-ml"), "error");
       $("water-goal").focus();
       return;
     }
@@ -223,12 +223,12 @@ export function installSettings({ getState, mutate, refreshFields }) {
     const interval = Number($("water-reminders-interval").value);
     const repeat = Number($("water-reminders-repeat").value);
     if (enabled && (!start || !end || start >= end)) {
-      settingsFeedback(t("ساعت پایان باید بعد از ساعت شروع باشد."), "error");
+      settingsFeedback(t("ui.the-end-time-must-be-after-the-start-time"), "error");
       $("water-goal-form").querySelector('[data-for="water-reminders-end"]').focus();
       return;
     }
     if (enabled && !(interval >= 15 && interval <= 240 && repeat >= 0 && repeat < interval)) {
-      settingsFeedback(t("تکرار یک‌باره باید کوتاه‌تر از فاصلهٔ یادآوری باشد."), "error");
+      settingsFeedback(t("ui.the-follow-up-must-come-before-the-next-reminder"), "error");
       const repeatField = $("water-reminders-repeat");
       repeatField.closest("details").open = true;
       repeatField.focus();
@@ -239,7 +239,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
       const previous = state.waterReminders ?? waterDefaults;
       state.waterReminders = enabled ? { start, end, interval, repeat, pauseUntil: previous.pauseUntil, enabled }
         : { ...previous, enabled: false };
-    }, t("تنظیمات آب ذخیره شد."), true);
+    }, t("ui.water-settings-saved"), true);
     if (saved && !enabled) loadWaterSettings(getState());
     updateWaterPause();
   });
@@ -251,23 +251,23 @@ export function installSettings({ getState, mutate, refreshFields }) {
     const choice = snoozePresets.find(control => control.checked).value;
     const minutes = integer(choice === "custom" ? $("snooze-minutes").value : choice);
     if (!(minutes >= 1 && minutes <= 1440)) {
-      settingsFeedback(t("مدت تعویق باید از ۱ تا ۱٬۴۴۰ دقیقه باشد."), "error");
+      settingsFeedback(t("ui.enter-a-snooze-duration-from-1-to-1-440-minutes"), "error");
       $("snooze-minutes").focus();
       return;
     }
     await saveSettings(event.submitter ?? $("snooze-form").querySelector('[type="submit"]'),
-      state => { state.medicationSnoozeMinutes = minutes; }, t("مدت تعویق ذخیره شد."));
+      state => { state.medicationSnoozeMinutes = minutes; }, t("ui.snooze-duration-saved"));
   });
   $("appointment-settings-form").addEventListener("submit", async event => {
     event.preventDefault();
     const start = $("appointment-reminders-start").value;
     const interval = Number($("appointment-reminders-interval").value);
     if (!start || ![60, 120].includes(interval)) {
-      settingsFeedback(t("ساعت شروع و فاصلهٔ یادآوری را بررسی کن."), "error");
+      settingsFeedback(t("ui.check-the-reminder-start-time-and-interval"), "error");
       return;
     }
     await saveSettings(event.submitter ?? $("appointment-settings-form").querySelector('[type="submit"]'),
-      state => { state.appointmentReminders = { start, interval }; }, t("تنظیمات قرار ذخیره شد."), true);
+      state => { state.appointmentReminders = { start, interval }; }, t("ui.appointment-settings-saved"), true);
   });
   $("display-form").addEventListener("submit", async event => {
     event.preventDefault();
@@ -284,7 +284,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
         state.calendar = selectedCalendar;
         state.finish = finish;
         state.familyPlacement = familyPlacement;
-      }, t("تنظیمات نمایش ذخیره شد."))) selectLanguage(nextLanguage);
+      }, t("ui.display-settings-saved"))) selectLanguage(nextLanguage);
   });
   gender.addEventListener("change", updateCycleControl);
   $("profile-form").addEventListener("submit", async event => {
@@ -295,7 +295,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
       return value ? [[key, input.type === "number" ? input.valueAsNumber : value]] : [];
     }));
     if (!validPersonalProfile(profile)) {
-      settingsFeedback(t("نام، تاریخ تولد، قد و وزن را بررسی کنید."), "error");
+      settingsFeedback(t("ui.check-your-name-date-of-birth-height-and-weight"), "error");
       return;
     }
     const selectedGender = genders.includes(gender.value) ? gender.value : "";
@@ -305,7 +305,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
       state.gender = selectedGender;
       state.cycleEnabled = enabled;
       loadedSettings.delete("display-settings");
-    }, t("پروفایل ذخیره شد."));
+    }, t("ui.profile-saved"));
   });
 
   function open(notifications) {

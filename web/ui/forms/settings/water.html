@@ -1,22 +1,22 @@
       <section id="water-settings" class="settings-panel water-panel" hidden>
         <form id="water-goal-form" novalidate>
-          <label>هدف روزانه (میلی‌لیتر)<input id="water-goal" dir="ltr" inputmode="numeric" maxlength="5" required></label>
-          <label class="feature-head editor-switch settings-switch">یادآوری آب<input type="checkbox" id="water-reminders-enabled" role="switch"></label>
+          <label>{{msg:ui.daily-goal-ml}}<input id="water-goal" dir="ltr" inputmode="numeric" maxlength="5" required></label>
+          <label class="feature-head editor-switch settings-switch">{{msg:ui.water-reminders}}<input type="checkbox" id="water-reminders-enabled" role="switch"></label>
           <div id="water-reminder-fields" hidden>
             <div class="settings-time-grid">
-              <label>شروع یادآوری<input id="water-reminders-start" type="time" value="08:00" required></label>
-              <label>پایان یادآوری<input id="water-reminders-end" type="time" value="22:00" required></label>
+              <label>{{msg:ui.start-reminders}}<input id="water-reminders-start" type="time" value="08:00" required></label>
+              <label>{{msg:ui.end-reminders}}<input id="water-reminders-end" type="time" value="22:00" required></label>
             </div>
-            <label>فاصلهٔ یادآوری<select id="water-reminders-interval"><option value="30">۳۰ دقیقه</option><option value="60">یک ساعت</option><option value="120">دو ساعت</option></select></label>
-            <details class="editor-options"><summary>گزینه‌های بیشتر</summary>
-              <label>تکرار یک‌باره<select id="water-reminders-repeat"><option value="0">خاموش</option><option value="5">۵ دقیقه بعد</option><option value="10">۱۰ دقیقه بعد</option><option value="15">۱۵ دقیقه بعد</option></select></label>
+            <label>{{msg:ui.reminder-interval}}<select id="water-reminders-interval"><option value="30">{{msg:ui.30-minutes}}</option><option value="60">{{msg:ui.one-hour}}</option><option value="120">{{msg:ui.two-hours}}</option></select></label>
+            <details class="editor-options"><summary>{{msg:ui.more-options}}</summary>
+              <label>{{msg:ui.repeat-once}}<select id="water-reminders-repeat"><option value="0">{{msg:ui.off}}</option><option value="5">{{msg:ui.after-5-minutes}}</option><option value="10">{{msg:ui.after-10-minutes}}</option><option value="15">{{msg:ui.after-15-minutes}}</option></select></label>
             </details>
           </div>
-          <button type="submit" class="block-action">ذخیرهٔ تنظیمات آب</button>
+          <button type="submit" class="block-action">{{msg:ui.save-water-settings}}</button>
         </form>
         <div id="water-pause-card" class="settings-callout" hidden>
-          <h3>وقفهٔ موقت</h3>
+          <h3>{{msg:ui.temporary-pause}}</h3>
           <p id="water-pause-status" class="quiet"></p>
-          <button type="button" class="secondary" id="water-reminders-pause">توقف برای یک ساعت</button>
+          <button type="button" class="secondary" id="water-reminders-pause">{{msg:ui.pause-for-one-hour}}</button>
         </div>
       </section>

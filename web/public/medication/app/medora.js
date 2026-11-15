@@ -1,3 +1,6 @@
+import { installEntryActions } from "./entry-actions.js";
+import { preserveFocus } from "../shared/ui/focus.js";
+import { routeFromLocation } from "./routes.js";
 import { installCareSync } from "../features/sync/controller.js";
 import { language, localizeMarkup, selectLanguage, t } from "../shared/i18n/locale.js";
 import { accessCare } from "../shared/storage.js";
@@ -17,7 +20,6 @@ import { installAccount } from "../features/account/dialog.js";
 import { installFamily } from "../features/family/panel.js";
 import { renderMemberHeader } from "../features/family/context.js";
 import { installSupport, loadOperations, reportDailyOpen } from "../features/operations.js";
-import { installPromotion } from "../features/promotions/dialog.js";
 import { installRoutines } from "../features/routines/view.js";
 import { renderToday } from "../features/today/view.js";
 import { installBackupRestore } from "../features/backups/dialog.js";
@@ -42,23 +44,23 @@ let familyNoticeTimer;
 update.addEventListener("click", async () => {
   clearTimeout(updateStatusTimer);
   if (busy) {
-    updateStatus.textContent = t("پس از ذخیرهٔ تغییرات دوباره تلاش کنید.");
+    updateStatus.textContent = t("ui.try-again-after-your-changes-are-saved");
     return;
   }
   if (!navigator.onLine) {
-    updateStatus.textContent = t("برای به‌روزرسانی به اینترنت وصل شوید.");
+    updateStatus.textContent = t("ui.connect-to-the-internet-to-update");
     return;
   }
   update.disabled = true;
-  updateStatus.textContent = t("در حال بررسی به‌روزرسانی…");
+  updateStatus.textContent = t("ui.checking-for-updates");
   try {
     if (await refreshApp({ canReload: () => !busy && !document.querySelector("dialog[open]") }) === false) {
-      updateStatus.textContent = t("آخرین نسخه نصب است.");
+      updateStatus.textContent = t("ui.medora-is-up-to-date");
       updateStatusTimer = setTimeout(() => { updateStatus.textContent = ""; }, 3200);
     }
   } catch (error) {
     updateStatus.textContent = error.message === "update_busy"
-      ? t("پس از ذخیرهٔ تغییرات دوباره تلاش کنید.") : t("به‌روزرسانی انجام نشد. دوباره تلاش کنید.");
+      ? t("ui.try-again-after-your-changes-are-saved") : t("ui.couldnt-update-medora-try-again");
   } finally {
     update.disabled = false;
   }
@@ -82,7 +84,7 @@ async function mutate(change, success, scheduleChanged = false, day) {
     accountSync.schedule();
     return true;
   } catch (error) {
-    $("status").textContent = error instanceof Error && error.name === "Error" ? error.message : t("ذخیره انجام نشد. دوباره تلاش کنید.");
+    $("status").textContent = error instanceof Error && error.name === "Error" ? error.message : t("ui.could-not-save-try-again");
     return false;
   } finally {
     busy = false;
@@ -106,7 +108,7 @@ function currentIndex() {
   return careIndex;
 }
 
-function render() {
+function paint() {
   if (!care || !$("day").value) return;
   const day = selectedDay();
   const index = currentIndex();
@@ -121,21 +123,35 @@ function render() {
   }
 }
 
+function render() {
+  return preserveFocus($("app"), paint, $("screen-title"));
+}
+
 async function reload() {
   if (busy) return;
   const snapshot = care;
   try {
     const latest = await accessCare(undefined, { snapshot });
-    if (busy || care !== snapshot) return;
+    if (busy || care !== snapshot || latest === snapshot) return;
     care = latest;
     render();
   } catch {
-    $("status").textContent = t("خواندن سوابق محلی انجام نشد.");
+    $("status").textContent = t("ui.could-not-read-your-local-records");
   }
 }
 
 $("day").addEventListener("change", render);
-$("today-dates").append($("day-controls"));
+
+const tools = $("header-menu");
+tools.addEventListener("keydown", event => {
+  if (event.key !== "Escape" || !tools.open) return;
+  event.stopPropagation();
+  tools.open = false;
+  tools.querySelector("summary").focus();
+});
+document.addEventListener("click", event => {
+  if (tools.open && !tools.contains(event.target)) tools.open = false;
+});
 const nextLanguage = language === "fa" ? "en" : "fa";
 for (const control of document.querySelectorAll("[data-language-switch]")) {
   control.lang = nextLanguage;
@@ -173,7 +189,7 @@ const accountSync = installCareSync({
   reload: async changed => {
     await reload();
     if (changed) {
-      if (care?.intro === "done" && $("app").hidden) showIntro(care, mutate, dashboard.show);
+      if (care?.intro === "done" && $("app").hidden) showIntro(care, mutate);
       void syncReminders(false, care);
     }
   },
@@ -214,6 +230,17 @@ const family = installFamily({ getState, openAccount, actionDay: dashboard.actio
   dashboard.show("settings");
   document.querySelector('[data-settings-panel="profile-settings"]').click();
 } });
+dashboard.setEntryAction(installEntryActions({
+  currentView: getFamilyView, currentDay: dashboard.actionDay,
+  open(kind, control) {
+    if (kind === "medicine") openEditor();
+    else if (kind === "visit") dashboard.openVisit();
+    else if (kind === "routine") routines.openEditor();
+    else if (kind === "cycle") dashboard.openCycle();
+    else dashboard.openWater(null, null, { focusAmount: control?.id === "water-custom-action" });
+  },
+  addWater: dashboard.addWater, quickWater: dashboard.quickAddWater, familyWater: family.quickWater
+}));
 $("account-dialog").addEventListener("close", family.openInvitation);
 document.querySelector(".app-bar").addEventListener("click", event => {
   if (event.target.closest('[data-open-account], [data-destination="settings"]')) family.leave();
@@ -230,11 +257,15 @@ try {
   const day = params.get("day");
   $("day").value = /^\d{4}-\d{2}-\d{2}$/.test(day ?? "") ? day : isoDay(today());
   if (!$("day").value) $("day").value = isoDay(today());
-  render();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(day ?? "") && $("day").value) {
+    history.replaceState({ ...history.state, medoraDay: selectedDay() }, "", location.href);
+  }
+  if (!dashboard.show(routeFromLocation(), false, { mode: "pop", focus: false })) {
+    dashboard.show("today", false, { mode: "replace", focus: false });
+  }
   $("app").hidden = false;
   $("boot-status").hidden = true;
-  showIntro(care, mutate, dashboard.show);
-  if (!$("app").hidden && ["water", "appointments", "routines"].includes(view)) dashboard.show(view);
+  showIntro(care, mutate);
   if (!$("app").hidden && view === "notification-settings") dashboard.show("settings", true);
   const routineId = params.get("routine");
   if (!$("app").hidden && view === "routines" && validRoutineId(routineId) && day === $("day").value) {
@@ -244,10 +275,10 @@ try {
     history.replaceState(history.state, "", `?${params}`);
   }
   if (!location.search) void reportDailyOpen();
-  installPromotion(loadOperations);
+  void import("../features/promotions/dialog.js").then(({ installPromotion }) => installPromotion(loadOperations)).catch(() => {});
   family.openInvitation();
   void family.refreshGroup();
   void initializeReminders();
 } catch {
-  $("boot-status").textContent = t("موتور برنامهٔ دارو یا فضای ذخیرهٔ محلی در دسترس نیست.");
+  $("boot-status").textContent = t("ui.the-schedule-engine-or-local-storage-is-unavailable");
 }
