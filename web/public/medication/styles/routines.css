@@ -58,7 +58,11 @@
   background: var(--pill-fill);
   color: var(--pill-ink);
 }
-.medora :is(.visit-card, #visit-appearance)[data-ink="green"] {
+.medora :is(
+  .visit-card, #visit-appearance,
+  .medicine, #medicine-appearance, #appearance-preview, .medication-banner, .medication-badge,
+  #medicine-colors .appearance-swatch
+)[data-ink="green"] {
   --pill-base: var(--category-visit-art);
   --pill-fill: var(--program-visit-fill);
   --pill-ink: var(--program-visit-ink);

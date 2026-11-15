@@ -94,7 +94,7 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
     t(day > today ? "برای این روز برنامه‌ای ندارید." : "برای این روز برنامه یا سابقه‌ای ندارید."), "empty")]));
   if (focusedKey) {
     const card = nodes.find(node => node.dataset.agendaKey === focusedKey);
-    (card?.querySelector(".day-card-actions > button, .day-card-more > summary") ?? grid.querySelector('[aria-pressed="true"]'))
+    (card?.querySelector(".day-card-actions > button, .day-card-more > summary") ?? $("calendar-days").querySelector('[aria-pressed="true"]'))
       ?.focus({ preventScroll: true });
   }
 }

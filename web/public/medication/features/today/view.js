@@ -77,13 +77,16 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
       .map(([, label]) => label).join(" · ")
     : t(view && !view.synced ? "هنوز سابقه‌ای از این حساب همگام نشده است." : "برای این روز برنامه‌ای ثبت نشده است.");
   const focus = $("today-focus");
+  const controls = $("day-focus-navigation");
   focus.replaceChildren();
+  controls.replaceChildren();
+  controls.hidden = group.length < 2;
   if (grouped) {
     const sameSlot = previousSlot?.slot === slot;
     const previousIndex = sameSlot ? group.findIndex(event => event.key === previousSlot.key) : -1;
     const index = previousIndex >= 0 ? previousIndex : sameSlot && previousSlot.index < group.length ? previousSlot.index : 0;
     selectedSlot = { day, slot, index, key: group[index].key };
-    renderGroup(focus, group, selectedSlot);
+    renderGroup(focus, controls, group, selectedSlot);
   } else if (focused) {
     const heading = focused.time == null || focused.time < now ? t("ui.still-pending") : t("ui.up-next");
     focus.append(featuredCard(focused, heading));
@@ -146,14 +149,12 @@ function timelineCard(event) {
   return card;
 }
 
-function renderGroup(focus, group, selection) {
+function renderGroup(focus, controls, group, selection) {
   const viewport = element("div", "", "day-focus-viewport");
   focus.append(viewport);
   const rtl = document.documentElement.dir === "rtl";
   const swipeOffset = dx => Math.sign(dx) * (rtl ? 1 : -1);
-  const status = group.length > 1
-    ? t("ui.value-items-at-this-time", localDigits(group.length))
-    : t(group[0].time < Date.now() ? "ui.still-pending" : "ui.up-next");
+  const status = t(group[0].time < Date.now() ? "ui.still-pending" : "ui.up-next");
 
   function show(index, source) {
     if (!group[index]) return;
@@ -168,7 +169,6 @@ function renderGroup(focus, group, selection) {
       card.classList.add("day-focus-enter");
     }
     if (group.length > 1) {
-      const controls = element("div", "", "day-focus-controls");
       const previous = arrow(t("ui.previous-item"), "previous");
       const next = arrow(t("ui.next-item"), "next");
       previous.setAttribute("aria-disabled", String(index === 0));
@@ -186,11 +186,10 @@ function renderGroup(focus, group, selection) {
       const trigger = picker.querySelector("summary");
       trigger.textContent = position;
       trigger.dataset.focusKey = "day-focus-picker";
-      controls.append(previous, picker, next);
-      card.querySelector(".day-focus-media").append(controls);
+      controls.replaceChildren(previous, picker, next);
     }
     viewport.replaceChildren(card);
-    if (source) card.querySelector(`[data-focus-key="${source}"]`)?.focus({ preventScroll: true });
+    if (source) controls.querySelector(`[data-focus-key="${source}"]`)?.focus({ preventScroll: true });
   }
   show(selection.index);
   if (group.length < 2) return;
@@ -234,11 +233,17 @@ function featuredCard(event, status) {
   art.before(media);
   media.append(art);
   const content = card.querySelector(".day-card-content");
+  media.append(content.querySelector(".day-card-kind"));
   const context = element("div", "", "day-focus-context");
   const time = content.querySelector("time");
   if (time) context.append(time);
   context.append(element("span", status, "day-focus-status"));
   content.prepend(context);
+  const copy = element("div", "", "day-focus-copy");
+  const actions = card.querySelector(".day-card-actions");
+  content.before(copy);
+  copy.append(content);
+  if (actions) copy.append(actions);
   return card;
 }
 

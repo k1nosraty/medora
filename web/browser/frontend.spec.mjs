@@ -145,14 +145,23 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
   }
   const banner = page.locator("#today-focus .day-card");
   const title = banner.locator(".day-card-title");
-  const picker = banner.locator(".day-focus-picker summary");
+  const navigation = page.locator("#day-focus-navigation");
+  const picker = navigation.locator(".day-focus-picker summary");
   await expect(title).toHaveText("Sample tablet");
+  const featuredHeight = (await banner.boundingBox()).height;
   await expect(picker).toHaveText("۱ از ۳");
-  await expect(banner.locator(".day-focus-status")).toHaveText("۳ برنامه در این ساعت");
-  await banner.locator(".day-focus-next").click();
+  await expect(banner.locator(".day-focus-status")).toBeVisible();
+  expect(await navigation.evaluate(node => {
+    const center = element => {
+      const { top, height } = element.getBoundingClientRect();
+      return top + height / 2;
+    };
+    return [...node.parentElement.children].every(element => Math.abs(center(element) - center(node)) < 1);
+  })).toBe(true);
+  await navigation.locator(".day-focus-next").click();
   await expect(title).toHaveText("Follow-up");
   await picker.click();
-  await banner.getByRole("button", { name: "Walk", exact: true }).click();
+  await navigation.getByRole("button", { name: "Walk", exact: true }).click();
   await expect(title).toHaveText("Walk");
   await expect(picker).toBeFocused();
   await banner.locator(".day-card-title").evaluate(node => {
@@ -166,6 +175,10 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
   await banner.locator(".care-record-action").click();
   await expect(title).toHaveText("Walk");
   await expect(picker).toHaveText("۲ از ۲");
+  await banner.locator(".care-record-action").click();
+  await expect(title).toHaveText("Sample tablet");
+  await expect(picker).toHaveCount(0);
+  expect((await banner.boundingBox()).height).toBe(featuredHeight);
   await page.locator("#program-cycle").click();
   const cycle = page.locator("#cycle-banner[data-card-kind=cycle]");
   await expect(cycle.locator(".day-card-kind + .day-card-title")).toBeVisible();

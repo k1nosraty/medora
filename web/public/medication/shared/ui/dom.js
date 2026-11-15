@@ -24,11 +24,13 @@ export function dayCardOptions(label, ...content) {
   details.append(trigger, menu);
   details.addEventListener("keydown", event => {
     if (event.key !== "Escape" || !details.open) return;
+    event.preventDefault();
+    event.stopPropagation();
     details.open = false;
     trigger.focus();
   });
   menu.addEventListener("click", event => {
-    if (event.target.closest("button, a[href]")) {
+    if (event.target.closest("button:not([type=submit]), a[href]")) {
       if (menu.contains(document.activeElement)) trigger.focus({ preventScroll: true });
       details.open = false;
     }

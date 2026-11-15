@@ -190,7 +190,8 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     const card = element("article", "", "medicine dose-card");
     const plan = dose.historyPlan ?? medicine;
     const unit = dose.unit ?? plan?.unit ?? "";
-    const color = medicineColorOf(plan?.color ?? dose.color);
+    const color = medicineColorOf(medicine?.color ?? dose.color ?? plan?.color);
+    const icon = medicine?.icon ?? dose.icon ?? plan?.icon;
     card.dataset.focusScope = `dose:${dose.medicineId}:${dose.day}:${dose.minute}`;
     card.dataset.ink = color;
     const heading = element("h3", dose.name || plan?.name || t("ui.medicine"));
@@ -206,7 +207,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     const snoozedTime = featured && dose.status === "snoozed" ? dose.snoozeUntil : null;
     const time = snoozedTime ? new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(snoozedTime) : localDigits(timeText(dose.minute));
     const layout = dayCard ? mountDayCard(card, {
-      kind: "medicine", label: t("ui.medicine"), image: medicationBadge(plan?.icon ?? dose.icon, color),
+      kind: "medicine", label: t("ui.medicine"), image: medicationBadge(icon, color),
       title: heading, time, dateTime: snoozedTime ? new Date(snoozedTime).toISOString() : timeText(dose.minute),
       summary: featured ? planned : "", featured
     }) : null;
@@ -214,7 +215,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     if (!layout) {
       info.append(heading, element("p", t("ui.at-value", time)));
       const header = element("div", "", "dose-header");
-      header.append(medicationBadge(medicine?.icon ?? dose.icon, color), info);
+      header.append(medicationBadge(icon, color), info);
       card.append(header);
     }
     const result = element("div");
@@ -249,8 +250,12 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     if (dose.actual != null) amount.value = amountText(dose.actual);
     if (dose.planned != null) amount.placeholder = amountText(dose.planned);
     label.append(amount);
+    const amountForm = element("form", "", "day-card-dose-form");
+    const amountError = element("p", "", "field-error");
+    amountError.setAttribute("role", "status");
     async function record(status) {
       try {
+        amountError.textContent = "";
         const entered = status === "taken" ? quantity(amount, true) : null;
         if (entered === 0) throw new Error(t("ui.enter-an-amount-greater-than-zero"));
         await mutate(state => {
@@ -283,24 +288,29 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
         }, status === "snoozed" ? t("ui.dose-snoozed") : t("ui.dose-status-saved"), true, dose.day);
       } catch (error) {
         $("status").textContent = error.message;
+        amountError.textContent = error.message;
       }
     }
 
-    const controls = element("div");
-    controls.className = "buttons";
     const pending = !dose.status || dose.status === "snoozed";
-    const taken = action(dose.status === "taken" ? t("ui.edit-intake") : t("ui.mark-as-taken"), () => record("taken"), !pending);
+    const takenLabel = t(dose.status === "taken" ? "ui.edit-intake" : "ui.mark-as-taken");
+    const taken = action(takenLabel, () => record("taken"), !pending);
     if (pending) taken.classList.add("care-record-action");
+    const saveAmount = element("button", takenLabel, "secondary");
+    saveAmount.type = "submit";
+    amountForm.append(label, saveAmount, amountError);
+    amountForm.addEventListener("submit", event => {
+      event.preventDefault();
+      void record("taken");
+    });
     const snooze = () => action(t("ui.in-value-min", localDigits(getState().medicationSnoozeMinutes ?? 10)), () => record("snoozed"), true);
-    const skipped = action(t("ui.skip-dose"), () => record("skipped"), true);
-    controls.append(...(pending || dayCard ? [skipped] : [taken, skipped]));
-    if ((!pending || compactDay) && canSnooze) controls.append(snooze());
-    if (dose.status) controls.append(action(t("ui.undo-log"), () => record(null), true));
+    const options = dayCardOptions(t("ui.dose-options"), amountForm,
+      ...(canSnooze ? [snooze()] : []),
+      ...(dose.status !== "skipped" ? [action(t("ui.skip-dose"), () => record("skipped"), true)] : []),
+      ...(dose.status ? [action(t("ui.undo-log"), () => record(null), true)] : []));
     if (layout) {
       taken.classList.add("secondary");
-      const options = dayCardOptions(t("ui.dose-options"), label, controls);
       if (compactDay) {
-        if (!pending) controls.prepend(taken);
         layout.addActions(options, ...(pending ? [taken] : []));
       } else {
         const postpone = pending && canSnooze ? snooze() : null;
@@ -308,11 +318,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
         layout.addActions(taken, ...(postpone ? [postpone] : []), options);
       }
     } else {
-      const actual = element("details", "", "dose-options");
-      const more = element("summary", "⋮");
-      more.setAttribute("aria-label", t("ui.dose-options"));
-      actual.append(more, label, controls);
-      card.append(actual);
+      card.append(options);
       if (pending) {
         const quick = element("div", "", "action-pair dose-quick");
         quick.append(taken);
