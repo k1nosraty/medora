@@ -2,7 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { careSession, inviteContact, normalizeEmail } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
 import { familySections, sharedCare } from "../../public/medication/domain/family.js";
-import { groupIconOf } from "../../public/medication/domain/group-icons.js";
+import { groupIconOf, groupIcons } from "../../public/medication/domain/group-icons.js";
 import { clean, idPattern } from "./care.mjs";
 
 const oneDay = 86_400_000;
@@ -30,6 +30,11 @@ export async function handleFamily(request, env, url) {
   let result;
   switch (data.action) {
     case "create": result = await store.create(actor, clean(data.name, 60), groupIconOf(data.icon)); break;
+    case "update-group":
+      result = typeof data.group === "string" && idPattern.test(data.group) &&
+        typeof data.icon === "string" && Object.hasOwn(groupIcons, data.icon)
+        ? await store.updateGroup(actor, data.group, clean(data.name, 60), data.icon) : failure("invalid");
+      break;
     case "invite-lookup": {
       if (!idPattern.test(data.group) || !await store.managesGroup(actor.person, data.group)) return reply(failure("forbidden"), 403);
       const query = clean(data.query, 254).replace(/^@(?=[a-z0-9_]+$)/i, "");
@@ -163,6 +168,16 @@ export class Families extends DurableObject {
       this.sql.exec("INSERT INTO family_members VALUES(?,?,?,?)", crypto.randomUUID(), id, actor.person, actor.label);
       this.audit(id, actor.person, actor.person, "create");
       return { group: id };
+    });
+  }
+
+  updateGroup(actor, group, name, icon) {
+    if (!name) return failure("invalid");
+    return this.ctx.storage.transactionSync(() => {
+      if (!this.managesGroup(actor.person, group)) return failure("forbidden");
+      this.sql.exec("UPDATE family_groups SET name=?, icon=? WHERE id=?", name, icon, group);
+      this.audit(group, actor.person, actor.person, "update-group");
+      return { group };
     });
   }
 

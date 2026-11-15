@@ -286,8 +286,15 @@
 .family-list { display: grid; gap: .6rem; }
 .family-choice, .family-choice [data-sections] { display: grid; gap: .45rem; }
 .family-choice [hidden] { display: none; }
-.family-choice label { display: flex; align-items: center; gap: .55rem; min-block-size: 2.5rem; }
-.family-choice :is(input[type="radio"], input[type="checkbox"]) { inline-size: 1.1rem; block-size: 1.1rem; accent-color: var(--action); }
+.medora .family-choice label {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  min-block-size: 2.75rem;
+  margin: 0;
+}
+.medora .family-choice input { flex: none; margin: 0; accent-color: var(--action); }
+.medora .family-choice input:not([role="switch"]) { inline-size: 1.1rem; min-block-size: 1.1rem; padding: 0; }
 .family-field-pair { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .6rem; }
 .family-field-pair label { min-inline-size: 0; }
 .family-field-pair input { inline-size: 100%; min-inline-size: 0; }

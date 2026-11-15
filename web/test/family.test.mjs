@@ -88,7 +88,18 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.equal(JSON.stringify(overview).includes("family_b@example.com"), false);
     const inbox = await (await call("family?inbox=1", null, b)).json();
     assert.equal(inbox.invitations[0].id, existingInvite.invite);
+    const edit = { action: "update-group", group, name: "Care circle", icon: "sprout" };
+    assert.equal((await family(b, edit)).status, 403);
+    assert.equal((await family(a, { ...edit, name: " " })).status, 400);
+    assert.equal((await family(a, { ...edit, icon: ["sprout"] })).status, 400);
+    assert.equal((await family(a, edit)).status, 200);
+    const renamedInbox = await (await call("family?inbox=1", null, b)).json();
+    assert.equal(renamedInbox.invitations[0].name, edit.name);
     assert.equal((await family(b, { action: "accept", invite: existingInvite.invite })).status, 200);
+    const memberGroup = (await (await family(b)).json()).groups.find(item => item.id === group);
+    assert.equal(memberGroup.name, edit.name);
+    assert.equal(memberGroup.icon, edit.icon);
+    assert.equal((await family(b, { ...edit, name: "Wrong owner" })).status, 403);
     assert.deepEqual(await (await call("family?inbox=1", null, b)).json(), { invitations: [] });
     const newInvite = await (await family(a, { action: "invite", group, email: "new_member@example.com" })).json();
     assert.equal(newInvite.delivered, true);

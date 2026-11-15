@@ -182,13 +182,13 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     }
   }
 
-  async function refresh(groupId, manage = false) {
+  async function refresh(groupId, show = showHome) {
     const request = generation;
     await refreshGroup();
     if (!dialog.open || request !== generation || !overview) return;
     const group = overview.groups.find(item => item.id === groupId);
     if (group) chooseGroup(group);
-    if (group && manage) showGroup(group);
+    if (group) show(group);
     else showHome();
   }
 
@@ -239,7 +239,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       groups.querySelector('[aria-pressed="true"]').scrollIntoView({ block: "nearest", inline: "nearest" });
     } else content.append(hero(t("گروه‌های مراقبت"), t("برای دیدن برنامهٔ اعضا، گروه بساز یا دعوتی را بپذیر.")));
     const controls = element("div", "", "family-group-links");
-    const create = button(t("ساخت گروه"), createGroup);
+    const create = button(t("ساخت گروه"), () => groupForm());
     create.prepend(icon("plus"));
     controls.append(create);
     if (selected) {
@@ -276,14 +276,16 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     content.append(invitationList(showInbox));
   }
 
-  function createGroup() {
-    page("ساخت گروه", showHome);
+  function groupForm(group) {
+    page(group ? "ویرایش گروه" : "ساخت گروه", group ? () => showGroup(group) : showHome);
     const form = element("form", "", "family-content family-compose sheet-form");
-    const name = field("نام گروه", "name", "text");
+    const name = field("نام گروه", "name", "text", group?.name);
     const nameInput = name.querySelector("input");
     nameInput.maxLength = 60;
+    nameInput.dir = "auto";
     nameInput.placeholder = t("مثلاً مراقبت از مادر");
-    const banner = groupBanner(t("گروه تازه"), "پیش‌نمایش", "group");
+    const selectedIcon = groupIconOf(group?.icon);
+    const banner = groupBanner(group?.name ?? t("گروه تازه"), "پیش‌نمایش", selectedIcon);
     const options = element("fieldset", "", "family-icon-options");
     options.append(element("legend", t("آیکون گروه")));
     const tiles = element("div", "", "family-icon-grid");
@@ -291,31 +293,66 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       const tile = element("label");
       tile.title = t(label);
       const input = document.createElement("input");
-      Object.assign(input, { type: "radio", name: "icon", value: id, checked: id === "group" });
+      Object.assign(input, { type: "radio", name: "icon", value: id, checked: id === selectedIcon });
       input.setAttribute("aria-label", t(label));
       tile.append(input, groupArt(id));
       tiles.append(tile);
     }
     options.append(tiles);
     nameInput.addEventListener("input", () => {
-      banner.querySelector("strong").textContent = nameInput.value.trim() || t("گروه تازه");
+      banner.querySelector("strong").textContent = nameInput.value.trim() || group?.name || t("گروه تازه");
     });
     options.addEventListener("change", event => banner.querySelector(".family-group-art").replaceWith(groupArt(event.target.value)));
-    const manager = profileName(getState()?.personalProfile) || overview.label;
-    form.append(banner, name, options, element("p", t("مدیر گروه: {0}", manager), "quiet"),
-      element("p", t("هر عضو دسترسی‌های خودش را تعیین می‌کند."), "quiet"), submitButton("ساخت گروه"));
+    form.append(banner, name, options);
+    if (!group) {
+      const manager = profileName(getState()?.personalProfile) || overview.label;
+      form.append(element("p", t("مدیر گروه: {0}", manager), "quiet"),
+        element("p", t("هر عضو دسترسی‌های خودش را تعیین می‌کند."), "quiet"));
+    }
+    form.append(submitButton(group ? "ذخیرهٔ تغییرات" : "ساخت گروه"));
+    let created;
     formSubmit(form, async data => {
-      const result = await familyRequest("create", { name: data.get("name").trim(), icon: data.get("icon") });
-      await refresh(result.group, true);
+      const request = generation;
+      const details = { name: data.get("name").trim(), icon: data.get("icon") };
+      if (group) {
+        await familyRequest("update-group", { group: group.id, ...details });
+        if (dialog.open && request === generation) await refresh(group.id, updated => {
+          showGroup(updated);
+          message("تغییرات گروه ذخیره شد.");
+        });
+      } else {
+        created ??= (await familyRequest("create", details)).group;
+        if (dialog.open && request === generation) await refresh(created, afterCreate);
+      }
     });
     content.append(form);
   }
 
+  function afterCreate(group) {
+    page("گروه ساخته شد", () => showGroup(group));
+    const invite = button(t("دعوت از اعضا"), () => inviteMember(group));
+    invite.className = "block-action";
+    const later = button(t("بعداً انجام می‌دهم"), () => showGroup(group));
+    later.className = "text-button block-action";
+    content.append(groupBanner(group.name, "گروه فعال", group.icon),
+      element("p", t("با ایمیل یا نام کاربری، اعضا را به گروه دعوت کنید."), "quiet"), invite, later);
+  }
+
   function showGroup(group) {
-    page("دسترسی‌های من", showHome);
-    content.append(hero(group.name, t("اعضای گروه")));
-    content.append(action("تازه‌کردن دسترسی‌ها", () => refresh(group.id, true)));
-    if (group.manager) content.append(button(t("دعوت عضو"), () => inviteMember(group)));
+    page("مدیریت گروه", showHome);
+    content.append(groupBanner(group.name, "اعضای گروه", group.icon));
+    const controls = element("div", "", "family-group-links");
+    if (group.manager) {
+      const edit = button(t("ویرایش نام و آیکون"), () => groupForm(group));
+      edit.prepend(icon("pen"));
+      const invite = button(t("دعوت عضو"), () => inviteMember(group));
+      invite.prepend(icon("plus"));
+      controls.append(edit, invite);
+    }
+    const reload = action("تازه‌کردن دسترسی‌ها", () => refresh(group.id, showGroup));
+    reload.prepend(icon("refresh"));
+    controls.append(reload);
+    content.append(controls);
     const members = group.members.filter(member => !member.self);
     if (!members.length) {
       content.append(element("p", t("هنوز عضو دیگری در این گروه نیست."), "quiet"));
@@ -469,7 +506,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       await familyRequest("share", { group: group.id, target: member?.id ?? "all", all: data.get("view") === "all",
         sections: data.getAll("section"), record: data.has("record"), add: data.has("add"),
         days: data.get("days") === "keep" ? "keep" : Number(data.get("days")) || null });
-      await refresh(group.id, true);
+      await refresh(group.id, showGroup);
       message(getState()?.accountCare?.enabled ? "دسترسی ذخیره شد." :
         "دسترسی ذخیره شد. برای دیدن سوابق این دستگاه، همگام‌سازی حساب را فعال کنید.");
     });
@@ -483,7 +520,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       button(t("انصراف"), () => showGroup(group)));
     const revoke = action("قطع دسترسی", async () => {
       await familyRequest("revoke", { group: group.id, target: member.id });
-      await refresh(group.id, true);
+      await refresh(group.id, showGroup);
       message("دسترسی قطع شد.");
     });
     revoke.classList.add("family-danger");
