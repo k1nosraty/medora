@@ -231,7 +231,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     if (instructions) result.append(element("p", instructions));
     if (result.childElementCount) info.append(result);
     if (view) {
-      if (dose.recordedBy) info.append(element("small", t("ثبت‌کننده: {0}", dose.recordedBy), "family-stamp"));
+      if (dose.recordedBy) info.append(element("small", t("ثبت‌کننده: {0}", view.authorName(dose)), "family-stamp"));
       if (view.canRecord("medicine", dose.day) && medicine && (!medicine.paused || dose.historyPlan) &&
           !["taken", "skipped"].includes(dose.status) && scheduledAt(dose.day, dose.minute) <= Date.now()) {
         const footer = element("div", "", dayCard ? "day-card-actions" : "dose-quick");

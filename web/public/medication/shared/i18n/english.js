@@ -1,4 +1,6 @@
 export default {
+  "گروه‌های مراقبت": "Care groups",
+  "اعضای گروه": "Group members",
   "جای نوار گروه فعال": "Active group bar placement",
   "بالای صفحهٔ امروز": "Top of Today",
   "پایین صفحهٔ امروز": "Bottom of Today",

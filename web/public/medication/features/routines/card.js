@@ -52,7 +52,7 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
     const view = getFamilyView();
     if (view) {
       if (entry.notes) copy.append(element("p", entry.notes));
-      if (entry.recordedBy) copy.append(element("small", t("ثبت‌کننده: {0}", entry.recordedBy), "family-stamp"));
+      if (entry.recordedBy) copy.append(element("small", t("ثبت‌کننده: {0}", view.authorName(entry)), "family-stamp"));
       if (!manage && !readOnly && !completed && view.canRecord("routine", day)) {
         const footer = dayCard ? element("div", "", "day-card-actions") : row;
         footer.append(recordAction(entry.mode === "done" ? "ثبت انجام" : "ثبت پیشرفت", () =>

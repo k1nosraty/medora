@@ -2,6 +2,7 @@ import { operations, logOperation } from "../operations/routes.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { scryptSync } from "node:crypto";
 import { applyFamilyChange } from "../family/care.mjs";
+import { profileName } from "../../public/medication/domain/profile.js";
 import { smallJson } from "../http/validation.mjs";
 
 const cookieName = "__Host-medora_session";
@@ -399,13 +400,17 @@ export class EmailAccount extends DurableObject {
     });
   }
 
-  async familyIdentity(token) {
+  async familyIdentity(token, withName) {
     const hash = await sessionHash(token);
     const email = this.activeSessionEmail(hash);
-    return email ? { email, epoch: this.epoch() } : null;
+    if (!email) return null;
+    const epoch = this.epoch();
+    if (!withName) return { email, epoch };
+    const snapshot = await this.ctx.storage.get("care-sync");
+    return { email, epoch, displayName: profileName(snapshot?.records?.settings?.personalProfile) };
   }
 
-  async changeFamilyCare(epoch, data, actor, label) {
+  async changeFamilyCare(epoch, data, actor, label, displayName) {
     const entryId = crypto.randomUUID();
     return this.ctx.storage.transaction(async storage => {
       if (this.epoch() !== epoch) return { error: "forbidden" };
@@ -414,7 +419,7 @@ export class EmailAccount extends DurableObject {
       const current = await storage.get("care-sync") ?? { revision: 0, records: null };
       if (!current.records) return { error: "sync_required" };
       const records = applyFamilyChange(current.records, { ...data, id: data.action === "add" || data.kind === "water"
-        ? entryId : data.id }, label, await storage.get("care-zone") ?? "Asia/Tehran");
+        ? entryId : data.id }, label, await storage.get("care-zone") ?? "Asia/Tehran", Date.now(), displayName);
       if (typeof records === "string") return { error: records };
       await storage.put("care-sync", { revision: current.revision + 1, records });
       await storage.put(key, Date.now());

@@ -190,7 +190,7 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
       const row = element("article", "", "entry-row");
       row.append(element("span", t("{0} میلی‌لیتر · {1}", numbers.format(entry.amount), clockText(entry.time))));
       if (view) {
-        if (entry.recordedBy) row.append(element("small", t("ثبت‌کننده: {0}", entry.recordedBy), "family-stamp"));
+        if (entry.recordedBy) row.append(element("small", t("ثبت‌کننده: {0}", view.authorName(entry)), "family-stamp"));
         return row;
       }
       row.append(button(t("ویرایش"), () => openWater(entry)),

@@ -1,6 +1,7 @@
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { language, t } from "../../shared/i18n/locale.js";
 import { glassObject } from "../../design/three-dimensional.js";
+import { profileName } from "../../domain/profile.js";
 import { familySections } from "../../domain/family.js";
 import { localWall, timezone } from "../../domain/wall-clock.js";
 import { quantityFromText } from "../../domain/medication-rules.js";
@@ -70,7 +71,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   const groupInView = () => overview?.groups.find(item => item.id === activeGroup) ?? overview?.groups[0];
   function updateGroup() {
     const group = groupInView();
-    $("family-group-name").textContent = group?.name ?? t("خانواده");
+    $("family-group-name").textContent = group?.name ?? t("گروه‌های مراقبت");
     $("family-group-caption").textContent = t(group ? "گروه فعال" : "گروه‌ها و اعضا");
     $("family-group-avatars").replaceChildren(...(group?.members ?? []).filter(member => !member.self).slice(0, 3)
       .map(member => avatar(member.label, member.id)));
@@ -207,7 +208,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       }
       content.append(groups, element("h3", t("اعضا"), "family-roster-title"), roster);
       groups.querySelector('[aria-pressed="true"]').scrollIntoView({ block: "nearest", inline: "nearest" });
-    } else content.append(hero(t("خانواده"), t("برای دیدن برنامهٔ اعضا، گروه بساز یا دعوتی را بپذیر.")));
+    } else content.append(hero(t("گروه‌های مراقبت"), t("برای دیدن برنامهٔ اعضا، گروه بساز یا دعوتی را بپذیر.")));
     const controls = element("div", "", "family-group-links");
     const create = button(t("ساخت گروه"), createGroup);
     create.prepend(icon("plus"));
@@ -240,7 +241,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     const form = element("form", "", "family-content");
     const name = field("نام گروه", "name", "text");
     name.querySelector("input").maxLength = 60;
-    form.append(hero(t("خانواده")), name, element("p", t("مدیر گروه: {0}", overview.label), "family-card"),
+    form.append(hero(t("گروه‌های مراقبت")), name, element("p", t("مدیر گروه: {0}", overview.label), "family-card"),
       element("p", t("هر عضو دسترسی‌های خودش را تعیین می‌کند."), "quiet"), submitButton("ساخت گروه"));
     formSubmit(form, async data => {
       const result = await familyRequest("create", { name: data.get("name").trim() });
@@ -251,7 +252,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   function showGroup(group) {
     page("دسترسی‌های من", showHome);
-    content.append(hero(group.name, t("اعضای خانواده")));
+    content.append(hero(group.name, t("اعضای گروه")));
     content.append(action("تازه‌کردن دسترسی‌ها", () => refresh(group.id, true)));
     if (group.manager) content.append(button(t("دعوت عضو"), () => inviteMember(group)));
     const members = group.members.filter(member => !member.self);
@@ -414,6 +415,10 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   function enter(group, member, data, feedback) {
     const view = sharedContext(data, group, member, {
+      authorName: entry => {
+        const personal = entry.recordedBy === overview?.label ? profileName(getState()?.personalProfile) : "";
+        return personal || entry.recordedByName || entry.recordedBy;
+      },
       record: details => {
         const view = getFamilyView();
         if (view?.member.id === member.id && view.group.id === group.id && view.canRecord(details.kind, details.day)) {

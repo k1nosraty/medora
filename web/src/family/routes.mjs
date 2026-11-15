@@ -16,12 +16,13 @@ export async function handleFamily(request, env, url) {
   if (request.method === "POST" && request.headers.get("Origin") !== url.origin) return reply(failure("forbidden"), 403);
   const session = await careSession(request, env);
   if (!session) return reply(failure("sign_in"), 401);
-  const identity = await env.EMAIL_ACCOUNTS.getByName(session.id).familyIdentity(session.token);
+  const data = request.method === "POST" ? await smallJson(request, 64 * 1024) : null;
+  const identity = await env.EMAIL_ACCOUNTS.getByName(session.id).familyIdentity(session.token,
+    data?.action === "record" || data?.action === "add");
   if (!identity) return reply(failure("sign_in"), 401);
   const actor = { ...identity, person: session.id + (identity.epoch ? "." + identity.epoch : ""), label: session.username };
   const store = env.FAMILIES.getByName("care-groups");
   if (request.method === "GET") return reply(await store.overview(actor));
-  const data = await smallJson(request, 64 * 1024);
   if (!data) return reply(failure("invalid"), 400);
   let result;
   switch (data.action) {
@@ -218,7 +219,7 @@ export class Families extends DurableObject {
           (action === "record" && data.kind === "medicine" && !policy.sections.includes("doses"))) return failure("forbidden");
       if (typeof data.operation !== "string" || !idPattern.test(data.operation) || (data.id !== undefined &&
           (typeof data.id !== "string" || !data.id || data.id.length > 512 || Object.hasOwn(Object.prototype, data.id)))) return failure("invalid");
-      const result = await owner.changeFamilyCare(epoch, data, actor.person, membership.label);
+      const result = await owner.changeFamilyCare(epoch, data, actor.person, membership.label, actor.displayName);
       if (result.error) return result;
       if (!result.replay) this.audit(group, actor.person, row.person, action + ":" + data.kind);
       return { ok: true };

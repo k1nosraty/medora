@@ -59,7 +59,7 @@ function planFor(data, zone) {
   } catch { return null; }
 }
 
-export function applyFamilyChange(snapshot, data, actor, homeZone, now = Date.now()) {
+export function applyFamilyChange(snapshot, data, actor, homeZone, now = Date.now(), displayName) {
   const records = snapshot ?? emptyCareRecords();
   const clock = timezone(homeZone);
   const today = Math.floor(localWall(now, clock) / dayMs);
@@ -68,7 +68,7 @@ export function applyFamilyChange(snapshot, data, actor, homeZone, now = Date.no
   const { day, kind, id, action } = data;
   const scheduledTime = clockMinute(data.time);
   const validDay = integer(day, -719162, 2932896);
-  const author = { recordedBy: actor, recordedAt: now };
+  const author = { recordedBy: actor, recordedAt: now, recordedByName: displayName || null };
 
   if (action === "add") {
     if (kind === "routine" && Object.keys(records.routines).length >= maxRoutines) return "limit";

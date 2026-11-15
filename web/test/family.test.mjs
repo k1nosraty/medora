@@ -97,6 +97,10 @@ test("family invitations, sharing and revocation are directional and group scope
     records.settings = { personalProfile: { firstName: "Sara" }, waterGoal: 2000, gender: "female" };
     records.cycleRecords[today] = { end: null, flow: "medium", note: "same account only until shared" };
     assert.equal((await call("account/care", { owner, revision, records, zone: "UTC" }, b, "PUT")).status, 200);
+    const actorCare = await (await call("account/care", null, a)).json();
+    const actorRecords = emptyCareRecords();
+    actorRecords.settings.personalProfile = { firstName: "Ali", lastName: "Sadeghi" };
+    assert.equal((await call("account/care", { ...actorCare, records: actorRecords, zone: "UTC" }, a, "PUT")).status, 200);
     const visible = await (await view(a, bId)).json();
     assert.equal(visible.records.profile.firstName, "Sara");
     assert.equal(visible.records.cycleRecords[today].flow, "medium");
@@ -109,6 +113,7 @@ test("family invitations, sharing and revocation are directional and group scope
     const updated = await (await call("account/care", null, b)).json();
     assert.equal(updated.records.water.length, 1);
     assert.equal(updated.records.water[0].recordedBy, "family_a");
+    assert.equal(updated.records.water[0].recordedByName, "Ali Sadeghi");
     assert.equal(updated.revision, revision + 2);
 
     const scheduled = { action: "add", kind: "medicine", group, target: bId, operation: randomUUID(),
@@ -127,9 +132,10 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.equal((await family(a, scheduled)).status, 200);
     const [savedPlan] = Object.values((await (await call("account/care", null, b)).json()).records.medicines);
     assert.equal(savedPlan.recordedBy, "family_a");
+    assert.equal(savedPlan.recordedByName, "Ali Sadeghi");
     assert.notEqual(savedPlan.id, scheduled.plan.id);
     assert.deepEqual(savedPlan.phases, scheduled.plan.phases);
-    assert.equal(Object.keys((await (await call("account/care", null, a)).json()).records ?? {}).length, 0);
+    assert.deepEqual((await (await call("account/care", null, a)).json()).records.medicines, {});
 
     assert.equal((await family(a, { action: "revoke", group, target: bId })).status, 200);
     assert.equal((await view(b, aId)).status, 403);

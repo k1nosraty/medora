@@ -1,5 +1,6 @@
 import { $, button, element } from "../../shared/ui/dom.js";
 import { t } from "../../shared/i18n/locale.js";
+import { profileName } from "../../domain/profile.js";
 import { emptyCareRecords } from "../../domain/family.js";
 import { dayMs, instantForWall, localWall, timezone } from "../../domain/wall-clock.js";
 
@@ -8,7 +9,7 @@ const programScopes = { medications: ["medicines", "doses"], appointments: ["vis
 
 const actionScopes = { medicine: "medicines", visit: "visits", routine: "routines", water: "water", cycle: "cycle" };
 
-export function sharedContext(data, group, member, { record, add, profile }) {
+export function sharedContext(data, group, member, { authorName, record, add, profile }) {
   const { records, policy, synced, zone } = data;
   const has = key => policy.sections.includes(key);
   const clock = timezone(zone);
@@ -20,11 +21,11 @@ export function sharedContext(data, group, member, { record, add, profile }) {
     has(actionScopes[kind]) && (kind !== "medicine" || has("doses")) &&
     (kind !== "cycle" || records.cycleEnabled);
   const canAdd = kind => synced && policy.add && ["medicine", "visit", "routine"].includes(kind) && has(actionScopes[kind]);
-  const name = [records.profile?.firstName, records.profile?.lastName].filter(Boolean).join(" ") || member.label;
+  const name = profileName(records.profile) || member.label;
   return {
     group, member, name, firstName: records.profile?.firstName || member.label, has, canView, canRecord, canAdd,
     state: { ...emptyCareRecords(), ...records, cycleEnabled: Boolean(records.cycleEnabled || Object.keys(records.cycleRecords ?? {}).length) },
-    zone, get today() { return today(); }, timeOf, record, add, profile: has("profile") ? profile : null, synced
+    zone, get today() { return today(); }, timeOf, authorName, record, add, profile: has("profile") ? profile : null, synced
   };
 }
 

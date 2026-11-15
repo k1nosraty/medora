@@ -79,7 +79,7 @@ export function appointmentView({
     if (details !== card) card.append(details);
     const view = getFamilyView();
     if (view) {
-      if (visit.recordedBy) details.append(element("small", t("ثبت‌کننده: {0}", visit.recordedBy), "family-stamp"));
+      if (visit.recordedBy) details.append(element("small", t("ثبت‌کننده: {0}", view.authorName(visit)), "family-stamp"));
       const options = element("div", "", dayCard ? "day-card-actions" : "buttons");
       if (calendar && notes.length) options.append(dayCardOptions(t("گزینه‌های قرار"), ...notes));
       if (view.canRecord("visit", local.day) && !visit.completed && !visit.cancelled) {

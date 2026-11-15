@@ -84,8 +84,9 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
       if (record.end !== null) copy.append(element("p", t("تا {0}", formatDay(record.end))));
       if (record.flow) copy.append(element("p", t({ light: "کم", medium: "متوسط", heavy: "زیاد" }[record.flow])));
       if (record.note) copy.append(element("p", record.note));
-      if (getFamilyView()) {
-        if (record.recordedBy) copy.append(element("small", t("ثبت‌کننده: {0}", record.recordedBy), "family-stamp"));
+      const view = getFamilyView();
+      if (view) {
+        if (record.recordedBy) copy.append(element("small", t("ثبت‌کننده: {0}", view.authorName(record)), "family-stamp"));
         row.append(copy);
         return row;
       }

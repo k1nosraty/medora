@@ -5,6 +5,8 @@ export const canEnableCycle = state => state.gender !== "male";
 export const cycleIsEnabled = state => canEnableCycle(state) && state.cycleEnabled === true;
 export const finishOf = value => value === "matte" ? "matte" : "glass";
 
+export const profileName = profile => [profile?.firstName, profile?.lastName].filter(Boolean).join(" ").trim();
+
 export function ageAt(birthDate, date) {
   if (typeof birthDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return null;
   const [year, month, day] = birthDate.split("-").map(Number);
