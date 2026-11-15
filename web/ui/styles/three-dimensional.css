@@ -173,7 +173,7 @@ html[dir="ltr"] .medora #app :is(#next-day, #next-month) svg { transform: rotate
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.medora[data-finish="matte"] #app :is(.day-card, .routine-banner, .visit-banner, .medication-banner, .today-state) {
+.medora[data-finish="matte"] #app :is(.day-card, .routine-row, .routine-banner, .visit-banner, .medication-banner, .today-state) {
   background-image: none;
   box-shadow: 0 2px 0 var(--outline);
 }

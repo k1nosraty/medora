@@ -84,8 +84,8 @@
 }
 .medora :is(.visit-card, #visit-appearance)[data-ink="green"] { --pill-base: var(--category-visit-art); }
 .medora .visit-card[data-ink="green"] { background: var(--program-visit-fill); color: var(--program-visit-ink); }
-.medora :is(.routine-glyph, .routine-row, .routine-day-card, .routine-day-art)[data-ink="coral"] { --pill-base: var(--category-routine-art); }
-.medora :is(.routine-row, .routine-day-card)[data-ink="coral"] { background: var(--routine-fill); color: var(--routine-ink); }
+.medora :is(.routine-row, .routine-day-card, .routine-day-art)[data-ink="coral"] { --pill-base: var(--category-routine-art); }
+.medora .routine-day-card[data-ink="coral"] { background: var(--routine-fill); color: var(--routine-ink); }
 .medora :is(.program-routine, [data-ink="coral"]) .routine-category-art { filter: hue-rotate(-12deg); }
 .medora svg:has(> use[href="#art-bottle"]) {
   --bottle-cap: color-mix(in srgb, var(--pill-base, var(--category-medicine-art)) 64%, #37255e);
@@ -147,25 +147,29 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 .medora .routine-search input { inline-size: 100%; }
 .medora #routine-list { display: grid; gap: .5rem; }
 .medora .routine-row {
+  --routine-art-origin: 12%;
+  --routine-row-fill: color-mix(in srgb, var(--pill-base) 8%, var(--panel));
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: .55rem;
   padding: .55rem;
   margin: 0;
-  border: 1px solid var(--outline);
+  border: 1px solid color-mix(in srgb, var(--pill-base) 22%, var(--outline));
   border-radius: 1.03rem;
-  background: var(--panel);
+  background: radial-gradient(ellipse 42% 110% at var(--routine-art-origin) 25%,
+    color-mix(in srgb, var(--pill-base) 45%, var(--panel)), transparent) var(--routine-row-fill);
   color: var(--ink);
 }
+html[dir="rtl"] .medora .routine-row { --routine-art-origin: 88%; }
+.medora .routine-row[data-ink="coral"] { --routine-row-fill: var(--routine-fill); color: var(--routine-ink); }
 .medora .routine-glyph {
-  display: grid;
-  place-items: center;
-  inline-size: 2.65rem;
-  aspect-ratio: 1;
-  border-radius: .85rem;
-  background: var(--routine-fill);
-  color: var(--routine-ink);
+  inline-size: clamp(2.75rem, 12vw, 3.75rem);
+  filter: drop-shadow(0 .16rem .22rem var(--glass-shadow));
+}
+.medora .routine-glyph > .glass-object {
+  inline-size: 100%;
+  block-size: auto;
 }
 .medora .routine-row-copy { display: grid; gap: .1rem; overflow-wrap: anywhere; }
 .medora .routine-row-copy small { color: var(--muted); font-size: .73rem; }
@@ -177,10 +181,6 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 .medora .routine-fields { display: grid; gap: .75rem; }
 .medora .routine-fields :is(label, input, select, textarea) { min-inline-size: 0; }
 .medora .routine-fields :is(input:not([type="checkbox"], [type="radio"]), select, textarea) { inline-size: 100%; }
-.medora .routine-glyph[data-ink] {
-  background: color-mix(in srgb, var(--pill-base) 22%, var(--panel));
-}
-.medora .routine-glyph[data-ink="coral"] { background: var(--routine-fill); color: var(--routine-ink); }
 .medora .routine-illustration {
   --routine-accent: var(--pill-base, #b8a4e8);
   --routine-light: color-mix(in srgb, var(--routine-accent) 32%, white);
@@ -241,7 +241,6 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 }
 @media (max-width: 23rem) {
   .medora .routine-row { gap: .38rem; }
-  .medora .routine-glyph { inline-size: 2.2rem; }
 }
 
 

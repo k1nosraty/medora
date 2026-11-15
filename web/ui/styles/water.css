@@ -77,9 +77,12 @@
 }
 .medora .today-water-actions [data-open-water] { flex: 1.32; padding-inline: .13rem; }
 .medora .today-water-actions .secondary {
-  border-color: color-mix(in srgb, var(--water-accent) 55%, var(--outline));
-  background: color-mix(in srgb, var(--panel) 58%, var(--water));
+  border: 0;
+  background: transparent;
   color: var(--water-ink);
+}
+.medora .today-water-actions .secondary:is(:hover, :active) {
+  background: color-mix(in srgb, var(--water-accent) 15%, transparent);
 }
 .today-water-actions small { display: block; font-size: .61rem; font-weight: 500; }
 .medora .today-water-feedback {
