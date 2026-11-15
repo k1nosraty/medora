@@ -1,7 +1,34 @@
 .daily-main { min-inline-size: 0; }
-.daily-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: 0 0 .55rem; }
-.medora .daily-heading h2 { font-size: 1.25rem; margin: 0; }
-.medora .daily-heading output { padding: .2rem .62rem; border-radius: 100vw; background: var(--dock-active); color: var(--action); font-size: .75rem; font-weight: 740; }
+.daily-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .35rem .65rem;
+  margin: 0 .45rem .45rem;
+}
+.medora .daily-heading #day-title {
+  margin: 0;
+  padding-inline-start: .55rem;
+  border-inline-start: .2rem solid var(--action);
+  border-radius: .13rem;
+  color: var(--action);
+  font-size: 1.2rem;
+  font-weight: 820;
+  line-height: 1.22;
+}
+.medora .daily-heading output {
+  --day-progress-direction: to right;
+  --day-progress-fill: color-mix(in srgb, var(--action) 23%, var(--dock-active));
+  padding: .2rem .62rem;
+  border-radius: 100vw;
+  background: linear-gradient(var(--day-progress-direction), var(--day-progress-fill) var(--day-progress), var(--dock-active) var(--day-progress));
+  color: var(--action);
+  font-size: .75rem;
+  font-weight: 740;
+  font-variant-numeric: tabular-nums;
+}
+html[dir="rtl"] .medora .daily-heading output { --day-progress-direction: to left; }
 .medora #med-day-doses .dose-card { padding: .5rem .65rem; }
 .medora #med-day-doses .dose-info { display: flex; align-items: baseline; flex-wrap: wrap; gap: .15rem .4rem; min-inline-size: 0; flex: 1; }
 .medora #med-day-doses .dose-info :is(h3, p) { margin: 0; }
@@ -41,11 +68,39 @@
 .medora .daily-sheet .timeline::before {
   content: "";
   position: absolute;
-  inset-block: 1.7rem 0;
+  inset-block: 2.75rem 0;
   inset-inline-start: -.5rem;
   border-inline-start: 2px solid var(--outline);
 }
-.medora #timeline-title { margin-block-end: .45rem; }
+.timeline-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-block-end: .3rem;
+}
+.medora #timeline-title { margin: 0; color: var(--action); font-size: .98rem; }
+.medora .timeline-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  flex: none;
+  margin: 0;
+  padding-inline-start: .55rem;
+  border-radius: .8rem;
+  background: var(--dock-active);
+  color: var(--action);
+}
+.medora .timeline-sort svg { inline-size: .95rem; block-size: .95rem; }
+.medora #timeline-order {
+  min-block-size: 2.75rem;
+  padding: 0 .15rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: .76rem;
+  font-weight: 700;
+}
 .medora .daily-sheet #doses { display: grid; gap: .55rem; }
 .medora .daily-sheet .timeline article::before {
   content: "";
@@ -66,40 +121,44 @@
   font-size: .82rem;
   font-weight: 750;
 }
-.day-focus-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: .15rem .6rem;
-  margin-block-end: .35rem;
-}
-.medora .day-focus-header .day-queue-heading { margin: 0; }
 .day-focus-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(2rem, 1fr) auto minmax(2rem, 1fr);
   align-items: center;
-  gap: .1rem;
-  margin-inline-start: auto;
 }
-.day-focus-position {
-  min-inline-size: 3.25rem;
-  text-align: center;
-  color: var(--muted);
-  font-size: .78rem;
-  white-space: nowrap;
-}
-.medora .day-focus-controls .icon-button {
-  border: 1px solid color-mix(in srgb, var(--action) 24%, transparent);
-  border-radius: .8rem;
-  background: linear-gradient(150deg, color-mix(in srgb, var(--glass-glint) 32%, transparent), transparent 68%);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--glass-glint) 56%, transparent);
-  -webkit-backdrop-filter: blur(8px) saturate(125%);
-  backdrop-filter: blur(8px) saturate(125%);
-  color: var(--action);
+.medora #today-focus .day-focus-controls :is(.icon-button, summary) {
+  display: grid;
+  place-items: center;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--day-ink);
 }
 .medora .day-focus-controls .icon-button[aria-disabled="true"] { opacity: .45; cursor: default; }
-.medora .day-focus-controls svg { inline-size: 1.1rem; block-size: 1.1rem; }
-html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { scale: -1 1; }
+.medora .day-focus-controls svg { inline-size: 1rem; block-size: 1rem; rotate: -90deg; }
+html[dir="rtl"] .medora .day-focus-next svg, html[dir="ltr"] .medora .day-focus-previous svg { rotate: 90deg; }
+.medora #today-focus .day-focus-picker { inline-size: auto; }
+.medora #today-focus .day-focus-picker > summary {
+  padding-inline: .18rem;
+  font-size: .75rem;
+  text-decoration: underline;
+  text-underline-offset: .18em;
+  white-space: nowrap;
+}
+.medora #today-focus .day-focus-picker .day-card-menu {
+  inset-block: calc(100% - .35rem) auto;
+  max-block-size: 13rem;
+  overflow: auto;
+}
+.medora .day-focus-picker .day-card-menu button {
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.medora .day-focus-picker .day-card-menu [aria-current] { background: var(--dock-active); }
 .day-focus-swipe { touch-action: pan-y pinch-zoom; }
 .day-focus-dragging { overflow: clip; }
 .day-focus-dragging > article { translate: var(--day-focus-drag); animation: none; }
@@ -111,24 +170,64 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
   .day-focus-enter { animation: none; }
 }
 .medora #today-focus .day-card[data-featured] {
-  --day-art-width: clamp(3.75rem, 26%, 6.2rem);
-  min-block-size: 6.75rem;
-  gap: .12rem .55rem;
-  padding: .48rem .65rem;
+  --day-art-width: clamp(6.65rem, 39%, 9.6rem);
+  --day-art-origin: 84%;
+  --focus-button: color-mix(in srgb, var(--day-paint) 44%, #11102b);
+  grid-template-columns: minmax(0, 1fr) var(--day-art-width);
+  align-content: center;
+  min-block-size: 8.75rem;
+  gap: 0 .55rem;
+  padding: .55rem .75rem;
+  border-radius: 1.45rem;
+}
+html[dir="rtl"] .medora #today-focus .day-card { --day-art-origin: 16%; }
+.medora:not([data-finish="matte"]) #today-focus .day-card[data-featured]::after {
+  content: "";
+  position: absolute;
+  inset: .28rem;
+  border: 1px solid color-mix(in srgb, var(--glass-glint) 66%, transparent);
+  border-radius: 1.17rem;
+  pointer-events: none;
+}
+.medora #today-focus .day-focus-media {
+  grid-area: 1 / 2 / span 2;
+  align-self: center;
+  min-inline-size: 0;
+}
+.medora #today-focus .day-card-art {
+  inline-size: min(100%, 8.1rem);
+  margin-inline: auto;
+}
+.medora #today-focus .day-focus-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .18rem .38rem;
+  font-size: .72rem;
+}
+.medora #today-focus .day-focus-status {
+  padding: .12rem .43rem;
+  border-radius: 100vw;
+  background: color-mix(in srgb, var(--panel) 54%, transparent);
+  font-weight: 740;
 }
 .medora #today-focus .day-card-content {
+  grid-area: 1 / 1;
+  align-self: end;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: .12rem .45rem;
+  align-items: center;
+  gap: .16rem .42rem;
 }
-.medora #today-focus .day-card-title {
-  order: -1;
-  flex-basis: 100%;
+.medora #today-focus :is(.day-focus-context, .day-card-title, .day-card-details) { flex-basis: 100%; }
+.medora #today-focus :is(.day-card-kind, .day-card-summary, .day-card-details) { order: 1; }
+.medora #today-focus .day-card-summary { color: var(--day-copy); font-size: .79rem; }
+.medora #today-focus .day-card-actions {
+  grid-area: 2 / 1;
+  align-self: start;
+  align-items: center;
+  column-gap: .12rem;
 }
-.medora #today-focus .day-card-summary { color: var(--muted); font-size: .79rem; }
-.medora #today-focus .day-card-details { flex-basis: 100%; }
-.medora #today-focus .day-card-actions { align-items: center; column-gap: .12rem; }
 .medora #today-focus .day-card-actions > button.secondary {
   position: relative;
   display: inline-flex;
@@ -143,7 +242,7 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
 .medora #today-focus .day-card-actions > button.care-record-action {
   isolation: isolate;
   padding-inline: .6rem;
-  color: var(--on-action);
+  color: white;
 }
 .medora #today-focus .day-card-actions > .care-record-action::before {
   content: "";
@@ -151,14 +250,32 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
   z-index: -1;
   inset: .27rem 0;
   border-radius: 100vw;
-  background: linear-gradient(148deg, #fff2, transparent 59%), var(--action);
+  background: linear-gradient(148deg, #fff1, transparent 59%), var(--focus-button);
   box-shadow: inset 0 1px 0 #fff3;
 }
 .medora[data-finish="matte"] #today-focus .day-card-actions > .care-record-action::before {
-  background: var(--action);
+  background: var(--focus-button);
   box-shadow: none;
 }
 .medora #today-focus .day-card-more { margin-inline-start: 0; }
+.medora #today-focus .day-card-actions .day-card-more {
+  position: absolute;
+  inset: 0;
+  align-self: stretch;
+  inline-size: auto;
+  pointer-events: none;
+}
+.medora #today-focus .day-card-actions .day-card-more > summary {
+  position: absolute;
+  inset-block-start: .1rem;
+  inset-inline-end: .15rem;
+  inline-size: 2.75rem;
+  pointer-events: auto;
+}
+.medora #today-focus .day-card-actions .day-card-menu {
+  inset-block: 2.75rem auto;
+  pointer-events: auto;
+}
 
 .medora #doses .day-card {
   --day-art-origin: 73%;
@@ -175,6 +292,9 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
   padding-inline: .5rem .38rem;
 }
 html[dir="rtl"] .medora #doses .day-card { --day-art-origin: 27%; }
+@media (max-width: 360px) {
+  html[dir="ltr"] .medora #doses .day-card { --timeline-art-width: 4rem; }
+}
 .medora #doses .day-card:has(.day-card-time) { --timeline-clock-width: clamp(3rem, 16%, 4.3rem); }
 .medora #doses .day-card-content { display: contents; }
 .medora #doses .day-card-kind { grid-area: 1 / 2; }
@@ -190,6 +310,7 @@ html[dir="rtl"] .medora #doses .day-card { --day-art-origin: 27%; }
   border-inline-end: 1px solid color-mix(in srgb, var(--day-paint) 44%, transparent);
   font-weight: 800;
 }
+.medora #doses .day-card-time svg { inline-size: 1.12rem; block-size: 1.12rem; }
 .medora #doses .day-card-art {
   position: relative;
   grid-area: 1 / 3 / -1;
@@ -235,7 +356,7 @@ html[dir="rtl"] .medora #doses .day-card { --day-art-origin: 27%; }
 .medora .daily-sheet .timeline .day-card[data-day-state="done"] {
   --day-paint: var(--muted);
   --day-fill: color-mix(in srgb, var(--muted) 9%, var(--panel));
-  --day-ink: var(--ink);
+  --day-ink: color-mix(in srgb, var(--pill-ink) 62%, var(--muted));
   border-color: var(--outline);
 }
 .medora .daily-sheet .timeline article[data-day-state="done"]::before {

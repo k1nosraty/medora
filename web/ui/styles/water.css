@@ -15,6 +15,27 @@
   border-radius: 1.15rem;
   background: linear-gradient(125deg, var(--glass-glint), transparent 60%), var(--water);
 }
+.medora[data-finish="glass"] #today-water {
+  --water-light-side: 8%;
+  position: relative;
+  border-color: var(--accent-glass-rim);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(ellipse at var(--water-light-side) 12%, var(--glass-glint), transparent 57%),
+    radial-gradient(ellipse at var(--water-light-side) 94%, color-mix(in srgb, var(--water-accent) 43%, transparent), transparent 66%),
+    linear-gradient(170deg, var(--glass-glint), transparent 37%),
+    var(--water);
+  box-shadow: inset 0 1px 1px var(--glass-glint), 0 .26rem .7rem var(--glass-shadow);
+}
+html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 92%; }
+.medora[data-finish="glass"] #today-water::before {
+  content: "";
+  position: absolute;
+  inset: .25rem;
+  border: 1px solid color-mix(in srgb, var(--glass-glint) 72%, transparent);
+  border-radius: 1.1rem;
+  pointer-events: none;
+}
 .today-water-art {
   position: relative;
   border-radius: .9rem;

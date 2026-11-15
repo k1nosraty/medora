@@ -51,14 +51,23 @@
 .medora .program-water { --program-fill: var(--category-water-fill); --program-ink: var(--category-water-ink); }
 .medora :is(.medicine, #medicine-appearance, #appearance-preview, .medication-banner, .medication-badge)[data-ink="purple"] {
   --pill-base: var(--category-medicine-art);
+  --pill-fill: var(--category-medicine-fill);
+  --pill-ink: var(--category-medicine-ink);
 }
-.medora :is(.dose-card, .treatment, #medicine-appearance, #appearance-preview)[data-ink="purple"]:not(.day-card) {
-  background: var(--category-medicine-fill);
-  color: var(--category-medicine-ink);
+.medora :is(.dose-card, #medicine-appearance, #appearance-preview)[data-ink]:not(.day-card) {
+  background: var(--pill-fill);
+  color: var(--pill-ink);
 }
-.medora :is(.visit-card, #visit-appearance)[data-ink="green"] { --pill-base: var(--category-visit-art); }
-.medora .visit-card[data-ink="green"]:not(.day-card) { background: var(--program-visit-fill); color: var(--program-visit-ink); }
-.medora :is(.routine-row, .day-card[data-card-kind="routine"])[data-ink="coral"] { --pill-base: var(--category-routine-art); }
+.medora :is(.visit-card, #visit-appearance)[data-ink="green"] {
+  --pill-base: var(--category-visit-art);
+  --pill-fill: var(--program-visit-fill);
+  --pill-ink: var(--program-visit-ink);
+}
+.medora :is(.routine-row, .day-card[data-card-kind="routine"])[data-ink="coral"] {
+  --pill-base: var(--category-routine-art);
+  --pill-fill: var(--routine-fill);
+  --pill-ink: var(--routine-ink);
+}
 .medora :is(.program-routine, [data-ink="coral"]) .routine-category-art { filter: hue-rotate(-12deg); }
 .medora svg:has(> use[href="#art-bottle"]) {
   --bottle-cap: color-mix(in srgb, var(--pill-base, var(--category-medicine-art)) 64%, #37255e);
@@ -67,37 +76,15 @@
 }
 
 .medora #today-programs { inline-size: var(--today-rail-width); margin-inline: auto; }
-.medora #programs-title { font-size: .98rem; margin: 0 0 .35rem; }
-.medora .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+.medora .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
 .medora .program-card, .medora .routine-banner {
-  border: 1px solid color-mix(in srgb, var(--program-ink) 15%, transparent);
-  background: radial-gradient(ellipse at var(--art-side, 16%) 15%, var(--glass-glint), transparent 58%),
-    linear-gradient(160deg, var(--program-fill), color-mix(in srgb, var(--program-fill) 84%, var(--panel)));
+  border: 1px solid color-mix(in srgb, var(--program-ink) 19%, var(--outline));
+  background: radial-gradient(ellipse at var(--art-side, 16%) 14%, var(--glass-glint), transparent 58%),
+    linear-gradient(160deg, var(--program-fill), color-mix(in srgb, var(--program-fill) 89%, var(--program-ink)));
   box-shadow: inset 0 1px 0 var(--glass-glint);
   color: var(--program-ink);
 }
 html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
-.medora .program-card {
-  position: relative;
-  display: grid;
-  align-content: end;
-  justify-items: start;
-  min-block-size: 5.4rem;
-  border-radius: 1.04rem;
-  padding: 1.7rem .55rem .45rem;
-  text-align: start;
-  line-height: 1.35;
-}
-.medora .program-card strong { font-size: .87rem; }
-.medora .program-card small { margin-block-start: .15rem; font-size: .7rem; }
-.medora .program-card svg {
-  position: absolute;
-  inset-inline-end: .24rem;
-  inset-block-start: .12rem;
-  inline-size: 2.55rem;
-  block-size: 2.5rem;
-  filter: drop-shadow(0 .2rem .24rem var(--glass-shadow));
-}
 .medora .routine-banner {
   display: flex;
   align-items: center;
@@ -121,7 +108,6 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
 .medora #routine-list { display: grid; gap: .5rem; }
 .medora .routine-row {
   --routine-art-origin: 12%;
-  --routine-row-fill: color-mix(in srgb, var(--pill-base) 8%, var(--panel));
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -131,11 +117,10 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
   border: 1px solid color-mix(in srgb, var(--pill-base) 22%, var(--outline));
   border-radius: 1.03rem;
   background: radial-gradient(ellipse 42% 110% at var(--routine-art-origin) 25%,
-    color-mix(in srgb, var(--pill-base) 45%, var(--panel)), transparent) var(--routine-row-fill);
-  color: var(--ink);
+    color-mix(in srgb, var(--pill-base) 45%, var(--panel)), transparent) var(--pill-fill);
+  color: var(--pill-ink);
 }
 html[dir="rtl"] .medora .routine-row { --routine-art-origin: 88%; }
-.medora .routine-row[data-ink="coral"] { --routine-row-fill: var(--routine-fill); color: var(--routine-ink); }
 .medora .routine-glyph {
   inline-size: clamp(2.75rem, 12vw, 3.75rem);
   filter: drop-shadow(0 .16rem .22rem var(--glass-shadow));
@@ -145,7 +130,7 @@ html[dir="rtl"] .medora .routine-row { --routine-art-origin: 88%; }
   block-size: auto;
 }
 .medora .routine-row-copy { display: grid; gap: .1rem; overflow-wrap: anywhere; }
-.medora .routine-row-copy small { color: var(--muted); font-size: .73rem; }
+.medora .routine-row-copy small { color: color-mix(in srgb, var(--pill-ink) 72%, var(--muted)); font-size: .73rem; }
 .medora .routine-row > button { font-size: .78rem; padding-inline: .55rem; min-block-size: 2.75rem; }
 .medora .routine-row-state { font-size: .75rem; font-weight: 700; color: var(--routine-ink); }
 .medora .routine-row[data-complete="true"] > button { background: var(--mint); color: var(--mint-ink); }
@@ -208,10 +193,6 @@ html[dir="rtl"] .medora .routine-row { --routine-art-origin: 88%; }
 .medora #routine-log-dialog :is(#routine-log-status, #routine-log-steps):empty { display: none; }
 .medora #routine-log-dialog .sheet-body:not(:has(> :not([hidden], :empty))) { display: none; }
 .medora .calendar-dots .routine { background: var(--routine-mark); }
-@media (min-width: 42rem) {
-  .medora .program-card { padding: 1.05rem .85rem; }
-  .medora .program-card svg { inset-block-start: .35rem; inline-size: 3.45rem; block-size: 3.45rem; }
-}
 @media (max-width: 23rem) {
   .medora .routine-row { gap: .38rem; }
 }

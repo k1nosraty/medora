@@ -1,10 +1,9 @@
 import { glassObject } from "../../design/three-dimensional.js";
-import { localDigits, locale, t } from "../../shared/i18n/locale.js";
+import { localDigits, t } from "../../shared/i18n/locale.js";
 import { routineComplete } from "../../domain/routine-plan.js";
 import { doseTime } from "../../domain/care-index.js";
-import { $, element } from "../../shared/ui/dom.js";
+import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
 
-const clock = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const slotOf = event => event.time == null ? null : Math.floor(event.time / 60_000);
 let selectedSlot;
 
@@ -15,6 +14,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     const done = dose.status === "taken" || dose.status === "skipped";
     return {
       key: `dose:${dose.medicineId}:${dose.day}:${dose.minute}`,
+      title: dose.name || dose.historyPlan?.name || medicine?.name || t("ui.medicine"),
       state: done ? "done" : medicine && !medicine.paused ? "pending" : "inactive",
       time: dose.status === "snoozed" && dose.snoozeUntil ? dose.snoozeUntil : scheduledAt(dose.day, dose.minute),
       resolvedAt: dose.resolvedAt,
@@ -26,6 +26,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     const plan = care.routines?.[entry.id];
     events.push({
       key: `routine:${entry.id}`,
+      title: entry.name,
       state: routineComplete(entry) ? "done" : plan && !plan.paused ? "pending" : "inactive",
       time: entry.minute == null ? null : scheduledAt(day, entry.minute),
       resolvedAt: entry.resolvedAt,
@@ -53,8 +54,10 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
   const waterResolved = includeWater && waterTotal >= (care.waterGoal ?? 2000) ? 1 : 0;
   const resolved = done.length + waterResolved;
   const total = scheduled + waterItems;
-  $("today-count").hidden = !total || day > today || (view?.has("doses") === false && daily.length > 0);
-  $("today-count").textContent = t("ui.value-of-value-items-handled", localDigits(resolved), localDigits(total));
+  const progress = $("today-count");
+  progress.hidden = !total || day > today || (view?.has("doses") === false && daily.length > 0);
+  progress.textContent = t("ui.value-of-value-items-handled", localDigits(resolved), localDigits(total));
+  progress.style.setProperty("--day-progress", total ? `${100 * resolved / total}%` : "0%");
   const previousSlot = selectedSlot?.day === day ? selectedSlot : null;
   const candidates = day === today ? pending : [];
   const focused = candidates.find(event => previousSlot && slotOf(event) === previousSlot.slot) ?? candidates[0];
@@ -83,9 +86,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     renderGroup(focus, group, selectedSlot);
   } else if (focused) {
     const heading = focused.time == null || focused.time < now ? t("ui.still-pending") : t("ui.up-next");
-    const card = focused.render(true);
-    card.dataset.focusScope = focused.key;
-    focus.append(element("h3", heading, "day-queue-heading"), card);
+    focus.append(featuredCard(focused, heading));
   }
   else if (day === today) {
     const completed = total > 0 && resolved === total;
@@ -112,65 +113,88 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
     focus.append(hero);
   }
   focus.hidden = day !== today;
-  const cards = [...pending.filter(event => grouped || event !== focused), ...inactive].map(event => {
-    const card = event.render(false);
-    card.dataset.focusScope = event.key;
-    return card;
-  });
+  const queue = [...pending.filter(event => grouped || event !== focused), ...inactive];
+  const order = $("timeline-order");
+  order.closest(".timeline-sort").hidden = !queue.length && !done.length;
+  if (order.value !== "default") {
+    const direction = order.value === "latest" ? -1 : 1;
+    const compare = (a, b) => a.time == null || b.time == null ? byTime(a, b) : direction * byTime(a, b);
+    queue.sort(compare);
+    done.sort(compare);
+  }
+  const cards = queue.map(timelineCard);
   if (done.length) {
     cards.push(element("h4", t("ui.handled"), "day-queue-heading day-queue-done"));
-    for (const event of done) {
-      const card = event.render(false);
-      card.dataset.focusScope = event.key;
-      card.dataset.dayState = "done";
-      cards.push(card);
-    }
+    for (const event of done) cards.push(timelineCard(event));
   }
   $("timeline-title").textContent = focused && !grouped ? t("ui.the-rest-of-the-day") : t("ui.doses-appointments-and-routines");
   $("doses").closest(".timeline").hidden = day === today && !cards.length;
   $("doses").replaceChildren(...(cards.length ? cards : [element("p", t("ui.nothing-planned-for-this-day"), "empty")]));
 }
 
-function renderGroup(focus, group, selection) {
-  const header = element("div", "", "day-focus-header");
-  const title = t("ui.at-value", clock.format(group[0].time));
-  const heading = group.length > 1 ? `${title} · ${t("ui.value-items-at-this-time", localDigits(group.length))}` : title;
-  header.append(element("h3", heading, "day-queue-heading"));
-  const viewport = element("div", "", "day-focus-viewport");
-  focus.append(header, viewport);
-  viewport.append(group[selection.index].render(true));
-  if (group.length < 2) return;
-  viewport.classList.add("day-focus-swipe");
+function timelineCard(event) {
+  const card = event.render(false);
+  card.dataset.focusScope = event.key;
+  if (event.state === "done") card.dataset.dayState = "done";
+  if (event.time == null) {
+    const marker = element("span", "", "day-card-time");
+    marker.setAttribute("role", "img");
+    marker.setAttribute("aria-label", t("ui.no-scheduled-time"));
+    marker.append(icon("clock-off"));
+    card.querySelector(".day-card-title").after(marker);
+  }
+  return card;
+}
 
-  const controls = element("div", "", "day-focus-controls");
-  const position = element("span", "", "day-focus-position");
-  position.setAttribute("aria-live", "polite");
-  const previous = arrow(t("ui.previous-item"), "previous");
-  const next = arrow(t("ui.next-item"), "next");
-  controls.append(previous, position, next);
-  header.append(controls);
+function renderGroup(focus, group, selection) {
+  const viewport = element("div", "", "day-focus-viewport");
+  focus.append(viewport);
   const rtl = document.documentElement.dir === "rtl";
   const swipeOffset = dx => Math.sign(dx) * (rtl ? 1 : -1);
+  const status = group.length > 1
+    ? t("ui.value-items-at-this-time", localDigits(group.length))
+    : t(group[0].time < Date.now() ? "ui.still-pending" : "ui.up-next");
 
-  function updateControls() {
-    previous.setAttribute("aria-disabled", String(selection.index === 0));
-    next.setAttribute("aria-disabled", String(selection.index === group.length - 1));
-    position.textContent = t("ui.value-of-value", localDigits(selection.index + 1), localDigits(group.length));
-  }
-  function move(offset) {
-    const index = selection.index + offset;
+  function show(index, source) {
     if (!group[index]) return;
+    const offset = Math.sign(index - selection.index);
     selection.index = index;
     selection.key = group[index].key;
-    const card = group[index].render(true);
-    card.style.setProperty("--day-focus-entry", offset === (rtl ? 1 : -1) ? "-1.1rem" : "1.1rem");
-    card.classList.add("day-focus-enter");
+    const card = featuredCard(group[index], status);
+    const record = card.querySelector(".care-record-action");
+    if (record) record.dataset.focusKey = "day-focus-record";
+    if (offset) {
+      card.style.setProperty("--day-focus-entry", offset === (rtl ? 1 : -1) ? "-1.1rem" : "1.1rem");
+      card.classList.add("day-focus-enter");
+    }
+    if (group.length > 1) {
+      const controls = element("div", "", "day-focus-controls");
+      const previous = arrow(t("ui.previous-item"), "previous");
+      const next = arrow(t("ui.next-item"), "next");
+      previous.setAttribute("aria-disabled", String(index === 0));
+      next.setAttribute("aria-disabled", String(index === group.length - 1));
+      previous.addEventListener("click", () => show(index - 1, previous.dataset.focusKey));
+      next.addEventListener("click", () => show(index + 1, next.dataset.focusKey));
+      const position = t("ui.value-of-value", localDigits(index + 1), localDigits(group.length));
+      const picker = dayCardOptions(t("ui.same-time-plans", position), ...group.map((event, option) => {
+        const choice = button(event.title, () => show(option, "day-focus-picker"));
+        choice.dir = "auto";
+        if (option === index) choice.setAttribute("aria-current", "true");
+        return choice;
+      }));
+      picker.classList.add("day-focus-picker");
+      const trigger = picker.querySelector("summary");
+      trigger.textContent = position;
+      trigger.dataset.focusKey = "day-focus-picker";
+      controls.append(previous, picker, next);
+      card.querySelector(".day-focus-media").append(controls);
+    }
     viewport.replaceChildren(card);
-    updateControls();
+    if (source) card.querySelector(`[data-focus-key="${source}"]`)?.focus({ preventScroll: true });
   }
-  previous.addEventListener("click", () => move(-1));
-  next.addEventListener("click", () => move(1));
-  updateControls();
+  show(selection.index);
+  if (group.length < 2) return;
+  viewport.classList.add("day-focus-swipe");
 
   let gesture;
   viewport.addEventListener("pointerdown", event => {
@@ -194,7 +218,7 @@ function renderGroup(focus, group, selection) {
     viewport.classList.remove("day-focus-dragging");
     viewport.style.removeProperty("--day-focus-drag");
     if (event.type === "pointerup" && Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.25) {
-      move(swipeOffset(dx));
+      show(selection.index + swipeOffset(dx));
     }
   }
   viewport.addEventListener("pointerup", endGesture);
@@ -202,17 +226,38 @@ function renderGroup(focus, group, selection) {
   viewport.addEventListener("lostpointercapture", endGesture);
 }
 
+function featuredCard(event, status) {
+  const card = event.render(true);
+  card.dataset.focusScope = event.key;
+  const media = element("div", "", "day-focus-media");
+  const art = card.querySelector(".day-card-art");
+  art.before(media);
+  media.append(art);
+  const content = card.querySelector(".day-card-content");
+  const context = element("div", "", "day-focus-context");
+  const time = content.querySelector("time");
+  if (time) context.append(time);
+  context.append(element("span", status, "day-focus-status"));
+  content.prepend(context);
+  return card;
+}
+
 function arrow(label, direction) {
   const control = element("button", "", `secondary icon-button day-focus-${direction}`);
   control.type = "button";
+  control.dataset.focusKey = `day-focus-${direction}`;
   control.setAttribute("aria-label", label);
+  control.append(icon("expand"));
+  return control;
+}
+
+function icon(name) {
   const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   const use = document.createElementNS(icon.namespaceURI, "use");
   icon.setAttribute("aria-hidden", "true");
-  use.setAttribute("href", "#i-back");
+  use.setAttribute("href", "#i-" + name);
   icon.append(use);
-  control.append(icon);
-  return control;
+  return icon;
 }
 
 function byTime(a, b) {

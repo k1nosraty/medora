@@ -76,6 +76,32 @@ test("refreshing local records keeps the selected day focused", async ({ page })
   await expect(selected).toBeFocused();
 });
 
+test("Today’s cover follows local time and reacts to the selected accent", async ({ page }) => {
+  const localTime = (hour, minute) => new Date(2026, 10, 15, hour, minute);
+  await page.clock.install({ time: localTime(5, 58) });
+  await page.clock.pauseAt(localTime(5, 59));
+  await open(page);
+  const cover = page.locator("#today-story");
+  await expect(cover).toHaveAttribute("data-story-period", "night");
+  await page.clock.runFor(60_000);
+  await expect(cover).toHaveAttribute("data-story-period", "morning");
+  await page.clock.setSystemTime(localTime(15, 0));
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(cover).toHaveAttribute("data-story-period", "afternoon");
+  await page.clock.setSystemTime(localTime(19, 0));
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(cover).toHaveAttribute("data-story-period", "night");
+  const colors = () => cover.evaluate(node => ({
+    background: getComputedStyle(node).backgroundColor,
+    rim: getComputedStyle(node, "::after").borderTopColor
+  }));
+  const blue = await colors();
+  await page.evaluate(() => { document.body.dataset.accent = "green"; });
+  const green = await colors();
+  expect(green.background).not.toBe(blue.background);
+  expect(green.rim).toBe(blue.rim);
+});
+
 test("the next dose and its action fit the first mobile view", async ({ page }) => {
   await open(page, { medicine: true });
   const calendar = page.locator("#today-dates");
@@ -117,6 +143,29 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
     await expect(card.locator(".day-card-kind + .day-card-title + .day-card-time")).toHaveText("۰۸:۰۰");
     await expect(card.locator(":scope > .day-card-actions > button")).toBeVisible();
   }
+  const banner = page.locator("#today-focus .day-card");
+  const title = banner.locator(".day-card-title");
+  const picker = banner.locator(".day-focus-picker summary");
+  await expect(title).toHaveText("Sample tablet");
+  await expect(picker).toHaveText("۱ از ۳");
+  await expect(banner.locator(".day-focus-status")).toHaveText("۳ برنامه در این ساعت");
+  await banner.locator(".day-focus-next").click();
+  await expect(title).toHaveText("Follow-up");
+  await picker.click();
+  await banner.getByRole("button", { name: "Walk", exact: true }).click();
+  await expect(title).toHaveText("Walk");
+  await expect(picker).toBeFocused();
+  await banner.locator(".day-card-title").evaluate(node => {
+    for (const [type, x] of [["pointerdown", 150], ["pointermove", 75], ["pointerup", 75]]) {
+      node.dispatchEvent(new PointerEvent(type, {
+        bubbles: true, pointerType: "touch", pointerId: 1, isPrimary: true, clientX: x, clientY: 20
+      }));
+    }
+  });
+  await expect(title).toHaveText("Follow-up");
+  await banner.locator(".care-record-action").click();
+  await expect(title).toHaveText("Walk");
+  await expect(picker).toHaveText("۲ از ۲");
   await page.locator("#program-cycle").click();
   const cycle = page.locator("#cycle-banner[data-card-kind=cycle]");
   await expect(cycle.locator(".day-card-kind + .day-card-title")).toBeVisible();
@@ -200,6 +249,7 @@ test("the installed shell shows and records data offline", async ({ page, contex
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator("#app")).toBeVisible();
+  expect(await page.evaluate(async () => (await fetch("/medication/assets/illustrations/today-scenes.webp")).ok)).toBe(true);
   await expect(page.locator("#today-focus")).toContainText("Sample tablet");
   await page.locator("#today-water-quick").click();
   await expect(page.locator("#today-water-feedback")).toBeVisible();

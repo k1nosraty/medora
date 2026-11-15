@@ -50,7 +50,7 @@ export function installAppearance(onShapeChange) {
     const type = $("medicine-icon").value;
     const selectedColor = $("medicine-color").value;
     const tile = $("medicine-appearance");
-    tile.dataset.color = tile.dataset.ink = medicineColorOf(selectedColor);
+    tile.dataset.ink = medicineColorOf(selectedColor);
     $("medicine-appearance-icon").replaceChildren(medicationBadge(type, selectedColor));
     tile.setAttribute("aria-label", t("ui.appearance-optional-value-value", medicineShapes[knownShape(type)], appearanceColors[medicineColorOf(selectedColor)]));
   }
@@ -89,7 +89,7 @@ export function installAppearance(onShapeChange) {
       return option;
     }));
     const preview = $("appearance-preview");
-    preview.dataset.color = preview.dataset.ink = color;
+    preview.dataset.ink = color;
     $("appearance-preview-icon").replaceChildren(medicationBanner(shape, color));
   }
 

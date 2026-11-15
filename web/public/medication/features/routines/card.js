@@ -98,7 +98,7 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
       if (compactDay) {
         const options = completed && logAction ? [logAction, edit] : [edit];
         layout.addActions(dayCardOptions(t("ui.routine-options"), ...options), ...(logAction && !completed ? [logAction] : []));
-      } else layout.addActions(...(logAction ? [logAction] : []), edit);
+      } else layout.addActions(...(logAction ? [logAction] : []), dayCardOptions(t("ui.routine-options"), edit));
     }
     return row;
   }

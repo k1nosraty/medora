@@ -14,6 +14,8 @@
 
 .medora #app .today-story {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+}
+.medora #app .today-story:not([data-story-period]) {
   background: radial-gradient(ellipse at center, #fff2, transparent 72%),
     linear-gradient(145deg, var(--cover), var(--cover-shade));
 }
@@ -22,16 +24,34 @@
   max-inline-size: none;
   max-block-size: 13rem;
 }
-.medora #app .program-card {
+.medora #today-programs .program-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   min-inline-size: 0;
-  min-block-size: 6.4rem;
-  padding: .45rem;
+  min-block-size: 6.7rem;
+  padding: .28rem .57rem .52rem;
   align-content: center;
   justify-items: center;
+  border-radius: 1.24rem;
   text-align: center;
+  line-height: 1.3;
 }
-.medora #app .program-card .glass-object { inline-size: min(100%, 4rem); block-size: 3.65rem; }
-.medora #app .program-card small:empty { display: none; }
+.medora #today-programs .program-card > :is(.category-art, .glass-object) {
+  inline-size: min(100%, 4.4rem);
+  block-size: 3.65rem;
+  object-fit: contain;
+}
+.medora #today-programs .program-card strong { font-size: .94rem; font-weight: 790; }
+.medora #today-programs .program-card small {
+  max-inline-size: 100%;
+  margin-block-start: .18rem;
+  padding: .1rem .32rem;
+  border-radius: .45rem;
+  background: color-mix(in srgb, var(--panel) 46%, transparent);
+  font-size: .66rem;
+  font-weight: 670;
+}
+.medora #today-programs .program-card small:empty { display: none; }
 .medora[data-cycle-enabled] #app .program-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .medora[data-cycle-enabled] #app .program-card {
   grid-template-columns: minmax(0, 1fr) min(45%, 5rem);
@@ -42,13 +62,16 @@
   gap: 0 .25rem;
   padding-inline: .65rem;
 }
-.medora[data-cycle-enabled] #app .program-card .glass-object {
+.medora[data-cycle-enabled] #app .program-card > :is(.category-art, .glass-object) {
   grid-area: 1 / 2 / span 3;
   inline-size: 100%;
   block-size: auto;
 }
 .medora[data-cycle-enabled] #app .program-card strong { grid-area: 2 / 1; }
 .medora[data-cycle-enabled] #app .program-card small { grid-area: 3 / 1; align-self: start; }
+@media (max-width: 360px) {
+  .medora[data-cycle-enabled] #app .program-card { grid-template-columns: minmax(0, 1fr) min(35%, 4rem); }
+}
 
 .medora #today-water .today-water-art { display: grid; place-items: center; background: transparent; }
 .medora .today-state-art .glass-object { inline-size: 100%; block-size: 100%; }
@@ -149,8 +172,10 @@ html[dir="ltr"] .medora #app :is(#previous-day, #previous-month) svg { transform
 html[dir="ltr"] .medora #app :is(#next-day, #next-month) svg { transform: rotate(-90deg); }
 
 .medora[data-finish="matte"] #app .today-story {
-  background: linear-gradient(145deg, var(--cover), var(--cover-shade));
   box-shadow: 0 .2rem .65rem var(--glass-shadow);
+}
+.medora[data-finish="matte"] #app .today-story:not([data-story-period]) {
+  background: linear-gradient(145deg, var(--cover), var(--cover-shade));
 }
 .medora[data-finish="matte"] #app .today-story::after { content: none; }
 .medora[data-finish="matte"] #app .today-story .story-art { mask-image: none; -webkit-mask-image: none; }

@@ -8,6 +8,7 @@
 .medora {
   font-family: Medora Vazirmatn, system-ui, sans-serif;
   color-scheme: light;
+  --pill-deep-share: 100%;
   --page: #f5f0f8;
   --panel: #fbf7fd;
   --field: #fffaff;
@@ -40,6 +41,7 @@
 @media (prefers-color-scheme: dark) {
   .medora:not([data-theme="light"]) {
     color-scheme: dark;
+    --pill-deep-share: 0%;
     --page: #151b20;
     --panel: #222b32;
     --field: #1a2228;
@@ -110,6 +112,7 @@
 
 .medora[data-theme="dark"] {
   color-scheme: dark;
+  --pill-deep-share: 0%;
   --page: #151b20;
   --panel: #222b32;
   --field: #1a2228;
@@ -192,10 +195,6 @@
 .medora input[role="switch"]::before { content: ""; display: block; block-size: 1rem; inline-size: 1rem; border-radius: 50%; background: var(--field); }
 .medora input[role="switch"]:checked { background: var(--action); }
 .medora input[role="switch"]:checked::before { margin-inline-start: auto; }
-.medora [data-color="green"] { background: var(--panel); color: var(--ink); }
-.medora [data-color="blue"] { background: color-mix(in srgb, #8ecfe8 25%, var(--panel)); color: var(--ink); }
-.medora [data-color="purple"] { background: color-mix(in srgb, #b8a4e8 24%, var(--panel)); color: var(--ink); }
-.medora [data-color="rose"] { background: var(--error-bg); color: var(--error); }
 .segmented { display: flex; gap: .15rem; background: var(--panel); border-radius: 1rem; }
 .medora .segmented button { background: transparent; border: 0; color: var(--muted); flex: 1 1 0; padding-inline: .15rem; font-size: .86rem; }
 .medora .segmented button[aria-pressed="true"], .medora .calendar-grid button[aria-current="date"] { color: var(--ink); background: var(--water); }
@@ -376,30 +375,25 @@
 }
 .medora #android-restore-status[data-state="error"] { color: var(--error); }
 .medora #android-restore-status[data-state="success"] { color: var(--ok); }
-.medora [data-ink="gold"] { --pill-base: #f3c56a; }
-.medora [data-ink="green"] { --pill-base: #35b6a2; }
-.medora [data-ink="blue"] { --pill-base: #a8ddf2; }
-.medora [data-ink="purple"] { --pill-base: #b8a4e8; }
-.medora [data-ink="rose"] { --pill-base: #f472b6; }
-.medora [data-ink="slate"] { --pill-base: #94a3b8; }
-.medora [data-ink="peach"] { --pill-base: #f6a776; }
-.medora [data-ink="coral"] { --pill-base: #ee7a80; }
-.medora [data-ink="indigo"] { --pill-base: #8391ed; }
-.medora [data-ink="pistachio"] { --pill-base: #abd280; }
-.medora :is([data-color="peach"], [data-color="coral"], [data-color="indigo"], [data-color="pistachio"]) {
-  background: color-mix(in srgb, var(--pill-base) 20%, var(--panel));
-  color: var(--ink);
+.medora [data-ink] {
+  --pill-fill: color-mix(in srgb, var(--pill-base) 24%, var(--panel));
+  --pill-ink: color-mix(in srgb, var(--pill-deep) var(--pill-deep-share), color-mix(in srgb, var(--pill-base) 52%, var(--ink)));
 }
+.medora [data-ink="gold"] { --pill-base: #f3c56a; --pill-deep: #704711; }
+.medora [data-ink="green"] { --pill-base: #35b6a2; --pill-deep: #135e50; }
+.medora [data-ink="blue"] { --pill-base: #a8ddf2; --pill-deep: #21587a; }
+.medora [data-ink="purple"] { --pill-base: #b8a4e8; --pill-deep: #603b86; }
+.medora [data-ink="rose"] { --pill-base: #f472b6; --pill-deep: #86234f; }
+.medora [data-ink="slate"] { --pill-base: #94a3b8; --pill-deep: #40536e; }
+.medora [data-ink="peach"] { --pill-base: #f6a776; --pill-deep: #823f20; }
+.medora [data-ink="coral"] { --pill-base: #ee7a80; --pill-deep: #89343b; }
+.medora [data-ink="indigo"] { --pill-base: #8391ed; --pill-deep: #3f4695; }
+.medora [data-ink="pistachio"] { --pill-base: #abd280; --pill-deep: #426018; }
 .medora .medication-badge { inline-size: 2.75rem; block-size: 2.75rem; stroke-width: 3; --pill-edge: color-mix(in srgb, var(--pill-base), black); }
 .pill-body { fill: var(--pill-base); stroke: var(--pill-edge); }
 .pill-light { fill: color-mix(in srgb, var(--pill-base) 45%, white); stroke: var(--pill-edge); }
 .pill-edge { fill: var(--pill-edge); stroke: var(--pill-edge); }
 .pill-line { stroke: var(--pill-edge); }
-.medora [data-color="slate"] { background: #e7ecf1; color: #283e4d; }
-@media (prefers-color-scheme: dark) {
-  .medora:not([data-theme="light"]) [data-color="slate"] { background: #293a46; color: #e7ecf1; }
-}
-.medora[data-theme="dark"] [data-color="slate"] { background: #293a46; color: #e7ecf1; }
 .medora .appearance-tile { display: flex; gap: .5rem; align-items: center; inline-size: 100%; margin-block: .45rem; border-color: var(--outline); }
 .medora .appearance-tile > svg { margin-inline-start: auto; inline-size: 1.15rem; }
 .medora .appearance-tile > span:first-child, #appearance-preview-icon { display: inline-flex; }
@@ -430,16 +424,15 @@
 .medication-banner {
   --art-tilt: -12deg;
   --art-shift: 0%;
-  --art-fill: color-mix(in srgb, var(--pill-base) 31%, var(--panel));
   position: relative;
   isolation: isolate;
   display: grid;
   place-items: center;
   overflow: hidden;
   block-size: 7.8rem;
-  color: var(--ink);
+  color: var(--pill-ink);
   border-radius: 1rem;
-  background: radial-gradient(ellipse at 72% 18%, color-mix(in srgb, var(--pill-base) 54%, transparent), transparent 65%), linear-gradient(145deg, var(--art-fill), var(--panel));
+  background: radial-gradient(ellipse at 72% 18%, color-mix(in srgb, var(--pill-base) 54%, transparent), transparent 65%), var(--pill-fill);
 }
 .medora .medication-banner .medication-badge {
   position: absolute;

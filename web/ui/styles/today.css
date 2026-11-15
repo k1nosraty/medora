@@ -38,6 +38,49 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora .story-label { display: inline-block; padding: .12rem .45rem; border: 1px solid #fff5; background: var(--cover-badge); border-radius: .7rem; font-size: .72rem; }
 .medora .story-copy h2 { margin: .35rem 0 .15rem; font-weight: 850; font-size: clamp(1.55rem, 6.5vw, 2.85rem); line-height: 1.18; text-wrap: balance; }
 .medora #story-summary { margin-block: .3rem 0; color: var(--cover-text); font-size: clamp(.75rem, 2.8vw, .95rem); }
+.medora #today-story[data-story-period] {
+  --scene-y: 100%;
+  --scene-offset: 0px;
+  --scene-fade-start: 27%;
+  --scene-shade: color-mix(in srgb, #231e54 48%, var(--accent-cover));
+  background: var(--scene-shade);
+}
+.medora #today-story[data-story-period="morning"] {
+  --scene-y: 0%;
+  --scene-fade-start: 30%;
+  --scene-shade: color-mix(in srgb, #fff0e4 71%, var(--accent-cover));
+  --cover-text: #402641;
+}
+.medora #today-story[data-story-period="afternoon"] {
+  --scene-y: 50%;
+  --scene-shade: color-mix(in srgb, #623953 52%, var(--accent-cover));
+}
+.medora #today-story[data-story-period]::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 33% 72% at 57% 12%, color-mix(in srgb, var(--accent-glow) 28%, transparent), transparent),
+    linear-gradient(90deg, transparent var(--scene-fade-start), color-mix(in srgb, var(--scene-shade) 26%, transparent) 40%,
+      color-mix(in srgb, var(--scene-shade) 78%, transparent) 52%, var(--scene-shade) 64%),
+    url("/medication/assets/illustrations/today-scenes.webp") left var(--scene-offset) top var(--scene-y) / auto 300% no-repeat;
+  pointer-events: none;
+}
+html[dir="ltr"] .medora #today-story[data-story-period]::before { transform: scaleX(-1); }
+.medora #today-story[data-story-period] .story-art { display: none; }
+.medora #today-story[data-story-period] .story-label {
+  border-color: color-mix(in srgb, var(--cover-text) 28%, transparent);
+  background: color-mix(in srgb, var(--cover-text) 10%, transparent);
+}
+@media (max-width: 31rem) {
+  .medora #today-story[data-story-period] { --scene-offset: -1.3rem; }
+  .medora #today-story[data-story-period="morning"] { --scene-offset: -1.75rem; }
+  .medora #today-story[data-story-period="night"] {
+    --scene-offset: -.55rem;
+    --scene-fade-start: 34%;
+  }
+}
 #today-dates { position: relative; z-index: 1; inline-size: var(--today-rail-width); margin: -1.35rem auto 0; }
 #today-dates:empty { display: none; }
 .medora :is(.day-controls, .calendar-card, #date-picker) {

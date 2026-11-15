@@ -62,7 +62,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
   function renderMedicine(medicine) {
     const card = element("article");
     card.className = "medicine treatment";
-    card.dataset.color = card.dataset.ink = medicineColorOf(medicine.color);
+    card.dataset.ink = medicineColorOf(medicine.color);
     card.dataset.search = medicine.name;
     card.dataset.focusScope = "medicine:" + medicine.id;
     const heading = action(medicine.name, () => openMedicine(medicine));
@@ -192,7 +192,6 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     const unit = dose.unit ?? plan?.unit ?? "";
     const color = medicineColorOf(plan?.color ?? dose.color);
     card.dataset.focusScope = `dose:${dose.medicineId}:${dose.day}:${dose.minute}`;
-    card.dataset.color = color;
     card.dataset.ink = color;
     const heading = element("h3", dose.name || plan?.name || t("ui.medicine"));
     heading.dir = "auto";

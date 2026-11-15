@@ -136,7 +136,7 @@ export function appointmentView({
         layout.addActions(dayCardOptions(t("ui.appointment-options"), ...(calendar ? notes : []), ...actions),
           ...(attendance && !visit.completed ? [attendance] : []));
       } else if (layout) {
-        layout.addActions(...(attendance ? [attendance] : []), edit, dayCardOptions(t("ui.appointment-options"), cancel, remove));
+        layout.addActions(...(attendance ? [attendance] : []), dayCardOptions(t("ui.appointment-options"), edit, cancel, remove));
       } else {
         const controls = element("div", "", "buttons");
         if (attendance) controls.append(attendance);
@@ -151,6 +151,7 @@ export function appointmentView({
     return index.visitsOn(day).filter(({ visit }) => !visit.cancelled)
       .map(local => ({
         key: `visit:${local.visit.id}`,
+        title: local.visit.name,
         time: local.instant,
         state: local.visit.completed ? "done" : "pending",
         resolvedAt: local.visit.resolvedAt,

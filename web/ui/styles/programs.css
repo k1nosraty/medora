@@ -12,7 +12,13 @@
 }
 .medora .quick-item svg.category-art { inline-size: 2.6rem; block-size: 2.25rem; }
 
-.medora #plans-heading { background: var(--stage); border: 0; padding: .8rem .95rem; }
+.medora #plans-heading {
+  background: var(--category-medicine-fill);
+  color: var(--category-medicine-ink);
+  border: 0;
+  padding: .8rem .95rem;
+}
+.medora #visits-title { color: var(--program-visit-ink); }
 .medora #plans-heading .quiet { margin: 0; font-size: .78rem; }
 #plans {
   display: grid;
@@ -37,12 +43,14 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  border: 1px solid var(--outline);
+  border: 1px solid color-mix(in srgb, var(--pill-base) 32%, var(--outline));
   border-radius: 1.48rem;
-  background: var(--panel);
-  color: var(--ink);
+  background: var(--pill-fill);
+  color: var(--pill-ink);
 }
 .medora #plans .treatment { min-block-size: 0; scroll-snap-align: start; }
+.medora .visit-card[data-ink]:not(.day-card) { background: var(--pill-fill); color: var(--pill-ink); }
+.medora :is(.treatment, .visit-shelf-card) .quiet { color: color-mix(in srgb, var(--pill-ink) 70%, var(--muted)); }
 .medora #plans .treatment-profile {
   display: grid;
   grid-template-columns: clamp(4.5rem, 29%, 6.8rem) minmax(0, 1fr);
@@ -55,12 +63,12 @@
 .medora #plans .treatment-profile .medication-banner {
   float: none;
   inline-size: 100%;
-  --banner-tint: var(--pill-base);
 }
-.medora :is(#plans .treatment-profile .medication-banner, #visits .visit-banner, #visit-appearance-preview) {
+.medora :is(#visits .visit-banner, #visit-appearance-preview) {
   border-radius: 1rem;
   background: radial-gradient(ellipse at 30% 22%, #fff4, transparent 58%),
-    linear-gradient(135deg, color-mix(in srgb, var(--banner-tint) 42%, var(--stage)), var(--stage));
+    linear-gradient(135deg, color-mix(in srgb, var(--banner-tint) 42%, var(--stage)), transparent),
+    var(--pill-fill, var(--stage));
 }
 .medora #visits .visit-banner { block-size: clamp(7.8rem, 33vw, 10rem); margin: 0 0 .36rem; }
 .medora #plans .treatment-profile .medication-banner { block-size: auto; min-block-size: 5.2rem; margin: 0; }

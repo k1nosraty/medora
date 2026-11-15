@@ -1,4 +1,6 @@
       <div data-screen="today" class="daily-sheet">
+        <!-- include layout/program-cards.html -->
+        <!-- include layout/today-water.html -->
         <div class="daily-main">
           <div class="daily-heading">
             <h2 id="day-title">{{msg:ui.daily-timeline}}</h2>
@@ -6,12 +8,20 @@
           </div>
           <div id="today-focus" data-context-list hidden></div>
         </div>
-        <!-- include layout/program-cards.html -->
-        <!-- include layout/today-water.html -->
         <div class="daily-timeline">
           <p id="future-schedule" class="quiet" hidden>{{msg:ui.upcoming-schedule-you-can-log-doses-on-or-after-the-sched}}</p>
           <section class="timeline" aria-labelledby="timeline-title">
-            <h3 id="timeline-title">{{msg:ui.doses-appointments-and-routines}}</h3>
+            <div class="timeline-heading">
+              <h3 id="timeline-title">{{msg:ui.doses-appointments-and-routines}}</h3>
+              <label class="timeline-sort">
+                <svg aria-hidden="true"><use href="#i-sort"/></svg>
+                <select id="timeline-order" aria-label="{{msg:ui.sort-day-schedule}}">
+                  <option value="default">{{msg:ui.schedule-default-order}}</option>
+                  <option value="earliest">{{msg:ui.earliest-first}}</option>
+                  <option value="latest">{{msg:ui.latest-first}}</option>
+                </select>
+              </label>
+            </div>
             <div id="doses" data-context-list></div>
           </section>
         </div>

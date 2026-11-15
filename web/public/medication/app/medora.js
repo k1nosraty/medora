@@ -22,6 +22,7 @@ import { renderMemberHeader } from "../features/family/context.js";
 import { installSupport, loadOperations, reportDailyOpen } from "../features/operations.js";
 import { installRoutines } from "../features/routines/view.js";
 import { renderToday } from "../features/today/view.js";
+import { installTodayStory } from "../features/today/story.js";
 import { installBackupRestore } from "../features/backups/dialog.js";
 import { installNavigation } from "./navigation.js";
 import { refreshApp } from "./update.js";
@@ -30,6 +31,7 @@ import { installSurfaceArt } from "../design/surfaces.js";
 
 localizeMarkup();
 installSurfaceArt();
+installTodayStory($("today-story"));
 installSupport();
 let care;
 let busy = false;
@@ -141,6 +143,7 @@ async function reload() {
 }
 
 $("day").addEventListener("change", render);
+$("timeline-order").addEventListener("change", render);
 
 const nextLanguage = language === "fa" ? "en" : "fa";
 for (const control of document.querySelectorAll("[data-language-switch]")) {

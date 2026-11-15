@@ -65,6 +65,7 @@ const svg = (await readdir(new URL("assets/", medication), { recursive: true, wi
   .map(file => "/medication/" + relative(fileURLToPath(medication), resolve(file.parentPath, file.name)).split(sep).join("/"))
   .sort();
 const shell = ["/medication/", ...[...outputs.keys()].sort().map(name => "/medication/bundles/" + name), ...svg,
+  "/medication/assets/illustrations/today-scenes.webp",
   "/manifest.webmanifest", "/manifest.en.webmanifest", "/icon-192.png", "/apple-touch-icon.png",
   "/medora-icon-192.png", "/vazirmatn.woff2"];
 const worker = await readFile(resolve(ui, "pwa/sw.js"), "utf8");
