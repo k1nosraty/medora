@@ -163,15 +163,15 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
 .medora #doses .day-card {
   --day-art-origin: 84%;
   --timeline-clock-width: 0px;
+  --timeline-edge-width: clamp(4.55rem, 27%, 10rem);
   isolation: isolate;
-  grid-template-columns: var(--timeline-clock-width) minmax(0, 1fr);
-  grid-template-rows: auto auto auto auto;
+  grid-template-columns: var(--timeline-clock-width) minmax(0, 1fr) var(--timeline-edge-width);
+  grid-template-rows: auto auto auto;
   align-content: center;
   gap: 0;
-  min-block-size: 5.2rem;
+  min-block-size: 4.85rem;
   padding-block: .45rem;
-  padding-inline-start: .5rem;
-  padding-inline-end: clamp(4.55rem, 27%, 10rem);
+  padding-inline: .5rem .38rem;
 }
 html[dir="rtl"] .medora #doses .day-card { --day-art-origin: 16%; }
 .medora #doses .day-card:has(.day-card-time) { --timeline-clock-width: clamp(3rem, 16%, 4.3rem); }
@@ -195,41 +195,36 @@ html[dir="rtl"] .medora #doses .day-card { --day-art-origin: 16%; }
   grid-area: auto;
   z-index: -1;
   inset-block: 0;
-  inset-inline: auto 0;
+  inset-inline: auto .6rem;
   inline-size: clamp(5rem, 32%, 12rem);
   overflow: hidden;
   border-radius: inherit;
   opacity: .78;
-  mask-image: linear-gradient(var(--timeline-fade), #000 51%, transparent);
+  mask-image: linear-gradient(var(--timeline-fade), #0007, #000 22%, #000 51%, transparent);
 }
 html[dir="rtl"] .medora #doses .day-card-art { --timeline-fade: to right; }
 .medora #doses .day-card-art > img { inline-size: 118%; max-inline-size: none; }
 .medora #doses .day-card-actions {
-  grid-area: 4 / 2;
-  flex-flow: row wrap;
-  align-items: center;
-  justify-content: start;
+  grid-area: 1 / 3 / -1;
+  align-self: end;
+  align-items: end;
 }
 .medora #doses .day-card-actions > button.secondary {
+  max-inline-size: 100%;
   background: transparent;
   box-shadow: none;
+}
+.medora #doses .day-card-actions > button.secondary,
+.medora #doses .day-card-more > summary {
+  text-shadow: 0 1px .25rem var(--day-fill);
 }
 .medora #doses .day-card-more { inline-size: 0; }
 .medora #doses .day-card-more > summary {
   position: absolute;
-  isolation: isolate;
   inset-block: .1rem auto;
   inset-inline-end: .15rem;
   inline-size: 2.75rem;
   background: transparent;
-}
-.medora #doses .day-card-more > summary::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: .6rem .5rem;
-  border-radius: 100vw;
-  background: color-mix(in srgb, var(--panel) 84%, transparent);
 }
 .medora .day-queue-done {
   margin-block-start: .35rem;

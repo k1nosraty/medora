@@ -34,8 +34,11 @@ html[dir="rtl"] .day-card { --day-art-origin: 88%; }
 }
 .medora .day-card[data-card-kind="routine"][data-ink="coral"] {
   --day-fill: var(--routine-fill);
+}
+.medora .day-card[data-ink="coral"] {
   --day-ink: var(--routine-ink);
 }
+.medora .day-card[data-ink="rose"] { --day-ink: var(--cycle-ink); }
 .medora .day-card[data-card-kind="cycle"] {
   --day-paint: var(--cycle-ink);
   --day-fill: var(--cycle-fill);
