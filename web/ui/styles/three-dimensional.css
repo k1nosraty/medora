@@ -159,14 +159,15 @@ html[dir="ltr"] .medora #app :is(#next-day, #next-month) svg { transform: rotate
   border-color: color-mix(in srgb, var(--program-ink) 17%, var(--outline));
   box-shadow: 0 2px color-mix(in srgb, var(--program-ink) 14%, var(--program-fill)), 0 .3rem .6rem var(--glass-shadow);
 }
-.medora[data-finish="matte"] :is(#settings-dialog .sheet-header, #app .glass-toolbar, #app #today-dates .day-controls) {
+.medora[data-finish="matte"] :is(#settings-dialog .sheet-header, #app .glass-toolbar),
+.medora[data-finish="matte"] #app #today-dates .day-controls::before {
   background: var(--panel);
   border-color: var(--outline);
   box-shadow: 0 2px 0 var(--outline);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.medora[data-finish="matte"] #app #today-dates .day-controls { background: var(--calendar-neutral); }
+.medora[data-finish="matte"] #app #today-dates .day-controls::before { background: var(--calendar-neutral); }
 .medora[data-finish="matte"] :is(#app .day-week button[aria-current="date"], #app .today-water-actions [data-open-water]) {
   background: var(--action);
   box-shadow: 0 2px 0 var(--outline);
