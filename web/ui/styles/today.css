@@ -59,7 +59,9 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 }
 .medora #today-dates .day-controls {
   --month-rise: 2rem;
-  --month-cap: min(68%, 9rem);
+  --month-width: 9rem;
+  --month-extra: 4.25rem;
+  --month-cap: min(68%, var(--month-width));
   --week-cap: 3rem;
   --week-height: calc(100% - var(--month-rise));
   position: relative;
@@ -69,7 +71,14 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   border: 0;
   background: transparent;
 }
-html[dir="ltr"] .medora #today-dates .day-controls { --month-cap: min(74%, 11.5rem); }
+html[dir="ltr"] .medora #today-dates .day-controls {
+  --month-width: 11.5rem;
+  --month-extra: 6.25rem;
+  --month-cap: min(74%, var(--month-width));
+}
+.medora #today-dates .day-controls:has(#today-reset:not([hidden])) {
+  --month-cap: min(100%, calc(var(--month-width) + var(--month-extra)));
+}
 .medora #today-dates .day-controls::before {
   /* The tab and pill share one backdrop so their join stays seamless. */
   content: "";
@@ -97,27 +106,32 @@ html[dir="ltr"] .medora #today-dates .day-controls { --month-cap: min(74%, 11.5r
 .medora .compact-day .date-field { min-block-size: 2.6rem; }
 .medora .compact-day #previous-day { grid-area: 1 / 1; }
 .medora #today-dates .day-toolbar {
-  display: grid;
+  display: flex;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  justify-content: center;
+  gap: .25rem;
   min-block-size: var(--month-rise);
   align-items: center;
 }
-.medora #today-dates .date-field { grid-column: 2; min-block-size: 2rem; padding: .1rem .3rem; font-size: .82rem; }
+.medora #today-dates .date-field { flex: 0 1 auto; min-block-size: 2rem; padding: .1rem .3rem; font-size: .82rem; }
 .medora #today-dates .date-field:focus-within { outline: none; }
 .medora #today-dates .date-field:focus-visible { box-shadow: inset 0 0 0 2px var(--action); }
 .medora #today-reset {
-  grid-column: 3;
-  justify-self: end;
-  min-block-size: 2rem;
-  margin-inline-end: .16rem;
-  padding: .1rem .55rem;
-  border-radius: .65rem;
-  background: var(--dock-active);
+  flex: none;
+  min-block-size: 1.65rem;
+  padding: .05rem .5rem;
+  border: 0;
+  border-radius: 100vw;
+  background: color-mix(in srgb, var(--action) 11%, var(--calendar-surface));
   color: var(--action);
   font-size: .72rem;
 }
-.medora #today-dates .day-arrow { min-inline-size: 2rem; min-block-size: 2.5rem; }
+.medora #app #today-dates .day-arrow {
+  min-inline-size: 2rem;
+  min-block-size: 2.5rem;
+  border: 0;
+  background: transparent;
+}
 .medora #today-dates .day-arrow svg { inline-size: 1.25rem; block-size: 1.25rem; }
 .day-week-window { min-inline-size: 0; overflow: hidden; }
 .medora #today-dates .day-week { position: relative; gap: 0; }
@@ -146,4 +160,6 @@ html[dir="ltr"] .medora #today-dates .day-controls { --month-cap: min(74%, 11.5r
 .medora #today-dates .day-week button[aria-current="date"]:focus-visible { outline-color: var(--on-action); }
 .medora #today-dates .day-week button[aria-current="date"] span { color: inherit; }
 .medora .daily-sheet { margin-block-start: .75rem; }
+.medora #today-reminders { box-sizing: border-box; inline-size: var(--today-rail-width); margin-inline: auto; }
+#today-family-bottom:empty { display: none; }
 .medora .today-state button { margin-block-start: .6rem; min-block-size: 2.75rem; }

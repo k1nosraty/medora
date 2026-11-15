@@ -132,7 +132,7 @@
 .medora .medication-banner .glass-object { aspect-ratio: 1; }
 .medora .report-hero img.report-art { object-fit: contain; }
 
-.medora #app :is(.day-arrow, #previous-month, #next-month, #today-reset, #calendar-today) {
+.medora #app :is(.day-arrow, #previous-month, #next-month, #calendar-today) {
   background: color-mix(in srgb, var(--calendar-neutral) 66%, transparent);
   border: 1px solid var(--surface-edge);
   border-radius: .8rem;

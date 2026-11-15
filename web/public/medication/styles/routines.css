@@ -67,7 +67,7 @@
   --bottle-mark: color-mix(in srgb, var(--pill-base, var(--category-medicine-art)) 78%, #4b2b6a);
 }
 
-.medora #today-programs { inline-size: var(--today-rail-width); margin-inline: auto; grid-area: programs; }
+.medora #today-programs { inline-size: var(--today-rail-width); margin-inline: auto; }
 .medora #programs-title { font-size: .98rem; margin: 0 0 .35rem; }
 .medora .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
 .medora .program-card, .medora .routine-banner {

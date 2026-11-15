@@ -4,15 +4,11 @@
   .medora .daily-sheet {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "daily" "reminders" "programs" "water" "timeline";
     gap: .7rem;
     align-items: start;
   }
-  .medora .daily-sheet:has(#today-water[hidden]) { grid-template-areas: "daily" "reminders" "programs" "timeline"; }
-  .daily-main { grid-area: daily; }
-  .daily-timeline { grid-area: timeline; }
-  .medora #today-water { grid-area: water; margin-block-end: 0; }
-  .medora #today-reminders { grid-area: reminders; box-sizing: border-box; inline-size: var(--today-rail-width); margin: 0 auto; }
+  .medora #today-water { margin-block-end: 0; }
+  .medora #today-reminders { margin-block: 0; }
   #plans { grid-auto-columns: min(48%, 23rem); }
   #visits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #visits > :is(h2, .visit-empty, .visit-featured) { grid-column: 1 / -1; }
