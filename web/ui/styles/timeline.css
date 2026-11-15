@@ -161,11 +161,12 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
 .medora #today-focus .day-card-more { margin-inline-start: 0; }
 
 .medora #doses .day-card {
-  --day-art-origin: 84%;
+  --day-art-origin: 73%;
   --timeline-clock-width: 0px;
-  --timeline-edge-width: clamp(4.55rem, 27%, 10rem);
+  --timeline-art-width: clamp(4.7rem, 28%, 6.8rem);
+  --timeline-action-width: clamp(3.9rem, 18%, 5.5rem);
   isolation: isolate;
-  grid-template-columns: var(--timeline-clock-width) minmax(0, 1fr) var(--timeline-edge-width);
+  grid-template-columns: var(--timeline-clock-width) minmax(0, 1fr) var(--timeline-art-width) var(--timeline-action-width);
   grid-template-rows: auto auto auto;
   align-content: center;
   gap: 0;
@@ -173,7 +174,7 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
   padding-block: .45rem;
   padding-inline: .5rem .38rem;
 }
-html[dir="rtl"] .medora #doses .day-card { --day-art-origin: 16%; }
+html[dir="rtl"] .medora #doses .day-card { --day-art-origin: 27%; }
 .medora #doses .day-card:has(.day-card-time) { --timeline-clock-width: clamp(3rem, 16%, 4.3rem); }
 .medora #doses .day-card-content { display: contents; }
 .medora #doses .day-card-kind { grid-area: 1 / 2; }
@@ -190,32 +191,27 @@ html[dir="rtl"] .medora #doses .day-card { --day-art-origin: 16%; }
   font-weight: 800;
 }
 .medora #doses .day-card-art {
-  --timeline-fade: to left;
-  position: absolute;
-  grid-area: auto;
-  z-index: -1;
-  inset-block: 0;
-  inset-inline: auto 1.05rem;
-  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
-  inline-size: clamp(5rem, 32%, 12rem);
+  position: relative;
+  grid-area: 1 / 3 / -1;
+  align-self: stretch;
+  margin-block: -.45rem;
   overflow: hidden;
-  border-radius: inherit;
-  opacity: .78;
-  mask-image: linear-gradient(var(--timeline-fade), #0007, #000 22%, #000 51%, transparent);
+  opacity: .92;
 }
-html[dir="rtl"] .medora #doses .day-card-art { --timeline-fade: to right; }
 .medora #doses .day-card-art > img {
-  inline-size: 108%;
-  max-inline-size: none;
-  max-block-size: calc(100% + .6rem);
+  position: absolute;
+  inset: 0;
+  block-size: 100%;
+  scale: 1.1;
 }
 .medora #doses .day-card-actions {
-  grid-area: 1 / 3 / -1;
+  grid-area: 1 / 4 / -1;
   align-self: end;
   align-items: end;
 }
 .medora #doses .day-card-actions > button.secondary {
   max-inline-size: 100%;
+  padding-inline: .12rem;
   background: transparent;
   box-shadow: none;
 }
