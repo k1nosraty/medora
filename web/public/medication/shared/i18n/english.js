@@ -1,4 +1,5 @@
 export default {
+  "شبکهٔ مراقبت": "Care network",
   "آیکون گروه": "Group icon",
   "گروه تازه": "New group",
   "مثلاً مراقبت از مادر": "e.g. Care for Mom",

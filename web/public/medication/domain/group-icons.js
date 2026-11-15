@@ -1,5 +1,5 @@
 export const groupIcons = {
-  group: "گروه",
+  group: "شبکهٔ مراقبت",
   heart: "قلب",
   "control-mark": "نشان مدورا",
   "routine-health": "سلامت",

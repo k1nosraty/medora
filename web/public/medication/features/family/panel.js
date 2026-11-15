@@ -39,7 +39,7 @@ function groupArt(value) {
   const art = element("span", "", "family-group-art");
   art.setAttribute("aria-hidden", "true");
   const design = groupIconOf(value);
-  if (design === "group") art.append(glassObject("control-user", "control"), glassObject("control-user", "control"));
+  if (design === "group") art.append(icon("care-network", "care-network-glyph"));
   else art.append(glassObject(design, "control"));
   return art;
 }
