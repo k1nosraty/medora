@@ -90,6 +90,41 @@ test("the next dose and its action fit the first mobile view", async ({ page }) 
   expect(await action.evaluate(node => node.getBoundingClientRect().bottom <= document.querySelector(".dock").getBoundingClientRect().top)).toBe(true);
 });
 
+test("daily plans and the cycle forecast use the same card slots", async ({ page }) => {
+  await open(page, { medicine: true, width: 320 });
+  await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { today } = await import("/medication/shared/ui/dates.js");
+    const day = today();
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    await accessCare(state => {
+      state.gender = "female";
+      state.cycleEnabled = true;
+      state.visits ??= {};
+      state.visits.sample = { id: "sample", name: "Follow-up", day, time: "08:00", zone, category: "general", offsets: [] };
+      state.routines ??= {};
+      state.routines.sample = {
+        id: "sample", name: "Walk", start: day, mask: 127, interval: 1, minute: 480, mode: "done", category: "walking", revision: 1
+      };
+    });
+  });
+  await page.reload();
+  const cards = page.locator("#doses .day-card");
+  await expect(cards).toHaveCount(3);
+  for (const kind of ["medicine", "visit", "routine"]) {
+    const card = cards.and(page.locator(`[data-card-kind="${kind}"]`));
+    await expect(card.locator(":scope > .day-card-art > img")).toBeVisible();
+    await expect(card.locator(".day-card-kind + .day-card-title + .day-card-time")).toHaveText("۰۸:۰۰");
+    await expect(card.locator(":scope > .day-card-actions > button")).toBeVisible();
+  }
+  await page.locator("#program-cycle").click();
+  const cycle = page.locator("#cycle-banner[data-card-kind=cycle]");
+  await expect(cycle.locator(".day-card-kind + .day-card-title")).toBeVisible();
+  await expect(cycle.locator(".day-card-details #cycle-forecast")).toBeVisible();
+  await cycle.locator(".day-card-actions #cycle-add").click();
+  await expect(page.locator("#cycle-dialog")).toBeVisible();
+});
+
 test("first launch reaches the app without a permission detour", async ({ page }) => {
   await page.goto("/medication/");
   await page.locator("#welcome-start").click();

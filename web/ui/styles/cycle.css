@@ -8,22 +8,6 @@
 }
 .medora .program-cycle { --program-fill: var(--cycle-fill); --program-ink: var(--cycle-ink); }
 .medora [data-screen="cycle"] { inline-size: var(--today-rail-width); margin-inline: auto; }
-.medora .cycle-banner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) min(39%, 9rem);
-  align-items: center;
-  gap: .6rem;
-  min-block-size: 8.5rem;
-  padding: .65rem .85rem;
-  border: 1px solid var(--surface-edge);
-  border-radius: 1.4rem;
-  background: radial-gradient(ellipse at 25% 58%, color-mix(in srgb, var(--cycle-ink) 16%, transparent), transparent 70%), var(--cycle-fill);
-  color: var(--cycle-ink);
-  box-shadow: var(--surface-shadow);
-}
-.medora .cycle-banner img { inline-size: 100%; block-size: auto; }
-.medora .cycle-banner p { margin-block: .25rem 0; }
-.medora #cycle-add { margin-block: .7rem; }
 .medora #cycle-form .sheet-body { display: grid; gap: .55rem; }
 .medora #cycle-form select { inline-size: 100%; }
 .medora .cycle-record {

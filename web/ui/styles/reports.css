@@ -37,7 +37,7 @@
 #calendar-entries { display: grid; gap: .45rem; }
 .medora #calendar-entries .day-card {
   --day-art-width: 3.65rem;
-  grid-template-columns: var(--day-art-width) minmax(0, 1fr) minmax(0, 6rem);
+  --day-actions-width: min(29%, 6rem);
   gap: .3rem .5rem;
   margin: 0;
   min-block-size: 5.4rem;
@@ -46,10 +46,7 @@
   overflow: visible;
 }
 .medora #calendar-entries .day-card-art {
-  grid-area: 1 / 1;
-  grid-template-columns: 1fr;
-  min-block-size: 0;
-  margin: 0;
+  align-self: stretch;
   border-radius: .75rem;
   background: color-mix(in srgb, var(--pill-base) 19%, transparent);
 }
@@ -59,37 +56,16 @@
   max-inline-size: 100%;
   transform: none;
 }
-.medora #calendar-entries .visit-banner::before { content: none; }
-.medora #calendar-entries .day-card-kind { padding-inline: 0; background: transparent; font-size: .68rem; }
+.medora #calendar-entries .day-card-kind { font-size: .68rem; }
 .medora #calendar-entries .day-card-content h3 { font-size: 1rem; }
 .medora #calendar-entries .day-card-content :is(p, small) { font-size: .77rem; }
 .medora #calendar-entries .day-card-content .badge { display: inline-block; align-self: start; max-inline-size: 100%; padding: .13rem .4rem; }
-.medora #calendar-entries .day-card:not(:has(.day-card-actions)) .day-card-content { grid-column-end: -1; }
-.medora #calendar-entries .day-card-actions {
-  position: static;
-  grid-area: 1 / 3;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 0;
-  border: 0;
-  padding: 0;
-}
-.medora #calendar-entries .day-card-actions > button.secondary { flex: none; }
-.medora #calendar-entries .day-card-more { flex: none; align-self: end; inline-size: 2.75rem; }
-.medora #calendar-entries .day-card-menu {
-  inset-block: 2.75rem auto;
-  inset-inline-end: .4rem;
-  box-sizing: border-box;
-  inline-size: min(calc(100% - .8rem), 18rem);
-}
 .medora #calendar-entries .day-card-menu p { margin: .18rem .35rem; overflow-wrap: anywhere; }
 .medora #calendar-entries .calendar-water {
   --pill-base: var(--category-water-bar);
-  background: var(--program-fill);
-  color: var(--program-ink);
+  --day-fill: var(--program-fill);
+  --day-ink: var(--program-ink);
 }
-.medora #calendar-entries .dose-snoozed { padding-inline-start: .45rem; }
 .medora .report-period { margin-block-end: .85rem; }
 .medora #report-range { background: transparent; padding: 0; }
 .medora #report-dates { margin: .35rem .3rem .2rem; text-align: center; color: var(--muted); font-size: .78rem; }

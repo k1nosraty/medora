@@ -114,8 +114,10 @@ html[dir="rtl"] .day-focus-next svg, html[dir="ltr"] .day-focus-previous svg { s
   padding-block-start: .55rem;
   border-block-start: 1px solid var(--outline);
 }
-.medora .daily-sheet .timeline article[data-day-state="done"] {
-  background: color-mix(in srgb, var(--muted) 9%, var(--panel));
+.medora .daily-sheet .timeline .day-card[data-day-state="done"] {
+  --day-paint: var(--muted);
+  --day-fill: color-mix(in srgb, var(--muted) 9%, var(--panel));
+  --day-ink: var(--ink);
   border-color: var(--outline);
 }
 .medora .daily-sheet .timeline article[data-day-state="done"]::before {

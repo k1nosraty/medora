@@ -1,5 +1,6 @@
-import { language, listSeparator, locale, localDigits, t } from "../../shared/i18n/locale.js";
+import { listSeparator, locale, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, action, dayCardOptions, element } from "../../shared/ui/dom.js";
+import { mountDayCard } from "../../shared/ui/day-card.js";
 import { recordAction } from "../family/context.js";
 import { localZone, minuteMs } from "../../domain/care-plan.js";
 import { compilePhases, createCareIndex, doseId, doseTime, timeText, trackSchedule } from "../../domain/care-index.js";
@@ -186,7 +187,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     const featured = variant === "featured";
     const calendar = variant === "calendar";
     const compactDay = dayCard && !featured;
-    const card = element("article", "", dayCard ? "medicine dose-card day-card" : "medicine dose-card");
+    const card = element("article", "", "medicine dose-card");
     const plan = dose.historyPlan ?? medicine;
     const unit = dose.unit ?? plan?.unit ?? "";
     const color = medicineColorOf(plan?.color ?? dose.color);
@@ -203,29 +204,19 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     const badge = element("p", recorded);
     badge.className = "badge";
     badge.dataset.status = dose.status ?? "pending";
-    const info = element("div");
-    info.className = "dose-info";
-    if (featured) {
-      const due = dose.snoozeUntil || scheduledAt(dose.day, dose.minute);
-      const eyebrow = element("p", dose.status === "snoozed" ? t("ui.snoozed-dose") : due >= Date.now() ? t("ui.next-dose") : t("ui.unlogged-dose"));
-      eyebrow.className = "hero-kicker";
-      const time = dose.snoozeUntil ? new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(due) : localDigits(timeText(dose.minute));
-      const meta = element("div");
-      meta.className = "dose-meta";
-      meta.append(eyebrow, element("p", time));
-      info.append(meta, heading);
-    } else info.append(heading, element("p", t("ui.at-value", localDigits(timeText(dose.minute)))));
-    const header = element("div");
-    header.className = dayCard ? "dose-header day-card-content" : "dose-header";
-    if (dayCard) {
-      const art = medicationBanner(plan?.icon ?? dose.icon, color);
-      art.classList.add("day-card-art");
-      art.removeAttribute("aria-hidden");
-      art.append(element("span", calendar && language === "en" ? "Med" : t("ui.medicine"), "day-card-kind"));
-      card.append(art);
-    } else header.append(medicationBadge(medicine?.icon ?? dose.icon, color));
-    header.append(info);
-    card.append(header);
+    const snoozedTime = featured && dose.status === "snoozed" ? dose.snoozeUntil : null;
+    const time = snoozedTime ? new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(snoozedTime) : localDigits(timeText(dose.minute));
+    const layout = dayCard ? mountDayCard(card, {
+      kind: "medicine", label: t("ui.medicine"), image: medicationBadge(plan?.icon ?? dose.icon, color),
+      title: heading, time, dateTime: snoozedTime ? new Date(snoozedTime).toISOString() : timeText(dose.minute), featured
+    }) : null;
+    const info = layout?.details ?? element("div", "", "dose-info");
+    if (!layout) {
+      info.append(heading, element("p", t("ui.at-value", time)));
+      const header = element("div", "", "dose-header");
+      header.append(medicationBadge(medicine?.icon ?? dose.icon, color), info);
+      card.append(header);
+    }
     const result = element("div");
     result.className = "dose-result";
     if (!featured && (!view || view.has("doses"))) result.append(badge);
@@ -236,10 +227,14 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
       if (dose.recordedBy) info.append(element("small", t("ui.recorded-by-value", view.authorName(dose)), "family-stamp"));
       if (view.canRecord("medicine", dose.day) && medicine && (!medicine.paused || dose.historyPlan) &&
           !["taken", "skipped"].includes(dose.status) && scheduledAt(dose.day, dose.minute) <= Date.now()) {
-        const footer = element("div", "", dayCard ? "day-card-actions" : "dose-quick");
-        footer.append(recordAction("ثبت مصرف", () => view.record({ kind: "medicine", day: dose.day,
-          id: medicine.id, minute: dose.minute, amount: dose.planned, title: heading.textContent, unit })));
-        card.append(footer);
+        const control = recordAction("ثبت مصرف", () => view.record({ kind: "medicine", day: dose.day,
+          id: medicine.id, minute: dose.minute, amount: dose.planned, title: heading.textContent, unit }));
+        if (layout) layout.addActions(control);
+        else {
+          const footer = element("div", "", "dose-quick");
+          footer.append(control);
+          card.append(footer);
+        }
       }
       return card;
     }
@@ -301,20 +296,15 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     controls.append(...(pending || dayCard ? [skipped] : [taken, skipped]));
     if ((!pending || compactDay) && canSnooze) controls.append(snooze());
     if (dose.status) controls.append(action(t("ui.undo-log"), () => record(null), true));
-    if (dayCard) {
-      const footer = element("div", "", "day-card-actions");
-      taken.className = "secondary";
+    if (layout) {
+      taken.classList.add("secondary");
       const options = dayCardOptions(t("ui.dose-options"), label, controls);
       if (compactDay) {
         if (!pending) controls.prepend(taken);
-        footer.append(options);
-        if (pending) footer.append(taken);
+        layout.addActions(options, ...(pending ? [taken] : []));
       } else {
-        footer.append(taken);
-        if (pending && canSnooze) footer.append(snooze());
-        footer.append(options);
+        layout.addActions(taken, ...(pending && canSnooze ? [snooze()] : []), options);
       }
-      card.append(footer);
     } else {
       const actual = element("details", "", "dose-options");
       const more = element("summary", "⋮");
@@ -333,7 +323,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
         dateStyle: "medium", timeStyle: "short"
       }).format(dose.snoozeUntil)));
       reminder.className = "dose-snoozed";
-      (compactDay ? info : card).append(reminder);
+      (layout ? info : card).append(reminder);
     }
     return card;
   }

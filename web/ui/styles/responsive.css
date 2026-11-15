@@ -32,7 +32,7 @@
     padding-right: max(.7rem, env(safe-area-inset-right));
   }
   .medora .today-story { padding-inline: .85rem; }
-  .medora #calendar-entries .day-card { --day-art-width: 3.05rem; grid-template-columns: var(--day-art-width) minmax(0, 1fr) 4.65rem; }
+  .medora #calendar-entries .day-card { --day-art-width: 3.05rem; --day-actions-width: 4.65rem; }
   .medora #visit-add { font-size: .875rem; }
 }
 .medora #today-dates .day-week { grid-template-columns: repeat(7, minmax(0, 1fr)); }

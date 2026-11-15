@@ -1,6 +1,7 @@
 import { renderMonthGrid } from "../../shared/ui/month-grid.js";
 import { listSeparator, locale, t } from "../../shared/i18n/locale.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
+import { mountDayCard } from "../../shared/ui/day-card.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { cycleIsEnabled } from "../../domain/profile.js";
 import { cycleForecast, cycleTotals } from "../../domain/cycle.js";
@@ -12,17 +13,16 @@ const number = value => numbers.format(value);
 const sum = values => values.reduce((total, value) => total + value, 0);
 
 function waterCard(entries, total, openHistory, addWater) {
-  const card = element("article", "", "water day-card calendar-water program-water");
+  const card = element("article", "", "water calendar-water program-water");
   card.dataset.calendarState = "done";
-  const art = element("div", "", "day-card-art");
-  art.append(glassObject("water", "water"), element("span", t("ui.water"), "day-card-kind"));
-  const copy = element("div", "", "day-card-content");
-  copy.append(element("h3", t("ui.value-ml", number(total))), element("p",
+  const layout = mountDayCard(card, {
+    kind: "water", label: t("ui.water"), image: glassObject("water", "water"),
+    title: element("h3", t("ui.value-ml", number(total)))
+  });
+  layout.details.append(element("p",
     entries.length === 1 ? t("ui.1-water-entry") : t("ui.value-water-entries", number(entries.length)), "quiet"));
-  const actions = element("div", "", "day-card-actions");
-  actions.append(dayCardOptions(t("ui.water-log-options"), button(t("ui.history"), openHistory)));
-  if (addWater) actions.append(button(t("ui.log-water"), addWater));
-  card.append(art, copy, actions);
+  layout.addActions(dayCardOptions(t("ui.water-log-options"), button(t("ui.history"), openHistory)),
+    ...(addWater ? [button(t("ui.log-water"), addWater)] : []));
   return card;
 }
 

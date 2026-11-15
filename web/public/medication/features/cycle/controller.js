@@ -1,4 +1,6 @@
 import { $, button, element } from "../../shared/ui/dom.js";
+import { mountDayCard } from "../../shared/ui/day-card.js";
+import { glassObject } from "../../design/three-dimensional.js";
 import { t } from "../../shared/i18n/locale.js";
 import { dayNumber } from "../../shared/ui/dates.js";
 import { isoDay } from "../../domain/care-index.js";
@@ -6,6 +8,13 @@ import { cycleForecast } from "../../domain/cycle.js";
 import { cycleIsEnabled } from "../../domain/profile.js";
 
 export function installCycle({ getState, getFamilyView = () => null, mutate, today, formatDay, requestDeletion, refreshFields }) {
+  const output = $("cycle-forecast");
+  const banner = mountDayCard($("cycle-banner"), {
+    kind: "cycle", label: t("ui.cycle"), image: glassObject("cycle", "cycle"),
+    title: $("cycle-banner-title"), featured: true
+  });
+  banner.details.append(output);
+  banner.addActions($("cycle-add"));
   const dialog = $("cycle-dialog");
   const start = $("cycle-start");
   const end = $("cycle-end");
@@ -68,7 +77,6 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
   function render(state) {
     const records = state.cycleRecords ?? {};
     const forecast = cycleForecast(records);
-    const output = $("cycle-forecast");
     output.textContent = !forecast ? t("ui.an-estimate-appears-after-you-log-three-start-dates")
       : forecast.last < today() ? t("ui.log-a-new-start-date-to-update-the-estimate")
       : t("ui.estimated-value-to-value", formatDay(forecast.first), formatDay(forecast.last));

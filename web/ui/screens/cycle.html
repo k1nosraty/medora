@@ -1,9 +1,9 @@
       <div data-screen="cycle" hidden>
-        <section class="cycle-banner program-cycle">
-          <div><h2>{{msg:ui.next-cycle-start}}</h2><p id="cycle-forecast" aria-live="polite"></p></div>
-          <span data-surface-art="cycle"></span>
+        <section id="cycle-banner" class="program-cycle" aria-labelledby="cycle-banner-title">
+          <h2 id="cycle-banner-title">{{msg:ui.next-cycle-start}}</h2>
+          <p id="cycle-forecast" aria-live="polite"></p>
+          <button id="cycle-add" class="secondary care-record-action" type="button">{{msg:ui.log-period-start}}</button>
         </section>
-        <button id="cycle-add" class="block-action" type="button">{{msg:ui.log-period-start}}</button>
         <section class="feature cycle-history" aria-labelledby="cycle-history-title">
           <h2 id="cycle-history-title">{{msg:ui.cycle-history}}</h2>
           <div id="cycle-history" data-context-list></div>

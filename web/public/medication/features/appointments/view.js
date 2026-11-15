@@ -1,7 +1,8 @@
 import { recordAction } from "../family/context.js";
-import { language, localDigits, t } from "../../shared/i18n/locale.js";
+import { localDigits, t } from "../../shared/i18n/locale.js";
 import { isoDay } from "../../domain/care-index.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
+import { mountDayCard } from "../../shared/ui/day-card.js";
 
 import { visitGlass } from "../../design/three-dimensional.js";
 
@@ -32,39 +33,45 @@ export function appointmentView({
     const category = categoryOf(visit.category);
     card.dataset.focusScope = "visit:" + visit.id;
     card.dataset.ink = colorOf(visit.color);
-    if (variant !== "compact") {
-      card.classList.add(...(dayCard ? ["day-card", "visit-day-card"] : ["visit-shelf-card"]));
+    if (!dayCard && variant !== "compact") {
+      card.classList.add("visit-shelf-card");
       const banner = element("div", "", "visit-banner");
-      if (dayCard) banner.classList.add("day-card-art");
       banner.append(visitIllustration(category, card.dataset.ink));
-      if (dayCard) banner.append(element("span", calendar && language === "en" ? "Visit" : t("ui.appointment"), "day-card-kind"));
       if (variant === "next") {
         card.classList.add("visit-featured");
         banner.append(element("span", t("ui.next-appointment"), "visit-eyebrow"));
       }
       card.append(banner);
     }
-    const title = element("h3", visit.name, "visit-title");
+    const title = element("h3", visit.name, dayCard ? "" : "visit-title");
     title.dir = "auto";
-    const day = element("time", "", "visit-date");
-    day.dateTime = isoDay(local.day);
-    day.setAttribute("aria-label", formatDay(local.day, true));
-    day.append(element("strong", formatDayNumber(local.day)), element("span", formatShortMonth(local.day)));
-    const hour = element("time", clockText(local.time), "visit-hour");
-    hour.dateTime = new Date(local.instant).toISOString();
-    hour.dir = "ltr";
-    const body = element("div", "", "visit-card-body");
-    body.append(title, hour);
+    const time = clockText(local.time);
+    const dateTime = new Date(local.instant).toISOString();
+    const layout = dayCard ? mountDayCard(card, {
+      kind: "visit", label: t("ui.appointment"), image: visitIllustration(category, card.dataset.ink),
+      title, time, dateTime, featured: variant === "day-featured"
+    }) : null;
+    const details = layout?.details ?? (variant === "compact" ? card : element("div", "", "visit-shelf-details"));
+    let metadata = details;
+    if (!layout) {
+      const day = element("time", "", "visit-date");
+      day.dateTime = isoDay(local.day);
+      day.setAttribute("aria-label", formatDay(local.day, true));
+      day.append(element("strong", formatDayNumber(local.day)), element("span", formatShortMonth(local.day)));
+      const hour = element("time", time, "visit-hour");
+      hour.dateTime = dateTime;
+      hour.dir = "ltr";
+      const body = element("div", "", "visit-card-body");
+      body.append(title, hour);
+      const header = element("div", "", "visit-card-header");
+      header.append(day, body);
+      details.append(header);
+      metadata = body;
+    }
     if (category !== "general") {
       const label = category === "custom" && visit.categoryName ? visit.categoryName : categories.get(category);
-      body.append(element("bdi", label, "visit-category"));
+      metadata.append(element("bdi", label, layout ? "" : "visit-category"));
     }
-    const header = element("div", "", "visit-card-header");
-    if (!dayCard) header.append(day);
-    header.append(body);
-    const details = variant === "compact" ? card : element("div", "", "visit-shelf-details");
-    if (dayCard) details.classList.add("day-card-content");
-    details.append(header);
     if (visit.zone && visit.zone !== zone) {
       details.append(element("p", t("ui.clinic-time-value-value-value", formatDay(visit.day), clockText(visit.time), visit.zone), "quiet"));
     }
@@ -77,20 +84,24 @@ export function appointmentView({
       ...(visit.contact ? [element("p", t("ui.contact-value", visit.contact), "quiet")] : [])
     ];
     if (!calendar) details.append(...notes);
-    if (details !== card) card.append(details);
+    if (!layout && details !== card) card.append(details);
     const view = getFamilyView();
     if (view) {
       if (visit.recordedBy) details.append(element("small", t("ui.recorded-by-value", view.authorName(visit)), "family-stamp"));
-      const options = element("div", "", dayCard ? "day-card-actions" : "buttons");
-      if (calendar && notes.length) options.append(dayCardOptions(t("ui.appointment-options"), ...notes));
+      const options = [];
+      if (calendar && notes.length) options.push(dayCardOptions(t("ui.appointment-options"), ...notes));
       if (view.canRecord("visit", local.day) && !visit.completed && !visit.cancelled) {
-        options.append(recordAction("ثبت حضور", () => view.record({ kind: "visit", day: local.day, id: visit.id, title: visit.name })));
+        options.push(recordAction("ثبت حضور", () => view.record({ kind: "visit", day: local.day, id: visit.id, title: visit.name })));
       }
-      if (options.childElementCount) (dayCard ? card : details).append(options);
+      if (layout) layout.addActions(...options);
+      else if (options.length) {
+        const controls = element("div", "", "buttons");
+        controls.append(...options);
+        details.append(controls);
+      }
       return card;
     }
     if (actionable) {
-      const controls = element("div", "", dayCard ? "day-card-actions" : "buttons");
       let attendance;
       if (!visit.cancelled && local.day <= today()) {
         attendance = button(visit.completed ? t("ui.undo-attendance") : t(dayCard ? "حضور یافتم" : "ثبت حضور"), () => {
@@ -122,14 +133,12 @@ export function appointmentView({
       remove.className = "text-button danger-link";
       if (compactDay) {
         const actions = attendance && visit.completed ? [attendance, edit, cancel, remove] : [edit, cancel, remove];
-        controls.append(dayCardOptions(t("ui.appointment-options"), ...(calendar ? notes : []), ...actions));
-        if (attendance && !visit.completed) controls.append(attendance);
-        card.append(controls);
-      } else if (dayCard) {
-        if (attendance) controls.append(attendance);
-        controls.append(edit, dayCardOptions(t("ui.appointment-options"), cancel, remove));
-        card.append(controls);
+        layout.addActions(dayCardOptions(t("ui.appointment-options"), ...(calendar ? notes : []), ...actions),
+          ...(attendance && !visit.completed ? [attendance] : []));
+      } else if (layout) {
+        layout.addActions(...(attendance ? [attendance] : []), edit, dayCardOptions(t("ui.appointment-options"), cancel, remove));
       } else {
+        const controls = element("div", "", "buttons");
         if (attendance) controls.append(attendance);
         controls.append(edit, cancel, remove);
         details.append(controls);

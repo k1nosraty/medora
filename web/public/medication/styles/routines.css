@@ -52,14 +52,13 @@
 .medora :is(.medicine, #medicine-appearance, #appearance-preview, .medication-banner, .medication-badge)[data-ink="purple"] {
   --pill-base: var(--category-medicine-art);
 }
-.medora :is(.dose-card, .treatment, #medicine-appearance, #appearance-preview)[data-ink="purple"] {
+.medora :is(.dose-card, .treatment, #medicine-appearance, #appearance-preview)[data-ink="purple"]:not(.day-card) {
   background: var(--category-medicine-fill);
   color: var(--category-medicine-ink);
 }
 .medora :is(.visit-card, #visit-appearance)[data-ink="green"] { --pill-base: var(--category-visit-art); }
-.medora .visit-card[data-ink="green"] { background: var(--program-visit-fill); color: var(--program-visit-ink); }
-.medora :is(.routine-row, .routine-day-card, .routine-day-art)[data-ink="coral"] { --pill-base: var(--category-routine-art); }
-.medora .routine-day-card[data-ink="coral"] { background: var(--routine-fill); color: var(--routine-ink); }
+.medora .visit-card[data-ink="green"]:not(.day-card) { background: var(--program-visit-fill); color: var(--program-visit-ink); }
+.medora :is(.routine-row, .day-card[data-card-kind="routine"])[data-ink="coral"] { --pill-base: var(--category-routine-art); }
 .medora :is(.program-routine, [data-ink="coral"]) .routine-category-art { filter: hue-rotate(-12deg); }
 .medora svg:has(> use[href="#art-bottle"]) {
   --bottle-cap: color-mix(in srgb, var(--pill-base, var(--category-medicine-art)) 64%, #37255e);

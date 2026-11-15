@@ -1,5 +1,6 @@
 import { recordAction } from "../family/context.js";
 import { button, dayCardOptions, element } from "../../shared/ui/dom.js";
+import { mountDayCard } from "../../shared/ui/day-card.js";
 import { listSeparator, localDigits, t } from "../../shared/i18n/locale.js";
 import { doseTime, timeText } from "../../domain/care-index.js";
 import { routineComplete } from "../../domain/routine-plan.js";
@@ -14,21 +15,24 @@ function entryText(entry, displayAmount) {
 export function routineCard({ getState, getFamilyView, today, colorOf, labelFor, days, formatDay, openEditor, saveLog, focusLogAction, openLog, displayAmount }) {
   function card(entry, day, { manage = false, readOnly = false, dayCard = false, featured = false, summaryOnly = false, calendar = false } = {}) {
     const compactDay = dayCard && !featured;
-    const row = element("article", "", dayCard ? "day-card routine-day-card" : "routine-row");
+    const row = element("article", "", dayCard ? "" : "routine-row");
     if (!summaryOnly) row.dataset.routineId = entry.id;
     row.dataset.focusScope = "routine:" + entry.id;
-    const art = element("span", "", dayCard ? "day-card-art routine-day-art" : "routine-glyph");
     const state = getState();
     const plan = state.routines?.[entry.id];
     const isToday = day === today();
     const currentColor = !readOnly && isToday ? plan?.color : null;
     const color = colorOf(currentColor ?? entry.color);
-    row.dataset.ink = art.dataset.ink = color;
-    art.append(glyph(entry.category, color));
-    if (dayCard) art.append(element("span", t("ui.routine"), "day-card-kind"));
-    const copy = element("div", "", dayCard ? "day-card-content routine-row-copy" : "routine-row-copy");
+    row.dataset.ink = color;
+    const image = glyph(entry.category, color);
     const name = element(dayCard ? "h3" : "strong", entry.name);
     name.dir = "auto";
+    const clock = entry.minute == null ? "" : timeText(entry.minute);
+    const layout = dayCard ? mountDayCard(row, {
+      kind: "routine", label: t("ui.routine"), image, title: name,
+      time: localDigits(clock), dateTime: clock, featured
+    }) : null;
+    const copy = layout?.details ?? element("div", "", "routine-row-copy");
     const completed = routineComplete(entry);
     const detail = [labelFor(entry.category)];
     if (manage) {
@@ -39,8 +43,14 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
     } else if (entryText(entry, displayAmount)) {
       detail.push(entryText(entry, displayAmount));
     }
-    if (entry.minute !== null) detail.push(localDigits(timeText(entry.minute)));
-    copy.append(name, element("small", detail.join(" · ")));
+    if (!layout) {
+      if (clock) detail.push(localDigits(clock));
+      const art = element("span", "", "routine-glyph");
+      art.append(image);
+      row.append(art, copy);
+      copy.append(name);
+    }
+    copy.append(element("small", detail.join(" · ")));
     if (dayCard && completed) copy.append(element("small", t("ui.done"), "routine-row-state"));
     else if (calendar) {
       const hasLog = Object.hasOwn(state.routineLogs[day] ?? {}, entry.id);
@@ -48,21 +58,19 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
         (isToday && entry.minute != null && doseTime(day, entry.minute) <= Date.now()) ? "بدون ثبت" : "برنامه‌ریزی‌شده";
       copy.append(element("p", t(status), "badge"));
     }
-    row.append(art, copy);
     if (summaryOnly) return row;
     const view = getFamilyView();
     if (view) {
       if (entry.notes) copy.append(element("p", entry.notes));
       if (entry.recordedBy) copy.append(element("small", t("ui.recorded-by-value", view.authorName(entry)), "family-stamp"));
       if (!manage && !readOnly && !completed && view.canRecord("routine", day)) {
-        const footer = dayCard ? element("div", "", "day-card-actions") : row;
-        footer.append(recordAction(entry.mode === "done" ? "ثبت انجام" : "ثبت پیشرفت", () =>
-          view.record({ kind: "routine", day, id: entry.id, title: entry.name, routine: entry })));
-        if (dayCard) row.append(footer);
+        const action = recordAction(entry.mode === "done" ? "ثبت انجام" : "ثبت پیشرفت", () =>
+          view.record({ kind: "routine", day, id: entry.id, title: entry.name, routine: entry }));
+        if (layout) layout.addActions(action);
+        else row.append(action);
       }
       return row;
     }
-    const footer = dayCard ? element("div", "", "day-card-actions") : row;
     let logAction;
     if (manage) {
       const edit = button(t("ui.edit"), () => openEditor(entry));
@@ -82,18 +90,16 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
       } else logAction.setAttribute("aria-label", t("ui.log-progress-for-value", entry.name));
       if (!completed) logAction.classList.add("care-record-action");
       row.dataset.complete = String(completed);
-      if (!compactDay) footer.append(logAction);
+      if (!layout) row.append(logAction);
     } else if (completed && !dayCard) row.append(element("span", t("ui.done"), "routine-row-state"));
-    if (dayCard && plan) {
+    if (layout && plan) {
       const edit = button(t("ui.edit"), () => openEditor(plan));
       edit.setAttribute("aria-label", t("ui.edit-routine-value", entry.name));
       if (compactDay) {
         const options = completed && logAction ? [logAction, edit] : [edit];
-        footer.append(dayCardOptions(t("ui.routine-options"), ...options));
-        if (logAction && !completed) footer.append(logAction);
-      } else footer.append(edit);
+        layout.addActions(dayCardOptions(t("ui.routine-options"), ...options), ...(logAction && !completed ? [logAction] : []));
+      } else layout.addActions(...(logAction ? [logAction] : []), edit);
     }
-    if (dayCard && footer.childElementCount) row.append(footer);
     return row;
   }
 

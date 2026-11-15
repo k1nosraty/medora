@@ -154,7 +154,7 @@ html[dir="ltr"] .medora #app :is(#next-day, #next-month) svg { transform: rotate
 }
 .medora[data-finish="matte"] #app .today-story::after { content: none; }
 .medora[data-finish="matte"] #app .today-story .story-art { mask-image: none; -webkit-mask-image: none; }
-.medora[data-finish="matte"] #app :is(.program-card, #today-water, .report-hero, .cycle-banner) {
+.medora[data-finish="matte"] #app :is(.program-card, #today-water, .report-hero) {
   background: linear-gradient(160deg, color-mix(in srgb, var(--program-fill) 72%, var(--panel)), var(--program-fill));
   border-color: color-mix(in srgb, var(--program-ink) 17%, var(--outline));
   box-shadow: 0 2px color-mix(in srgb, var(--program-ink) 14%, var(--program-fill)), 0 .3rem .6rem var(--glass-shadow);
@@ -174,7 +174,7 @@ html[dir="ltr"] .medora #app :is(#next-day, #next-month) svg { transform: rotate
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.medora[data-finish="matte"] #app :is(.day-card, .routine-row, .routine-banner, .visit-banner, .medication-banner, .today-state) {
+.medora[data-finish="matte"] #app :is(.routine-row, .routine-banner, .visit-banner, .medication-banner, .today-state) {
   background-image: none;
   box-shadow: 0 2px 0 var(--outline);
 }
