@@ -352,6 +352,11 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     const reload = action("تازه‌کردن دسترسی‌ها", () => refresh(group.id, showGroup));
     reload.prepend(icon("refresh"));
     controls.append(reload);
+    if (group.manager) {
+      const remove = button(t("حذف گروه"), () => confirmGroupDeletion(group));
+      remove.classList.add("family-danger");
+      controls.append(remove);
+    }
     content.append(controls);
     const members = group.members.filter(member => !member.self);
     if (!members.length) {
@@ -382,6 +387,31 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     content.append(section("سوابقی که می‌بینم", received.length ? received :
       [element("p", t("اعضای گروه هنوز سابقه‌ای با شما به اشتراک نگذاشته‌اند."), "quiet")]),
     section("چه کسانی سوابقم را می‌بینند؟", given));
+  }
+
+  function confirmGroupDeletion(group) {
+    const cancel = () => showGroup(group);
+    page("حذف گروه", cancel);
+    let deleted = false;
+    const remove = action("حذف گروه", async () => {
+      const request = generation;
+      if (!deleted) {
+        await familyRequest("delete-group", { group: group.id });
+        deleted = true;
+      }
+      if (activeGroup === group.id) {
+        activeGroup = null;
+        sessionStorage.removeItem(groupPreference);
+      }
+      await refreshGroup();
+      if (!dialog.open || request !== generation) return;
+      showHome();
+      message("گروه حذف شد.");
+    });
+    remove.classList.add("family-danger");
+    content.append(groupBanner(group.name, "حذف گروه", group.icon),
+      element("p", t("با حذف گروه، دعوت‌ها و دسترسی‌های همین گروه لغو می‌شوند. سوابق شخصی اعضا باقی می‌مانند.")),
+      button(t("انصراف"), cancel), remove);
   }
 
   function inviteMember(group) {

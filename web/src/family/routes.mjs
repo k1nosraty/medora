@@ -35,6 +35,10 @@ export async function handleFamily(request, env, url) {
         typeof data.icon === "string" && Object.hasOwn(groupIcons, data.icon)
         ? await store.updateGroup(actor, data.group, clean(data.name, 60), data.icon) : failure("invalid");
       break;
+    case "delete-group":
+      result = typeof data.group === "string" && idPattern.test(data.group)
+        ? await store.deleteGroup(actor, data.group) : failure("invalid");
+      break;
     case "invite-lookup": {
       if (!idPattern.test(data.group) || !await store.managesGroup(actor.person, data.group)) return reply(failure("forbidden"), 403);
       const query = clean(data.query, 254).replace(/^@(?=[a-z0-9_]+$)/i, "");
@@ -178,6 +182,18 @@ export class Families extends DurableObject {
       this.sql.exec("UPDATE family_groups SET name=?, icon=? WHERE id=?", name, icon, group);
       this.audit(group, actor.person, actor.person, "update-group");
       return { group };
+    });
+  }
+
+  deleteGroup(actor, group) {
+    return this.ctx.storage.transactionSync(() => {
+      if (!this.managesGroup(actor.person, group)) return failure("forbidden");
+      this.sql.exec("DELETE FROM family_grants WHERE group_id=?", group);
+      this.sql.exec("DELETE FROM family_invites WHERE group_id=?", group);
+      this.sql.exec("DELETE FROM family_members WHERE group_id=?", group);
+      this.sql.exec("DELETE FROM family_groups WHERE id=?", group);
+      this.audit(group, actor.person, actor.person, "delete-group");
+      return { ok: true };
     });
   }
 

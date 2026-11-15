@@ -174,5 +174,20 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.equal((await view(a, bId)).status, 403);
     assert.equal((await family(a, record)).status, 403);
     assert.equal((await call("account/care", null, b)).status, 200);
+
+    const remove = { action: "delete-group", group };
+    assert.equal((await family(b, remove)).status, 403);
+    assert.equal((await share(b, aId, { all: true, record: false, add: false })).status, 200);
+    const { invite: pending } = await (await family(a, { action: "invite", group, email: "later@example.com" })).json();
+    const savedBeforeDeletion = (await (await call("account/care", null, b)).json()).records;
+    assert.equal((await view(a, bId)).status, 200);
+    assert.equal((await family(a, remove)).status, 200);
+    for (const account of [a, b]) {
+      const { groups } = await (await family(account)).json();
+      assert.deepEqual(groups.map(item => item.id), [otherGroup]);
+    }
+    assert.equal((await family(a, { action: "cancel", invite: pending })).status, 404);
+    assert.equal((await view(a, bId)).status, 403);
+    assert.deepEqual((await (await call("account/care", null, b)).json()).records, savedBeforeDeletion);
   } finally { await mf.dispose(); }
 });

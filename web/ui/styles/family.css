@@ -301,8 +301,7 @@
 .family-age { display: flex; align-items: center; justify-content: space-between; margin: 0; color: var(--action); }
 .family-stamp { color: var(--muted); font-size: .86em; }
 .medora #family-status { margin: 0; padding: .55rem .7rem; color: var(--action); background: var(--stage); border-radius: .75rem; }
-.medora #family-status[data-error] { color: var(--danger); }
-.family-content .family-danger { color: var(--danger); }
+.medora #family-status[data-error], .medora .family-content .family-danger { color: var(--error); }
 @media (max-width: 340px) {
   .family-content .family-field-pair { grid-template-columns: 1fr; }
 }
