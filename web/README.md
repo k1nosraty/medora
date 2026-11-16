@@ -75,7 +75,7 @@ Durable Objectهای SQLite روی Workers Free اجرا می‌شوند. هر �
 
 همگام‌سازی سوابق اختیاری است. داده‌ها برای کار آفلاین روی دستگاه می‌مانند. هر حساب می‌تواند تا ۴ مگابایت داده را با سرور همگام کند. روی دستگاه تازه، پس از ورود، سوابق همگام‌شده قابل بازیابی‌اند. سوابق مهمان و تغییراتی که هنوز همگام نشده‌اند در بکاپ شخصی دستگاه می‌مانند.
 
-در ادغام موجودی، افزایش موجودی و کسر دوزهای متفاوت هر دو اعمال می‌شوند. اگر یک نوبت از دو دستگاه ثبت شود، یک کسر در موجودی باقی می‌ماند. حذف هم‌زمان دارو بر ویرایش آن مقدم است. در تعارض روی یک فیلد دارو یا مبنای ثبت موجودی، مقدار دستگاهی که تعارض را ادغام می‌کند اعمال می‌شود.
+در ادغام موجودی، افزایش موجودی و کسر دوزهای متفاوت هر دو اعمال می‌شوند. اگر یک نوبت از دو دستگاه ثبت شود، یک کسر در موجودی باقی می‌ماند. در تعارض‌هایی مثل حذف و ویرایش هم‌زمان یک دارو، مدورا هر دو نسخه را نشان می‌دهد تا یکی را انتخاب کنید. اگر یکی از نسخه‌ها در این فاصله تغییر کند، باید نسخه‌های تازه را دوباره بررسی کنید.
 
 نصب دارای اعلان پس از اولین همگام‌سازی با نسخهٔ جدید به حساب وصل می‌شود. سپس عملیات مراقب، برنامهٔ اعلان همان نصب را از سرور به‌روز می‌کند. زبان، منطقهٔ زمانی و انتخاب نمایش جزئیات اعلان از تنظیمات نصب گرفته می‌شوند. خاموش کردن همگام‌سازی یا خروج از حساب، اتصال نصب به تغییرات حساب را قطع می‌کند و زمان‌بندی محلی دستگاه را حفظ می‌کند. حذف حساب، اعلان نصب‌های متصل را هم متوقف می‌کند.
 
@@ -180,8 +180,111 @@ Use first-party promotional media uploads where possible. If a deployment still 
 | Family group IDs, membership, grants, invitations, audits, support messages and diagnostics, archive metadata | Authorization, support, and recovery operations. Retention is documented above. Archive operators must apply their own deletion schedule. |
 | Encrypted envelopes, key identifiers, optional rotation verifiers | Store and migrate encrypted notes and verify key replacement. The account password and recovery key remain separate. |
 
-Newly protected snapshots can rotate the recovery key. Save the new key before choosing **Replace recovery key**. Rotation commits at a specific cloud revision, keeps record content and envelope locations intact, and requires the proof derived from the currently unlocked key. A lost acknowledgement can be checked by retrying with the same replacement key. Keep old keys for older archives. Previously encrypted snapshots without a verifier continue to use their existing recovery key. They need a separately reviewed migration before they can support rotation.
+Newly protected snapshots can rotate the recovery key. Save the new key before choosing **Replace recovery key**. Rotation commits at a specific cloud revision, keeps record content and envelope locations intact, and requires the proof derived from the currently unlocked key. A lost acknowledgement can be checked by retrying with the same replacement key. Keep old keys for older archives. Previously encrypted snapshots without a verifier continue to use their existing recovery key. The stored SHA-256 fingerprint cannot authenticate a first verifier without an additional possession protocol. The Worker rejects attaching a verifier based only on account authentication, even if ciphertext bytes are unchanged. Keep the original recovery key and an encrypted local backup. Password reset restores sign-in access independently.
+
+The account owner receives the full portable snapshot from `/api/account/care`. The [portable records](public/medication/domain/care-records.js) and [private fields](public/medication/domain/private-fields.js) define its top-level settings and encrypted field paths. Legacy row extensions can remain readable to the service and owner. They have no scheduling or sharing requirement and should be reviewed before accepting additional extension fields. `/api/family` uses the [field-by-field projection](public/medication/domain/family.js) after verifying active group membership and a directional, section-specific grant. Group managers can see pending-invite recipient labels or addresses. Other members see group-scoped member IDs and display labels. Account scope IDs and owner keys are used internally for routing and authorization. Care record IDs identify records that the grantee can act on.
+
+The [reminder projection](public/medication/domain/care-plan.js) defines which sync fields can reach per-device scheduling. It uses the configured subscription endpoint and keys, due times and outcomes, device time zone, language and detail preference. Profile fields, full history, and private notes have no scheduling role. Status and test endpoints require the device token and return fixed statuses and numeric provider codes. Clearing a device drops the server-side plan, subscription, and last-test state and retains a revision and revocation marker so the same token cannot be reused. A browser must enroll a new subscription to resume. This action is initiated on the device being cleared. Operator archives can still contain earlier records until their retention period ends.
+
+The family store holds group names and icons, membership labels, invitation addresses and expiry, grant sections and permissions, and audit actor/target/action/time data. The account store also holds temporary challenge digests, delivery timestamps, account generation, pending reset and deletion metadata, and linked device IDs. Support message, optional diagnostics, reply, and ticket status are readable to authorized support staff. Administrators can access operational counters, audit records, account metadata, and promotions through the operations and admin endpoints. Operator migration exports require the migration authorization and can include whole readable snapshots, ciphertext, credential verifiers, reminder state, and the family and operations stores. Downloaded archives require a separate encrypted-storage and expiry policy. Their current contents do not determine what any ongoing device or family API returns.
 
 A damaged or newer IndexedDB database can be read for an encrypted `.medoraid` recovery export. The export is for technical recovery and strips active account and reminder bindings. The application leaves the database version and stored records intact. For manual diagnosis, the file uses the existing encrypted backup codec with the `MEDORAID` header.
 
 The local synthetic integration suite exercises the 4 MiB application boundary with SQLite-backed Workerd, account and family authorization, encrypted archive migration, simultaneous edits, interrupted restores, recovery on a second browser, and reminder fan-out. Hosted verification requires a separately configured Cloudflare account and isolated Worker, representative permissions, and synthetic data. Use scoped staging credentials and keep staging separate from the production Wrangler target.
+
+### Isolated Cloudflare staging
+
+Use the standalone `wrangler.staging.jsonc` from the remediation branch. The account must already have a `workers.dev` subdomain and be dedicated to synthetic staging. On the dashboard, compare the account ID and subdomain with the values you intend to use, confirm there are no production resources, and confirm the Worker name is free on first deployment. Only publish to `https://medora-remediation-stage.STAGING_SUBDOMAIN.workers.dev`. The deployment needs no DNS, custom routes, OAuth callbacks, or billing changes.
+
+| Resource | Staging identifier |
+|---|---|
+| Worker | `medora-remediation-stage`, account `STAGING_ACCOUNT_ID` |
+| Static assets | `ASSETS`, built `web/public`, Worker-first on `/api/*` |
+| Cron | `*/5 * * * *` in the staging Worker |
+| SQLite Durable Objects | `PILOT/PushPilot`, `REMINDERS/MedicationReminders`, `EMAIL_ACCOUNTS/EmailAccount`, `CREDENTIALS/Credentials`, `PROMOTIONS/Promotions`, `OPERATIONS/Operations`, `FAMILIES/Families`. Migrations `v1` through `v7` provision seven distinct namespace IDs. All seven bindings target classes in the staging Worker. |
+| Account rate limiters | `PUSH_ENROLL_LIMIT/760501` (30/min), `PUSH_DEVICE_LIMIT/760502` (60/min), `PROMOTION_EVENT_LIMIT/760504` (60/min), `EMAIL_AUTH_LIMIT/760503` (8/min) |
+| Other storage and integrations | A staging-only Resend sender and synthetic test inboxes. The Worker uses no KV namespace, R2 bucket, D1 database, queue, or service binding. |
+
+The operator runs all Cloudflare writes. For the first `wrangler deploy` creating a Worker, authenticate locally with temporary **Workers Admin** at product scope in the staging account only. Subsequent deployments and secret management need **Editor** scoped to `medora-remediation-stage`. Use the dashboard for the account-wide namespace inventory. A temporary read-only Worker role is sufficient for inspecting the Worker itself. Use an existing stage-only Resend key with Sending access restricted to the test sender domain. Keep credential values in the operator's own environment or secret manager. [Cloudflare Workers roles](https://developers.cloudflare.com/workers/authorization/workers/) · [Resend sending scopes](https://resend.com/changelog/new-api-key-permissions)
+
+Prepare an operator-owned JSON file outside the checkout with permissions `0600`. Its required keys are `EMAIL_ACCOUNT_ID_KEY`, `EMAIL_SESSION_KEY`, `EMAIL_CODE_KEY`, `EMAIL_PASSWORD_KEY`, and `REMINDER_SIGNING_KEY` (each a fresh independent 32-byte hex value), `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (fresh P-256 pair from the existing `scripts/pilot-secrets.mjs`, run in an empty scratch directory), `VAPID_SUBJECT` (test contact), `RESEND_API_KEY`, and `EMAIL_FROM` (verified staging sender). The config sets `EMAIL_PASSWORD_KEY_ID=stage-v1` and `EMAIL_ALLOW_LEGACY_PASSWORDS=false`. Leave `MEDORA_RELEASE`, `PILOT_ACCESS_CODE`, legacy keys, admin accounts, support identities, external promotion hosts, and continuity export unset. For a separately prepared operator archive rehearsal use a temporary staging `MIGRATION_TOKEN` and `MIGRATION_TOKEN_EXPIRES_AT` (Unix milliseconds within 24 hours). A full archive restore needs a second empty staging Worker with matching **synthetic** key continuity and a separate approval for that destination.
+
+From `web`, use Bash and replace only the two staging placeholders. `MEDORA_STAGE_SECRETS_FILE` must already point to the operator-owned JSON file. If the operator uses token-based authentication, keep the temporary staging token in the local Wrangler environment. The explicit account ID in the local config selects the account.
+
+```bash
+set -euo pipefail
+export MEDORA_STAGE_ACCOUNT_ID=STAGING_ACCOUNT_ID
+export MEDORA_STAGE_SUBDOMAIN=STAGING_SUBDOMAIN
+: "${MEDORA_STAGE_SECRETS_FILE:?Set the path to your own staging secret JSON file}"
+export MEDORA_STAGE_SECRETS_FILE
+[[ "$MEDORA_STAGE_ACCOUNT_ID" =~ ^[0-9a-f]{32}$ ]]
+[[ "$MEDORA_STAGE_SUBDOMAIN" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
+test -f "$MEDORA_STAGE_SECRETS_FILE"
+node --input-type=module -e '
+  import {readFileSync, statSync, writeFileSync} from "node:fs";
+  const secretFile = process.env.MEDORA_STAGE_SECRETS_FILE;
+  const values = JSON.parse(readFileSync(secretFile, "utf8"));
+  const names = ["EMAIL_ACCOUNT_ID_KEY", "EMAIL_SESSION_KEY", "EMAIL_CODE_KEY", "EMAIL_PASSWORD_KEY",
+    "REMINDER_SIGNING_KEY", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT", "RESEND_API_KEY", "EMAIL_FROM"];
+  if ((statSync(secretFile).mode & 0o077) || Object.keys(values).length !== names.length ||
+      names.some(name => typeof values[name] !== "string" || !values[name])) {
+    throw new Error("Use a private JSON file with exactly the listed staging keys");
+  }
+  const template = readFileSync("wrangler.staging.jsonc", "utf8");
+  writeFileSync(".wrangler.staging.local.jsonc",
+    template.replace("STAGING_ACCOUNT_ID", process.env.MEDORA_STAGE_ACCOUNT_ID),
+    { flag: "wx", mode: 0o600 });
+'
+stage_wrangler() {
+  env -u CLOUDFLARE_ACCOUNT_ID ./node_modules/.bin/wrangler "$@" \
+    --config .wrangler.staging.local.jsonc
+}
+GITHUB_SHA="$(git rev-parse HEAD)" npm run build
+stage_wrangler whoami
+stage_wrangler deploy --dry-run
+```
+
+Check the dry-run binding list against the inventory and confirm the authenticated account independently in the dashboard. Then execute this **single** write. It creates and deploys the Worker, runs its namespace migrations, and uploads that version's variables and secrets. Future deployments must use the same explicit staging config.
+
+```bash
+stage_wrangler deploy --secrets-file "$MEDORA_STAGE_SECRETS_FILE"
+```
+
+Immediately verify the deployment, secret **names**, and stage origin. Confirm the version in the dashboard. Open **Workers & Pages → medora-remediation-stage → Bindings** and the account's **Durable Objects** inventory. Record all seven namespace IDs and verify the owning Worker and SQLite backend for each. Keep the deployed version ID, time in UTC, status codes, and redacted test results with the verification record.
+
+```bash
+stage_wrangler deployments list
+stage_wrangler secret list
+MEDORA_STAGE_ORIGIN="https://medora-remediation-stage.$MEDORA_STAGE_SUBDOMAIN.workers.dev"
+curl --silent --show-error --fail "$MEDORA_STAGE_ORIGIN/medication/" -o /dev/null
+curl --silent --show-error --fail "$MEDORA_STAGE_ORIGIN/api/config" |
+  jq -e '.publicKey | test("^[A-Za-z0-9_-]{87}$")'
+test "$(curl --silent --show-error -o /dev/null -w '%{http_code}' "$MEDORA_STAGE_ORIGIN/api/account/care")" = 401
+```
+
+Use two independent browser profiles for one synthetic account, a second synthetic family account, and an unrelated synthetic account. Verify password reset only through controlled test inboxes. Record p50 and p95 for repeated same-shape requests in each test location. A Cloudflare rate limit binding is approximate and local to a Cloudflare location. [Rate limit behavior](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+
+| Hosted scenario | Procedure and evidence |
+|---|---|
+| Snapshot limit and concurrent writes | As a synthetic owner, GET `/api/account/care` with its cookie. Use the returned owner and revision for two same-revision PUTs from separate profiles with matching Origin and JSON. Record one 200, one 409, and the committed revision. On a disposable synthetic account build a valid legacy care body just below 4 MiB, repeat with an over-4-MiB body, and compare the revision after rejection. Record UTF-8 byte length, status, and exact configuration. A real storage failure requires controlled injection on staging. The local rollback test covers a transaction aborted after the snapshot write was staged. |
+| Restore and conflicts | Export a synthetic personal backup. Restore locally and compare cloud revision. Run cloud merge with an identity collision. For cloud replacement, change the cloud revision from the other profile while confirmation is open. Verify the newer data survives. Repeat with the same base edits and different changes to one record, then change one candidate while its conflict is open. Record the two versions, result, and observed confirmation. |
+| Key recovery | Use generated test keys and a unique synthetic private note. Upload plaintext legacy records, then unlock to verify migration to sealed text. Start a second profile without the key, then use an incorrect key and the correct key. Use separate fixtures for damaged ciphertext and legacy encrypted records without a verifier. Verify unchanged remote revision and retained local records after a failure. During a current-format rotation, let the successful PUT reach staging and drop only the response in browser automation. Retry with the saved replacement key, verify a single new revision, then import it on the second profile. |
+| Privacy and authorization | Grant only one family section to the second account. Confirm the family projection excludes private text, encrypted payloads, and unknown legacy fields. Revoke the grant and retest. Check that a third unrelated account cannot read or write the first account's care or family records. |
+| Auth and abuse controls | Compare identical wrong-password and nonexistent-user responses and record timing distributions. Confirm legitimate sign-in and email password reset from test inboxes, invalidation of the old session, and independent recovery-key import. Verify the staging binding using controlled serial requests from the permitted synthetic source. Multiple locations require explicit measurement and do not establish global throttling. |
+| Reminder fan-out and revocation | Link two synthetic browser installations, change a plan, and check applied revision on both. Test a plan rejected by the reminder limits, a lost client response followed by retry, cancellation, and clearing one installation. Expect the cleared token to return 401 for status, test, and subsequent enable requests. Confirm the other installation still has its plan. |
+
+One day of testing should stay below 2,000 dynamic requests, 100 MB of synthetic storage, and 30 emails. An existing staging plan must accommodate the workload. Cloudflare documents an 8 MB SQLite Durable Object key/value ceiling. The application ceiling is 4 MiB of UTF-8 JSON. The hosted test must measure accepted application payloads and rejects on the actual plan. [Durable Object limits](https://developers.cloudflare.com/durable-objects/platform/limits/) · [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) · [Pricing](https://developers.cloudflare.com/workers/platform/pricing/)
+
+For operator-approved cleanup later, collect redacted evidence first. Clear test devices and accounts, remove temporary migration settings, and revoke disposable provider and Cloudflare credentials. Worker or namespace deletion is a separate destructive operation. Confirm the dedicated staging account and the recorded identifiers in the dashboard before authorizing it.
+
+### Physical reminder verification
+
+Use Android Chrome and Safari on a physical iPhone with Medora installed on the Home Screen. Use the same synthetic account with separate subscriptions. Run the matrix on both, recording OS/browser versions, installation mode, time zone, cloud revision, provider result, and actual notification display time.
+
+| Procedure | Expected observation |
+|---|---|
+| Deny permission, then allow it and enable reminders from a user gesture | No notification while denied. The app reports the permission state, then enrolls or resumes after permission returns. |
+| Schedule a synthetic reminder a few minutes ahead and close the app before it fires | The device displays the expected notification inside the reminder window. Reopening shows the correct next occurrence. Repeat after a device restart. |
+| Update and cancel a reminder from the other device | Both installations receive the new revision. The prior due time produces no notification. |
+| Go offline, edit locally, then reconnect | Local edits remain available offline and fan out after sync. Confirm the eventual applied revision and check for duplicate delivery. |
+| Clear one installation during a failed or interrupted network request and reconnect | Local records disappear, the revocation retries, and the old subscription stops working. The second installation stays enrolled. |

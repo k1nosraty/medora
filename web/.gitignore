@@ -2,6 +2,7 @@ node_modules/
 .wrangler/
 .dev.vars
 .pilot-secrets.json
+.wrangler.staging.local.jsonc
 public/medication/index.html
 public/medication/sw.js
 public/design/index.html
