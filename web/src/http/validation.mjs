@@ -72,16 +72,22 @@ export async function validSubscriptionKey(subscription) {
  */
 export async function smallJson(request, limit = 4096, { onLimit = () => null } = {}) {
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json" || !request.body) return null;
+  if (Number(request.headers.get("content-length")) > limit) return onLimit();
   const reader = request.body.getReader();
-  const buffer = new Uint8Array(limit);
+  let buffer = new Uint8Array(Math.min(limit, 4096));
   let size = 0;
   try {
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-      if (size + value.length > buffer.length) {
-        await reader.cancel().catch(() => {});
+      if (size + value.length > limit) {
+        void reader.cancel().catch(() => {});
         return onLimit();
+      }
+      if (size + value.length > buffer.length) {
+        const extended = new Uint8Array(Math.min(limit, Math.max(size + value.length, buffer.length * 2)));
+        extended.set(buffer);
+        buffer = extended;
       }
       buffer.set(value, size);
       size += value.length;

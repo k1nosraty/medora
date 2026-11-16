@@ -406,6 +406,29 @@ test("a damaged or newer local database can be read for recovery without rewriti
   expect((await recovery()).days[0].water[0].id).toBe("recovery");
 });
 
+for (const version of [1, 2]) {
+  test(`a damaged v${version} database retains its version and readable records`, async ({ page }) => {
+    await page.goto("/");
+    const result = await page.evaluate(async version => {
+      const name = "medora-medication-prototype";
+      const { accessCare, readCareRecovery } = await import("/medication/shared/storage.js");
+      const absent = await readCareRecovery().then(() => false, () => true);
+      const original = version === 1 ? ["damaged legacy row"] : { settings: { medicines: {} }, revision: 0 };
+      await new Promise((resolve, reject) => {
+        const request = indexedDB.open(name, version);
+        request.onerror = () => reject(request.error);
+        request.onupgradeneeded = () => request.result.createObjectStore("care").put(original, "state");
+        request.onsuccess = () => { request.result.close(); resolve(); };
+      });
+      const failure = await accessCare().then(() => null, error => error.name);
+      return { absent, failure, original, data: await readCareRecovery() };
+    }, version);
+    expect(result.absent).toBe(true);
+    expect(result.failure).toBe("DataError");
+    expect(result.data).toEqual({ databaseVersion: version, care: result.original, days: [] });
+  });
+}
+
 test("notification deep links keep the requested date", async ({ page }) => {
   await open(page);
   const day = await page.locator("#day").inputValue();

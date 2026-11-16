@@ -1,11 +1,19 @@
 import { hasPrivateText, isRecoveryKeyId, privateFields, privateRows, validPrivateText, withoutPrivateFields } from "../../domain/private-fields.js";
+import { recordObject } from "../../domain/care-contract.js";
+
+/** @import { PrivateCareSnapshot, PrivateKind, SnapshotRow } from "../../domain/private-fields.js" */
+/** @typedef {{id: string, rotationProof: string, rotationVerifier: string, key: CryptoKey}} RecoveryKey */
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
+/** @param {Uint8Array} bytes */
 const hex = bytes => Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+/** @param {Uint8Array<ArrayBuffer>} bytes */
 const digest = async bytes => hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
-const unhex = value => Uint8Array.from(value.match(/../g), byte => Number.parseInt(byte, 16));
+/** @param {string} value */
+const unhex = value => Uint8Array.from(value.match(/../g) ?? [], byte => Number.parseInt(byte, 16));
 
+/** @param {ArrayBuffer} buffer */
 function base64(buffer) {
   const bytes = new Uint8Array(buffer);
   const chunks = [];
@@ -17,6 +25,7 @@ function base64(buffer) {
 
 export const generateRecoveryKey = () => hex(crypto.getRandomValues(new Uint8Array(32)));
 
+/** @param {unknown} value @returns {Promise<RecoveryKey>} */
 export async function importRecoveryKey(value) {
   if (!isRecoveryKeyId(value)) throw new Error("private_key");
   const raw = unhex(value);
@@ -31,16 +40,23 @@ export async function importRecoveryKey(value) {
   }
 }
 
+/** @param {unknown[]} path @param {Uint8Array<ArrayBuffer>} iv */
 function parameters(path, iv) {
   return { name: "AES-GCM", iv, additionalData: encoder.encode(JSON.stringify(["Medora private care", 1, ...path])), tagLength: 128 };
 }
 
+/**
+ * @template {PrivateCareSnapshot} T
+ * @param {T} records
+ * @param {(kind: PrivateKind, path: unknown[], row: SnapshotRow) => Promise<SnapshotRow>} work
+ */
 async function transform(records, work) {
   const result = structuredClone(records);
   for (const { kind, path, rows, key } of privateRows(result)) rows[key] = await work(kind, path, rows[key]);
   return result;
 }
 
+/** @template {PrivateCareSnapshot | undefined | null} T @param {T} records */
 export function normalizePrivateCare(records) {
   if (!records) return records;
   const result = structuredClone(records);
@@ -52,6 +68,7 @@ export function normalizePrivateCare(records) {
   return result;
 }
 
+/** @template {PrivateCareSnapshot} T @param {T} records @param {RecoveryKey} [recovery] */
 export async function sealPrivateCare(records, recovery, withRotation = false) {
   if (!recovery) {
     if (hasPrivateText(records)) throw new Error("private_key");
@@ -78,6 +95,7 @@ export async function sealPrivateCare(records, recovery, withRotation = false) {
     ...(withRotation && { privacyRotation: recovery.rotationVerifier }) };
 }
 
+/** @template {PrivateCareSnapshot | null | undefined} T @param {T} records @param {RecoveryKey} [recovery] */
 export async function openPrivateCare(records, recovery) {
   if (!records || records.privacyVersion === undefined) return records;
   if (!recovery || recovery.id !== records.privacyKey ||
@@ -91,8 +109,11 @@ export async function openPrivateCare(records, recovery) {
       const plain = new Uint8Array(await crypto.subtle.decrypt(parameters(path, unhex(iv)), recovery.key,
         Uint8Array.from(atob(data), char => char.charCodeAt(0))));
       try {
+        /** @type {unknown} */
         const fields = JSON.parse(decoder.decode(plain));
-        if (!Object.entries(fields).every(([field, value]) => privateFields[kind].includes(field) && typeof value === "string")) {
+        if (!recordObject(fields) || !Object.keys(fields).length ||
+            !Object.entries(fields).every(([field, value]) =>
+              privateFields[kind].includes(field) && typeof value === "string" && value.length > 0)) {
           throw new Error("invalid_private_fields");
         }
         return { ...clean, ...fields };

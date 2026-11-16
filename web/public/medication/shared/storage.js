@@ -47,17 +47,30 @@ function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(databaseName, 3);
     let blocked = false;
+    let damaged = false;
+    function abortUpgrade() {
+      damaged = true;
+      request.transaction.abort();
+    }
     request.onupgradeneeded = event => {
-      // Older shells rewrite day records without routine history.
-      if (event.oldVersion >= 2) return;
       const db = request.result;
+      // Older shells rewrite day records without routine history.
+      if (event.oldVersion >= 2) {
+        if (!["care", "days"].every(name => db.objectStoreNames.contains(name))) abortUpgrade();
+        return;
+      }
       const care = db.objectStoreNames.contains("care") ? request.transaction.objectStore("care") : db.createObjectStore("care");
       const history = db.createObjectStore("days", { keyPath: "day" });
       const read = care.get("state");
       read.onsuccess = () => {
         const legacy = read.result;
-        if (!legacy) return;
-        for (const bucket of historyDays(legacy).values()) history.put(bucket);
+        if (legacy === undefined) return;
+        if (!recordObject(legacy)) { abortUpgrade(); return; }
+        let days;
+        try { days = historyDays(legacy); }
+        catch { abortUpgrade(); return; }
+        if (![...days.values()].every(validBucket)) { abortUpgrade(); return; }
+        for (const bucket of days.values()) history.put(bucket);
         care.put({ settings: metadata(legacy), revision: 0 }, "state");
       };
     };
@@ -71,7 +84,7 @@ function openDatabase() {
       request.result.onversionchange = () => request.result.close();
       resolve(request.result);
     };
-    request.onerror = () => reject(request.error);
+    request.onerror = () => reject(damaged ? corruptStorage() : request.error);
     request.onblocked = () => {
       blocked = true;
       reject(new DOMException("Storage upgrade blocked", "BlockedError"));

@@ -29,6 +29,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
   let resumeActivation = false;
   const choices = [];
   let authGeneration = 0;
+  let recoveryAttempt = 0;
   let retryCount = 0;
   let retryAt = 0;
   const maxAutomaticRetries = 4;
@@ -331,13 +332,20 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       return;
     }
     if (!confirm(t("ui.sync-rotate-confirm"))) return;
+    recoveryAttempt++;
+    const unlock = $("account-care-key-unlock");
+    unlock.disabled = true;
     running = control.disabled = enable.disabled = disable.disabled = true;
     try {
       const replacement = await importRecoveryKey(input);
       if (replacement.id === previous.id) throw new Error("private_key");
       const response = await transport(path, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
       if (!response.ok) throw new Error("rotation_failed");
-      const { owner, revision, records } = await response.json();
+      const current = await response.json();
+      if (!isCloudRevision(current)) throw new Error("rotation_failed");
+      const { owner, revision, records } = current;
+      const binding = (await readSettings()).accountCare;
+      if ((binding?.owner && binding.owner !== owner) || generation !== authGeneration) return;
       validateCareRecords(records);
       if (!records.privacyRotation) throw new Error("rotation_legacy");
       if (records.privacyKey === replacement.id) {
@@ -345,6 +353,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       } else {
         const clear = await openPrivateCare(records, previous);
         const sealed = await sealPrivateCare(clear, replacement, true);
+        validateCareRecords(sealed);
         const body = JSON.stringify({ owner, revision, records: sealed, rotationProof: previous.rotationProof });
         if (generation !== authGeneration) return;
         if (new TextEncoder().encode(body).length > careSyncLimit) throw new Error("rotation_failed");
@@ -352,7 +361,12 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
           method: "PUT", headers: { "Content-Type": "application/json" }, body, signal: AbortSignal.timeout(12_000)
         });
         if (!saved.ok) throw new Error("rotation_failed");
-        await openPrivateCare((await saved.json()).records, replacement);
+        const confirmed = await saved.json();
+        if (!isCloudRevision(confirmed) || confirmed.owner !== owner || confirmed.revision !== revision + 1 ||
+            confirmed.records?.privacyKey !== replacement.id ||
+            confirmed.records.privacyRotation !== replacement.rotationVerifier) throw new Error("rotation_failed");
+        validateCareRecords(confirmed.records);
+        if (!same(await openPrivateCare(confirmed.records, replacement), clear)) throw new Error("rotation_failed");
       }
       if (generation !== authGeneration) return;
       recovery = replacement;
@@ -364,6 +378,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       if (generation === authGeneration) keyStatus.textContent = t(error.message === "rotation_legacy"
         ? "ui.sync-rotation-legacy" : "ui.sync-rotation-failed");
     } finally {
+      unlock.disabled = false;
       running = control.disabled = enable.disabled = disable.disabled = false;
       if (pendingSignIn) {
         pendingSignIn = false;
@@ -372,19 +387,23 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
     }
   });
   $("account-care-key-unlock").addEventListener("click", async () => {
+    const attempt = ++recoveryAttempt;
     try {
-      recovery = await importRecoveryKey(keyInput.value.trim().toLowerCase());
+      const imported = await importRecoveryKey(keyInput.value.trim().toLowerCase());
+      if (attempt !== recoveryAttempt) return;
+      recovery = imported;
       keyInput.value = "";
       keyInput.type = "password";
       keyStatus.textContent = "";
       if (running) pendingSignIn = true;
       else void sync(false, true);
     } catch {
-      keyStatus.textContent = t("ui.sync-invalid-recovery-key");
+      if (attempt === recoveryAttempt) keyStatus.textContent = t("ui.sync-invalid-recovery-key");
     }
   });
   function clearRecovery() {
     authGeneration++;
+    recoveryAttempt++;
     showConflict(undefined);
     choices.length = 0;
     recovery = undefined;

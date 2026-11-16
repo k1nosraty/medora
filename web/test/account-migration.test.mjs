@@ -128,11 +128,14 @@ test("encrypted migration restores existing login, account history and a pending
         start, interval: 1, mask: 127, minute: 540 } }, routineLogs: {},
       cycleRecords: { [start]: { end: null, flow: "", note: "" } },
       water: [{ id: "water-1", day: start, time: "12:00", amount: 250 }] };
-    const records = await sealPrivateCare(legacyCare, await importRecoveryKey("7".repeat(64)));
+    const legacyKey = await importRecoveryKey("7".repeat(64));
+    const records = await sealPrivateCare(legacyCare, legacyKey);
     const update = { owner, revision: 0, records, zone: "America/Toronto" };
     assert.equal((await api(source, carePath, "PUT", session, update)).status, 200);
     assert.equal((await api(source, carePath, "PUT", session, update)).status, 409);
     assert.equal((await api(source, carePath, "PUT", session, { ...update, revision: 1, records: legacyCare })).status, 422);
+    const verifierOnly = { ...records, careSchemaVersion: 2, privacyRotation: legacyKey.rotationVerifier };
+    assert.equal((await api(source, carePath, "PUT", session, { ...update, revision: 1, records: verifierOnly })).status, 422);
     assert.equal((await api(source, carePath, "GET", { ...session, "If-None-Match": `"${owner}:1"` })).status, 304);
     assert.equal((await api(source, carePath, "GET", { "If-None-Match": `"${owner}:1"` })).status, 401);
     // Use a chunked upload so the server detects the limit at the end of the body.

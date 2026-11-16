@@ -1,10 +1,22 @@
+/** @typedef {Partial<Record<
+ * "EMAIL_ACCOUNT_ID_KEY" | "EMAIL_AUTH_SECRET" | "EMAIL_SESSION_KEY" | "EMAIL_CODE_KEY" |
+ * "EMAIL_PASSWORD_KEY_ID" | "EMAIL_PASSWORD_KEY" | "EMAIL_PREVIOUS_PASSWORD_KEY_ID" |
+ * "EMAIL_PREVIOUS_PASSWORD_KEY" | "EMAIL_ALLOW_LEGACY_PASSWORDS", string>>} AuthKeyBindings */
+
+/** @param {unknown} value @returns {value is string} */
 const isKey = value => typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
+/** @param {unknown} value */
 const isVersion = value => typeof value === "string" && /^[a-z0-9-]{1,32}$/.test(value);
 
+/** @param {AuthKeyBindings} env */
 export const identityKey = env => env.EMAIL_ACCOUNT_ID_KEY ?? env.EMAIL_AUTH_SECRET;
+/** @param {AuthKeyBindings} env */
 export const sessionKey = env => env.EMAIL_SESSION_KEY ?? env.EMAIL_AUTH_SECRET;
+/** @param {AuthKeyBindings} env */
 export const codeKey = env => env.EMAIL_CODE_KEY ?? env.EMAIL_AUTH_SECRET;
+/** @param {AuthKeyBindings} env */
 export const passwordVersion = env => env.EMAIL_PASSWORD_KEY_ID ?? "legacy";
+/** @param {AuthKeyBindings} env */
 export function passwordKey(env, version = passwordVersion(env)) {
   if (version === passwordVersion(env)) return env.EMAIL_PASSWORD_KEY ?? env.EMAIL_AUTH_SECRET;
   if (version === env.EMAIL_PREVIOUS_PASSWORD_KEY_ID) return env.EMAIL_PREVIOUS_PASSWORD_KEY;
@@ -12,6 +24,7 @@ export function passwordKey(env, version = passwordVersion(env)) {
   return undefined;
 }
 
+/** @param {AuthKeyBindings} env */
 export function validAuthKeys(env) {
   return [identityKey(env), sessionKey(env), codeKey(env), passwordKey(env)].every(isKey) &&
     isVersion(passwordVersion(env)) && (!env.EMAIL_PASSWORD_KEY || passwordVersion(env) !== "legacy") &&

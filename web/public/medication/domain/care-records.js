@@ -134,7 +134,7 @@ function validPrivacy(data) {
 }
 
 export function validatePortable(data, validatePhases) {
-  if (!object(data) || (data.careSchemaVersion === 2 && !boundedCarePayload(data)) || !object(data.settings) || !Object.entries(data.settings).every(([key, value]) =>
+  if (!object(data) || !boundedCarePayload(data, data.careSchemaVersion !== 2) || !object(data.settings) || !Object.entries(data.settings).every(([key, value]) =>
     Object.hasOwn(settings, key) && settings[key](value)) ||
     !record(data.medicines, (row, id) => row.id === id && validMedicine(row, validatePhases)) ||
     !record(data.doses, (row, id) => safeId(row.medicineId) && day(row.day) && minute(row.minute) &&

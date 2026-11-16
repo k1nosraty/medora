@@ -26,6 +26,7 @@ test("protects private text while preserving readable schedules, legacy records 
     assert.doesNotMatch(JSON.stringify(family), /privateText|Private note|Legacy note|Private contact|Private cycle note/);
   }
   const incorrect = await importRecoveryKey(generateRecoveryKey());
+  await assert.rejects(openPrivateCare(wire), /private_key/);
   await assert.rejects(openPrivateCare(wire, incorrect), /private_key/);
 
   const corrupt = structuredClone(wire);
@@ -37,4 +38,22 @@ test("protects private text while preserving readable schedules, legacy records 
   assert.throws(() => validateCareRecords(corrupt), /invalid_backup/);
   await assert.rejects(openPrivateCare(corrupt, recovery), /private_corrupt/);
   assert.equal(wire.visits.a.privateText.iv.length, 24);
+});
+
+test("authenticated envelopes still reject malformed private field containers", async () => {
+  const recovery = await importRecoveryKey(generateRecoveryKey());
+  const records = await sealPrivateCare({ ...emptyCareRecords(),
+    visits: { v: { id: "v", name: "Synthetic", day: 20000, time: "10:00", note: "Original" } }
+  }, recovery);
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const additionalData = encoder.encode(JSON.stringify(["Medora private care", 1, "visits", "v"]));
+  for (const invalid of [[], {}, "", { note: "" }]) {
+    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData }, recovery.key,
+      encoder.encode(JSON.stringify(invalid)));
+    const snapshot = structuredClone(records);
+    snapshot.visits.v.privateText = { iv: Buffer.from(iv).toString("hex"), data: Buffer.from(encrypted).toString("base64") };
+    await assert.rejects(openPrivateCare(snapshot, recovery), /private_corrupt/);
+  }
+  assert.equal((await openPrivateCare(records, recovery)).visits.v.note, "Original");
 });

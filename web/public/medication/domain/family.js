@@ -22,14 +22,24 @@ const projectionFields = {
   cycleRecords: ["end", "flow", "sharedNote", ...attribution]
 };
 
-const listFields = ["dates", "offsets", "steps", "checked"];
 const scalar = value => value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
+const familyText = (value, limit) => typeof value === "string" && value.length <= limit;
+
+function projectedValue(key, value) {
+  if (key === "recordedBy") return typeof value === "string" && /^[a-z0-9_]{3,32}$/.test(value);
+  if (key === "recordedByName") return value === null || familyText(value, 121);
+  if (key === "sharedContact") return familyText(value, 160);
+  if (["sharedNote", "sharedNotes", "sharedInstructions"].includes(key)) return familyText(value, 2000);
+  if (key === "steps") return Array.isArray(value) && value.every(item => familyText(item, 16_384));
+  if (["dates", "offsets", "checked"].includes(key)) return Array.isArray(value) && value.every(Number.isSafeInteger);
+  return scalar(value);
+}
 
 function selectFields(row, keys) {
   return Object.fromEntries(keys.flatMap(key => {
     if (!Object.hasOwn(row ?? {}, key)) return [];
     const value = row[key];
-    if (scalar(value) || (listFields.includes(key) && Array.isArray(value) && value.every(scalar))) return [[key, value]];
+    if (projectedValue(key, value)) return [[key, value]];
     return [];
   }));
 }

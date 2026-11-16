@@ -4,6 +4,9 @@
 /** @typedef {{iv: string, data: string}} PrivateTextEnvelope */
 /**
  * @typedef {Partial<Record<PrivateKind, SnapshotRows>> & {
+ *   privacyVersion?: number,
+ *   privacyKey?: string,
+ *   privacyRotation?: string,
  *   routineLogs?: Record<string, SnapshotRows>,
  *   scheduleHistory?: Partial<Record<"medicines" | "routines", {plan: SnapshotRow, until: number}[]>>
  * }} PrivateCareSnapshot

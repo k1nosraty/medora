@@ -3,6 +3,7 @@ const maxNodes = 300_000;
 const maxEntries = 45_000;
 const maxText = 16_384;
 const maxEnvelopeText = 131_072;
+const legacyMaxText = 16 * 1024 * 1024;
 
 /** @param {unknown} value @returns {value is Record<string, unknown>} */
 export function recordObject(value) {
@@ -13,19 +14,26 @@ export function recordObject(value) {
 
 /** Validate resource usage and JSON shape before domain-specific validation.
  * @param {unknown} input
+ * @param {boolean} [legacy]
  */
-export function boundedCarePayload(input) {
+export function boundedCarePayload(input, legacy = false) {
+  const depthLimit = legacy ? 24 : maxDepth;
+  const nodeLimit = legacy ? 600_000 : maxNodes;
+  const entryLimit = legacy ? 100_000 : maxEntries;
   let nodes = 0;
   /** @param {unknown} value @param {number} depth @param {string} [field] @returns {boolean} */
   function bounded(value, depth, field) {
-    if (++nodes > maxNodes || depth > maxDepth) return false;
-    if (typeof value === "string") return value.length <= (field === "data" ? maxEnvelopeText : maxText);
+    if (++nodes > nodeLimit || depth > depthLimit) return false;
+    if (typeof value === "string") {
+      const limit = legacy ? legacyMaxText : field === "data" ? maxEnvelopeText : maxText;
+      return value.length <= limit;
+    }
     if (typeof value === "number") return Number.isFinite(value);
     if (value == null || typeof value === "boolean") return true;
-    if (Array.isArray(value)) return value.length <= maxEntries && value.every(item => bounded(item, depth + 1));
+    if (Array.isArray(value)) return value.length <= entryLimit && value.every(item => bounded(item, depth + 1));
     if (!recordObject(value)) return false;
     const keys = Object.keys(value);
-    return keys.length <= maxEntries && keys.every(key => key.length <= 550 &&
+    return keys.length <= entryLimit && keys.every(key => key.length <= 550 &&
       key !== "__proto__" && key !== "prototype" && key !== "constructor" && bounded(value[key], depth + 1, key));
   }
   return recordObject(input) && bounded(input, 0);

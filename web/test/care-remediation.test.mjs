@@ -5,6 +5,7 @@ import { saveMedicinePlan } from "../public/medication/domain/medicine-command.j
 import { CareConflict, conflictChoice, mergeCare, mergeRestoredCare } from "../public/medication/features/sync/merge.js";
 import { emptyCareRecords, sharedCare } from "../public/medication/domain/family.js";
 import { validateCareRecords } from "../public/medication/domain/care-records.js";
+import { boundedCarePayload } from "../public/medication/domain/care-contract.js";
 import { reminderCareProjection } from "../public/medication/domain/care-plan.js";
 
 test("replacement is scoped to the confirmed revision and recognizes a lost acknowledgement", () => {
@@ -100,15 +101,57 @@ test("bounded snapshots reject oversized and deeply nested extensions without in
   assert.throws(() => validateCareRecords({ ...emptyCareRecords(), careSchemaVersion: 3 }), /invalid_backup/);
 });
 
+test("legacy recovery permits long original text while bounding structural work", () => {
+  for (const [legacy, depth, entryLimit, textLimit] of [
+    [false, 10, 45_000, 16_384], [true, 24, 100_000, 16 * 1024 * 1024]
+  ]) {
+    let boundary = null;
+    for (let level = 0; level < depth; level++) boundary = { value: boundary };
+    assert.equal(boundedCarePayload(boundary, legacy), true);
+    assert.equal(boundedCarePayload({ value: boundary }, legacy), false);
+    assert.equal(boundedCarePayload({}, legacy), true);
+    assert.equal(boundedCarePayload({ values: Array(entryLimit).fill(null) }, legacy), true);
+    assert.equal(boundedCarePayload({ values: Array(entryLimit + 1).fill(null) }, legacy), false);
+    assert.equal(boundedCarePayload({ note: "x".repeat(textLimit) }, legacy), true);
+    assert.equal(boundedCarePayload({ note: "x".repeat(textLimit + 1) }, legacy), false);
+    assert.equal(boundedCarePayload(JSON.parse('{"extension":{"__proto__":{}}}'), legacy), false);
+  }
+  let extension = {};
+  for (let i = 0; i < 25; i++) extension = { nested: extension };
+  assert.throws(() => validateCareRecords({ ...emptyCareRecords(), extension }), /invalid_backup/);
+  assert.throws(() => validateCareRecords({ ...emptyCareRecords(), extension, careSchemaVersion: 1 }), /invalid_backup/);
+});
+
+test("a reviewed deletion choice remains usable on retry and expires when the competing edit changes", () => {
+  const water = { id: "water", day: 20000, time: "10:00", amount: 250 };
+  const base = { water: [water] };
+  const local = { water: [] };
+  const cloud = { water: [{ ...water, amount: 300 }] };
+  let choices;
+  assert.throws(() => mergeCare(base, local, cloud), conflict => {
+    assert.ok(conflict instanceof CareConflict);
+    assert.equal(conflict.local, undefined);
+    choices = [{ ...conflict, side: "device" }];
+    return true;
+  });
+  const choose = conflict => conflictChoice(conflict, choices);
+  assert.deepEqual(mergeCare(base, local, cloud, choose).water, []);
+  assert.deepEqual(mergeCare(base, local, local, choose).water, []);
+  assert.throws(() => mergeCare(base, local, { water: [{ ...water, amount: 400 }] }, choose), /care_conflict/);
+});
+
 test("family projections exclude unknown fields and deeply nested legacy extensions", () => {
   const source = { ...emptyCareRecords(), medicines: { sample: {
     id: "sample", name: "Synthetic", unit: "tablet", sharedInstructions: "Share this",
     extension: "private legacy extra",
     phases: [{ start: 20000, end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 1000, extension: "private slot extra" }] }]
-  } }, water: [{ id: "water", day: 20000, time: "10:00", amount: 200, recordedBy: { extension: "private author extra" }, extension: "private water extra" }] };
-  const view = sharedCare(source, ["medicines", "water"]);
+  } }, visits: { v: { id: "v", name: "Synthetic", sharedNote: 200, sharedContact: true, offsets: [5, "10"] } },
+  water: [{ id: "water", day: 20000, time: "10:00", amount: 200, recordedBy: "a".repeat(64), extension: "private water extra" }] };
+  const view = sharedCare(source, ["medicines", "water", "visits"]);
   assert.equal(view.medicines.sample.sharedInstructions, "Share this");
   assert.equal(view.medicines.sample.phases[0].slots[0].amount, 1000);
   assert.equal(view.water[0].amount, 200);
+  assert.equal(view.water[0].recordedBy, undefined);
+  assert.deepEqual(view.visits.v, { id: "v", name: "Synthetic" });
   assert.doesNotMatch(JSON.stringify(view), /private .* extra/);
 });
