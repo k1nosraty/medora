@@ -25,3 +25,11 @@
 .medora #service-notice p { margin-block: .2rem 0; }
 .medora .support-ticket { padding-block: .45rem; border-block-start: 1px solid var(--outline); overflow-wrap: anywhere; }
 .medora .support-ticket p { margin-block: .25rem; white-space: pre-wrap; }
+
+.medora #today-promotion {
+  inline-size: var(--today-rail-width);
+  margin-inline: auto;
+  overflow-wrap: anywhere;
+}
+#today-promotion :is(p, .buttons) { margin-block: .25rem; }
+#today-promotion-title { font-weight: 700; }

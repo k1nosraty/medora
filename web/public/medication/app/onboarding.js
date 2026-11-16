@@ -7,6 +7,7 @@ export function showIntro(care, mutate) {
     care.theme || care.calendar || care.waterGoal;
   function show(step) {
     document.querySelector(".app-bar").hidden = step !== "done";
+    $("care-main").hidden = step === "welcome";
     $("app").hidden = step !== "done";
     $("welcome-screen").hidden = step !== "welcome";
   }

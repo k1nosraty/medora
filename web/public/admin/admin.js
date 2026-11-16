@@ -17,6 +17,7 @@ const accountsPath = "/api/admin/accounts";
 const promotionPath = "/api/admin/promotion";
 const search = $("admin-account-search");
 const more = $("admin-account-more");
+const retryAccounts = $("admin-retry");
 const confirmation = $("admin-account-delete");
 const cancel = $("admin-delete-cancel");
 const confirm = $("admin-delete-confirm");
@@ -186,10 +187,14 @@ async function loadAccounts(append = false, success = "") {
   const list = $("admin-account-list");
   const params = new URLSearchParams({ q: accountQuery });
   if (append && nextPage) params.set("after", nextPage);
-  status("admin-account-status", "در حال ارتباط…");
+  retryAccounts.disabled = true;
+  status(panel.hidden ? "admin-status" : "admin-account-status", "در حال ارتباط…");
   try {
     const result = await request(accountsPath + "?" + params);
-    if (!result) return;
+    if (!result) {
+      retryAccounts.hidden = true;
+      return;
+    }
     if (result.error) throw new Error(result.error);
     const rows = result.users.map(accountRow);
     if (append) list.append(...rows);
@@ -197,15 +202,24 @@ async function loadAccounts(append = false, success = "") {
     nextPage = result.next;
     more.hidden = !nextPage;
     panel.hidden = false;
+    retryAccounts.hidden = true;
     status("admin-status", "");
     status("admin-account-status", success || (list.childElementCount ? "" : "حسابی پیدا نشد."));
   } catch {
+    retryAccounts.hidden = !panel.hidden;
     status(panel.hidden ? "admin-status" : "admin-account-status", "فهرست حساب‌ها بارگذاری نشد. دوباره تلاش کنید.", true);
   } finally {
+    retryAccounts.disabled = false;
     loadingAccounts = more.disabled = search.elements.query.disabled = search.querySelector("button").disabled = false;
   }
 }
 
+retryAccounts.addEventListener("click", async () => {
+  await loadAccounts();
+  if (!panel.hidden) search.elements.query.focus();
+  else if (!retryAccounts.hidden) retryAccounts.focus();
+  else if (!signIn.hidden) signIn.focus();
+});
 search.addEventListener("submit", event => {
   event.preventDefault();
   accountQuery = search.elements.query.value.trim();

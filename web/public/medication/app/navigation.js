@@ -32,7 +32,9 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     formatShortDate: day => dates.shortDate(day)
   });
   const appointments = installAppointments({
-    getState, getFamilyView, today, defaultDay: () => screen === "insights" ? actionDay() : today(),
+    getState, getFamilyView, today, selectedDate: () => {
+      if (screen === "insights" || screen === "today" && selectedDay() !== today()) return actionDay();
+    },
     render, mutate, requestDeletion, refreshFields, formatDay,
     formatDayNumber: day => dates.dayNumber(day),
     formatShortMonth: day => dates.shortMonth(day)

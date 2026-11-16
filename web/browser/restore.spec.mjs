@@ -93,6 +93,18 @@ test("browser restore honors intent against the Worker and transfers private not
     await connect(page);
     await page.goto("/medication/?view=account");
     await expect(page.locator("#account-session")).toBeVisible();
+    const recoveryPanel = page.locator("details:has(#account-care-key)");
+    await recoveryPanel.locator("summary").click();
+    await page.locator("#account-care-key-generate").click();
+    await expect(page.locator("#account-care-key")).toHaveAttribute("type", "text");
+    await page.keyboard.press("Escape");
+    await page.locator("#open-account").click();
+    await expect(page.locator("#account-care-key")).toHaveAttribute("type", "password");
+    await page.locator("#account-care-key-reveal").click();
+    await expect(page.locator("#account-care-key")).toHaveAttribute("type", "text");
+    await page.locator("#account-care-key-reveal").click();
+    await expect(page.locator("#account-care-key")).toHaveAttribute("type", "password");
+    await recoveryPanel.locator("summary").click();
     await expect.poll(async () => (await state(page)).water.map(row => row.id)).toEqual(["fresh"]);
     const beforeZone = await latest();
     const legacyZone = await dispatch(care, "PATCH", JSON.stringify({
@@ -253,6 +265,10 @@ test("browser restore honors intent against the Worker and transfers private not
     });
     await page.locator("#account-sync-enable").click();
     await expect(page.locator("#account-sync-review")).toBeVisible();
+    const comparison = page.locator("#account-sync-differences");
+    await expect(comparison.locator("dt")).toHaveText(["مقدار"]);
+    await expect(comparison.locator("dd bdi")).toHaveText(["۷۰۰ میلی‌لیتر", "۵۰۰ میلی‌لیتر"]);
+    await expect(page.locator("#account-sync-review pre")).toHaveCount(0);
     expect((await state(page)).water[0].amount).toBe(700);
     expect((await latest()).records.water[0].amount).toBe(500);
     await page.locator("#account-sync-keep-cloud").click();

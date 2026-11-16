@@ -22,7 +22,8 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
   }
   for (const [id, delta] of [["previous-day", -1], ["next-day", 1]]) {
     $(id).addEventListener("click", () => {
-      const animate = screen === "today" && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const animate = screen === "today" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
+        getComputedStyle(dayWeek).gridTemplateColumns.split(" ").length === 7;
       const outgoing = animate ? dayWeek.children[delta > 0 ? 0 : 6]?.cloneNode(true) : null;
       chooseDay(selectedDay() + delta);
       if (!outgoing) return;
@@ -44,8 +45,12 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
   });
 
   function dateButton(day, selected, choose) {
-    const control = button(getDates().dayNumber(day), () => choose(day));
-    control.setAttribute("aria-label", getDates().formatDay(day, true));
+    const dates = getDates();
+    const number = dates.dayNumber(day);
+    const weekday = shortWeek[weekIndex(day)];
+    const control = button(number + " ", () => choose(day));
+    control.append(element("span", weekday));
+    control.setAttribute("aria-label", number + " " + weekday + ", " + dates.formatDay(day, true));
     control.dataset.focusKey = `day-${day}`;
     if (day === selected) control.setAttribute("aria-current", "date");
     return control;
@@ -70,7 +75,7 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
     if (dayControls.hidden) return;
     const dates = getDates();
     $("day-label").textContent = screen === "today" ? dates.month(day) : day === today() ? t("ui.today") : dates.formatDay(day);
-    $("pick-day").setAttribute("aria-label", t("ui.choose-date-value", dates.formatDay(day, true)));
+    $("pick-day").setAttribute("aria-label", $("day-label").textContent + ", " + t("ui.choose-date-value", dates.formatDay(day, true)));
     if (screen !== "today") return;
     $("today-reset").hidden = day === today();
     weekSlide?.cancel();
@@ -78,7 +83,6 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
       const date = day - 3 + offset;
       const control = dateButton(date, day, selected => chooseDay(selected, "day-week"));
       if (date === today()) control.classList.add("calendar-today");
-      control.append(element("span", shortWeek[weekIndex(date)]));
       return control;
     }));
   }

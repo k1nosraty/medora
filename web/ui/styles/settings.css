@@ -1,4 +1,9 @@
-.medora .settings-dialog .sheet-header { border-radius: 0 0 1.25rem 1.25rem; padding: .48rem .75rem; }
+.medora .settings-dialog .sheet-header {
+  border-radius: 0 0 1.25rem 1.25rem;
+  padding: .48rem .75rem;
+}
+.medora .settings-dialog .sheet-header > div { min-inline-size: 0; overflow-wrap: anywhere; }
+.medora .settings-dialog .sheet-header > .icon-button { min-inline-size: 44px; min-block-size: 44px; padding-inline: .25rem; }
 .medora #settings-subtitle { margin-block: .14rem 0; color: var(--muted); }
 .medora #settings-home h3 { margin: .9rem .25rem .35rem; color: var(--muted); font-size: .85rem; }
 .medora .settings-hero {

@@ -36,3 +36,96 @@
   .medora #visit-add { font-size: .875rem; }
 }
 .medora #today-dates .day-week { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+
+@media (max-width: 360px) {
+  .medora #today-dates .day-toolbar { grid-area: 1 / 2; flex-wrap: wrap; }
+  .medora #today-dates #previous-day { grid-area: 1 / 1; }
+  .medora #today-dates #next-day { grid-area: 1 / 3; }
+  .medora #today-dates .day-week-window { grid-area: 2 / 1 / 3 / -1; }
+  .medora #today-dates .day-week button { min-block-size: 2.75rem; }
+}
+
+@container (max-width: 16rem) {
+  .medora #today-dates .day-controls {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    row-gap: .35rem;
+  }
+  .medora #app #today-dates .day-arrow { min-inline-size: 44px; min-block-size: 44px; padding-inline: 0; }
+  .medora .day-controls .date-field { white-space: normal; overflow-wrap: anywhere; min-inline-size: 0; }
+  .medora #today-dates .day-toolbar { grid-area: 1 / 1 / 2 / -1; flex-wrap: wrap; }
+  .medora #today-dates #previous-day { grid-area: 2 / 1; }
+  .medora #today-dates #next-day { grid-area: 2 / 3; }
+  .medora #today-dates .day-week-window { grid-area: 3 / 1 / 4 / -1; }
+  .medora #today-dates .day-week button[aria-current="date"] { background: var(--action); backdrop-filter: none; }
+  .medora #today-dates .day-week { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .12rem; }
+  .medora #today-dates .day-week-ghost { display: none; }
+  .medora #today-dates .day-week button { min-block-size: 2.75rem; }
+  .medora #today-dates .day-controls::before { mask: none; }
+  .medora .dock { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); border-radius: 1rem; }
+  .medora .dock #open-quick { inline-size: clamp(44px, 16vw, 2.75rem); aspect-ratio: 1; align-self: center; min-block-size: 44px; }
+  .medora .dock button { line-height: 1.15; border-radius: .85rem; }
+  .medora .dock button svg { inline-size: 1rem; block-size: 1rem; }
+  .medora .dock:has(button[hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .medora .dock:has(#open-quick[hidden]):has([data-destination="insights"][hidden]) { grid-template-columns: minmax(0, 1fr); }
+  .medora #app #today-programs .program-grid, .medora #app .today-story { grid-template-columns: minmax(0, 1fr); }
+  .medora #app #today-programs button { min-inline-size: 0; white-space: normal; text-align: start; }
+  .medora #app #today-programs .program-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    justify-items: start;
+    min-block-size: 2.75rem;
+  }
+  .medora #app #today-programs .program-card > :is(svg, .glass-object, .category-art) { display: none; }
+  .medora #app #today-programs .program-card :is(strong, small) { grid-area: auto; overflow-wrap: anywhere; }
+  .medora #today-water { grid-template-columns: minmax(0, 1fr); }
+  .medora #app #today-water .today-water-art { display: none; }
+  .medora #water-entry .water-quick { display: flex; flex-wrap: wrap; }
+  .medora #water-entry .water-quick button { flex: 1 1 auto; white-space: normal; }
+  .medora .water-history-entries .entry-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .medora .water-history-entries .entry-row > :not(button) { grid-column: 1 / -1; }
+  .medora .water-history-entries .entry-row button { min-inline-size: 0; white-space: normal; overflow-wrap: anywhere; }
+  .medora #visits-heading, .medora #visit-filters { flex-wrap: wrap; }
+  .medora :is(#visit-add, #visit-filters button) { white-space: normal; max-inline-size: 100%; overflow-wrap: anywhere; }
+  .medora #visit-filters button { flex: 1 1 auto; }
+  .medora #calendar-today { white-space: normal; min-inline-size: min(100%, 3rem); }
+  .medora .today-story .story-art { display: none; }
+  .medora #today-water .water-info { grid-template-columns: minmax(0, 1fr); }
+  .medora #today-water-percent { grid-area: auto; justify-self: start; }
+  .medora #today-water .today-water-target { white-space: normal; }
+  .medora .today-water-actions { flex-wrap: wrap; }
+  .medora .today-water-actions button { min-inline-size: min(100%, 5rem); flex: 1 1 auto; }
+  .medora :is(.daily-heading, .timeline-heading, .calendar-agenda-head, .section-heading) { display: flex; flex-wrap: wrap; }
+  .medora .timeline-sort { max-inline-size: 100%; min-inline-size: 0; }
+  .medora #today-reminders button { max-inline-size: 100%; white-space: normal; }
+  .medora #timeline-order { min-inline-size: 0; max-inline-size: 100%; flex: 1 1 auto; }
+  .medora :is(#doses, #calendar-entries, #today-focus) .day-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: .2rem;
+  }
+  .medora :is(#doses, #calendar-entries, #today-focus) :is(.day-card-art, .day-focus-media) { display: none; }
+  .medora #today-focus .day-focus-copy { display: contents; }
+  .medora :is(#doses, #calendar-entries, #today-focus) .day-card-actions {
+    max-inline-size: 100%;
+    align-self: stretch;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .medora :is(#doses, #calendar-entries, #today-focus) .day-card-actions button { white-space: normal; min-inline-size: min(100%, 4rem); }
+  .medora #doses .day-card-time { border: 0; margin: 0; justify-content: start; }
+  .medora :is(.insights-tabs, #report-range) { flex-wrap: wrap; }
+  .medora :is(.insights-tabs, #report-range) button { flex: 1 1 auto; }
+  .medora #calendar-panel { grid-template-columns: minmax(0, 1fr); }
+  .medora .calendar-head { flex-wrap: wrap; }
+  .medora .calendar-head :is(button, h2) { min-inline-size: 0; }
+  .medora .calendar-head h2 { overflow-wrap: anywhere; }
+  .medora #calendar-days button { overflow-wrap: anywhere; }
+  .medora .report-hero { padding-inline-end: 0; }
+  .medora .report-hero .report-art { display: none; }
+  .medora .report-stats { grid-template-columns: minmax(0, 1fr); }
+  .medora #visits { grid-template-columns: minmax(0, 1fr); }
+  .medora #visits .visit-featured, .medora #plans .treatment-profile { display: block; }
+  .medora #plans .treatment-profile .medication-banner { display: none; }
+  .medora .app-content :is(h1, h2, h3, strong, .quiet) { overflow-wrap: anywhere; }
+}

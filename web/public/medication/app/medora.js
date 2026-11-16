@@ -153,10 +153,15 @@ $("timeline-order").addEventListener("change", render);
 const nextLanguage = language === "fa" ? "en" : "fa";
 for (const control of document.querySelectorAll("[data-language-switch]")) {
   control.lang = nextLanguage;
-  control.setAttribute("aria-label", language === "fa" ? "Switch to English" : "تغییر زبان به فارسی");
   const caption = control.querySelector("span");
-  if (caption) caption.textContent = nextLanguage.toUpperCase();
-  else control.textContent = language === "fa" ? "English" : "فارسی";
+  const name = language === "fa" ? "Switch to English" : "تغییر زبان به فارسی";
+  if (caption) {
+    caption.textContent = nextLanguage.toUpperCase();
+    control.setAttribute("aria-label", caption.textContent + ", " + name);
+  } else {
+    control.textContent = language === "fa" ? "English" : "فارسی";
+    control.setAttribute("aria-label", name);
+  }
   control.addEventListener("click", () => selectLanguage(nextLanguage));
 }
 for (const control of document.querySelectorAll("[data-close]")) control.addEventListener("click", () => $(control.dataset.close).close());
@@ -184,6 +189,7 @@ const openEditor = installMedicineEditor({
   getState, isBusy: () => busy, mutate, removeMedicine: medicines.deleteMedicine, pickers, formatDay: dashboard.formatDay
 });
 const accountSync = installCareSync({
+  formatDay: dashboard.formatDay,
   reload: async changed => {
     await reload();
     if (changed) {
@@ -270,7 +276,9 @@ try {
   $("app").hidden = false;
   $("boot-status").hidden = true;
   showIntro(care, mutate);
-  if (!$("app").hidden && view === "notification-settings") dashboard.show("settings", true);
+  if (!$("app").hidden && ["settings", "notification-settings"].includes(view)) {
+    dashboard.show("settings", view === "notification-settings");
+  }
   const routineId = params.get("routine");
   if (!$("app").hidden && view === "routines" && validRoutineId(routineId) && day === $("day").value) {
     const date = selectedDay();

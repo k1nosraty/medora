@@ -127,6 +127,7 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
   const max = Math.max(goal, ...bars.map(bar => bar.value));
   chart.style.setProperty("--goal", `${goal / max * 100}%`);
   const selection = $("report-chart-selection");
+  const picker = $("report-chart-pick");
   const previous = $("report-chart-previous");
   const next = $("report-chart-next");
   const initial = bars.findLastIndex(bar => bar.count);
@@ -157,6 +158,7 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
       control.tabIndex = i === selected ? 0 : -1;
     });
     const bar = bars[selected];
+    picker.selectedIndex = index;
     selection.replaceChildren(element("span", dateLabel(bar)),
       element("strong", valueLabel(bar)),
       ...(bar.end > bar.start && bar.count ? [element("small", t("ui.average-across-value-logged-days", number(bar.count)))] : []));
@@ -165,6 +167,8 @@ function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDa
   }
   previous.onclick = () => { if (selected > 0) select(selected - 1); };
   next.onclick = () => { if (selected < bars.length - 1) select(selected + 1); };
+  picker.replaceChildren(...bars.map(bar => new Option(t("ui.value-value", dateLabel(bar), valueLabel(bar)))));
+  picker.onchange = () => select(picker.selectedIndex);
   chart.replaceChildren(...controls);
   $("report-chart-dates").replaceChildren(element("span", formatShortDate(first)), element("span", formatShortDate(last)));
   select(initial);

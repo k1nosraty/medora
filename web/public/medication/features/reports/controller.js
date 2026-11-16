@@ -65,8 +65,9 @@ export function installInsights({ root, today, getFamilyView, getDates, render, 
 
   function reset() {
     selection = today();
-    for (const id of ["calendar-days", "calendar-entries", "report-chart", "report-chart-dates"]) get(id).replaceChildren();
+    for (const id of ["calendar-days", "calendar-entries", "report-chart", "report-chart-dates", "report-chart-pick"]) get(id).replaceChildren();
     delete get("report-chart").dataset.chartKey;
+    get("report-chart-pick").onchange = null;
     for (const id of ["report-chart-previous", "report-chart-next"]) get(id).onclick = null;
   }
   return { paint, stop, reset, actionDay: () => section === "calendar" ? selection : today() };

@@ -49,7 +49,7 @@ const pickers = installPickers({ selectedDay: calendarPreview.selected, today, d
 const refreshFields = pickers.refresh;
 const openMedicine = installMedicineEditor({ ...sample, isBusy: () => false, removeMedicine: noAction, pickers });
 const appointments = installAppointments({
-  ...sample, defaultDay: today, refreshFields, formatDayNumber: dates.dayNumber, formatShortMonth: dates.shortMonth
+  ...sample, refreshFields, formatDayNumber: dates.dayNumber, formatShortMonth: dates.shortMonth
 });
 const routines = installRoutines({ ...sample, refreshFields });
 const water = installWater({ ...sample, selectedDay: today, actionDay: today, refreshFields, formatShortDate: dates.shortDate });

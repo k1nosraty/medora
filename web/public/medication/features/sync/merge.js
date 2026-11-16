@@ -32,7 +32,7 @@ function debits(snapshot) {
   return totals;
 }
 
-const scheduleFields = ["phases", "dates", "phased", "paused", "archived", "effectiveFrom", "scheduleFrom", "unit", "stockTrackedFrom"];
+export const medicineScheduleFields = ["phases", "dates", "phased", "paused", "archived", "effectiveFrom", "scheduleFrom", "unit", "stockTrackedFrom"];
 const select = (row, fields) => !row ? undefined : fields.map(key => row[key]);
 function diverged(before, ours, theirs) {
   return !equal(before, ours) && !equal(before, theirs) && !equal(ours, theirs);
@@ -61,9 +61,9 @@ function mergeMedicines(base, local, remote, merged, resolve) {
   return mergeMap(base.medicines, local.medicines, remote.medicines, (before, ours, theirs, id) => {
     const path = ["medicines", id];
     if (!before || !ours || !theirs) return resolve(path, before, ours, theirs);
-    const scheduleBefore = select(before, scheduleFields);
-    const scheduleLocal = select(ours, scheduleFields);
-    const scheduleCloud = select(theirs, scheduleFields);
+    const scheduleBefore = select(before, medicineScheduleFields);
+    const scheduleLocal = select(ours, medicineScheduleFields);
+    const scheduleCloud = select(theirs, medicineScheduleFields);
     const schedule = diverged(scheduleBefore, scheduleLocal, scheduleCloud)
       ? resolve([...path, "schedule"], before, ours, theirs, true)
       : preferRecord(scheduleBefore, scheduleLocal, scheduleCloud) === scheduleLocal ? ours : theirs;
@@ -72,7 +72,7 @@ function mergeMedicines(base, local, remote, merged, resolve) {
     const localTracking = scope(ours) !== previous;
     const remoteTracking = scope(theirs) !== previous;
     const fields = mergeMap(before, ours, theirs, (previous, localValue, cloudValue, field) => {
-      if (scheduleFields.includes(field)) return schedule[field];
+      if (medicineScheduleFields.includes(field)) return schedule[field];
       if (field === "stock" || field === "revision") return preferRecord(previous, localValue, cloudValue);
       return resolve([...path, field], previous, localValue, cloudValue);
     });

@@ -32,7 +32,7 @@ test("narrow English header fits including the invite badge", async ({ page }) =
     }).map(node => node.id || node.getAttribute("aria-label") || node.textContent.trim());
   });
   await expect(page.getByRole("button", { name: "Update app", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "تغییر زبان به فارسی", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "FA, تغییر زبان به فارسی", exact: true })).toBeVisible();
   expect(await overflow()).toEqual([]);
   await page.context().addCookies([{ name: "test-family", value: "1", url: "http://127.0.0.1:8872" }]);
   await page.reload();
@@ -508,8 +508,160 @@ test("design gallery opens shared forms", async ({ page }) => {
   await page.goto("/design/?lang=en");
   await page.locator('[data-open-medication]').first().evaluate(button => button.click());
   await expect(page.locator("#medication-dialog")).toBeVisible();
-  await page.locator('[data-close="medication-dialog"]').click();
+  await page.locator("#editor-close").click();
   await page.locator('[data-open-visit]').first().evaluate(button => button.click());
   await expect(page.locator("#visit-dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   expect(errors).toEqual([]);
+});
+
+test.describe("appointments on a device in Tehran", () => {
+  test.use({ timezoneId: "Asia/Tehran" });
+
+  test("an appointment opens at the clinic clock and keeps a day selected in the calendar", async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-11-17T01:30:00Z") });
+    await open(page, { language: "en" });
+    await page.evaluate(async () => {
+      const { accessCareSettings } = await import("/medication/shared/storage.js");
+      await accessCareSettings(state => { state.clinicTimeZone = "America/Toronto"; });
+    });
+    await page.reload();
+    const startVisit = async () => {
+      await page.locator("#open-quick").click();
+      await page.locator("#quick-dialog [data-open-visit]").click();
+    };
+    await startVisit();
+    await expect(page.locator("#visit-day")).toHaveValue("2026-11-16");
+    await expect(page.locator("#visit-time")).toHaveValue("20:30");
+    await expect(page.locator("#visit-zone-summary")).toHaveText("Appointment time in Toronto");
+    await page.keyboard.press("Escape");
+    await page.locator('.dock [data-destination="insights"]').click();
+    await page.locator('#calendar-days button[aria-pressed="true"]').press("ArrowRight");
+    await page.locator('#calendar-days button[tabindex="0"]').press("Enter");
+    await startVisit();
+    await expect(page.locator("#visit-day")).toHaveValue("2026-11-18");
+    await expect(page.locator("#visit-time")).toHaveValue("20:30");
+  });
+});
+
+test("large text reflows care screens and the backup form at 320 pixels", async ({ page }) => {
+  await open(page, { language: "en", width: 320, height: 640, theme: "dark", medicine: true });
+  await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { today } = await import("/medication/shared/ui/dates.js");
+    await accessCare(state => {
+      state.medicines.sample.phases[0].slots[0].minute = 0;
+      state.cycleEnabled = true;
+      state.water = [{ day: today(), amount: 250, id: "water-sample", time: "10:00" }];
+      state.visits = { visit: { day: today(), name: "Sample appointment", id: "visit", time: "13:00", zone: "UTC" } };
+    });
+  });
+  for (const language of ["en", "fa"]) {
+    await page.evaluate(language => localStorage.setItem("medora-language", language), language);
+    for (const view of ["today", "water", "medications", "appointments", "routines", "insights", "reports", "cycle", "settings"]) {
+      await page.goto("/medication/?view=" + (view === "reports" ? "insights" : view));
+      await expect(page.locator("#app")).toBeVisible();
+      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+      if (view === "reports") await page.locator('[data-insight="reports"]').click();
+      if (view === "settings") await page.locator('[data-settings-panel="backup-settings"]').click();
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth), language + " " + view).toBe(320);
+      if (view === "today") {
+        const box = await page.locator("#today-water button[data-open-water]").boundingBox();
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.x + box.width).toBeLessThanOrEqual(320);
+        await expect(page.locator("#day-week button").first()).toHaveAccessibleName(/^\S+\s+\S+, /);
+      }
+      if (view === "settings") {
+        const content = page.locator("#settings-content");
+        await expect.poll(() => content.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+        await expect(page.locator("#android-restore-submit")).toBeEnabled();
+      }
+    }
+  }
+});
+
+test("the medicine editor keeps a changed draft when dismissal is declined", async ({ page }) => {
+  await open(page, { language: "en" });
+  await page.locator("#open-quick").click();
+  await page.locator("#quick-dialog [data-open-medication]").click();
+  await page.locator("#name").fill("Synthetic medicine draft");
+  await page.locator("#editor-next").click();
+  page.once("dialog", async dialog => {
+    expect(dialog.message()).toContain("unsaved changes");
+    await dialog.dismiss();
+  });
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#medication-dialog")).toBeVisible();
+  await page.locator("#editor-back").click();
+  await expect(page.locator("#name")).toHaveValue("Synthetic medicine draft");
+  page.once("dialog", dialog => dialog.accept());
+  await page.locator("#editor-close").click();
+  await expect(page.locator("#medication-dialog")).toBeHidden();
+});
+
+test("English cycle choices and the water report picker have readable labels", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-11-16T12:00:00Z") });
+  await open(page, { language: "en", width: 320, height: 640 });
+  await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { today } = await import("/medication/shared/ui/dates.js");
+    await accessCare(state => {
+      state.cycleEnabled = true;
+      state.water = [{ id: "sample", day: today(), time: "10:00", amount: 250 }];
+    });
+  });
+  await page.goto("/medication/?view=cycle");
+  await page.locator("#cycle-add").click();
+  await expect(page.locator("#cycle-flow option")).toHaveText(["Not selected", "Light", "Medium", "Heavy"]);
+  await page.goto("/medication/?view=insights");
+  await page.locator('[data-insight="reports"]').click();
+  await expect(page.getByLabel("Choose a day or period")).toBeVisible();
+  await expect(page.locator('#report-chart-pick option:checked')).toContainText("250 mL");
+  await page.locator('#report-range [data-report-range="week"]').click();
+  const select = page.locator("#report-chart-pick");
+  await select.selectOption({ index: 0 });
+  await expect(page.locator("#report-chart button").first()).toHaveAttribute("aria-pressed", "true");
+});
+
+test("the admin account list offers a retry after the initial response fails", async ({ page }) => {
+  await page.route("**/api/admin/operations/access", route => route.fulfill({ json: { role: "admin" } }));
+  let attempts = 0;
+  await page.route("**/api/admin/accounts?*", route => {
+    if (++attempts === 1) return route.fulfill({ status: 503, json: { error: "unavailable" } });
+    return route.fulfill({ json: { users: [], next: null } });
+  });
+  await page.goto("/admin/");
+  await expect(page.locator("#admin-sign-in")).toBeHidden();
+  await page.locator("#admin-retry").click();
+  await expect(page.locator("#admin-retry")).toBeHidden();
+  await expect(page.locator("#admin-account-search input")).toBeFocused();
+  expect(attempts).toBe(2);
+});
+
+test.describe("promotion without a service worker", () => {
+  test.use({ serviceWorkers: "block" });
+  test("a sponsored message stays inline until the user opens it", async ({ page }) => {
+    const events = [];
+    await page.route("**/api/operations", route => route.fulfill({ json: { flags: { promotions: 100 }, notice: null } }));
+    await page.route("**/api/promotion", route => route.fulfill({ json: { promotion: {
+      id: "sample", title: "Test campaign", description: "Synthetic", frequency: 1
+    } } }));
+    await page.route("**/api/promotion/events", route => {
+      events.push(route.request().postDataJSON().event);
+      return route.fulfill({ status: 204 });
+    });
+    await page.goto("/medication/");
+    await page.locator("#welcome-start").click();
+    await expect(page.locator("#today-promotion")).toBeVisible();
+    await expect(page.locator("#promotion-dialog")).toBeHidden();
+    expect(events).toEqual([]);
+    await page.locator("#today-promotion-open").click();
+    await expect(page.locator("#promotion-dialog")).toBeVisible();
+    await expect.poll(() => events).toEqual(["impression"]);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#today-promotion")).toBeHidden();
+  });
 });

@@ -5,7 +5,6 @@ import { dayMs, localWall, timezone } from "../../domain/wall-clock.js";
 import { isoDay } from "../../domain/care-index.js";
 import { appearanceColors } from "../medicines/appearance.js";
 import { $, button, element } from "../../shared/ui/dom.js";
-import { localClock } from "../../shared/ui/input-values.js";
 import { timeZoneCity } from "../../shared/ui/time-zone-picker.js";
 import { appointmentView, visitIllustration } from "./view.js";
 
@@ -13,7 +12,7 @@ const numbers = new Intl.NumberFormat(locale);
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "green";
 
-export function installAppointments({ getState, getFamilyView = () => null, today, defaultDay, render, mutate, requestDeletion, refreshFields, formatDay, formatDayNumber, formatShortMonth }) {
+export function installAppointments({ getState, getFamilyView = () => null, today, selectedDate = () => undefined, render, mutate, requestDeletion, refreshFields, formatDay, formatDayNumber, formatShortMonth }) {
   let editingVisit = null;
   let delegation;
   let clinicZone;
@@ -142,13 +141,14 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     $("visit-form-title").textContent = target ? t("ui.add-for-value", target.name) : visit ? t("ui.edit-appointment") : t("ui.new-appointment");
     $("visit-editor").querySelector('[type="submit"]').textContent = target ? t("ui.save-for-value", target.name) : t("ui.save-appointment");
     $("visit-name").value = visit?.name ?? "";
-    $("visit-day").value = isoDay(visit?.day ?? target?.day ?? defaultDay());
-    $("visit-time").value = visit?.time ?? localClock();
+    const chosenZone = visit ? visit.zone : target ? target.zone : getState().clinicTimeZone;
+    clinicZone = chosenZone ?? localZone() ?? "UTC";
+    const wall = localWall(Date.now(), timezone(clinicZone));
+    $("visit-day").value = isoDay(visit?.day ?? target?.day ?? selectedDate() ?? Math.floor(wall / dayMs));
+    $("visit-time").value = visit?.time ?? new Date(wall).toISOString().slice(11, 16);
     $("visit-place").value = visit?.place ?? "";
     $("visit-note").value = visit?.note ?? visit?.notes ?? "";
     $("visit-contact").value = visit?.contact ?? "";
-    const chosenZone = visit ? visit.zone : target ? target.zone : getState().clinicTimeZone;
-    clinicZone = chosenZone ?? localZone() ?? "UTC";
     $("visit-zone-summary").textContent = t("ui.clinic-zone-appointment-value", timeZoneCity(clinicZone));
     $("visit-extra").open = Boolean(visit?.note || visit?.contact);
     visitAppearance.open = false;

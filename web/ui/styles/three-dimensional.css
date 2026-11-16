@@ -115,7 +115,7 @@
 .medora #water-dialog:has(.water-log-hero) .sheet-header > svg { display: none; }
 .medora #water-dialog:has(.water-log-hero) #water-presets button[aria-pressed="true"] { background: var(--action); color: var(--on-action); }
 
-.medora #settings-heading-art { flex: 0 0 2.35rem; }
+.medora #settings-heading-art { flex: 0 0 min(12%, 2.35rem); }
 .medora #settings-heading-art .glass-object { inline-size: 100%; block-size: auto; }
 .medora #settings-back { order: -1; margin-inline-start: 0; }
 .medora .settings-icon .glass-object { inline-size: 100%; block-size: auto; }

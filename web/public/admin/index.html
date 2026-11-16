@@ -22,6 +22,7 @@
     <h1>پنل مدیریت مدورا</h1>
     <p id="admin-status" role="status">در حال ارتباط…</p>
     <a id="admin-sign-in" href="/medication/?view=account&return=admin" hidden>ورود به حساب مدورا</a>
+    <button id="admin-retry" type="button" class="secondary" hidden>تلاش دوباره</button>
     <div id="admin-workspace" hidden>
       <nav class="admin-tabs segmented glass-toolbar" aria-label="بخش‌های مدیریت">
         <button type="button" data-admin-tab="accounts" aria-controls="admin-accounts" aria-pressed="true">حساب‌های کاربری</button>
@@ -89,7 +90,7 @@
             <span class="admin-preview-skip">رد کردن</span>
             <a id="preview-link" class="admin-preview-action" target="_blank" rel="noopener noreferrer" hidden>مشاهدهٔ جزئیات</a>
           </div>
-          <p class="quiet">هر مرورگر روزانه حداکثر یک تبلیغ می‌بیند. پیش‌نمایش خصوصی را می‌توانی دوباره باز کنی.</p>
+          <p class="quiet">پیام در پایین صفحهٔ امروز نمایش داده می‌شود. بازکردن پیام به‌عنوان نمایش ثبت می‌شود. پیش‌نمایش خصوصی را می‌توانی دوباره باز کنی.</p>
         </div>
       </section>
       <section id="admin-operations" hidden>

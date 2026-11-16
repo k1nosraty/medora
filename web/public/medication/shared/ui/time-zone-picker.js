@@ -14,13 +14,40 @@ const persianNames = {
   "America/Toronto": ["تورنتو"],
   "America/New_York": ["نیویورک"],
   "America/Los_Angeles": ["لس‌آنجلس", "لس آنجلس"],
-  "Australia/Sydney": ["سیدنی"]
+  "Australia/Sydney": ["سیدنی"],
+  "Australia/Melbourne": ["ملبورن"],
+  "Asia/Baghdad": ["بغداد", "عراق"],
+  "Asia/Riyadh": ["ریاض", "عربستان"],
+  "Asia/Muscat": ["مسقط", "عمان"],
+  "Asia/Qatar": ["دوحه", "قطر"],
+  "Asia/Yerevan": ["ایروان", "ارمنستان"],
+  "Asia/Tbilisi": ["تفلیس", "گرجستان"],
+  "Asia/Baku": ["باکو", "آذربایجان"],
+  "Asia/Karachi": ["کراچی", "پاکستان"],
+  "Asia/Kolkata": ["کلکته", "هند", "دهلی", "بمبئی", "دِهلی"],
+  "Asia/Singapore": ["سنگاپور"],
+  "Asia/Shanghai": ["شانگهای", "پکن", "چین"],
+  "Asia/Kuala_Lumpur": ["کوالالامپور", "کوالا لامپور"],
+  "Asia/Seoul": ["سئول", "کره"],
+  "Asia/Bangkok": ["بانکوک"],
+  "Europe/Rome": ["رم", "روم", "ایتالیا"],
+  "Europe/Amsterdam": ["آمستردام", "هلند"],
+  "Europe/Madrid": ["مادرید", "اسپانیا"],
+  "Europe/Athens": ["آتن", "یونان"],
+  "Europe/Vienna": ["وین", "اتریش"],
+  "Europe/Stockholm": ["استکهلم", "سوئد"],
+  "Europe/Moscow": ["مسکو", "روسیه"],
+  "America/Vancouver": ["ونکوور"],
+  "America/Chicago": ["شیکاگو"],
+  "America/Denver": ["دنور"],
+  "Africa/Cairo": ["قاهره", "مصر"]
 };
 
 const searchKey = text => text.normalize("NFKD").toLowerCase()
   .replace(/[يى]/g, "ی").replace(/ك/g, "ک").replace(/[^\p{L}\p{N}]/gu, "");
-const cityOf = zone => zone.split("/").at(-1).replaceAll("_", " ");
-export const timeZoneCity = zone => (language === "fa" && persianNames[zone]?.[0]) || cityOf(zone);
+const cityOf = zone => zone === "Asia/Calcutta" ? "Kolkata" : zone.split("/").at(-1).replaceAll("_", " ");
+const aliasesFor = zone => persianNames[zone === "Asia/Calcutta" ? "Asia/Kolkata" : zone] ?? [];
+export const timeZoneCity = zone => (language === "fa" && aliasesFor(zone)[0]) || cityOf(zone);
 const cities = new Intl.Collator(locale, { sensitivity: "base" });
 
 function utcOffset(zone, now) {
@@ -55,7 +82,7 @@ export function installTimeZonePicker(search, options, empty) {
         .sort((a, b) => cities.compare(timeZoneCity(a), timeZoneCity(b)) || cities.compare(a, b));
       rows = [...pinned, ...others].map(zone => {
         const city = cityOf(zone);
-        const aliases = persianNames[zone] ?? [];
+        const aliases = aliasesFor(zone);
         const name = timeZoneCity(zone);
         const title = zone === device ? t("ui.sync-device-zone-option", name) : name;
         const row = element("label", "", "time-zone-option");

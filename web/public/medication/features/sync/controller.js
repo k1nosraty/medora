@@ -8,6 +8,7 @@ import { hasPrivateText } from "../../domain/private-fields.js";
 import { applyPortable, CareConflict, conflictChoice, equal as same, mergeCare, mergeRestoredCare } from "./merge.js";
 import { generateRecoveryKey, importRecoveryKey, normalizePrivateCare, openPrivateCare, sealPrivateCare } from "./private-care.js";
 import { installTimeZonePicker } from "../../shared/ui/time-zone-picker.js";
+import { showCareConflict } from "./conflict-view.js";
 const path = "/api/account/care";
 
 function syncError(response) {
@@ -15,7 +16,7 @@ function syncError(response) {
     422: "private_key", 429: "rate_limit" })[response.status] ?? "sync_failed");
 }
 
-export function installCareSync({ reload, remindersChanged, readCare = accessCare, readSettings = accessCareSettings,
+export function installCareSync({ reload, remindersChanged, formatDay, readCare = accessCare, readSettings = accessCareSettings,
   transport = fetch, now = Date.now }) {
   const status = $("account-sync-status");
   const enable = $("account-sync-enable");
@@ -36,15 +37,18 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
   const maxAutomaticRetries = 4;
   const keyInput = $("account-care-key");
   const keyStatus = $("account-care-key-status");
+  const reveal = $("account-care-key-reveal");
+  function revealKey(visible) {
+    keyInput.type = visible ? "text" : "password";
+    reveal.textContent = t(visible ? "ui.sync-hide-key" : "ui.sync-show-key");
+  }
+  reveal.addEventListener("click", () => revealKey(keyInput.type === "password"));
+  $("account-dialog").addEventListener("close", () => revealKey(false));
   const review = $("account-sync-review");
-  function showConflict(value) {
+  function showConflict(value, snapshot) {
     conflict = value;
     review.hidden = !value;
-    $("account-sync-record").textContent = value?.path.join(" / ") ?? "";
-    for (const side of ["local", "cloud"]) {
-      $("account-sync-" + side).textContent = !value ? "" : value[side] === undefined
-        ? t("ui.sync-record-deleted") : JSON.stringify(value[side], null, 2);
-    }
+    showCareConflict(value, snapshot, formatDay);
   }
 
   for (const side of ["device", "cloud"]) {
@@ -107,6 +111,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
     message = "در حال همگام‌سازی سوابق…";
     void refresh();
     let accountOwner;
+    let original;
     try {
       if (!activate && !signedIn && !((await readSettings()).accountCare?.enabled)) {
         message = "";
@@ -138,7 +143,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       accountOwner = wire.owner;
       if (conflictOwner !== accountOwner) choices.length = 0;
       const choose = value => conflictChoice(value, choices);
-      const original = normalizePrivateCare(portable(local));
+      original = normalizePrivateCare(portable(local));
       const remote = { ...wire, records: normalizePrivateCare(await openPrivateCare(wire.records, key)) };
       if (currentGeneration !== authGeneration) return;
       const autoRestore = signedIn && !binding && remote.records && ![
@@ -218,7 +223,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
         conflictOwner = accountOwner;
         resumeActivation = activate;
         retryAt = Infinity;
-        showConflict(error);
+        showConflict(error, original);
         message = "ui.sync-care-conflict";
         return;
       }
@@ -326,7 +331,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
   });
 
   $("account-care-key-generate").addEventListener("click", () => {
-    keyInput.type = "text";
+    revealKey(true);
     keyInput.value = generateRecoveryKey();
     keyInput.select();
     keyStatus.textContent = t("ui.sync-save-recovery-key");
@@ -381,7 +386,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       if (generation !== authGeneration) return;
       recovery = replacement;
       keyInput.value = "";
-      keyInput.type = "password";
+      revealKey(false);
       keyStatus.textContent = t("ui.sync-key-rotated");
       schedule(0);
     } catch (error) {
@@ -403,7 +408,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       if (attempt !== recoveryAttempt) return;
       recovery = imported;
       keyInput.value = "";
-      keyInput.type = "password";
+      revealKey(false);
       keyStatus.textContent = "";
       if (running) pendingSignIn = true;
       else void sync(false, true);
@@ -418,7 +423,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
     choices.length = 0;
     recovery = undefined;
     keyInput.value = "";
-    keyInput.type = "password";
+    revealKey(false);
     keyStatus.textContent = "";
   }
 

@@ -1,5 +1,5 @@
 import { $, button, element } from "../medication/shared/ui/dom.js";
-import { shortWeek, weekIndex } from "../medication/shared/i18n/locale.js";
+import { shortWeek, t, weekIndex } from "../medication/shared/i18n/locale.js";
 import { isoDay } from "../medication/domain/care-index.js";
 
 export function installCalendarPreview(dates, today) {
@@ -18,11 +18,14 @@ export function installCalendarPreview(dates, today) {
   function render() {
     $("day").value = isoDay(selected);
     $("day-label").textContent = dates.month(selected);
+    $("pick-day").setAttribute("aria-label", $("day-label").textContent + ", " + t("ui.choose-date-value", dates.formatDay(selected, true)));
     $("today-reset").hidden = selected === today;
     $("day-week").replaceChildren(...Array.from({ length: 7 }, (_, index) => {
       const day = selected + index - 3;
       const control = dateButton(day, () => choose(day, "day-week"));
-      control.append(element("span", shortWeek[weekIndex(day)]));
+      const weekday = shortWeek[weekIndex(day)];
+      control.append(" ", element("span", weekday));
+      control.setAttribute("aria-label", dates.dayNumber(day) + " " + weekday + ", " + dates.formatDay(day, true));
       return control;
     }));
     $("gallery-month-label").textContent = dates.month(month);

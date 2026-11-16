@@ -7,7 +7,7 @@
       <div class="sheet-body">
         <label>{{msg:ui.start-date}}<input id="cycle-start" type="date" required></label>
         <label>{{msg:ui.end-date-optional}}<input id="cycle-end" type="date"></label>
-        <label>{{msg:ui.flow-optional}}<select id="cycle-flow"><option value="">{{msg:ui.not-selected}}</option><option value="light">کم</option><option value="medium">متوسط</option><option value="heavy">زیاد</option></select></label>
+        <label>{{msg:ui.flow-optional}}<select id="cycle-flow"><option value="">{{msg:ui.not-selected}}</option><option value="light">{{msg:ui.cycle-flow-light}}</option><option value="medium">{{msg:ui.cycle-flow-medium}}</option><option value="heavy">{{msg:ui.cycle-flow-heavy}}</option></select></label>
         <label>{{msg:ui.symptoms-or-notes-optional}}<textarea id="cycle-note" maxlength="500" rows="2"></textarea></label>
         <p id="cycle-error" class="field-error" role="alert"></p>
         <button class="block-action" type="submit">{{msg:ui.save}}</button>

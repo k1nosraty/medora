@@ -3,6 +3,7 @@ import { localDigits, t } from "../../shared/i18n/locale.js";
 import { isoDay } from "../../domain/care-index.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
 import { mountDayCard } from "../../shared/ui/day-card.js";
+import { timeZoneCity } from "../../shared/ui/time-zone-picker.js";
 
 import { visitGlass } from "../../design/three-dimensional.js";
 
@@ -73,7 +74,7 @@ export function appointmentView({
       metadata.append(element("bdi", label, layout ? "" : "visit-category"));
     }
     if (visit.zone && visit.zone !== zone) {
-      details.append(element("p", t("ui.clinic-time-value-value-value", formatDay(visit.day), clockText(visit.time), visit.zone), "quiet"));
+      details.append(element("p", t("ui.clinic-time-value-value-value", formatDay(visit.day), clockText(visit.time), timeZoneCity(visit.zone)), "quiet"));
     }
     if (visit.place) details.append(element("p", t("ui.location-value", visit.place), "quiet"));
     if (visit.cancelled) details.append(element("p", t("ui.cancelled-appointment"), "badge"));

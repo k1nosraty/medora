@@ -1,6 +1,6 @@
   <dialog id="medication-dialog" class="sheet" aria-labelledby="editor-title">
     <form id="editor" class="sheet-form" novalidate>
-      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="editor-title">{{msg:ui.new-medicine}}</h2><button class="icon-button" type="button" data-close="medication-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-mark"/></svg><h2 id="editor-title">{{msg:ui.new-medicine}}</h2><button class="icon-button" type="button" id="editor-close" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
       <div class="sheet-body">
         <ol id="editor-steps" class="wizard-steps" aria-label="{{msg:ui.medicine-setup-steps}}">
           <li><span>{{msg:ui.1}}</span>{{msg:ui.name-form}}</li><li><span>{{msg:ui.2}}</span>{{msg:ui.dose-schedule}}</li><li><span>{{msg:ui.3}}</span>{{msg:ui.review-save}}</li>

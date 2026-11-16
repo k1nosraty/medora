@@ -173,6 +173,8 @@
 .medora #report-chart > button[data-logged="false"]::before { opacity: .27; }
 .medora #report-chart-dates { display: flex; justify-content: space-between; gap: .5rem; font-size: .72rem; }
 .medora #report-chart-dates > :last-child { text-align: end; }
+.medora .report-chart-picker { display: grid; gap: .2rem; margin-block-start: .45rem; font-size: .8rem; }
+.medora .report-chart-picker select { min-inline-size: 0; max-inline-size: 100%; min-block-size: 2.75rem; }
 .report-chart-controls { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: center; gap: .4rem; }
 .medora .report-chart-controls button { color: inherit; background: transparent; }
 .medora .report-chart-controls button[aria-disabled="true"] { opacity: .45; }

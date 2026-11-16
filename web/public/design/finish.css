@@ -102,3 +102,28 @@
 .medora .gallery-finish-card[data-finish="glass"] {
   background: radial-gradient(ellipse at 15% 10%, color-mix(in srgb, var(--action) 10%, transparent), transparent 76%), var(--panel);
 }
+
+.gallery { container-type: inline-size; }
+@container (max-width: 16rem) {
+  .medora .gallery .gallery-toolbar { position: static; }
+  .medora .gallery :is(.gallery-toolbar, .gallery-filter, .gallery-hero-picker, .gallery-month-head, .gallery-calendar-footer) { flex-wrap: wrap; }
+  .medora .gallery :is(label, select, input, button) { min-inline-size: 0; max-inline-size: 100%; }
+  .medora .gallery :is(h1, h2, h3, p, a, button, .gallery-check span) { overflow-wrap: anywhere; white-space: normal; }
+  .medora .gallery #today-dates #day-controls { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .medora .gallery #today-dates .day-arrow { min-inline-size: 44px; min-block-size: 44px; padding-inline: 0; }
+  .medora .gallery #today-dates .day-toolbar { grid-area: 1 / 1 / 2 / -1; }
+  .medora .gallery #today-dates #previous-day { grid-area: 2 / 1; }
+  .medora .gallery #today-dates #next-day { grid-area: 2 / 3; }
+  .medora .gallery #today-dates .day-week-window { grid-area: 3 / 1 / 4 / -1; }
+  .medora .gallery #today-dates .day-controls::before { mask: none; }
+  .medora .gallery #today-dates .day-week { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .medora .gallery #today-dates .day-week button[aria-current="date"] { background: var(--action); backdrop-filter: none; }
+  .medora .gallery .gallery-calendar { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .medora .gallery .gallery-calendar button { padding-inline: 0; }
+  .medora .gallery .program-grid:has(> .program-card),
+  .medora .gallery :is(#today-water, .glass-comparison-pair, #gallery-finish-comparison) { grid-template-columns: minmax(0, 1fr); }
+  .medora .gallery .today-water-art { display: none; }
+  .medora .gallery .today-water-actions { flex-wrap: wrap; }
+  .medora .gallery .today-water-actions button { flex: 1 1 auto; }
+  .medora .gallery .gallery-dock-preview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

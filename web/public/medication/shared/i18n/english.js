@@ -1,4 +1,5 @@
 export default {
+  "پیام در پایین صفحهٔ امروز نمایش داده می‌شود. بازکردن پیام به‌عنوان نمایش ثبت می‌شود. پیش‌نمایش خصوصی را می‌توانی دوباره باز کنی.": "The message appears at the bottom of Today. Opening it counts as an impression. You can reopen the private preview.",
   "شبکهٔ مراقبت": "Care network",
   "دعوت برای ثبت‌نام": "Invite to sign up",
   "نشان مدورا": "Medora mark",

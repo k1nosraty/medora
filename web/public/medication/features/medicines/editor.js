@@ -21,6 +21,15 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
   let editorStep = 0;
   let editorDates = [];
   let restoreExactMode = false;
+  let initialDraft;
+  const dialog = $("medication-dialog");
+  const editor = $("editor");
+  const draft = () => JSON.stringify([editorDates, Array.from(editor.elements).filter(field =>
+    field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement
+  ).map(field => field.type === "checkbox" || field.type === "radio" ? field.checked : field.value)]);
+  const canDismiss = () => !$("editor-next").disabled && (initialDraft === draft() || confirm(t("ui.discard-medicine-draft")));
+  $("editor-close").addEventListener("click", () => { if (canDismiss()) dialog.close(); });
+  dialog.addEventListener("cancel", event => { if (!canDismiss()) event.preventDefault(); });
 
   function updateSlotLabels(container) {
     Array.from(container.children).forEach((row, index, rows) => {
@@ -144,7 +153,8 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
     updateStockOptions();
     updateEditorMode();
     showEditorStep(0, false);
-    $("medication-dialog").showModal();
+    initialDraft = draft();
+    dialog.showModal();
     $("editor-identity").focus({ preventScroll: true });
   }
 

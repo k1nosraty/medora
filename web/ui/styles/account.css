@@ -104,4 +104,16 @@
 .medora .account-shortcuts button { display: flex; justify-content: center; align-items: center; gap: .3rem; padding-inline: .2rem; }
 .medora .account-shortcuts svg { inline-size: 1rem; block-size: 1rem; }
 
-#account-sync-review pre { white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 14rem; overflow: auto; }
+#account-sync-review h4 { margin-block: .5rem .15rem; }
+#account-sync-differences > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .25rem .45rem;
+  padding-block: .5rem;
+  border-block-end: 1px solid var(--outline);
+}
+#account-sync-differences dt { grid-column: 1 / -1; font-weight: 700; }
+#account-sync-differences dd { margin: 0; min-inline-size: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+#account-sync-differences small { display: block; color: var(--muted); white-space: normal; }
+#account-sync-pages { align-items: center; }
+#account-sync-page { margin: 0; }

@@ -77,6 +77,7 @@
             <summary>{{msg:ui.sync-recovery-key}}</summary>
             <p class="quiet">{{msg:ui.sync-recovery-description}}</p>
             <label>{{msg:ui.sync-recovery-key}}<input id="account-care-key" type="password" dir="ltr" autocomplete="off" spellcheck="false" maxlength="64"></label>
+            <button type="button" id="account-care-key-reveal" class="text-button" aria-controls="account-care-key">{{msg:ui.sync-show-key}}</button>
             <button type="button" id="account-care-key-generate" class="secondary">{{msg:ui.sync-generate-key}}</button>
             <button type="button" id="account-care-key-unlock" class="secondary">{{msg:ui.sync-unlock-key}}</button>
             <button type="button" id="account-care-key-rotate" class="secondary">{{msg:ui.sync-rotate-key}}</button>
@@ -101,13 +102,18 @@
           <button id="account-sync-disable" type="button" class="text-button" hidden>{{msg:ui.pause-sync-on-this-device}}</button>
           <p id="account-sync-last" class="quiet" hidden></p>
           <p id="account-sync-status" class="quiet" role="status"></p>
-          <div id="account-sync-review" hidden>
+          <section id="account-sync-review" aria-labelledby="account-sync-review-title" hidden>
+            <h4 id="account-sync-review-title">{{msg:ui.sync-review-title}}</h4>
             <p><bdi id="account-sync-record"></bdi></p>
-            <details><summary>{{msg:ui.sync-device-version}}</summary><pre id="account-sync-local"></pre></details>
-            <details><summary>{{msg:ui.sync-cloud-version}}</summary><pre id="account-sync-cloud"></pre></details>
+            <dl id="account-sync-differences"></dl>
+            <div id="account-sync-pages" class="buttons" hidden>
+              <button id="account-sync-prev" type="button" class="secondary">{{msg:ui.previous}}</button>
+              <p id="account-sync-page" role="status"></p>
+              <button id="account-sync-next" type="button" class="secondary">{{msg:ui.next}}</button>
+            </div>
             <button id="account-sync-keep-device" type="button" class="secondary">{{msg:ui.sync-keep-device}}</button>
             <button id="account-sync-keep-cloud" type="button" class="secondary">{{msg:ui.sync-keep-cloud}}</button>
-          </div>
+          </section>
         </section>
         <div class="account-shortcuts">
           <button type="button" class="secondary" data-account-shortcut="notification-settings"><svg aria-hidden="true"><use href="#i-bell"/></svg>{{msg:ui.notifications}}</button>

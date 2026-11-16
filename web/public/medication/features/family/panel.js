@@ -353,7 +353,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     const later = button(t("ui.ill-do-this-later"), () => showGroup(group));
     later.className = "text-button block-action";
     content.append(groupBanner(group.name, "گروه فعال", group.icon),
-      element("p", t("ui.invite-people-using-their-email-or-username"), "quiet"), invite, later);
+      element("p", t("ui.invite-people-by-email"), "quiet"), invite, later);
   }
 
   function showGroup(group) {

@@ -32,4 +32,12 @@
           <p class="quiet">{{msg:ui.set-up-this-device-to-get-reminders-when-medora-is-closed}}</p>
           <button type="button" class="secondary" data-destination="settings" data-open-notifications>{{msg:ui.notification-settings}}</button>
         </section>
+        <aside id="today-promotion" class="feature" aria-labelledby="today-promotion-label" hidden>
+          <p id="today-promotion-label" class="quiet">{{msg:ui.sponsored-message}}</p>
+          <p id="today-promotion-title" dir="auto"></p>
+          <div class="buttons">
+            <button id="today-promotion-open" type="button" class="secondary" aria-haspopup="dialog">{{msg:ui.promotion-open}}</button>
+            <button id="today-promotion-dismiss" type="button" class="text-button">{{msg:ui.promotion-dismiss}}</button>
+          </div>
+        </aside>
       </div>
