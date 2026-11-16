@@ -116,6 +116,30 @@ test("the next dose and its action fit the first mobile view", async ({ page }) 
   expect(await action.evaluate(node => node.getBoundingClientRect().bottom <= document.querySelector(".dock").getBoundingClientRect().top)).toBe(true);
 });
 
+test("the bottom navigation stays in the viewport when older Safari contains the page layout", async ({ page }) => {
+  await open(page, { width: 375, height: 812, medicine: true });
+  const dock = page.locator(".dock");
+  await dock.evaluate(node => {
+    // Older WebKit applied layout containment to inline-size query containers.
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      if (getComputedStyle(parent).containerType === "inline-size") parent.style.contain = "layout";
+    }
+  });
+  const geometry = () => dock.evaluate(node => {
+    const { top, bottom } = node.getBoundingClientRect();
+    return { top, bottom, height: window.innerHeight, scroll: window.scrollY };
+  });
+  const first = await geometry();
+  expect(first.top).toBeGreaterThanOrEqual(0);
+  expect(first.bottom).toBeLessThanOrEqual(first.height);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(async () => (await geometry()).scroll).toBeGreaterThan(100);
+  const after = await geometry();
+  expect(after.bottom).toBeCloseTo(first.bottom, 0);
+  await dock.locator("#open-quick").click();
+  await expect(page.locator("#quick-dialog")).toBeVisible();
+});
+
 test("daily plans and the cycle forecast use the same card slots", async ({ page }) => {
   await open(page, { medicine: true, width: 320 });
   await page.evaluate(async () => {
@@ -198,8 +222,11 @@ test("startup falls back to Persian when language storage access fails", async (
 
 test("first launch reaches the app without a permission detour", async ({ page }) => {
   await page.goto("/medication/");
+  await expect(page.locator("#welcome-start")).toBeVisible();
+  await expect(page.locator(".dock")).toBeHidden();
   await page.locator("#welcome-start").click();
   await expect(page.locator("#app")).toBeVisible();
+  await expect(page.locator(".dock")).toBeVisible();
   await expect(page.locator("#permission-screen")).toBeHidden();
   await page.locator("#today-focus [data-open-quick]").click();
   await expect(page.locator("#quick-dialog")).toBeVisible();

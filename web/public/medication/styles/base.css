@@ -71,7 +71,8 @@
 .icon-library { position: absolute; inline-size: 0; block-size: 0; overflow: hidden; }
 .medora svg:not(.icon-library) { inline-size: 1.5rem; block-size: 1.5rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .medora svg:has(use[href="#i-mark"]) { stroke-width: 0; }
-.medora .app-content { container-type: inline-size; max-inline-size: 43rem; padding: .85rem max(1rem, env(safe-area-inset-right)) calc(7rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+.medora .app-content { max-inline-size: 43rem; padding: .85rem max(1rem, env(safe-area-inset-right)) calc(7rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+.medora #app { container-type: inline-size; }
 .medora section { border: 0; padding: 0; margin-block: .85rem; }
 .medora p { margin-block: .35rem; overflow-wrap: anywhere; }
 .medora .quiet, .medora .empty { color: var(--muted); font-size: .9rem; }

@@ -61,6 +61,7 @@ html { scroll-padding-block-end: max(5rem, env(safe-area-inset-bottom)); }
   }
 }
 
+#app[hidden] + #app-dock { display: none; }
 .medora .dock {
   position: fixed;
   z-index: 2;
@@ -69,7 +70,7 @@ html { scroll-padding-block-end: max(5rem, env(safe-area-inset-bottom)); }
   inline-size: min(calc(100% - 2rem), 14.75rem);
   margin-inline: auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) min(3rem, max(48px, 18vw)) minmax(0, 1fr);
   gap: .12rem;
   padding: .15rem;
   border: 1px solid var(--glass-rim);
@@ -99,13 +100,17 @@ html { scroll-padding-block-end: max(5rem, env(safe-area-inset-bottom)); }
   background: color-mix(in srgb, var(--dock-active) 34%, transparent);
 }
 .medora .dock #open-quick {
-  inline-size: 2.75rem;
+  inline-size: clamp(44px, 16vw, 2.75rem);
+  min-block-size: 0;
+  aspect-ratio: 1;
+  align-self: center;
   margin-inline: auto;
+  padding: 0;
   border-radius: 50%;
   background: var(--accent-glass-fill);
   color: var(--on-action);
 }
-.medora .dock #open-quick svg { inline-size: 1.35rem; block-size: 1.35rem; }
+.medora .dock #open-quick svg { inline-size: min(1.35rem, 10vw); block-size: min(1.35rem, 10vw); }
 .medora .dock:has(button[hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .medora .dock:has(#open-quick[hidden]):has([data-destination="insights"][hidden]) { grid-template-columns: minmax(0, 1fr); }
 .medora[data-finish="matte"] .dock { background: var(--panel); backdrop-filter: none; }

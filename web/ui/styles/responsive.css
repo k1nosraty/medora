@@ -61,12 +61,6 @@
   .medora #today-dates .day-week-ghost { display: none; }
   .medora #today-dates .day-week button { min-block-size: 2.75rem; }
   .medora #today-dates .day-controls::before { mask: none; }
-  .medora .dock { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); border-radius: 1rem; }
-  .medora .dock #open-quick { inline-size: clamp(44px, 16vw, 2.75rem); aspect-ratio: 1; align-self: center; min-block-size: 44px; }
-  .medora .dock button { line-height: 1.15; border-radius: .85rem; }
-  .medora .dock button svg { inline-size: 1rem; block-size: 1rem; }
-  .medora .dock:has(button[hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .medora .dock:has(#open-quick[hidden]):has([data-destination="insights"][hidden]) { grid-template-columns: minmax(0, 1fr); }
   .medora #app #today-programs .program-grid, .medora #app .today-story { grid-template-columns: minmax(0, 1fr); }
   .medora #app #today-programs button { min-inline-size: 0; white-space: normal; text-align: start; }
   .medora #app #today-programs .program-card {

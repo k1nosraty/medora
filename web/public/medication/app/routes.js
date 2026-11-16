@@ -8,7 +8,7 @@ export function routeFromLocation() {
 
 export function installRoutes({ root, titles, canOpen, activate, openSettings }) {
   const panels = [...root.querySelectorAll("[data-screen]")];
-  const dock = root.querySelector(".dock");
+  const dock = root.ownerDocument.getElementById("app-dock");
   const heading = root.querySelector("#screen-title");
   const back = document.querySelector("#screen-back");
   let current = "today";
