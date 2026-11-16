@@ -28,9 +28,16 @@ jobs:
         working-directory: web
         run: |
           npm ci
+          npm run typecheck
+          npm audit --audit-level=high
           npm test
           npm run test:care
           npm run test:alarms
+      - name: Verify Chromium and WebKit flows
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium webkit
+          npm run test:browser
       - name: Publish to Cloudflare Workers
         working-directory: web
         env:

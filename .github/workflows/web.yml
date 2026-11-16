@@ -3,7 +3,7 @@ name: Check Medora web
 on:
   pull_request:
   push:
-    branches: ['feature/**']
+    branches: ['feature/**', 'fix/**']
 
 permissions:
   contents: read
@@ -23,6 +23,8 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: npm run typecheck
+      - run: npm audit --audit-level=high
       - run: npm test
       - run: npm run test:care
       - run: npm run test:alarms

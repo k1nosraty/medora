@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "types": []
+  },
+  "files": [
+    "public/medication/domain/restore-intent.js",
+    "public/medication/domain/private-fields.js",
+    "public/medication/features/family/quick-action.js"
+  ]
+}
