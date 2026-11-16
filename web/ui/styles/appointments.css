@@ -89,15 +89,6 @@
   opacity: .75;
   transform: rotate(-12deg);
 }
-.medora #visit-appearance > summary {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  list-style: none;
-}
-.medora #visit-appearance > summary::-webkit-details-marker { display: none; }
-.medora #visit-appearance > summary::after { content: "⌄"; margin-inline-start: auto; }
-.medora #visit-appearance[open] > summary::after { content: "⌃"; }
 .visit-appearance-dot {
   inline-size: 1rem;
   block-size: 1rem;

@@ -21,11 +21,11 @@
   accent-color: var(--action);
 }
 
-.design-gallery :is(#settings-dialog, #water-dialog) {
+.design-gallery #settings-dialog {
   border: 1px solid var(--preview-rim);
 }
 
-.design-gallery[data-finish="glass"] :is(#settings-dialog, #water-dialog) {
+.design-gallery[data-finish="glass"] #settings-dialog {
   background: color-mix(in srgb, var(--page) 91%, transparent);
   box-shadow: inset 0 1px var(--glass-glint), 0 .75rem 2.5rem var(--cast);
 }
@@ -48,14 +48,14 @@
 .design-gallery #gallery-open-settings { padding: .24rem; }
 .design-gallery #gallery-open-settings img { inline-size: 2rem; }
 
-.design-gallery :is(#settings-dialog, #water-dialog) > :is(.sheet-header, .sheet-form) .icon-button,
-.design-gallery :is(#settings-dialog, #water-dialog) .editor-options {
+.design-gallery #settings-dialog > :is(.sheet-header, .sheet-form) .icon-button,
+.design-gallery #settings-dialog .editor-options {
   border: 1px solid var(--preview-rim);
   background: var(--preview-surface);
   box-shadow: var(--preview-lift);
 }
 
-.design-gallery :is(#settings-dialog, #water-dialog) .sheet-header {
+.design-gallery #settings-dialog .sheet-header {
   padding: .45rem .55rem;
   color: var(--ink);
   background: transparent;
@@ -115,49 +115,11 @@
 }
 .design-gallery #settings-dialog .settings-panel .settings-switch { border: 1px solid var(--glass-rim); }
 
-.gallery-water-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) min(34%, 7.2rem);
-  align-items: center;
-  gap: .25rem;
-  padding: .45rem .65rem;
-  border: 1px solid var(--glass-rim);
-  border-radius: 1.25rem;
-  background: var(--water);
-  box-shadow: var(--preview-lift);
-}
-.design-gallery[data-finish="glass"] .gallery-water-hero {
-  background: radial-gradient(ellipse at 20% 8%, var(--glass-glint), transparent 65%),
-    linear-gradient(140deg, color-mix(in srgb, var(--category-water-bar) 20%, var(--water)), var(--water));
-}
-.design-gallery #water-dialog .water-amount-field {
-  justify-items: start;
-  align-content: center;
-  min-block-size: 5.55rem;
-  margin: 0;
-  padding: .45rem .55rem;
-  border: 0;
-  background: transparent;
-  text-align: start;
-}
-.design-gallery #water-amount { text-align: start; }
-.design-gallery #water-dialog #water-presets button {
-  min-inline-size: 0;
-  min-block-size: 2.75rem;
-  border-color: var(--preview-rim);
-  background: var(--preview-surface);
-  box-shadow: var(--preview-lift);
-}
-.design-gallery #water-dialog #water-presets button[aria-pressed="true"] {
-  color: var(--on-action);
-  border-color: var(--action);
-  background: var(--action);
-}
-.design-gallery :is(#settings-dialog, #water-dialog) :is(.block-action, .settings-push-actions button) {
+.design-gallery #settings-dialog :is(.block-action, .settings-push-actions button) {
   min-block-size: 2.75rem;
   border-radius: 1.1rem;
 }
-.design-gallery[data-finish="glass"] :is(#settings-dialog, #water-dialog) :is(button.block-action:not(.text-button), .settings-push-actions button:not(.secondary)) {
+.design-gallery[data-finish="glass"] #settings-dialog :is(button.block-action:not(.text-button), .settings-push-actions button:not(.secondary)) {
   background: linear-gradient(150deg, color-mix(in srgb, #fff 11%, var(--action)), var(--action));
   box-shadow: inset 0 1px var(--glass-glint), 0 .22rem .5rem var(--glass-shadow);
 }

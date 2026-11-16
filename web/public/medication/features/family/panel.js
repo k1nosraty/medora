@@ -47,7 +47,7 @@ function groupArt(value) {
 }
 
 function groupBanner(title, caption, art) {
-  const banner = element("div", "", "wizard-visual family-group-hero");
+  const banner = element("div", "", "family-group-hero");
   const label = element("p");
   const name = element("strong", title);
   name.dir = "auto";

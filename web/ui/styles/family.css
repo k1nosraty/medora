@@ -55,7 +55,6 @@
   object-fit: contain;
 }
 .medora .care-network-glyph { color: var(--action); }
-.medora .family-group-hero .care-network-glyph { color: var(--cover-text); }
 .medora .family-switcher {
   min-block-size: 3.6rem;
   padding-inline: .42rem .54rem;
@@ -239,23 +238,21 @@
 .medora[data-finish="matte"] .family-switcher {
   background: color-mix(in srgb, var(--accent-cover) 25%, var(--stage));
 }
-.medora .wizard-visual.family-group-hero {
-  min-block-size: 6.7rem;
+.family-group-hero {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 .medora .family-group-hero > p {
   display: grid;
-  gap: .18rem;
-  max-inline-size: 62%;
+  gap: .12rem;
+  min-inline-size: 0;
+  margin: 0;
   overflow-wrap: anywhere;
 }
 .family-group-hero small { font-size: .76rem; font-weight: 500; }
-.family-group-hero > .family-group-art {
-  position: absolute;
-  inset-inline-end: 16%;
-  transform: scale(2.35);
-}
-.medora .family-group-hero .family-group-art img { z-index: auto; inset-block-end: auto; transform: none; }
+.family-group-hero > .family-group-art { inline-size: 3.25rem; block-size: 3.25rem; }
+.medora .family-group-hero .family-group-art :is(img, svg) { inline-size: 2.75rem; block-size: 2.75rem; }
 .family-content, .family-body, .medora-profile-form { display: grid; gap: .8rem; min-inline-size: 0; }
 .family-content > :is(h3, p), .family-hero > :is(h3, p), .family-content fieldset { margin: 0; }
 .family-hero, .family-target {

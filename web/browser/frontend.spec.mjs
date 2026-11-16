@@ -161,11 +161,17 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
   await page.reload();
   const cards = page.locator("#doses .day-card");
   await expect(cards).toHaveCount(3);
+  const cardFor = kind => cards.and(page.locator(`[data-card-kind="${kind}"]`));
   for (const kind of ["medicine", "visit", "routine"]) {
-    const card = cards.and(page.locator(`[data-card-kind="${kind}"]`));
+    const card = cardFor(kind);
     await expect(card.locator(":scope > .day-card-art > img")).toBeVisible();
     await expect(card.locator(".day-card-kind + .day-card-title + .day-card-time")).toHaveText("۰۸:۰۰");
-    await expect(card.locator(":scope > .day-card-actions > button")).toBeVisible();
+    const record = card.locator(".care-record-action");
+    const more = card.locator(".day-card-more > summary");
+    await expect(record).toBeVisible();
+    const menuBounds = await more.boundingBox();
+    const recordBounds = await record.boundingBox();
+    expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(recordBounds.y);
   }
   const banner = page.locator("#today-focus .day-card");
   const title = banner.locator(".day-card-title");
@@ -196,13 +202,19 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
     }
   });
   await expect(title).toHaveText("Follow-up");
-  await banner.locator(".care-record-action").click();
+  const visitOptions = cardFor("visit").locator(".day-card-more > summary");
+  await visitOptions.click();
+  await expect(cardFor("visit").locator(".day-card-menu")).toBeVisible();
+  await visitOptions.press("Escape");
+  await cardFor("visit").locator(".care-record-action").click();
   await expect(title).toHaveText("Walk");
   await expect(picker).toHaveText("۲ از ۲");
-  await banner.locator(".care-record-action").click();
+  await cardFor("routine").locator(".care-record-action").click();
   await expect(title).toHaveText("Sample tablet");
   await expect(picker).toHaveCount(0);
   expect((await banner.boundingBox()).height).toBe(featuredHeight);
+  await cardFor("medicine").locator(".care-record-action").click();
+  await expect(cardFor("medicine")).toHaveAttribute("data-day-state", "done");
   await page.locator("#program-cycle").click();
   const cycle = page.locator("#cycle-banner[data-card-kind=cycle]");
   await expect(cycle.locator(".day-card-kind + .day-card-title")).toBeVisible();

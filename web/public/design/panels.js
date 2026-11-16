@@ -76,12 +76,4 @@ export function installPanelPreview({ openSettings, openAccount, text, calendar 
   const open = $("gallery-open-settings");
   open.replaceChildren(art(panelArt[""]));
   open.addEventListener("click", () => openSettings());
-
-  const water = $("water-dialog");
-  const amount = water.querySelector(".water-amount-field");
-  const hero = document.createElement("div");
-  hero.className = "gallery-water-hero";
-  amount.before(hero);
-  hero.append(amount, art("water"));
-  water.querySelector(".sheet-header > svg").remove();
 }

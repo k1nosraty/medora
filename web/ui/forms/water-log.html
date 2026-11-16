@@ -1,6 +1,9 @@
-  <dialog id="water-dialog" class="sheet" aria-labelledby="water-dialog-title">
+  <dialog id="water-dialog" class="sheet add-sheet" aria-labelledby="water-dialog-title">
     <form id="water-custom" class="sheet-form" novalidate>
-      <div class="sheet-header"><svg aria-hidden="true"><use href="#i-water"/></svg><h2 id="water-dialog-title">{{msg:ui.log-water}}</h2><button class="icon-button" type="button" data-close="water-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-header program-water">
+        <img class="glass-object add-sheet-icon" data-art="water" src="/design/optical-glass/water.webp" width="256" height="256" loading="lazy" alt="">
+        <h2 id="water-dialog-title">{{msg:ui.log-water}}</h2><button class="icon-button" type="button" data-close="water-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
       <div class="sheet-body">
         <label class="water-amount-field">
           <span>{{msg:ui.water-amount}}</span>
@@ -10,7 +13,7 @@
           <button type="button" data-water-preset="150" aria-pressed="false">{{msg:ui.150}}</button><button type="button" data-water-preset="250" aria-pressed="true">{{msg:ui.250}}</button><button type="button" data-water-preset="500" aria-pressed="false">{{msg:ui.500}}</button>
         </div>
         <details id="water-options" class="editor-options">
-          <summary><span>{{msg:ui.date-and-time}}</span><span id="water-when"></span><svg aria-hidden="true"><use href="#i-expand"/></svg></summary>
+          <summary><span>{{msg:ui.date-and-time}}</span><span id="water-when"></span></summary>
           <div class="water-log-when"><label>{{msg:ui.date}}<input id="water-log-day" type="date" required></label><label>{{msg:ui.time}}<input id="water-log-time" type="time" required></label></div>
         </details>
         <p id="water-error" role="alert" class="field-error"></p>

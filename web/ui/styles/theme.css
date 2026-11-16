@@ -48,6 +48,9 @@
   --glass-shadow: color-mix(in srgb, var(--action) 14%, transparent);
   --accent-glass-fill: color-mix(in srgb, var(--action) 92%, transparent);
   --accent-glass-rim: color-mix(in srgb, var(--action) 58%, white);
+  --filled-button-reflection: radial-gradient(ellipse 105% 95% at 70% 0%, #ffffff16, transparent 78%), linear-gradient(170deg, #fff1 35%, #0001);
+  --filled-button-rim: #fff3;
+  --filled-button-shadow: inset 0 1px 0 #fff2, 0 .14rem .35rem #0002;
   --mint: #dcf0bf;
   --mint-ink: #233d2c;
   background: radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--action) 10%, transparent), transparent 34rem), var(--page);

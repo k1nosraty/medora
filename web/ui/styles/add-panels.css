@@ -1,0 +1,70 @@
+.medora :is(.add-sheet, #family-dialog:has(.family-compose)) .sheet-header,
+.medora .family-group-hero {
+  --add-header-fill: var(--program-fill, var(--dock-active));
+  --add-header-ink: var(--program-ink, var(--ink));
+  min-block-size: 3.65rem;
+  padding: .35rem .65rem;
+  gap: .65rem;
+  border: 1px solid color-mix(in srgb, var(--add-header-ink) 15%, var(--outline));
+  border-radius: 1.15rem;
+  background: var(--add-header-fill);
+  color: var(--add-header-ink);
+}
+.medora[data-finish="glass"] :is(.add-sheet, #family-dialog:has(.family-compose)) .sheet-header,
+.medora[data-finish="glass"] .family-group-hero {
+  background: linear-gradient(155deg, var(--glass-glint), transparent 65%), var(--add-header-fill);
+  box-shadow: inset 0 1px 0 var(--glass-glint), 0 .2rem .55rem var(--glass-shadow);
+}
+.medora :is(.add-sheet, #family-dialog:has(.family-compose)) .sheet-header h2 {
+  font-size: clamp(1.05rem, 4.3vw, 1.25rem);
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.medora .add-sheet .sheet-header > :is(.add-sheet-icon, svg) {
+  inline-size: 2.85rem;
+  block-size: 2.85rem;
+  flex: none;
+  object-fit: contain;
+}
+.medora #quick-dialog .sheet-header > svg {
+  box-sizing: border-box;
+  padding: .7rem;
+  border-radius: .85rem;
+  background: var(--surface-fill);
+}
+.medora :is(.add-sheet, #family-dialog:has(.family-compose)) .sheet-header > .icon-button {
+  flex: none;
+  color: inherit;
+}
+.medora .add-sheet .sheet-body { padding-block: .8rem 1.15rem; }
+.medora .add-sheet .field-error:empty { display: none; }
+.medora .add-sheet :is(.editor-options, .routine-schedule) {
+  border: 1px solid var(--surface-edge);
+  border-radius: 1rem;
+  background: var(--surface-fill);
+}
+.medora[data-finish="glass"] .add-sheet :is(.editor-options, .routine-schedule) {
+  box-shadow: inset 0 1px 0 var(--glass-glint);
+}
+.medora .add-sheet .editor-options > summary {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  list-style: none;
+}
+.medora .add-sheet .editor-options > summary::-webkit-details-marker { display: none; }
+.medora .add-sheet .editor-options > summary::after {
+  content: "";
+  flex: none;
+  inline-size: .45rem;
+  block-size: .45rem;
+  margin-inline: auto .18rem;
+  border: solid var(--muted);
+  border-width: 0 1.5px 1.5px 0;
+  rotate: 45deg;
+}
+.medora .add-sheet .editor-options[open] > summary::after { rotate: 225deg; }
+.medora[data-finish="glass"] #quick-dialog .quick-item {
+  background: linear-gradient(155deg, var(--glass-glint), transparent 70%), var(--program-fill);
+  box-shadow: var(--pressed-shadow, inset 0 1px 0 var(--glass-glint));
+}

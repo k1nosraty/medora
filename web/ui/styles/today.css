@@ -202,6 +202,41 @@ html[dir="ltr"] .medora #today-dates .day-controls {
 }
 .medora #today-dates .day-week button[aria-current="date"]:focus-visible { outline-color: var(--on-action); }
 .medora #today-dates .day-week button[aria-current="date"] span { color: inherit; }
+.medora :is(#today-focus, #doses) .day-card-actions > .care-record-action,
+.medora[data-finish="glass"] #today-water .today-water-actions > button {
+  position: relative;
+  isolation: isolate;
+  box-shadow: none;
+}
+.medora[data-finish="glass"] #today-water .today-water-actions > [data-open-water] {
+  border: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.medora :is(#today-focus, #doses) .day-card-actions > .care-record-action::before,
+.medora[data-finish="glass"] #today-water .today-water-actions > button::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: .23rem 0;
+  border: 1px solid #fff6;
+  border-radius: .82rem;
+  background:
+    radial-gradient(ellipse 105% 95% at 70% 0%, #fff4, transparent 78%),
+    linear-gradient(170deg, #fff1 35%, #0001);
+  box-shadow: var(--pressed-shadow, inset 0 1px 1px #fff5, inset 0 -1px 1px #0001, 0 .14rem .35rem #0002);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+.medora[data-finish="glass"] #today-water .today-water-actions > [data-open-water]::before {
+  background: var(--filled-button-reflection), var(--accent-glass-fill);
+  border-color: var(--filled-button-rim);
+  box-shadow: var(--pressed-shadow, var(--filled-button-shadow));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .medora .daily-sheet { margin-block-start: .75rem; }
 .medora #today-reminders { box-sizing: border-box; inline-size: var(--today-rail-width); margin-inline: auto; }
 #today-family-bottom:empty { display: none; }

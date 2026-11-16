@@ -160,18 +160,6 @@ html[dir="rtl"] .medora .routine-row { --routine-art-origin: 88%; }
 .medora #routine-form .field-error:empty { display: none; }
 .medora #routine-options > .routine-fields { margin-block-start: .7rem; }
 .medora #routine-options { margin: 0; }
-.medora #routine-options > summary { display: flex; align-items: center; justify-content: space-between; list-style: none; }
-.medora #routine-options > summary::-webkit-details-marker { display: none; }
-.medora #routine-options > summary::after {
-  content: "";
-  inline-size: .45rem;
-  block-size: .45rem;
-  margin-inline: .25rem;
-  border: solid var(--muted);
-  border-width: 0 1.5px 1.5px 0;
-  rotate: 45deg;
-}
-.medora #routine-options[open] > summary::after { rotate: 225deg; }
 .medora .visit-attended { background: var(--ok-bg); color: var(--ok); }
 .medora .routine-time-fields, .medora #routine-management { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
 .medora .routine-time-fields :is(label, .picker-control) { align-self: end; }

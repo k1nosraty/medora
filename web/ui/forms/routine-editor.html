@@ -1,8 +1,11 @@
-  <dialog id="routine-editor" class="sheet routine-sheet" aria-labelledby="routine-editor-title">
+  <dialog id="routine-editor" class="sheet add-sheet routine-sheet" aria-labelledby="routine-editor-title">
     <form id="routine-form" class="sheet-form" novalidate>
-      <div class="sheet-header"><svg aria-hidden="true"><use href="/medication/assets/icons/routines.svg#custom"/></svg><h2 id="routine-editor-title">{{msg:ui.new-routine}}</h2><button type="button" class="icon-button" data-close="routine-editor" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-header program-routine">
+        <img class="glass-object add-sheet-icon" data-art="routine" src="/design/optical-glass/routine.webp" width="256" height="256" loading="lazy" alt="">
+        <h2 id="routine-editor-title">{{msg:ui.new-routine}}</h2><button type="button" class="icon-button" data-close="routine-editor" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
       <div class="sheet-body routine-fields">
-        <label>{{msg:ui.routine-name}}<input id="routine-name" type="text" dir="auto" maxlength="80" placeholder="{{msg:ui.e-g-morning-stretch}}" required></label>
+        <label class="editor-field">{{msg:ui.routine-name}}<input id="routine-name" type="text" dir="auto" maxlength="80" placeholder="{{msg:ui.e-g-morning-stretch}}" required></label>
         <div class="routine-category-choice">
           <span>{{msg:ui.routine-type}}</span>
           <button id="routine-category-open" type="button" class="secondary" aria-haspopup="dialog">

@@ -66,18 +66,36 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
   :is(.water-icon-liquid, .water-matte-liquid) { transition: none; }
 }
 .today-water-body { min-inline-size: 0; padding: .16rem .13rem .08rem; }
-.medora #today-water .water-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .4rem; align-items: center; }
-.medora #today-water-label { margin: 0; color: inherit; font-size: .98rem; }
-.medora #today-water .amount-line { grid-area: 2 / 1; margin: 0; font-size: .78rem; }
-.today-water-target { white-space: nowrap; }
-.medora #today-water-progress {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  clip-path: inset(50%);
+.medora #today-water .water-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: .55rem;
+  padding-inline-end: .4rem;
 }
+.medora #today-water-label { margin: 0; color: inherit; font-size: .98rem; }
+.medora #today-water .amount-line { max-inline-size: 76%; margin: 0; font-size: .78rem; }
+.today-water-target { white-space: nowrap; }
+.today-water-meter {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+.medora #today-water-progress {
+  appearance: none;
+  flex: 1;
+  min-inline-size: 0;
+  block-size: .4rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--water-ink) 16%, transparent);
+}
+.medora #today-water-progress::-webkit-progress-bar { background: transparent; }
+.medora #today-water-progress::-webkit-progress-value { border-radius: 1rem; background: var(--water-accent); }
+.medora #today-water-progress::-moz-progress-bar { border-radius: 1rem; background: var(--water-accent); }
 .medora #today-water-percent {
-  grid-area: 1 / 2 / span 2;
   padding: .08rem .36rem;
   border-radius: .55rem;
   background: color-mix(in srgb, var(--water-accent) 24%, var(--water));
@@ -102,7 +120,7 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
   background: transparent;
   color: var(--water-ink);
 }
-.medora .today-water-actions .secondary:is(:hover, :active) {
+.medora[data-finish="matte"] .today-water-actions .secondary:is(:hover, :active) {
   background: color-mix(in srgb, var(--water-accent) 15%, transparent);
 }
 .today-water-actions small { display: block; font-size: .61rem; font-weight: 500; }
@@ -126,8 +144,6 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
 .today-water-feedback > span { flex: 1; }
 .medora .today-water-feedback button { min-block-size: 2.75rem; padding: .2rem .5rem; color: inherit; font-size: .8rem; }
 .medora #today-water-dismiss { min-inline-size: 2.75rem; border: 0; background: transparent; }
-.medora #water-dialog .sheet-header { background: var(--water); color: var(--water-ink); }
-.medora #water-dialog .sheet-header > svg { color: inherit; }
 .medora #water-dialog .water-amount-field {
   display: grid;
   justify-items: center;
@@ -157,11 +173,8 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
 .medora #water-presets button { background: var(--field); border-color: var(--outline); color: var(--water-ink); }
 .medora #water-presets button[aria-pressed="true"] { background: var(--water); border-color: var(--water-ink); }
 .medora #water-options { padding: .2rem .65rem; border: 1px solid var(--outline); }
-.medora #water-options summary { display: flex; align-items: center; gap: .4rem; list-style: none; font-size: .88rem; }
-#water-options summary::-webkit-details-marker { display: none; }
+.medora #water-options summary { font-size: .88rem; }
 .medora #water-when { flex: 1; min-inline-size: 0; color: var(--muted); text-align: end; }
-.medora #water-options summary svg { inline-size: .9rem; block-size: .9rem; color: var(--action); }
-.medora #water-options[open] summary svg { transform: rotate(180deg); }
 .water-log-when { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; padding-block-end: .45rem; }
 .medora .water-log-when .picker-field { background: var(--field); }
 

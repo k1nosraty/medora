@@ -4,6 +4,14 @@
   --press-duration: 160ms;
   --press-in-duration: 65ms;
 }
+.medora[data-finish="glass"] button:is(
+  .primary-action, .block-action, [type="submit"], .picker-actions button
+):not(.secondary, .text-button, .danger-button, .icon-button),
+.medora[data-finish="glass"] .dock #open-quick {
+  background-image: var(--filled-button-reflection);
+  border-color: var(--filled-button-rim);
+  box-shadow: var(--pressed-shadow, var(--filled-button-shadow));
+}
 .medora :is(button, summary, label:has(> input:is([type="radio"], [type="checkbox"]))):not(:disabled, :has(> input:disabled)) {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;

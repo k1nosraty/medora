@@ -107,7 +107,7 @@ export function renderToday(care, day, today, daily, visits, routines, waterTota
       t(view ? "برای این روز برنامه‌ای ثبت نشده است." : "ui.add-a-medicine-appointment-or-routine-to-your-plan");
     copy.append(element("h3", title), element("p", summary));
     if (!total && !view) {
-      const add = element("button", t("ui.add-your-first-plan"));
+      const add = element("button", t("ui.add-your-first-plan"), "primary-action");
       add.type = "button";
       add.dataset.openQuick = "";
       copy.append(add);

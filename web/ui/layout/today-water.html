@@ -5,9 +5,11 @@
           <div class="today-water-body">
             <div class="water-info">
               <h2 id="today-water-label">{{msg:ui.water-intake}}</h2>
-              <p class="amount-line"><strong id="today-water-total">{{msg:ui.0}}</strong> {{msg:ui.of}} <span class="today-water-target"><span id="today-water-goal">{{msg:ui.2-000}}</span> {{msg:ui.ml}}</span></p>
-              <progress class="water-progress" id="today-water-progress" aria-label="{{msg:ui.water-goal-progress}}" max="1" value="0"></progress>
               <span id="today-water-percent" aria-hidden="true"></span>
+              <div class="today-water-meter">
+                <p class="amount-line"><strong id="today-water-total">{{msg:ui.0}}</strong> {{msg:ui.of}} <span class="today-water-target"><span id="today-water-goal">{{msg:ui.2-000}}</span> {{msg:ui.ml}}</span></p>
+                <progress class="water-progress" id="today-water-progress" aria-label="{{msg:ui.water-goal-progress}}" max="1" value="0"></progress>
+              </div>
             </div>
             <div class="today-water-actions">
               <button type="button" data-open-water>{{msg:ui.log-water}}</button>

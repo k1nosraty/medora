@@ -106,12 +106,12 @@ html { scroll-padding-block-end: max(5rem, env(safe-area-inset-bottom)); }
   align-self: center;
   margin-inline: auto;
   padding: 0;
+  border: 1px solid var(--action);
   border-radius: 50%;
-  background: var(--accent-glass-fill);
+  background: var(--action);
   color: var(--on-action);
 }
 .medora .dock #open-quick svg { inline-size: min(1.35rem, 10vw); block-size: min(1.35rem, 10vw); }
 .medora .dock:has(button[hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .medora .dock:has(#open-quick[hidden]):has([data-destination="insights"][hidden]) { grid-template-columns: minmax(0, 1fr); }
 .medora[data-finish="matte"] .dock { background: var(--panel); backdrop-filter: none; }
-.medora[data-finish="matte"] .dock #open-quick { background: var(--action); }

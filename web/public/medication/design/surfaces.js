@@ -1,4 +1,4 @@
-import { $, element } from "../shared/ui/dom.js";
+import { $ } from "../shared/ui/dom.js";
 import { glassObject } from "./three-dimensional.js";
 
 const settingsArt = {
@@ -24,9 +24,4 @@ export function installSurfaceArt() {
   };
   new MutationObserver(renderHeading).observe(settings, { attributeFilter: ["data-panel"] });
   renderHeading();
-
-  const amount = $("water-dialog").querySelector(".water-amount-field");
-  const hero = element("div", "", "water-log-hero");
-  amount.before(hero);
-  hero.append(amount, glassObject("water", "water"));
 }
