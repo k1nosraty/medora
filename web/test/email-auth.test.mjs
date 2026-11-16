@@ -176,8 +176,10 @@ test("registration, password recovery and account deletion preserve authorizatio
     const other = "english@example.com";
     const sent = await auth("register-code", { email: other, language: "en" });
     assert.equal(sent.status, 202);
-    assert.equal((await awaitDelivery(1)).subject, "Verify your email for Medora");
-    const secondProof = { email: other, challenge: (await sent.json()).challenge, code: deliveries[1].text.match(/\b\d{6}\b/)[0] };
+    const englishChallenge = (await sent.json()).challenge;
+    const englishDelivery = await awaitDelivery(1);
+    assert.equal(englishDelivery.subject, "Verify your email for Medora");
+    const secondProof = { email: other, challenge: englishChallenge, code: englishDelivery.text.match(/\b\d{6}\b/)[0] };
     const secondGrant = (await (await auth("confirm-email", secondProof)).json()).grant;
     const duplicate = await auth("register", { email: other, grant: secondGrant, username: "MEDORA_ADMIN", password });
     assert.equal(duplicate.status, 409);
@@ -308,8 +310,9 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal((await auth("register", repeatedSignup, null, "192.0.2.31")).status, 401);
     const newCode = await auth("register-code", { email: other });
     assert.equal(newCode.status, 202);
+    const freshChallenge = (await newCode.json()).challenge;
     await awaitDelivery(2);
-    const freshProof = { email: other, challenge: (await newCode.json()).challenge, code: readCode(2) };
+    const freshProof = { email: other, challenge: freshChallenge, code: readCode(2) };
     const freshGrant = (await (await auth("confirm-email", freshProof)).json()).grant;
     assert.equal((await auth("register", { ...repeatedSignup, grant: freshGrant }, null, "192.0.2.31")).status, 200);
     assert.equal((await accounts(adminCookie, { body: deleted })).status, 409);
