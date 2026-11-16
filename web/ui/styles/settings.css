@@ -57,6 +57,10 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 .medora .settings-panel form { display: grid; gap: .55rem; padding: .8rem; border-radius: 1.2rem; }
 .medora .settings-panel form > label { margin-block: 0; }
 .medora .settings-panel :is(input:not([type]), input[type="password"], select) { display: block; inline-size: 100%; margin-block-start: .24rem; }
+.clinic-zone-settings { min-inline-size: 0; margin: 0 0 .65rem; padding: .65rem; border: 1px solid var(--outline); border-radius: .9rem; }
+.medora .clinic-zone-settings .editor-switch { min-block-size: 2.75rem; justify-content: space-between; }
+.medora .clinic-zone-settings .cabinet-search { margin-block-start: .35rem; }
+.medora #save-appointment-settings { flex: none; inline-size: auto; margin: .35rem .75rem .6rem; }
 .medora .settings-panel .settings-switch { display: flex; padding: .35rem .55rem; border-radius: .9rem; background: var(--water); }
 .settings-time-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
 .medora .settings-panel .picker-field { background: var(--field); padding-inline: .45rem; }

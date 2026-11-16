@@ -6,6 +6,7 @@ import { isoDay } from "../../domain/care-index.js";
 import { appearanceColors } from "../medicines/appearance.js";
 import { $, button, element } from "../../shared/ui/dom.js";
 import { localClock } from "../../shared/ui/input-values.js";
+import { timeZoneCity } from "../../shared/ui/time-zone-picker.js";
 import { appointmentView, visitIllustration } from "./view.js";
 
 const numbers = new Intl.NumberFormat(locale);
@@ -15,6 +16,7 @@ const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "
 export function installAppointments({ getState, getFamilyView = () => null, today, defaultDay, render, mutate, requestDeletion, refreshFields, formatDay, formatDayNumber, formatShortMonth }) {
   let editingVisit = null;
   let delegation;
+  let clinicZone;
   const visitOffsetFields = [...document.querySelectorAll('[name="visit-offset"]')];
   const visitCategory = $("visit-category");
   const visitCategories = new Map(Array.from(visitCategory.options, option => [option.value, option.text]));
@@ -117,8 +119,7 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     summary.textContent = "";
     if (!Number.isInteger(day) || !time) return;
     try {
-      const zone = $("visit-zone").value.trim() || localZone();
-      const visit = { day, time, zone, offsets: [...retainedVisitOffsets(existing), ...checkedVisitOffsets()] };
+      const visit = { day, time, zone: clinicZone, offsets: [...retainedVisitOffsets(existing), ...checkedVisitOffsets()] };
       const next = appointmentReminders(visit, getState().appointmentReminders ?? appointmentDefaults, localZone())
         .find(at => at > Date.now());
       if (next === undefined) summary.textContent = t("ui.no-upcoming-reminder-falls-before-this-appointment");
@@ -127,9 +128,9 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
         summary.textContent = t("ui.first-upcoming-reminder-value-at-value",
           formatDay(Math.floor(wall / dayMs)), clockText(new Date(wall).toISOString().slice(11, 16)));
       }
-    } catch { /* The form reports an invalid timezone when saved. */ }
+    } catch { /* The reminder summary needs a valid date and time. */ }
   }
-  for (const field of [$("visit-day"), $("visit-time"), $("visit-zone"), visitReminderToggle, ...visitOffsetFields]) {
+  for (const field of [$("visit-day"), $("visit-time"), visitReminderToggle, ...visitOffsetFields]) {
     field.addEventListener("change", refreshVisitReminder);
   }
 
@@ -146,8 +147,10 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     $("visit-place").value = visit?.place ?? "";
     $("visit-note").value = visit?.note ?? visit?.notes ?? "";
     $("visit-contact").value = visit?.contact ?? "";
-    $("visit-zone").value = visit?.zone ?? target?.zone ?? localZone();
-    $("visit-extra").open = Boolean(visit?.note || visit?.contact || visit?.zone && visit.zone !== localZone());
+    const chosenZone = visit ? visit.zone : target ? target.zone : getState().clinicTimeZone;
+    clinicZone = chosenZone ?? localZone() ?? "UTC";
+    $("visit-zone-summary").textContent = t("ui.clinic-zone-appointment-value", timeZoneCity(clinicZone));
+    $("visit-extra").open = Boolean(visit?.note || visit?.contact);
     visitAppearance.open = false;
     visitCategory.value = visitCategoryOf(visit?.category);
     visitCategoryName.value = visitCategory.value === "custom" ? visit?.categoryName ?? "" : "";
@@ -201,12 +204,7 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     const category = visitCategoryOf(visitCategory.value);
     const categoryName = category === "custom" ? visitCategoryName.value.trim() : "";
     const color = selectedVisitColor();
-    const zone = $("visit-zone").value.trim() || localZone();
-    try { timezone(zone); } catch {
-      $("visit-extra").open = true;
-      showVisitError(t("ui.enter-the-clinics-time-zone-in-a-format-like-asia-tehran"), $("visit-zone"));
-      return;
-    }
+    const zone = clinicZone;
     const remindersOff = !visitReminderToggle.checked;
     const chosenOffsets = checkedVisitOffsets();
     submit.disabled = true;
@@ -223,7 +221,8 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
       if (existingId && !visits[id]) throw new CareInputError(t("ui.this-appointment-has-been-deleted"));
       const previous = visits[id];
       const offsets = [...retainedVisitOffsets(previous), ...chosenOffsets];
-      const completed = previous?.completed && previous.day === day && previous.time === time && previous.zone === zone;
+      const completed = previous?.completed && previous.day === day && previous.time === time &&
+        (previous.zone ?? localZone() ?? "UTC") === zone;
       visits[id] = { ...(previous?.sharedNote && { sharedNote: previous.sharedNote }),
         ...(previous?.sharedContact && { sharedContact: previous.sharedContact }), ...plan, offsets, cancelled: previous?.cancelled ?? false,
         ...(completed ? { completed, resolvedAt: previous.resolvedAt } : {}) };

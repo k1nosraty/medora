@@ -1,8 +1,24 @@
       <section id="appointment-settings" class="settings-panel" hidden>
         <form id="appointment-settings-form" novalidate>
+          <fieldset class="clinic-zone-settings">
+            <legend>{{msg:ui.clinic-time-zone}}</legend>
+            <p class="quiet">{{msg:ui.clinic-zone-default-description}}</p>
+            <label class="editor-switch">
+              <span id="clinic-zone-automatic-label">{{msg:ui.clinic-zone-follow-device}}</span>
+              <input id="clinic-zone-automatic" type="checkbox" role="switch" checked>
+            </label>
+            <div id="clinic-zone-custom" hidden>
+              <label class="cabinet-search">
+                <svg aria-hidden="true"><use href="#i-search"/></svg>
+                <input id="clinic-zone-search" type="search" dir="auto" autocomplete="off"
+                  placeholder="{{msg:ui.sync-search-zone}}" aria-label="{{msg:ui.sync-search-zone}}" aria-controls="clinic-zone-options">
+              </label>
+              <div id="clinic-zone-options" class="time-zone-options"></div>
+              <p id="clinic-zone-empty" class="quiet" role="status" hidden>{{msg:ui.sync-no-zone-found}}</p>
+            </div>
+          </fieldset>
           <label>{{msg:ui.start-reminders-on-the-appointment-day}}<input id="appointment-reminders-start" type="time" value="08:00" required></label>
           <label>{{msg:ui.repeat-until-the-appointment}}<select id="appointment-reminders-interval"><option value="60">{{msg:ui.every-hour}}</option><option value="120">{{msg:ui.every-two-hours}}</option></select></label>
           <p class="quiet">{{msg:ui.if-an-appointment-is-before-the-start-time-medora-sends-o}}</p>
-          <button type="submit" class="block-action">{{msg:ui.save-appointment-settings}}</button>
         </form>
       </section>

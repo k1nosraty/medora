@@ -83,10 +83,18 @@
             <p id="account-care-key-status" class="settings-message" role="status"></p>
           </details>
           <details id="account-care-zone-open">
-            <summary>{{msg:ui.sync-care-zone}}</summary>
+            <summary id="account-care-zone-title">{{msg:ui.sync-care-zone}}</summary>
             <p class="quiet">{{msg:ui.sync-care-zone-description}}</p>
-            <label>{{msg:ui.sync-care-zone}}<input id="account-care-zone" dir="ltr" spellcheck="false" maxlength="64"></label>
-            <button id="account-care-zone-save" type="button" class="secondary">{{msg:ui.save}}</button>
+            <fieldset id="account-care-zone-picker" aria-labelledby="account-care-zone-title" disabled>
+              <label class="cabinet-search">
+                <svg aria-hidden="true"><use href="#i-search"/></svg>
+                <input id="account-care-zone-search" type="search" dir="auto" autocomplete="off"
+                  placeholder="{{msg:ui.sync-search-zone}}" aria-label="{{msg:ui.sync-search-zone}}" aria-controls="account-care-zone-options">
+              </label>
+              <div id="account-care-zone-options" class="time-zone-options"></div>
+              <p id="account-care-zone-empty" class="quiet" role="status" hidden>{{msg:ui.sync-no-zone-found}}</p>
+            </fieldset>
+            <button id="account-care-zone-save" type="button" class="secondary" disabled>{{msg:ui.save}}</button>
             <p id="account-care-zone-status" class="settings-message" role="status"></p>
           </details>
           <button id="account-sync-enable" type="button" class="secondary">{{msg:ui.enable-record-sync}}</button>

@@ -1,7 +1,8 @@
 import { defaultCalendar, language, locale, selectLanguage, t } from "../../shared/i18n/locale.js";
 import { $, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { integer } from "../../shared/ui/input-values.js";
-import { appointmentDefaults, waterDefaults } from "../../domain/care-plan.js";
+import { appointmentDefaults, localZone, waterDefaults } from "../../domain/care-plan.js";
+import { installTimeZonePicker, timeZoneCity } from "../../shared/ui/time-zone-picker.js";
 import { accentOf, accentLabel } from "../../styles/theme.js";
 import { canEnableCycle, cycleIsEnabled, finishOf, genders, ageAt, validPersonalProfile } from "../../domain/profile.js";
 import { familyPlacementOf } from "../../domain/family.js";
@@ -17,7 +18,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
     "notification-settings": [t("ui.notifications-on-this-device"), t("ui.medicine-water-appointment-and-routine-reminders")],
     "water-settings": [t("ui.water"), t("ui.daily-goal-and-reminder-times")],
     "snooze-settings": [t("ui.medication-reminder-snooze"), t("ui.medication-snooze-duration")],
-    "appointment-settings": [t("ui.appointment-reminders"), t("ui.reminder-start-and-interval")],
+    "appointment-settings": [t("ui.appointment-settings"), t("ui.appointment-settings-description")],
     "backup-settings": [t("ui.backups"), t("ui.create-or-restore-an-encrypted-backup")]
   };
   const settings = $("settings-dialog");
@@ -29,6 +30,16 @@ export function installSettings({ getState, mutate, refreshFields }) {
   const snoozePresets = [...document.querySelectorAll('[name="snooze-preset"]')];
   const gender = $("profile-gender");
   const cycle = $("profile-cycle-enabled");
+  const saveAppointmentSettings = $("save-appointment-settings");
+  const automaticClinicZone = $("clinic-zone-automatic");
+  const clinicZonePicker = installTimeZonePicker($("clinic-zone-search"), $("clinic-zone-options"), $("clinic-zone-empty"));
+  function showClinicZonePicker() {
+    $("clinic-zone-custom").hidden = automaticClinicZone.checked;
+    if (!automaticClinicZone.checked && !clinicZonePicker.value) {
+      clinicZonePicker.load(getState().clinicTimeZone, localZone() ?? "UTC", Date.now());
+    }
+  }
+  automaticClinicZone.addEventListener("change", showClinicZonePicker);
   function updateProfileAge() {
     const age = ageAt($("profile-birth-date").value, new Date());
     $("profile-age").textContent = age === null ? "—" : t("ui.value-years-old", numbers.format(age));
@@ -62,8 +73,9 @@ export function installSettings({ getState, mutate, refreshFields }) {
     $("settings-water-summary").textContent = t("ui.goal-value-ml", numbers.format(data.waterGoal ?? 2000)) + " · " + waterStatus;
     $("settings-snooze-summary").textContent = t("ui.value-min", numbers.format(data.medicationSnoozeMinutes ?? 10));
     const appointment = data.appointmentReminders ?? appointmentDefaults;
-    $("settings-appointment-summary").textContent = t("ui.from-value-value", clockText(appointment.start),
-      appointment.interval === 60 ? t("ui.every-hour") : t("ui.every-two-hours"));
+    const clinic = timeZoneCity(data.clinicTimeZone ?? localZone() ?? "UTC");
+    $("settings-appointment-summary").textContent = [clinic, t("ui.from-value-value", clockText(appointment.start),
+      appointment.interval === 60 ? t("ui.every-hour") : t("ui.every-two-hours"))].join(" · ");
     const theme = { system: t("ui.system"), light: t("ui.light"), dark: t("ui.dark") }[data.theme] ?? t("ui.system");
     const calendar = (data.calendar ?? defaultCalendar) === "persian" ? t("ui.solar-hijri") : t("ui.gregorian");
     const finish = t(finishOf(data.finish) === "glass" ? "شیشه‌ای" : "سه‌بعدی مات");
@@ -111,6 +123,12 @@ export function installSettings({ getState, mutate, refreshFields }) {
     }
     if (panel === "appointment-settings") {
       const appointment = data.appointmentReminders ?? appointmentDefaults;
+      const device = localZone() ?? "UTC";
+      automaticClinicZone.checked = !data.clinicTimeZone;
+      $("clinic-zone-automatic-label").textContent = t("ui.clinic-zone-follow-device-value", timeZoneCity(device));
+      if (data.clinicTimeZone) clinicZonePicker.load(data.clinicTimeZone, device, Date.now());
+      else $("clinic-zone-options").replaceChildren();
+      showClinicZonePicker();
       $("appointment-reminders-start").value = appointment.start;
       $("appointment-reminders-interval").value = appointment.interval;
       refreshFields($("appointment-settings-form"));
@@ -122,6 +140,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
       $("web-backup-export").reset();
     }
     settings.dataset.panel = panel;
+    saveAppointmentSettings.hidden = panel !== "appointment-settings";
     $("settings-back").hidden = !panel;
     $("settings-home").hidden = Boolean(panel);
     const [title, subtitle] = settingsPanels[panel] ?? [t("ui.medora-settings"), t("ui.appearance-reminders-and-data")];
@@ -262,12 +281,22 @@ export function installSettings({ getState, mutate, refreshFields }) {
     event.preventDefault();
     const start = $("appointment-reminders-start").value;
     const interval = Number($("appointment-reminders-interval").value);
+    const zone = automaticClinicZone.checked ? null : clinicZonePicker.value;
     if (!start || ![60, 120].includes(interval)) {
       settingsFeedback(t("ui.check-the-reminder-start-time-and-interval"), "error");
       return;
     }
-    await saveSettings(event.submitter ?? $("appointment-settings-form").querySelector('[type="submit"]'),
-      state => { state.appointmentReminders = { start, interval }; }, t("ui.appointment-settings-saved"), true);
+    if (zone === undefined) {
+      settingsFeedback(t("ui.clinic-zone-choose-city"), "error");
+      $("clinic-zone-search").focus();
+      return;
+    }
+    await saveSettings(event.submitter ?? saveAppointmentSettings,
+      state => {
+        state.appointmentReminders = { start, interval };
+        if (zone) state.clinicTimeZone = zone;
+        else delete state.clinicTimeZone;
+      }, t("ui.appointment-settings-saved"), true);
   });
   $("display-form").addEventListener("submit", async event => {
     event.preventDefault();

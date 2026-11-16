@@ -7,6 +7,7 @@ import { careSnapshotFits, careSyncLimit, careVersion, portable, validateCareRec
 import { hasPrivateText } from "../../domain/private-fields.js";
 import { applyPortable, CareConflict, conflictChoice, equal as same, mergeCare, mergeRestoredCare } from "./merge.js";
 import { generateRecoveryKey, importRecoveryKey, normalizePrivateCare, openPrivateCare, sealPrivateCare } from "./private-care.js";
+import { installTimeZonePicker } from "../../shared/ui/time-zone-picker.js";
 const path = "/api/account/care";
 
 function syncError(response) {
@@ -55,8 +56,13 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       void sync(resumeActivation);
     });
   }
-  const zoneInput = $("account-care-zone");
+  const zonePanel = $("account-care-zone-open");
+  const zoneFields = $("account-care-zone-picker");
+  const zonePicker = installTimeZonePicker($("account-care-zone-search"), $("account-care-zone-options"),
+    $("account-care-zone-empty"));
+  const zoneSave = $("account-care-zone-save");
   const zoneStatus = $("account-care-zone-status");
+  let zoneRequest = 0;
 
   async function prepareRestore(mode) {
     if (mode === "device") return restoreTarget(mode);
@@ -285,22 +291,26 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
     message = "همگام‌سازی این دستگاه متوقف شد.";
     await refresh();
   });
-  $("account-care-zone-open").addEventListener("toggle", async event => {
-    if (!event.target.open) return;
+  zonePanel.addEventListener("toggle", async () => {
+    const request = ++zoneRequest;
+    if (!zonePanel.open) return;
+    zoneFields.disabled = zoneSave.disabled = true;
+    zoneStatus.textContent = "";
     try {
       const response = await transport(path + "?zone", { cache: "no-store", signal: AbortSignal.timeout(12_000) });
       if (!response.ok) throw new Error("zone_unavailable");
       const data = await response.json();
-      zoneInput.value = data.zone ?? localZone();
-      zoneStatus.textContent = "";
+      if (request !== zoneRequest) return;
+      zonePicker.load(data.zone, localZone() ?? "UTC", now());
+      zoneFields.disabled = zoneSave.disabled = false;
     } catch {
-      zoneStatus.textContent = t("ui.sync-zone-unavailable");
+      if (request === zoneRequest) zoneStatus.textContent = t("ui.sync-zone-unavailable");
     }
   });
-  $("account-care-zone-save").addEventListener("click", async event => {
-    const control = event.currentTarget;
-    const zone = zoneInput.value.trim();
-    control.disabled = true;
+  zoneSave.addEventListener("click", async () => {
+    const zone = zonePicker.value;
+    if (!zone) return;
+    zoneSave.disabled = true;
     try {
       const { owner, revision } = await prepareRestore("merge");
       const response = await transport(path, { method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -311,7 +321,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
     } catch {
       zoneStatus.textContent = t("ui.sync-zone-unavailable");
     } finally {
-      control.disabled = false;
+      zoneSave.disabled = zoneFields.disabled;
     }
   });
 

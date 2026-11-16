@@ -92,6 +92,7 @@
 .medora .account-sync { margin-block: .45rem; padding: .65rem; border: 1px solid var(--outline); border-radius: 1rem; }
 .medora .account-sync p { margin-block: .25rem; }
 .medora .account-sync button { margin-block-start: .3rem; }
+.medora #account-care-zone-picker { border: 0; padding: 0; margin: .45rem 0; min-inline-size: 0; }
 .account-identity { display: flex; align-items: center; gap: .65rem; padding: .55rem .7rem; border-radius: 1rem; background: var(--surface-fill); border: 1px solid var(--surface-edge); }
 .account-identity bdi { display: block; color: var(--muted); font-size: .84rem; }
 .account-avatar { display: grid; place-items: center; flex: 0 0 2.75rem; aspect-ratio: 1; border-radius: 50%; background: var(--dock-active); color: var(--action); font-weight: 800; }

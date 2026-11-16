@@ -205,6 +205,69 @@ test("first launch reaches the app without a permission detour", async ({ page }
   await expect(page.locator("#quick-dialog")).toBeVisible();
 });
 
+test("new appointments use the clinic setting or device zone and older records keep their zones", async ({ page }) => {
+  await open(page, { language: "en", width: 375 });
+  const device = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const custom = device === "America/Toronto" ? "Asia/Tehran" : "America/Toronto";
+  const city = custom.split("/").at(-1);
+  const clinicSettings = async () => {
+    await page.locator('.header-tools [data-destination="settings"]').click();
+    await page.locator('[data-settings-panel="appointment-settings"]').click();
+  };
+  const openVisit = async () => {
+    await page.locator("#open-quick").click();
+    await page.locator("#quick-dialog [data-open-visit]").click();
+    await expect(page.locator("#visit-dialog")).toBeVisible();
+    await expect(page.locator("#visit-zone")).toHaveCount(0);
+  };
+  const saveVisit = async name => {
+    await page.locator("#visit-name").fill(name);
+    await page.locator('#visit-editor button[type="submit"]').click();
+    await expect(page.locator("#visit-dialog")).toBeHidden();
+  };
+  const read = () => page.evaluate(async () => (await import("/medication/shared/storage.js")).accessCare());
+  const followDevice = page.locator("#clinic-zone-automatic");
+  const closeSettings = () => page.locator('[data-close="settings-dialog"]').click();
+  const saveSettings = async () => {
+    await page.locator("#save-appointment-settings").click();
+    await expect(page.locator("#settings-status")).toHaveText("Appointment settings saved.");
+  };
+
+  await clinicSettings();
+  await expect(followDevice).toBeChecked();
+  await expect(page.locator("#clinic-zone-custom")).toBeHidden();
+  await closeSettings();
+  await openVisit();
+  await saveVisit("Device zone visit");
+
+  await clinicSettings();
+  await followDevice.uncheck();
+  await page.locator("#clinic-zone-search").fill(city);
+  await page.locator(`#clinic-zone-options label:has(input[value="${custom}"])`).click();
+  await saveSettings();
+  await closeSettings();
+  await page.reload();
+  await openVisit();
+  await expect(page.locator("#visit-zone-summary")).toHaveText("Appointment time in " + city);
+  await saveVisit("Custom zone visit");
+  let state = await read();
+  expect(state.clinicTimeZone).toBe(custom);
+  expect(Object.fromEntries(Object.values(state.visits).map(visit => [visit.name, visit.zone])))
+    .toEqual({ "Device zone visit": device, "Custom zone visit": custom });
+
+  await clinicSettings();
+  await expect(page.locator("#clinic-zone-options input:checked")).toHaveValue(custom);
+  await followDevice.check();
+  await saveSettings();
+  await closeSettings();
+  await openVisit();
+  await saveVisit("Automatic again");
+  state = await read();
+  expect(state.clinicTimeZone).toBeUndefined();
+  expect(Object.fromEntries(Object.values(state.visits).map(visit => [visit.name, visit.zone])))
+    .toEqual({ "Device zone visit": device, "Custom zone visit": custom, "Automatic again": device });
+});
+
 test("date picker has one tab stop, supports RTL arrows and restores focus on cancel", async ({ page }) => {
   await open(page);
   const opener = page.locator("#pick-day");

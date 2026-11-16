@@ -7,6 +7,7 @@
           <label class="editor-field">{{msg:ui.appointment-date}}<input id="visit-day" type="date" required></label>
           <label class="editor-field">{{msg:ui.appointment-time}}<input id="visit-time" type="time" step="1" required></label>
         </div>
+        <p id="visit-zone-summary" class="quiet"></p>
         <label class="editor-field">{{msg:ui.location}}<input id="visit-place" maxlength="160"></label>
         <details id="visit-appearance" class="editor-options">
           <summary><span class="visit-appearance-dot" aria-hidden="true"></span>{{msg:ui.visit-appearance-optional}}</summary>
@@ -81,8 +82,6 @@
           <fieldset id="visit-colors"><legend>{{msg:ui.visit-color}}</legend><div class="visit-color-grid"></div></fieldset>
         </details>
         <details id="visit-extra" class="editor-options"><summary>{{msg:ui.more-options}}</summary>
-          <label class="editor-field">{{msg:ui.clinic-time-zone}}<input id="visit-zone" dir="ltr" maxlength="64" spellcheck="false"></label>
-          <p class="quiet">{{msg:ui.enter-the-appointment-date-and-time-in-the-clinics-time-z}}</p>
           <label class="editor-field">{{msg:ui.contact-information}}<input id="visit-contact" maxlength="160"></label>
           <label class="editor-field">{{msg:ui.notes}}<textarea id="visit-note" maxlength="600" rows="2"></textarea></label>
         </details>

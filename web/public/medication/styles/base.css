@@ -90,6 +90,18 @@
 .progress-ring span { display: grid; place-items: center; inline-size: 76%; aspect-ratio: 1; background: var(--water); border-radius: 50%; font-size: .9rem; font-weight: 700; }
 .medora button, .medora input, .medora textarea, .medora select { min-block-size: 3rem; border-color: var(--outline); border-radius: .9rem; color: var(--ink); font: inherit; }
 .medora input, .medora select, .medora textarea { background: var(--field); border: 1px solid var(--outline); padding: .5rem .7rem; box-sizing: border-box; }
+.time-zone-options { max-block-size: min(16rem, 36dvh); overflow-y: auto; overscroll-behavior: contain; margin-block-start: .35rem; }
+.medora .time-zone-option {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem;
+  min-block-size: 2.8rem; padding: .2rem .45rem; border-block-end: 1px solid var(--outline); cursor: pointer;
+}
+.medora .time-zone-option input {
+  inline-size: 1rem; block-size: 1rem; min-block-size: 0; padding: 0; margin: 0; accent-color: var(--action);
+}
+.time-zone-option:has(:checked) { background: var(--dock-active); }
+.time-zone-option:focus-within { outline: 2px solid var(--action); outline-offset: -2px; }
+.time-zone-region { display: block; color: var(--muted); font-size: .75rem; }
+.time-zone-offset { color: var(--muted); white-space: nowrap; font-size: .8rem; font-variant-numeric: tabular-nums; }
 .medora textarea { display: block; inline-size: 100%; resize: vertical; }
 .medora button { background: var(--action); border-color: var(--action); color: var(--on-action); font-weight: 650; }
 .medora button.secondary { background: var(--field); border-color: var(--outline); color: var(--ink); }
