@@ -1,12 +1,12 @@
 import { codeKey, identityKey, passwordKey, passwordVersion, sessionKey, validAuthKeys } from "./keys.mjs";
 import { operations, logOperation } from "../operations/audit.mjs";
 import { DurableObject } from "cloudflare:workers";
-import { scryptSync } from "node:crypto";
+import { equal, hex, hmac, passwordProof, randomCode, sessionHash } from "./auth-crypto.mjs";
 import { applyFamilyChange } from "../family/care.mjs";
 import { profileName } from "../../public/medication/domain/profile.js";
 import { reminderCareProjection } from "../../public/medication/domain/care-plan.js";
 import { smallJson } from "../http/validation.mjs";
-import { careSnapshotFits, careVersion } from "../../public/medication/domain/care-records.js";
+import { careSnapshotFits, careVersion, validateCareRecords } from "../../public/medication/domain/care-records.js";
 
 const cookieName = "__Host-medora_session";
 const minute = 60_000;
@@ -14,7 +14,6 @@ const day = 24 * 60 * minute;
 const sessionAge = 30 * day;
 const familyReplayAge = 7 * day;
 const adminSessionMaxAge = 10 * minute;
-const encoder = new TextEncoder();
 const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
 const sessionPattern = /^([a-f0-9]{64})\.([a-f0-9]{64})\.([a-f0-9]{64})$/;
 const challengePattern = /^([a-f0-9-]{36})\.([a-f0-9]{64})$/;
@@ -22,22 +21,6 @@ const grantPattern = /^(\d{13})(?:\.([a-f0-9]{32}))?\.([a-f0-9]{64})$/;
 const usernamePattern = /^[a-z0-9_]{3,32}$/;
 const authRoutes = ["register-code", "confirm-email", "register", "login", "logout", "reset-code", "reset-password"];
 
-function hex(bytes) {
-  return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, "0")).join("");
-}
-async function hmac(secret, purpose, value) {
-  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return hex(await crypto.subtle.sign("HMAC", key, encoder.encode(`${purpose}:${value}`)));
-}
-async function sessionHash(token) {
-  return hex(await crypto.subtle.digest("SHA-256", encoder.encode(token)));
-}
-const equal = (left, right) => crypto.subtle.timingSafeEqual(encoder.encode(left), encoder.encode(right));
-function randomCode() {
-  const value = new Uint32Array(1);
-  do crypto.getRandomValues(value); while (value[0] >= 4_294_000_000);
-  return String(value[0] % 1_000_000).padStart(6, "0");
-}
 function configured(env) {
   return Boolean(env.EMAIL_ACCOUNTS && env.CREDENTIALS && env.EMAIL_AUTH_LIMIT &&
     validAuthKeys(env));
@@ -62,10 +45,6 @@ async function accountId(env, email) {
   return await credentials(env).accountIdFor(email) ?? await hmac(identityKey(env), "account-v1", email);
 }
 const credentials = env => env.CREDENTIALS.getByName("medora-credentials-v1");
-async function passwordProof(secret, password, salt) {
-  const peppered = await hmac(secret, "password-v1", password);
-  return hex(scryptSync(peppered, salt, 32, { N: 16384, r: 8, p: 5, maxmem: 32 * 1024 * 1024 }));
-}
 function cookie(value, maxAge) {
   return `${cookieName}=${value}; Path=/; Max-Age=${maxAge}; Secure; HttpOnly; SameSite=Lax`;
 }
@@ -537,6 +516,7 @@ export class EmailAccount extends DurableObject {
       const records = applyFamilyChange(current.records, { ...data, id: data.action === "add" || data.kind === "water"
         ? entryId : data.id }, label, zone, now, displayName);
       if (typeof records === "string") return { error: records };
+      try { validateCareRecords(records); } catch { return { error: "invalid" }; }
       const owner = accountScope(account, epoch);
       if (!careSnapshotFits(owner, current.revision + 1, records, zone)) {
         return { error: "care_too_large" };
@@ -557,7 +537,8 @@ export class EmailAccount extends DurableObject {
       const snapshot = await storage.get("care-sync") ?? { revision: 0, records: null };
       const epoch = this.epoch();
       if (known && known === careVersion(accountScope(owner, epoch), snapshot.revision)) return { unchanged: known };
-      return { epoch, ...snapshot, ...(includeZone && { zone: await storage.get("care-zone") ?? null }) };
+      if (includeZone) return { epoch, revision: snapshot.revision, zone: await storage.get("care-zone") ?? null };
+      return { epoch, ...snapshot };
     });
   }
 

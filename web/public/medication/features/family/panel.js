@@ -1,3 +1,4 @@
+import { watchFamilyAccess } from "./access.js";
 import { quickActions } from "./quick-action.js";
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { language, localDigits, t } from "../../shared/i18n/locale.js";
@@ -80,17 +81,31 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   let overview;
   let returnTo;
   let generation = 0;
-  let accessTimer;
-  let accessToken = 0;
-  let activeGroup = sessionStorage.getItem(groupPreference);
-  let currentAccess;
+  let activeGroup;
+  let actionStorage;
+  try {
+    actionStorage = sessionStorage;
+    activeGroup = actionStorage.getItem(groupPreference);
+  } catch {}
   let editorOperation;
   let recovery = false;
   let overviewRequest = 0;
 
   const personalName = () => getState()?.personalProfile?.firstName || overview?.label || t("ui.me");
   const groupInView = () => overview?.groups.find(item => item.id === activeGroup) ?? overview?.groups[0];
-  const waterActions = quickActions();
+  const waterActions = quickActions({ storage: actionStorage });
+  const access = watchFamilyAccess({
+    request: familyRequest,
+    today: () => getFamilyView()?.today,
+    denied: reason => leave(t(errors[reason.message] ?? "ارتباط با خانواده برقرار نشد. دوباره تلاش کنید.")),
+    changed: (group, member, data, feedback, policyChanged) => {
+      if (policyChanged) {
+        if (dialog.open) dialog.close();
+        closeFamilyEditors();
+      }
+      enter(group, member, data, feedback);
+    }
+  });
 
   function renderInboxBadge(invitations) {
     const count = invitations.length;
@@ -541,9 +556,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   }
 
   function leave(feedback) {
-    accessToken++;
-    clearTimeout(accessTimer);
-    currentAccess = null;
+    access.stop();
     closeFamilyEditors();
     if (getFamilyView() && dialog.open) dialog.close();
     if (getFamilyView()) setFamilyView(null, feedback);
@@ -575,7 +588,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
         content.append(facts.childElementCount ? facts : element("p", t("ui.no-profile-information-has-been-added")));
       }
     });
-    currentAccess = { group, member, data, day: view.today };
+    access.set({ group, member, data, day: view.today });
     setFamilyView(view, feedback);
   }
 
@@ -586,44 +599,16 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     if (!dialog.open || generation !== request) return;
     chooseGroup(group);
     dialog.close();
-    accessToken++;
     enter(group, member, data);
-    scheduleAccess();
+    access.start();
     $("family-home").focus({ preventScroll: true });
-  }
-
-  function scheduleAccess() {
-    clearTimeout(accessTimer);
-    accessTimer = setTimeout(() => void checkAccess(), 15000);
-  }
-
-  async function checkAccess({ feedback, force = false } = {}) {
-    if (!currentAccess) return;
-    const { group, member, data, day } = currentAccess;
-    const token = ++accessToken;
-    clearTimeout(accessTimer);
-    try {
-      const latest = await familyRequest("view", { group: group.id, target: member.id,
-        ...(!force && { knownPolicy: JSON.stringify(data.policy), knownRevision: data.revision }) });
-      if (token !== accessToken) return;
-      if (!latest.unchanged) {
-        if (JSON.stringify(data.policy) !== JSON.stringify(latest.policy)) {
-          if (dialog.open) dialog.close();
-          closeFamilyEditors();
-        }
-        enter(group, member, latest, feedback);
-      } else if (day !== getFamilyView()?.today) enter(group, member, data);
-      scheduleAccess();
-    } catch (reason) {
-      if (token === accessToken) leave(t(errors[reason.message] ?? "ارتباط با خانواده برقرار نشد. دوباره تلاش کنید."));
-    }
   }
 
   async function saved(feedback, view) {
     const current = getFamilyView();
     if (view.member.id !== current?.member.id || view.group.id !== current.group.id) return;
     if (dialog.open) dialog.close();
-    await checkAccess({ feedback: t(feedback), force: true });
+    await access.check({ feedback: t(feedback), force: true });
   }
 
   async function quickWater(view, day, amount, control) {
@@ -632,12 +617,13 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     const attempt = waterActions.start(key, () => clockFor(view.zone));
     if (!attempt) return;
     control.disabled = true;
+    let confirmed = false;
     try {
       await familyRequest("record", { group: view.group.id, target: view.member.id, operation: attempt.operation,
         kind: "water", day, amount, time: attempt.time });
-      waterActions.finish(key, true);
+      confirmed = true;
       if (view.member.id === getFamilyView()?.member.id && view.group.id === getFamilyView()?.group.id) {
-        await checkAccess({ feedback: t("ui.water-logged"), force: true });
+        await access.check({ feedback: t("ui.water-logged"), force: true });
       }
     } catch (reason) {
       if (view.member.id === getFamilyView()?.member.id && view.group.id === getFamilyView()?.group.id) {
@@ -648,7 +634,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
         }
       }
     } finally {
-      waterActions.finish(key, false);
+      waterActions.finish(key, confirmed);
       control.disabled = false;
     }
   }
@@ -790,7 +776,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       void refreshInbox();
-      if (getFamilyView()) void checkAccess();
+      if (getFamilyView()) void access.check();
     }
   });
   window.addEventListener("hashchange", () => {

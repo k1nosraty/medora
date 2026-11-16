@@ -7,7 +7,7 @@ import { changeReminderRevision } from "../reminders/controller.js";
 import { accessCare } from "../../shared/storage.js";
 import { isoDay } from "../../domain/care-index.js";
 
-export function installBackupRestore(mutate, validatePhases, prepareRestore) {
+export function installBackupRestore(mutate, validatePhases, { prepareRestore, clearRecovery }) {
   const backupForm = $("android-restore");
   const backupInput = $("android-backup-file");
   const emptyBackupFilename = $("android-backup-filename").textContent;
@@ -24,7 +24,10 @@ export function installBackupRestore(mutate, validatePhases, prepareRestore) {
       for (const key of Object.keys(state)) delete state[key];
       Object.assign(state, { intro: "done", medicines: {}, doses: {}, water: [], routineLogs: {}, preventAutoRestore: true });
       if (reminders) state.reminders = { ...reminders, enabled: false };
-    }, t("ui.clear-device-done"), true)) exportFeedback("ui.clear-device-done", "success");
+    }, t("ui.clear-device-done"), true)) {
+      clearRecovery();
+      exportFeedback("ui.clear-device-done", "success");
+    }
   });
 
   const backupOpen = () => $("settings-dialog").open && $("settings-dialog").dataset.panel === "backup-settings";
@@ -124,7 +127,7 @@ export function installBackupRestore(mutate, validatePhases, prepareRestore) {
     submit.disabled = true;
     backupFeedback(t("ui.checking-the-backup"), "busy");
     try {
-      const { maxBackupBytes } = await import("./crypto.js");
+      const { maxBackupBytes } = await import("../../shared/crypto/backup.js");
       if (!isCurrent()) return;
       if (file.size > maxBackupBytes) {
         backupFeedback(t("ui.choose-a-backup-file-no-larger-than-16-mb"), "error");

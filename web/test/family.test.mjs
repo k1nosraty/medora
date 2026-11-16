@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 import { scheduleForPush } from "../public/medication/domain/care-plan.js";
-import { subscriptionId } from "../public/medication/features/reminders/subscription-id.js";
+import { subscriptionId } from "../public/medication/domain/subscription-id.js";
 import { emptyCareRecords } from "../public/medication/domain/family.js";
 import { ageAt, validPersonalProfile } from "../public/medication/domain/profile.js";
 
@@ -58,12 +58,18 @@ test("family invitations, sharing and revocation are directional and group scope
       }
       export class TestReminders extends MedicationReminders {
         failOnce() { this.failNext = true; }
+        loseReplyOnce() { this.loseReply = true; }
         async replaceAccountPlan(...args) {
           if (this.failNext) {
             this.failNext = false;
             throw new Error("temporary test failure");
           }
-          return super.replaceAccountPlan(...args);
+          const result = await super.replaceAccountPlan(...args);
+          if (this.loseReply) {
+            this.loseReply = false;
+            throw new Error("Synthetic lost device response");
+          }
+          return result;
         }
       }
     ` },
@@ -247,24 +253,40 @@ test("family invitations, sharing and revocation are directional and group scope
     linkedRecords.doses[`postponed|${day}|${minute}`] = { medicineId: "postponed", day, minute,
       planned: 1000, actual: null, debit: 0, status: "snoozed", snoozeUntil: originalDue };
     for (const row of Object.values(linkedRecords.medicines)) if (row.id !== "postponed") row.paused = true;
-    const saved = await (await call("account/care", { ...linkedSnapshot, records: linkedRecords, zone: "UTC" }, b, "PUT")).json();
+    const saved = await (await call("account/care", { ...linkedSnapshot, records: linkedRecords, zone: "America/Toronto" }, b, "PUT")).json();
+    assert.equal((await (await call("account/care?zone", null, b)).json()).zone, "UTC");
+    const zone = (value, revision) => call("account/care", { owner, revision, zone: value }, b, "PATCH");
+    assert.equal((await zone("Asia/Tehran", saved.revision - 1)).status, 409);
+    const changedZone = await (await zone("America/Toronto", saved.revision)).json();
+    assert.equal(changedZone.revision, saved.revision + 1);
+    const resetZone = await (await zone("UTC", changedZone.revision)).json();
+    assert.equal(resetZone.zone, "UTC");
     const subscription = { endpoint: "https://web.push.apple.com/family-test-endpoint",
       keys: { p256dh: createECDH("prime256v1").generateKeys().toString("base64url"), auth: Buffer.alloc(16).toString("base64url") } };
     const { token } = await (await call("reminders/enroll", { subscription })).json();
     const headers = { Authorization: "Bearer " + token };
     const plan = { ...scheduleForPush({ ...linkedRecords.settings, ...linkedRecords }, "UTC", today),
       enabled: true, revision: 1, subscription, language: "en",
-      account: { owner, revision: saved.revision, details: false } };
+      account: { owner, revision: resetZone.revision, details: false } };
     assert.equal((await call("reminders", plan, a, "PUT", headers)).status, 401);
     assert.equal((await (await call("reminders", plan, b, "PUT", headers)).json()).next, originalDue);
     const account = await stub("EMAIL_ACCOUNTS", owner);
     const device = await stub("REMINDERS", await subscriptionId(subscription));
+    const otherSubscription = { ...subscription, endpoint: "https://web.push.apple.com/second-family-test-endpoint" };
+    const otherEnrollment = await (await call("reminders/enroll", { subscription: otherSubscription })).json();
+    const otherHeaders = { Authorization: "Bearer " + otherEnrollment.token };
+    assert.equal((await call("reminders", { ...plan, subscription: otherSubscription }, b, "PUT", otherHeaders)).status, 200);
+    const otherDevice = await stub("REMINDERS", await subscriptionId(otherSubscription));
     await until(async () => !(await account.reminderJob()));
     await device.failOnce();
+    await otherDevice.loseReplyOnce();
     assert.equal((await family(a, { action: "record", group, target: bId, operation: randomUUID(), kind: "medicine",
       id: "postponed", day, minute, status: "taken" })).status, 200);
     await until(async () => (await account.reminderJob())?.at > Date.now() + 20_000);
     assert.equal((await device.status()).next, originalDue);
+    assert.equal((await device.status()).accountSchedule.status, "pending");
+    assert.equal((await otherDevice.status()).next, null);
+    assert.equal((await otherDevice.status()).accountSchedule.status, "applied");
     await account.retryReminderJob();
     assert.equal((await device.status()).next, null);
     assert.equal(await device.replaceAccountPlan(owner, saved.revision, linkedRecords), "current");
@@ -350,7 +372,7 @@ test("family invitations, sharing and revocation are directional and group scope
     const removal = await account.removalStatus();
     assert.equal(removal.status, "complete");
     assert.ok(removal.familyRows > 0);
-    assert.equal(removal.devices, 1);
+    assert.equal(removal.devices, 2);
     assert.equal((await device.status()).enabled, false);
     assert.equal((await (await family(a)).json()).groups[0].members.length, 1);
     assert.equal((await hub.exportFamilyPage("audit", 0)).some(row => row.actor === owner || row.subject === owner), false);

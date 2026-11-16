@@ -2,7 +2,7 @@ import { defaultCalendar, language, listSeparator, locale, t } from "../../share
 import { accessCare, accessCareSettings } from "../../shared/storage.js";
 import { scheduleForPush, localZone } from "../../domain/care-plan.js";
 import { validSchedule, reminderRequestLimit } from "../../domain/reminder-schedule.js";
-import { matchesSubscriptionId } from "./subscription-id.js";
+import { matchesSubscriptionId } from "../../domain/subscription-id.js";
 
 export { scheduleForPush };
 

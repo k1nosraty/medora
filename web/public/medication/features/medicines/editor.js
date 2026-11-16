@@ -1,8 +1,9 @@
+import { saveMedicinePlan } from "../../domain/medicine-command.js";
 import { listSeparator, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, action, element } from "../../shared/ui/dom.js";
 import { dayNumber, today } from "../../shared/ui/dates.js";
 import { clockMinute } from "../../domain/care-plan.js";
-import { compilePhases, isoDay, timeText, trackSchedule } from "../../domain/care-index.js";
+import { compilePhases, isoDay, timeText } from "../../domain/care-index.js";
 import * as engine from "../../domain/medication-rules.js";
 import { defaultMedicineIcon, installAppearance, medicineColorOf } from "./appearance.js";
 import { amountText, doseUnit, quantity } from "./quantity.js";
@@ -376,17 +377,9 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
         return;
       }
       if (await mutate(state => {
-        const saved = state.medicines[id];
-        if (editing && (!saved || saved.revision !== editingRevision)) {
+        if (!saveMedicinePlan(state, plan, editing ? editingRevision : null, Date.now())) {
           throw new Error(t("ui.this-schedule-changed-in-another-window-reopen-it-to-edit"));
         }
-        state.medicines[id] = {
-          ...saved,
-          ...plan, unit: saved?.stock != null ? saved.unit : unit, stock: saved?.stock ?? stock,
-          ...(saved && saved.stock == null && stock !== null ? { stockTrackedFrom: Date.now() } : {}),
-          revision: (saved?.revision ?? 0) + 1
-        };
-        trackSchedule(state, "medicines", saved, state.medicines[id], Date.now());
       }, t("ui.medication-schedule-saved"), true)) {
         $("medication-dialog").close();
         editing = null;

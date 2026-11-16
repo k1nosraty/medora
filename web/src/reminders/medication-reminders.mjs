@@ -7,7 +7,7 @@ import { dayMs, localWall, timezone } from "../../public/medication/domain/wall-
 import { smallJson, validSubscription, validSubscriptionKey } from "../http/validation.mjs";
 import { reminderCopy } from "./copy.mjs";
 import { sendPush } from "./push.mjs";
-import { matchesSubscriptionId, subscriptionId } from "../../public/medication/features/reminders/subscription-id.js";
+import { matchesSubscriptionId, subscriptionId } from "../../public/medication/domain/subscription-id.js";
 
 const encoder = new TextEncoder();
 const sendWindow = 5 * 60_000;

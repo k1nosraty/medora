@@ -20,6 +20,9 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
   let pendingSignIn = false;
   let recovery;
   let authGeneration = 0;
+  let retryCount = 0;
+  let retryAt = 0;
+  const maxAutomaticRetries = 4;
   const keyInput = $("account-care-key");
   const keyStatus = $("account-care-key-status");
   const zoneInput = $("account-care-zone");
@@ -27,14 +30,26 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
 
   async function prepareRestore(mode) {
     if (mode === "device") return restoreTarget(mode);
-    const response = await transport(path, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
+    const response = await transport(path + "?zone", { cache: "no-store", signal: AbortSignal.timeout(12_000) });
     if (!response.ok) throw new Error(response.status === 401 ? "sign_in" : "sync_failed");
     return restoreTarget(mode, await response.json());
   }
 
   function schedule(delay = 1500) {
+    retryCount = retryAt = 0;
+    planSync(delay);
+  }
+
+  function retry(initialDelay) {
+    if (retryCount >= maxAutomaticRetries) { retryAt = Infinity; return; }
+    const delay = Math.min(initialDelay * 2 ** retryCount++, 120_000) + Math.random() * 1000;
+    retryAt = now() + delay;
+    planSync(delay);
+  }
+
+  function planSync(delay) {
     clearTimeout(timer);
-    timer = setTimeout(() => void sync(), delay);
+    timer = setTimeout(() => void sync(), Math.ceil(delay));
   }
 
   async function sync(activate = false, signedIn = false) {
@@ -42,6 +57,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       pendingSignIn ||= signedIn;
       return;
     }
+    if (!activate && !signedIn && now() < retryAt) return;
     if (!navigator.onLine) {
       if (activate) {
         message = "برای فعال‌کردن همگام‌سازی به اینترنت وصل شوید.";
@@ -99,7 +115,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       let privacyKey = wire.records?.privacyKey;
       if ((!autoRestore && !sameRecords) || (!privacyKey && key)) {
         const zone = localZone();
-        const protectedRecords = await sealPrivateCare(candidate, key);
+        const protectedRecords = await sealPrivateCare({ ...candidate, careSchemaVersion: 1 }, key);
         validateCareRecords(protectedRecords);
         if (currentGeneration !== authGeneration) return;
         if (!careSnapshotFits(remote.owner, remote.revision, protectedRecords, zone)) throw new Error("care_too_large");
@@ -111,7 +127,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
         if (uploaded.status === 409) {
           if (replace) throw new Error("restore_conflict");
           if (activate) message = "سوابق حساب هم‌زمان تغییر کردند. دوباره همگام‌سازی را بزنید.";
-          else schedule(1000 + Math.random() * 2000);
+          else retry(1000);
           return;
         }
         if (!uploaded.ok) throw new Error((await uploaded.json().catch(() => ({}))).error ?? "sync_failed");
@@ -143,12 +159,19 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
         state.accountCare = { owner: remote.owner, enabled: true, revision: confirmed.revision,
           base: confirmed.records, syncedAt: now(), sessionValid: true, privacyKey };
       }, { snapshot: local });
+      retryCount = retryAt = 0;
       await reload(changed || linkChanged);
       message = !privacyKey && hasPrivateText(confirmed.records)
         ? "ui.sync-legacy-private-text" : "سوابق با حساب همگام شدند.";
       if (edited) schedule();
     } catch (error) {
+      if (error.message === "sign_in") {
+        message = "برای ادامهٔ همگام‌سازی دوباره وارد حساب شوید.";
+        await signedOut();
+        return;
+      }
       if (["private_key", "private_corrupt", "restore_conflict", "care_conflict", "invalid_backup", "invalid_sync"].includes(error.message)) {
+        retryAt = Infinity;
         message = ({
           private_key: "ui.sync-recovery-key-required",
           private_corrupt: "ui.sync-private-corrupt",
@@ -160,11 +183,12 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
         return;
       }
       if (error.message === "care_too_large") {
+        retryAt = Infinity;
         message = "حجم سوابق از ظرفیت همگام‌سازی بیشتر است. سوابق روی دستگاه باقی ماندند.";
         return;
       }
       message = "همگام‌سازی انجام نشد. سوابق روی دستگاه باقی ماندند.";
-      if (!activate) schedule(30_000 + Math.random() * 5000);
+      if (!activate) retry(30_000);
     } finally {
       running = enable.disabled = disable.disabled = false;
       await refresh();
@@ -193,6 +217,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
   enable.addEventListener("click", () => {
     void readCare().then(state => {
       if (!state.accountCare?.enabled && !confirm(t("ui.add-this-devices-records-to-the-current-account"))) return;
+      retryCount = retryAt = 0;
       void sync(!state.accountCare?.enabled);
     });
   });
@@ -255,12 +280,16 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       keyStatus.textContent = t("ui.sync-invalid-recovery-key");
     }
   });
-  async function signedOut() {
+  function clearRecovery() {
     authGeneration++;
     recovery = undefined;
     keyInput.value = "";
     keyInput.type = "password";
     keyStatus.textContent = "";
+  }
+
+  async function signedOut() {
+    clearRecovery();
     let changed = false;
     await readSettings(state => {
       if (!state.accountCare?.enabled || state.accountCare.sessionValid === false) return;
@@ -272,6 +301,6 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
   }
   window.addEventListener("online", () => schedule(0));
   window.addEventListener("focus", () => schedule(0));
-  setInterval(() => { if (!document.hidden) schedule(0); }, 30_000);
-  return { refresh, schedule, signedOut, prepareRestore, signedIn: () => void sync(false, true) };
+  setInterval(() => { if (!document.hidden && !running && now() >= retryAt) void sync(); }, 30_000);
+  return { refresh, schedule, signedOut, prepareRestore, clearRecovery, signedIn: () => void sync(false, true) };
 }

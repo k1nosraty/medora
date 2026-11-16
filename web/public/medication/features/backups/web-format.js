@@ -1,4 +1,4 @@
-import { decryptBackup, encryptBackup, hasBackupMagic } from "./crypto.js";
+import { decryptBackup, encryptBackup, hasBackupMagic } from "../../shared/crypto/backup.js";
 import { portable, validatePortable } from "../../domain/care-records.js";
 export { portable, validatePortable, webBackupSettings } from "../../domain/care-records.js";
 

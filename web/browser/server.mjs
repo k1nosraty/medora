@@ -10,6 +10,7 @@ const types = {
 };
 
 const actions = [];
+const delayedAcknowledgements = new Set();
 const group = "32100000-0000-4000-8000-000000000001";
 const target = "32100000-0000-4000-8000-000000000002";
 
@@ -43,7 +44,11 @@ createServer(async (request, response) => {
         records: { profile: { firstName: "Alex" }, medicines: {}, doses: {}, water: [], waterGoal: 2000 } });
     } else {
       actions.push(data);
-      json(response, { ok: true });
+      const delay = /test-family-delay=([a-f0-9-]{36})/.exec(cookie)?.[1];
+      if (delay && !delayedAcknowledgements.has(delay)) {
+        delayedAcknowledgements.add(delay);
+        json(response, { error: "unavailable" }, 503);
+      } else json(response, { ok: true });
     }
     return;
   }

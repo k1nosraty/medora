@@ -301,12 +301,7 @@ test("family entry controls respect view, record and add permissions", async ({ 
   await selectMember();
   await expect(page.locator("#open-quick")).toBeVisible();
   const count = (await actions()).length;
-  await page.route("**/api/family", async route => {
-    if (route.request().postDataJSON()?.action === "record") {
-      await route.fetch();
-      await route.abort();
-    } else await route.continue();
-  }, { times: 1 });
+  await context.addCookies([{ name: "test-family-delay", value: crypto.randomUUID(), url: origin }]);
   await page.locator("#today-water-quick").click();
   await expect.poll(async () => (await actions()).length).toBe(count + 1);
   await expect(page.locator("#family-notice")).toBeVisible();
@@ -330,6 +325,38 @@ test("family entry controls respect view, record and add permissions", async ({ 
   await selectMember();
   await page.evaluate(() => window.dispatchEvent(new Event("offline")));
   await expect(page.locator("#family-home")).toBeHidden();
+});
+
+test("failed storage writes preserve records and repaint errors do not undo a commit", async ({ page }) => {
+  await open(page, { language: "en" });
+  await page.evaluate(() => {
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (...args) {
+      if (this.name === "days") {
+        IDBObjectStore.prototype.put = put;
+        throw new DOMException("Synthetic quota", "QuotaExceededError");
+      }
+      return put.apply(this, args);
+    };
+  });
+  const water = () => page.evaluate(async () => (await (await import("/medication/shared/storage.js")).accessCare()).water);
+  await page.locator("#today-water-quick").click();
+  await expect(page.locator("#status")).toHaveText(/Browser storage is full/);
+  expect(await water()).toHaveLength(0);
+
+  await page.evaluate(() => {
+    const paint = Element.prototype.replaceChildren;
+    Element.prototype.replaceChildren = function (...args) {
+      if (this.closest("#app")) {
+        Element.prototype.replaceChildren = paint;
+        throw new Error("Synthetic view failure after commit");
+      }
+      return paint.apply(this, args);
+    };
+  });
+  await page.locator("#today-water-quick").click();
+  await expect(page.locator("#status")).toHaveText(/Records saved/);
+  expect(await water()).toHaveLength(1);
 });
 
 test("notification deep links keep the requested date", async ({ page }) => {

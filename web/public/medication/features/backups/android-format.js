@@ -1,8 +1,8 @@
 import { dayMs, localWall, timezone } from "../../domain/wall-clock.js";
 
-import { decryptBackup } from "./crypto.js";
+import { decryptBackup } from "../../shared/crypto/backup.js";
 
-export { maxBackupBytes } from "./crypto.js";
+export { maxBackupBytes } from "../../shared/crypto/backup.js";
 const magic = new Uint8Array([77, 69, 68, 79, 82, 65, 0, 1]);
 const maxQuantity = 1_000_000_000;
 const clockPattern = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?$/;

@@ -72,16 +72,14 @@ async function mutate(change, success, scheduleChanged = false, day) {
   if (busy || familyView) return false;
   busy = true;
   $("app").setAttribute("aria-busy", "true");
+  let needsSync = false;
   try {
-    let needsSync = false;
     care = await accessCare(state => {
       const revision = state.reminders?.revision;
       change(state);
       if (scheduleChanged) changeReminderRevision(state);
       needsSync = state.reminders?.revision !== revision;
     }, { snapshot: care, day });
-    if (needsSync) void syncReminders(false, care);
-    accountSync.schedule();
   } catch (error) {
     $("status").textContent = error instanceof Error && error.name === "Error" ? error.message : t(storageMessage(error, "ui.could-not-save-try-again"));
     return false;
@@ -89,6 +87,8 @@ async function mutate(change, success, scheduleChanged = false, day) {
     busy = false;
     $("app").removeAttribute("aria-busy");
   }
+  if (needsSync) void syncReminders(false, care);
+  accountSync.schedule();
   try {
     render();
     $("status").textContent = success;
@@ -249,7 +249,10 @@ const params = new URLSearchParams(location.search);
 const view = params.get("view");
 if (view === "account") void openAccount();
 
-installBackupRestore(mutate, phases => engine.validMedicationPhases(compilePhases(engine, phases)), accountSync.prepareRestore);
+installBackupRestore(mutate, phases => engine.validMedicationPhases(compilePhases(engine, phases)), {
+  prepareRestore: accountSync.prepareRestore,
+  clearRecovery: accountSync.clearRecovery
+});
 
 try {
   care = await accessCare();

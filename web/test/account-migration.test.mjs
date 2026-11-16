@@ -9,11 +9,11 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
-import { subscriptionId } from "../public/medication/features/reminders/subscription-id.js";
+import { subscriptionId } from "../public/medication/domain/subscription-id.js";
 import { careSyncLimit } from "../public/medication/domain/care-records.js";
 import { advanceHash, emptyHash, openPart } from "../src/operations/backup-parts-format.mjs";
 import { dayMs, localWall, timezone } from "../public/medication/domain/wall-clock.js";
-import { decryptBackup, encryptBackup } from "../public/medication/features/backups/crypto.js";
+import { decryptBackup, encryptBackup } from "../public/medication/shared/crypto/backup.js";
 import { importRecoveryKey, sealPrivateCare } from "../public/medication/features/sync/private-care.js";
 import { mergeCare } from "../public/medication/features/sync/merge.js";
 

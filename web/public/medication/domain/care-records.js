@@ -49,6 +49,7 @@ export function portable(state) {
     routines: state.routines ?? {}, routineLogs: state.routineLogs ?? {},
     ...(Object.keys(state.scheduleHistory ?? {}).length ? { scheduleHistory: state.scheduleHistory } : {}),
     ...(state.cycleRecords !== undefined ? { cycleRecords: state.cycleRecords } : {}),
+    ...(state.careSchemaVersion !== undefined && { careSchemaVersion: state.careSchemaVersion }),
     ...(state.privacyVersion !== undefined && { privacyVersion: state.privacyVersion, privacyKey: state.privacyKey }),
     settings: Object.fromEntries(webBackupSettings.filter(key => state[key] !== undefined).map(key => [key, state[key]]))
   };
@@ -92,6 +93,18 @@ function validHistory(history, validatePhases) {
     }));
 }
 
+// v0 is the original portable format. v1 is emitted by current sync
+// clients. Existing archives and untouched older cloud rows remain valid.
+function validContract(data) {
+  if (data.careSchemaVersion === undefined) return true;
+  if (data.careSchemaVersion !== 1) return false;
+  const ids = data.water.map(row => row.id);
+  if (new Set(ids).size !== ids.length) return false;
+  return Object.values(data.visits).every(row =>
+    optional(row.cancelled, flag) && optional(row.completed, flag) && optional(row.remindersOff, flag) &&
+    optional(row.note, text) && optional(row.notes, text) && optional(row.contact, text));
+}
+
 function validPrivacy(data) {
   const protectedRecords = data.privacyVersion === 1 && isRecoveryKeyId(data.privacyKey);
   if (!protectedRecords && (data.privacyVersion !== undefined || data.privacyKey !== undefined)) return false;
@@ -123,7 +136,7 @@ export function validatePortable(data, validatePhases) {
       optional(row.note, value => text(value) && value.length <= 500))) ||
     !optional(data.scheduleHistory, history => validHistory(history, validatePhases)) ||
     !record(data.routineLogs, (rows, key) => String(Number(key)) === key && day(Number(key)) &&
-      record(rows, validRoutine)) || !validPrivacy(data)) throw new Error("invalid_backup");
+      record(rows, validRoutine)) || !validContract(data) || !validPrivacy(data)) throw new Error("invalid_backup");
   const { settings: preferences, ...records } = portable({ ...data, ...data.settings });
   return { ...records, ...preferences, intro: "done" };
 }
