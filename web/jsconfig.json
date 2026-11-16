@@ -10,7 +10,10 @@
   },
   "files": [
     "public/medication/domain/restore-intent.js",
+    "public/medication/domain/care-contract.js",
+    "public/medication/domain/subscription-id.js",
     "public/medication/domain/private-fields.js",
-    "public/medication/features/family/quick-action.js"
+    "public/medication/features/family/quick-action.js",
+    "src/http/validation.mjs"
   ]
 }
