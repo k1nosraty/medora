@@ -37,7 +37,7 @@ jobs:
         working-directory: web
         run: |
           npx playwright install --with-deps chromium webkit
-          npm run test:browser
+          npm run test:browser -- --reporter=list
       - name: Publish to Cloudflare Workers
         working-directory: web
         env:

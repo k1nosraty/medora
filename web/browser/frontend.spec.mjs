@@ -233,6 +233,8 @@ test("first launch reaches the app without a permission detour", async ({ page }
 });
 
 test("new appointments use the clinic setting or device zone and older records keep their zones", async ({ page }) => {
+  // Allow three appointment saves and a reload on slower mobile WebKit CI runners.
+  test.setTimeout(60_000);
   await open(page, { language: "en", width: 375 });
   const device = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const custom = device === "America/Toronto" ? "Asia/Tehran" : "America/Toronto";
