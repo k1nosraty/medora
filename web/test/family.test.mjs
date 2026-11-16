@@ -50,6 +50,14 @@ test("family invitations, sharing and revocation are directional and group scope
           return super.exportFamilyCare(revision);
         }
         async reminderJob() { return await this.ctx.storage.get("reminder-update") ?? null; }
+        rejectNextSnapshotTransaction() { this.rejectSnapshot = true; }
+        async queueReminderUpdate(...args) {
+          if (this.rejectSnapshot) {
+            this.rejectSnapshot = false;
+            throw new Error("Synthetic transaction failure after staging the snapshot write");
+          }
+          await super.queueReminderUpdate(...args);
+        }
         async retryReminderJob() {
           const job = await this.reminderJob();
           if (job) await this.ctx.storage.put("reminder-update", { ...job, at: Date.now() });
@@ -296,6 +304,13 @@ test("family invitations, sharing and revocation are directional and group scope
     await until(async () => (await device.status()).nextKinds.includes("appointment"));
 
     const health = await (await call("account/care", null, b)).json();
+    await account.rejectNextSnapshotTransaction();
+    const failed = await call("account/care", { ...health, records: { ...health.records,
+      water: [...health.records.water, { id: "synthetic-failed-write", day, time: "10:00", amount: 500 }] }
+    }, b, "PUT");
+    assert.equal(failed.status, 503);
+    assert.deepEqual(await failed.json(), { error: "unavailable" });
+    assert.deepEqual(await (await call("account/care", null, b)).json(), health);
     const overloaded = structuredClone(health.records);
     for (let index = 0; index < 101; index++) {
       const id = "synthetic-" + index;
@@ -312,6 +327,20 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.equal(await device.replaceAccountPlan(owner, rejected.revision, overloaded), "invalid");
     assert.equal((await call("account/care", { ...rejected, records: health.records }, b, "PUT")).status, 200);
     await until(async () => !(await device.status()).accountPlanError);
+
+    const clear = { enabled: false, revoke: true, revision: 2 };
+    const staleClear = await (await call("reminders", clear, null, "PUT", headers)).json();
+    assert.equal(staleClear.enabled, true);
+    clear.revision = staleClear.revision + 1;
+    const clearDevice = () => call("reminders", clear, null, "PUT", headers);
+    assert.deepEqual(await (await clearDevice()).json(), { revision: 3, enabled: false, revoked: true });
+    assert.deepEqual(await (await clearDevice()).json(), { revision: 3, enabled: false, revoked: true });
+    assert.equal((await call("reminders", null, null, "GET", headers)).status, 401);
+    assert.equal((await call("reminders/test", {}, null, "POST", headers)).status, 401);
+    assert.equal((await call("reminders", { ...plan, revision: 4 }, b, "PUT", headers)).status, 401);
+    assert.deepEqual(JSON.parse(JSON.stringify(await device.exportReminder())),
+      { revision: 3, revoked: true, plan: null, next: null });
+    assert.equal((await otherDevice.status()).enabled, true);
 
     await account.pauseViews();
     const pendingView = view(a, bId);

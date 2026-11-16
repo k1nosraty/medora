@@ -43,11 +43,18 @@ export async function handleMedicationReminders(request, env, url) {
   const { success } = await env.PUSH_DEVICE_LIMIT.limit({ key: match[1] });
   if (!success) return reply({ error: "rate_limit" }, 429);
   const device = env.REMINDERS.getByName(match[1]);
-  if (testing) return reply(await device.test());
-  if (request.method === "GET") return reply(await device.status());
+  if (testing) {
+    const result = await device.test();
+    return result.status === "revoked" ? reply({ error: "unauthorized" }, 401) : reply(result);
+  }
+  if (request.method === "GET") {
+    const result = await device.status();
+    return result.revoked ? reply({ error: "unauthorized" }, 401) : reply(result);
+  }
 
   const body = await smallJson(request, reminderRequestLimit);
-  if (!Number.isSafeInteger(body?.revision) || body.revision < 1 || typeof body.enabled !== "boolean") {
+  if (!Number.isSafeInteger(body?.revision) || body.revision < 1 || typeof body.enabled !== "boolean" ||
+      (body.revoke !== undefined && (body.revoke !== true || body.enabled))) {
     return reply({ error: "bad_request" }, 400);
   }
   let plan = null;
@@ -75,13 +82,14 @@ export async function handleMedicationReminders(request, env, url) {
     // A registered device must be discoverable by backup even if this request is interrupted.
     if (operations(env)) await operations(env).registerReminder(match[1]);
   }
-  const saved = await device.replace(body.revision, plan, link);
+  const saved = await device.replace(body.revision, plan, link, body.revoke);
+  if (saved.revoked && !body.revoke) return reply({ error: "unauthorized" }, 401);
   if (account && saved.revision === body.revision &&
       !await account.client.registerReminderDevice(account.session.token, account.session.id, link.owner, match[1])) {
     await device.detachAccountPlan(link.owner, body.revision);
     return reply({ error: "sign_in" }, 401);
   }
-  return reply(saved);
+  return reply(saved.revoked ? { revision: saved.revision, enabled: false, revoked: true } : saved);
 }
 
 function publicState(state) {
@@ -91,7 +99,9 @@ function publicState(state) {
     ...(state?.accountPlanError && { accountPlanError: state.accountPlanError,
       appliedAccountRevision: state.link?.revision, rejectedAccountRevision: state.rejectedAccountRevision,
       suspendedKinds: state.suspendedKinds }),
-    last: state?.last ?? null
+    last: state?.last ? {
+      at: state.last.at, status: state.last.status, providerStatus: state.last.providerStatus, kinds: state.last.kinds
+    } : null
   };
 }
 
@@ -158,7 +168,8 @@ export class MedicationReminders extends DurableObject {
   async restoreReminder(state) {
     return this.ctx.storage.transaction(async storage => {
       const existing = await storage.get("state");
-      if (existing) return existing.revision === state.revision && JSON.stringify(existing.plan) === JSON.stringify(state.plan);
+      if (existing) return existing.revision === state.revision && Boolean(existing.revoked) === Boolean(state.revoked) &&
+        JSON.stringify(existing.plan) === JSON.stringify(state.plan);
       const now = Date.now();
       const next = !state.plan ? null : state.next && state.next.at > now - sendWindow
         ? state.next : nextCareReminder(state.plan, now);
@@ -169,6 +180,7 @@ export class MedicationReminders extends DurableObject {
 
   async status() {
     const state = await this.ctx.storage.get("state");
+    if (state?.revoked) return { ...publicState(state), revoked: true };
     const result = publicState(state);
     if (!state?.link?.owner) return result;
     const applied = state.link.revision;
@@ -187,6 +199,7 @@ export class MedicationReminders extends DurableObject {
     const now = Date.now();
     const target = await this.ctx.storage.transaction(async storage => {
       const state = await storage.get("state");
+      if (state?.revoked) return { status: "revoked" };
       if (!state?.plan?.subscription) return { status: "inactive" };
       const lastTest = await storage.get("lastTest");
       if (lastTest && now - lastTest < 60_000) return { status: "rate_limit" };
@@ -201,10 +214,17 @@ export class MedicationReminders extends DurableObject {
     }, 120, async () => (await this.ctx.storage.get("state"))?.revision === target.revision);
   }
 
-  async replace(revision, plan, link = null) {
+  async replace(revision, plan, link = null, revoke = false) {
     return this.ctx.storage.transaction(async storage => {
       const previous = await storage.get("state");
+      if (previous?.revoked) return { ...publicState(previous), revoked: true };
       if (revision <= (previous?.revision ?? 0)) return publicState(previous);
+      if (revoke) {
+        const state = { revision, revoked: true, plan: null, next: null };
+        await saveState(storage, state);
+        await storage.delete(["lastTest", "release-send", "release-sent"]);
+        return { ...publicState(state), revoked: true };
+      }
       if (link && previous?.link?.owner === link.owner && Math.max(previous.link.revision, previous.rejectedAccountRevision ?? 0) > link.revision && previous.plan) {
         const state = { ...previous, revision };
         await saveState(storage, state, await storage.getAlarm());
@@ -301,8 +321,8 @@ export class MedicationReminders extends DurableObject {
       }
       const plan = result.status === "gone" ? null : current.plan;
       const next = plan ? nextCareReminder(plan, finished) : null;
-      const { status, providerStatus, reason } = result;
-      await saveState(storage, { ...current, plan, next, attempts: 0, last: { at: due, status, providerStatus, reason, kinds: dueKinds } });
+      const { status, providerStatus } = result;
+      await saveState(storage, { ...current, plan, next, attempts: 0, last: { at: due, status, providerStatus, kinds: dueKinds } });
     });
   }
 }

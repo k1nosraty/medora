@@ -81,6 +81,9 @@ export function validateAccounts(accounts) {
 export async function validateReminders(reminders) {
   for (const { id, state } of reminders) {
     assertBackup(hex(id, 32) && count(state?.revision) && state.revision > 0);
+    if (state.revoked !== undefined) {
+      assertBackup(state.revoked === true && state.plan === null && state.next === null && state.link == null);
+    }
     if (state.link != null) {
       assertBackup(typeof state.link.owner === "string" && /^[a-f0-9]{64}(?:\.[a-f0-9]{32})?$/.test(state.link.owner) &&
         count(state.link.revision) && typeof state.link.details === "boolean");

@@ -52,6 +52,8 @@ test("browser restore honors intent against the Worker and transfers private not
     expect(seed.status).toBe(200);
     const latest = async () => (await dispatch(care)).json();
     let loseRotationAcknowledgement = false;
+    let rejectStaleRotation = false;
+    let loseReplacementAcknowledgement = false;
     let disabledReminder;
     const connect = page => page.route("**/api/**", async route => {
       const request = route.request();
@@ -59,10 +61,23 @@ test("browser restore honors intent against the Worker and transfers private not
       if (pathname === "/api/reminders" && request.method() === "PUT" &&
           request.headers().authorization === "Bearer synthetic-clearing-token") {
         disabledReminder = request.postDataJSON();
-        await route.fulfill({ json: { enabled: false, revision: disabledReminder.revision } });
+        await route.fulfill({ json: { enabled: false, revoked: true, revision: disabledReminder.revision } });
         return;
       }
+      if (rejectStaleRotation && request.method() === "PUT" && pathname === care && request.postDataJSON()?.rotationProof) {
+        rejectStaleRotation = false;
+        const { owner, revision } = request.postDataJSON();
+        const moved = await dispatch(care, "PATCH", JSON.stringify({ owner, revision, zone: "America/Toronto" }));
+        expect(moved.status).toBe(200);
+        await moved.arrayBuffer();
+      }
       const response = await dispatch(pathname + search, request.method(), request.postDataBuffer() ?? undefined);
+      if (loseReplacementAcknowledgement && request.method() === "PUT" && pathname === care && response.ok) {
+        loseReplacementAcknowledgement = false;
+        await response.arrayBuffer();
+        await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' });
+        return;
+      }
       if (loseRotationAcknowledgement && request.method() === "PUT" && pathname === care &&
           request.postDataJSON()?.rotationProof && response.ok) {
         loseRotationAcknowledgement = false;
@@ -96,16 +111,43 @@ test("browser restore honors intent against the Worker and transfers private not
     await second.locator("#account-care-key").fill(recoveryKey);
     await second.locator("#account-care-key-unlock").click();
     await expect.poll(async () => (await state(second)).visits?.v?.note).toBe(visit.note);
+    await page.evaluate(() => {
+      const digest = crypto.subtle.digest.bind(crypto.subtle);
+      crypto.subtle.digest = async (algorithm, data) => {
+        if (data instanceof Uint8Array && data.length === 32 && data.every(byte => byte === 0xdd)) {
+          await new Promise(resolve => { window.finishSlowKeyImport = resolve; });
+        }
+        return digest(algorithm, data);
+      };
+    });
+    await page.locator("#account-care-key").fill("d".repeat(64));
+    await page.locator("#account-care-key-unlock").click();
+    await page.waitForFunction(() => Boolean(window.finishSlowKeyImport));
+    await page.locator("#account-care-key").fill(recoveryKey);
+    await page.locator("#account-care-key-unlock").click();
+    await expect(page.locator("#account-care-key")).toHaveValue("");
+    await page.evaluate(() => window.finishSlowKeyImport());
+
     const rotated = "c".repeat(64);
-    const beforeRotation = await latest();
-    expect(beforeRotation.records.privacyRotation).toMatch(/^[a-f0-9]{64}$/);
-    const denied = await dispatch(care, "PUT", JSON.stringify({ ...beforeRotation,
-      records: { ...beforeRotation.records, privacyKey: "a".repeat(64) } }));
+    const firstRotationBase = await latest();
+    expect(firstRotationBase.records.privacyRotation).toMatch(/^[a-f0-9]{64}$/);
+    const denied = await dispatch(care, "PUT", JSON.stringify({ ...firstRotationBase,
+      records: { ...firstRotationBase.records, privacyKey: "a".repeat(64) } }));
     expect(denied.status).toBe(422);
     await page.locator("#account-care-key").fill(rotated);
+    rejectStaleRotation = true;
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#account-care-key-rotate").click();
+    await expect(page.locator("#account-care-key-status")).toContainText("نتوانست تغییر کلید را تأیید کند");
+    const beforeRotation = await latest();
+    expect(beforeRotation.revision).toBe(firstRotationBase.revision + 1);
+    expect(beforeRotation.records).toEqual(firstRotationBase.records);
+    expect((await state(second)).visits.v.note).toBe(visit.note);
     loseRotationAcknowledgement = true;
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#account-care-key-rotate").click();
+    await expect.poll(async () => (await latest()).revision).toBe(beforeRotation.revision + 1);
+    await expect(page.locator("#account-care-key-rotate")).toBeEnabled();
     await expect(page.locator("#account-care-key-status")).toContainText("نتوانست تغییر کلید را تأیید کند");
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#account-care-key-rotate").click();
@@ -153,10 +195,17 @@ test("browser restore honors intent against the Worker and transfers private not
     await expect(page.locator("#account-sync-status")).toHaveText(/پس از تأیید/);
     expect((await latest()).records.water.map(row => row.id)).toEqual(["fresh", "old", "newer-concurrent"]);
     await page.locator('[data-account-shortcut="backup-settings"]').click();
+    const beforeReplacement = (await latest()).revision;
+    loseReplacementAcknowledgement = true;
     await restore("replace", () => page.once("dialog", dialog => dialog.accept()));
     await expect.poll(async () => (await latest()).records.water).toEqual([old]);
-    // The two edits both start from the committed copy of the restored row.
+    await expect.poll(async () => (await state(page)).accountCare?.restore?.mode).toBe("replace");
+    await page.locator("#settings-dialog [data-close]").first().click();
+    await page.locator(".app-bar [data-open-account]").click();
+    await page.locator("#account-sync-enable").click();
     await expect.poll(async () => (await state(page)).accountCare?.restore).toBeUndefined();
+    expect((await latest()).revision).toBe(beforeReplacement + 1);
+    // The two edits both start from the committed copy of the restored row.
     const cloudEdit = { ...old, amount: 500 };
     const snapshot = await latest();
     const edited = await dispatch(care, "PUT", JSON.stringify({ ...snapshot, records: { ...snapshot.records, water: [cloudEdit] } }));
@@ -165,8 +214,7 @@ test("browser restore honors intent against the Worker and transfers private not
       const { accessCare } = await import("/medication/shared/storage.js");
       await accessCare(state => { state.water[0].amount = 700; });
     });
-    await page.locator("#settings-dialog [data-close]").first().click();
-    await page.locator(".app-bar [data-open-account]").click();
+    await page.locator("#account-sync-enable").click();
     await expect(page.locator("#account-sync-review")).toBeVisible();
     expect((await state(page)).water[0].amount).toBe(700);
     expect((await latest()).records.water[0].amount).toBe(500);
@@ -186,7 +234,7 @@ test("browser restore honors intent against the Worker and transfers private not
     await page.locator("#clear-device-records").click();
     await expect.poll(async () => (await state(page)).water).toEqual([]);
     await expect.poll(async () => (await state(page)).reminders).toBeUndefined();
-    expect(disabledReminder).toEqual({ enabled: false, revision: 4 });
+    expect(disabledReminder).toEqual({ enabled: false, revoke: true, revision: 4 });
     expect((await latest()).records.water).toEqual([cloudEdit]);
   } finally {
     await secondContext?.close();

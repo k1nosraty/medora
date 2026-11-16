@@ -1,4 +1,4 @@
-import { defaultCalendar, language, listSeparator, locale, t } from "../../shared/i18n/locale.js";
+import { defaultCalendar, language, locale, t } from "../../shared/i18n/locale.js";
 import { accessCare, accessCareSettings } from "../../shared/storage.js";
 import { scheduleForPush, localZone } from "../../domain/care-plan.js";
 import { validSchedule, reminderRequestLimit } from "../../domain/reminder-schedule.js";
@@ -64,7 +64,7 @@ function localDay() {
 }
 
 function deliveryText(result) {
-  const details = result.providerStatus ? ` (${new Intl.NumberFormat(locale).format(result.providerStatus)}${result.reason ? listSeparator + result.reason : ""})` : "";
+  const details = result.providerStatus ? ` (${new Intl.NumberFormat(locale).format(result.providerStatus)})` : "";
   switch (result.status) {
     case "accepted": return t("ui.the-push-service-accepted-the-message-check-your-device");
     case "rejected": return t("ui.the-push-service-rejected-the-message-value", details);
@@ -128,14 +128,14 @@ async function sync(check = false, snapshot) {
           plan.account = { owner: link.owner, revision: link.revision, details };
         }
       }
-      const body = { revision: settings.revision, enabled: settings.enabled, ...plan };
+      const body = { revision: settings.revision, enabled: settings.enabled, ...(settings.clearing && { revoke: true }), ...plan };
       if (settings.enabled && (!validSchedule(body) ||
           new TextEncoder().encode(JSON.stringify(body)).length > reminderRequestLimit)) throw new Error("bad_schedule");
       remote = await request(api, "PUT", settings.token, body);
       latest = (await accessCareSettings(current => {
         const reminder = current.reminders;
         if (reminder?.token !== settings.token) return;
-        if (settings.clearing && reminder.revision === settings.revision && remote.enabled === false && remote.revision >= settings.revision) {
+        if (settings.clearing && reminder.revision === settings.revision && remote.revoked === true) {
           delete current.reminders;
         } else if (!settings.clearing) {
           reminder.synced = Math.max(reminder.synced ?? 0, settings.revision);
@@ -292,6 +292,10 @@ $("push-enable").addEventListener("click", () => {
       controls(updated.reminders);
       await sync();
     } catch (error) {
+      if (error.message === "unauthorized" && subscription) {
+        await subscription.unsubscribe().catch(() => {});
+        subscription = null;
+      }
       status(error.message === "rate_limit" ? t("ui.too-many-requests-try-again-in-one-minute") :
         t("ui.could-not-enable-notifications-check-your-connection-and"));
       controls((await accessCareSettings()).reminders);

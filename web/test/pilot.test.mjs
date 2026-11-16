@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 import { smallJson, validSubject, validSubscription } from "../src/http/validation.mjs";
-import { pushTopic } from "../src/reminders/push.mjs";
+import { pushTopic, sendPush } from "../src/reminders/push.mjs";
 
 const ecdh = createECDH("prime256v1");
 const keys = { p256dh: ecdh.generateKeys().toString("base64url"), auth: Buffer.alloc(16).toString("base64url") };
@@ -126,4 +126,41 @@ test("bounded JSON distinguishes media types and rejects malformed UTF-8", async
   assert.deepEqual(await smallJson(request("Application/JSON; charset=utf-8", '{"ok":true}')), { ok: true });
   assert.equal(await smallJson(request("application/jsonp", '{"ok":true}')), null);
   assert.equal(await smallJson(request("application/json", Uint8Array.of(34, 255, 34))), null);
+});
+
+test("bounded JSON rejects overflow even when an incoming stream stalls during cancellation", async () => {
+  const encode = text => new TextEncoder().encode(text);
+  const request = (body, extra = {}) => new Request("https://medora.test/", {
+    method: "POST", headers: { "Content-Type": "application/json", ...extra }, duplex: "half", body
+  });
+  const exact = JSON.stringify({ data: "x".repeat(5000) });
+  const split = new ReadableStream({ start(controller) {
+    controller.enqueue(encode(exact.slice(0, 3000)));
+    controller.enqueue(encode(exact.slice(3000)));
+    controller.close();
+  } });
+  assert.deepEqual(await smallJson(request(split), exact.length), JSON.parse(exact));
+  let cancelled = false;
+  const oversized = new ReadableStream({
+    start(controller) { controller.enqueue(encode(exact)); },
+    cancel() { cancelled = true; return new Promise(() => {}); }
+  });
+  assert.equal(await smallJson(request(oversized), exact.length - 1, { onLimit: () => "limited" }), "limited");
+  assert.equal(cancelled, true);
+  assert.equal(await smallJson(request("{}", { "Content-Length": "9999" }), 8), null);
+});
+
+test("push errors expose the provider status without reading provider response content", async context => {
+  let cancelled = false;
+  const content = new ReadableStream({
+    start(controller) { controller.enqueue(new TextEncoder().encode('{"reason":"SyntheticSensitiveValue"}')); },
+    cancel() { cancelled = true; }
+  });
+  context.mock.method(globalThis, "fetch", async () =>
+    new Response(content, { status: 429, headers: { "Content-Type": "application/json" } }));
+  const env = { PILOT: { getByName: () => ({ authorization: async () => "synthetic" }) } };
+  const subscription = { endpoint: "https://web.push.apple.com/synthetic-test-endpoint", keys };
+  assert.deepEqual(await sendPush(env, subscription, { tag: "synthetic" }, 60),
+    { status: "rejected", providerStatus: 429 });
+  assert.equal(cancelled, true);
 });
