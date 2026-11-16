@@ -72,6 +72,22 @@
         <section class="account-sync" aria-labelledby="account-sync-title">
           <div class="account-sync-heading"><h3 id="account-sync-title">{{msg:ui.sync-records}}</h3><span id="account-sync-badge"></span></div>
           <p class="quiet">{{msg:ui.when-enabled-records-and-schedules-on-this-device-join-yo}}</p>
+          <p class="quiet">{{msg:ui.sync-privacy-summary}}</p>
+          <details>
+            <summary>{{msg:ui.sync-recovery-key}}</summary>
+            <p class="quiet">{{msg:ui.sync-recovery-description}}</p>
+            <label>{{msg:ui.sync-recovery-key}}<input id="account-care-key" type="password" dir="ltr" autocomplete="off" spellcheck="false" maxlength="64"></label>
+            <button type="button" id="account-care-key-generate" class="secondary">{{msg:ui.sync-generate-key}}</button>
+            <button type="button" id="account-care-key-unlock" class="secondary">{{msg:ui.sync-unlock-key}}</button>
+            <p id="account-care-key-status" class="settings-message" role="status"></p>
+          </details>
+          <details id="account-care-zone-open">
+            <summary>{{msg:ui.sync-care-zone}}</summary>
+            <p class="quiet">{{msg:ui.sync-care-zone-description}}</p>
+            <label>{{msg:ui.sync-care-zone}}<input id="account-care-zone" dir="ltr" spellcheck="false" maxlength="64"></label>
+            <button id="account-care-zone-save" type="button" class="secondary">{{msg:ui.save}}</button>
+            <p id="account-care-zone-status" class="settings-message" role="status"></p>
+          </details>
           <button id="account-sync-enable" type="button" class="secondary">{{msg:ui.enable-record-sync}}</button>
           <button id="account-sync-disable" type="button" class="text-button" hidden>{{msg:ui.pause-sync-on-this-device}}</button>
           <p id="account-sync-last" class="quiet" hidden></p>

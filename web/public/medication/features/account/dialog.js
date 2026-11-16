@@ -2,6 +2,7 @@ import { language, t } from "../../shared/i18n/locale.js";
 import { $, fitDialogToViewport } from "../../shared/ui/dom.js";
 
 const errors = {
+  reset_retry: "ui.password-reset-retry",
   email: "نشانی ایمیل را بررسی کنید.",
   rate_limit: "درخواست‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید.",
   invalid_code: "کد معتبر نیست یا منقضی شده است. کد را بررسی کنید یا دوباره کد بگیرید.",

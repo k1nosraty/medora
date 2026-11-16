@@ -37,6 +37,7 @@ function assemble(settings, days) {
 function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(databaseName, 3);
+    let blocked = false;
     request.onupgradeneeded = event => {
       // Older shells rewrite day records without routine history.
       if (event.oldVersion >= 2) return;
@@ -52,11 +53,15 @@ function openDatabase() {
       };
     };
     request.onsuccess = () => {
+      if (blocked) { request.result.close(); return; }
       request.result.onversionchange = () => request.result.close();
       resolve(request.result);
     };
     request.onerror = () => reject(request.error);
-    request.onblocked = () => reject(new Error("Storage blocked"));
+    request.onblocked = () => {
+      blocked = true;
+      reject(new DOMException("Storage upgrade blocked", "BlockedError"));
+    };
   });
 }
 
@@ -167,4 +172,14 @@ export function accessCare(change, options) {
 
 export function accessCareSettings(change) {
   return transact(change, { settingsOnly: true });
+}
+
+export function storageMessage(error, fallback) {
+  return ({
+    BlockedError: "ui.storage-blocked",
+    VersionError: "ui.storage-version",
+    QuotaExceededError: "ui.storage-quota",
+    SecurityError: "ui.storage-unavailable",
+    InvalidStateError: "ui.storage-unavailable"
+  })[error?.name] ?? fallback;
 }

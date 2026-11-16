@@ -75,7 +75,10 @@ export async function handleOperations(request, env, url, ctx) {
   if (!admin) return result({ error: "forbidden" }, 403);
   const promotion = env.PROMOTIONS.getByName("home");
   const credentials = env.CREDENTIALS.getByName("medora-credentials-v1");
-  if (path === "/api/admin/operations/export" && method === "GET") return exportResponse({ promotion, credentials, store });
+  if (path === "/api/admin/operations/export" && method === "GET") {
+    await store.audit(email, "operations_exported");
+    return exportResponse({ promotion, credentials, store });
+  }
   if (path !== "/api/admin/operations") return result({ error: "not_found" }, 404);
   if (method === "GET") {
     const [dashboard, promotions, accounts] = await Promise.all([store.dashboard(), promotion.getStorageSize(), credentials.getStorageSize()]);
@@ -306,10 +309,18 @@ export class Operations extends DurableObject {
       : this.sql.exec("SELECT * FROM tickets ORDER BY CASE status WHEN 'open' THEN 0 ELSE 1 END, at DESC LIMIT 100").toArray();
   }
 
+  eraseSupportTickets(email) {
+    this.sql.exec("DELETE FROM tickets WHERE email = ?", email);
+  }
+
+  pruneTickets(now = Date.now()) {
+    this.sql.exec("DELETE FROM tickets WHERE (status = 'closed' AND at < ?) OR at < ?", now - 90 * day, now - 180 * day);
+  }
+
   addTicket(email, message, diagnostics) {
     const now = Date.now();
     if (this.sql.exec("SELECT COUNT(*) AS count FROM tickets WHERE email = ? AND at >= ?", email, now - day).one().count >= 5) return null;
-    this.sql.exec("DELETE FROM tickets WHERE status = 'closed' AND at < ?", now - 90 * day);
+    this.pruneTickets(now);
     if (this.sql.exec("SELECT COUNT(*) AS count FROM tickets").one().count >= 2000) return null;
     const id = crypto.randomUUID();
     this.sql.exec("INSERT INTO tickets VALUES (?, ?, ?, ?, ?, '', 'open')", id, email, now, message, JSON.stringify(diagnostics));

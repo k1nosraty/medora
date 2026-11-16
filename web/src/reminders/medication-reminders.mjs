@@ -88,9 +88,28 @@ function publicState(state) {
   return {
     revision: state?.revision ?? 0, enabled: Boolean(state?.plan), next: state?.next?.at ?? null,
     nextKinds: state?.next ? state.next.kinds ?? ["dose"] : [],
-    ...(state?.accountPlanError && { accountPlanError: state.accountPlanError }),
+    ...(state?.accountPlanError && { accountPlanError: state.accountPlanError,
+      appliedAccountRevision: state.link?.revision, rejectedAccountRevision: state.rejectedAccountRevision,
+      suspendedKinds: state.suspendedKinds }),
     last: state?.last ?? null
   };
+}
+
+// Compile independent categories from the new records. A rejected category
+// must never fall back to instructions from an old plan.
+function replacementPlan(raw, subscription, language) {
+  const fits = input => encoder.encode(JSON.stringify({ ...input, subscription, language })).length <= reminderRequestLimit;
+  const complete = fits(raw) && validSchedule(raw);
+  if (complete) return { plan: complete, suspendedKinds: [] };
+
+  let plan = { zone: raw.zone, rules: [] };
+  const suspendedKinds = [];
+  for (const [kind, field] of [["dose", "rules"], ["appointment", "appointments"], ["routine", "routineRules"], ["water", "water"]]) {
+    const candidate = { ...plan, [field]: raw[field] };
+    if (fits(candidate) && validSchedule(candidate)) plan = candidate;
+    else suspendedKinds.push(kind);
+  }
+  return { plan: validSchedule(plan), suspendedKinds };
 }
 
 async function saveState(storage, state, alarm = state.next?.at) {
@@ -149,7 +168,19 @@ export class MedicationReminders extends DurableObject {
   }
 
   async status() {
-    return publicState(await this.ctx.storage.get("state"));
+    const state = await this.ctx.storage.get("state");
+    const result = publicState(state);
+    if (!state?.link?.owner) return result;
+    const applied = state.link.revision;
+    const target = await this.accountRevision(state.link) ?? state.rejectedAccountRevision ?? applied;
+    const covered = state.rejectedAccountRevision ?? applied;
+    const status = target > covered ? "pending" : state.accountPlanError ? "rejected" : "applied";
+    return { ...result, accountSchedule: { status, applied, target } };
+  }
+
+  accountRevision(link) {
+    const id = link.owner.split(".")[0];
+    return this.env.EMAIL_ACCOUNTS?.getByName(id).reminderRevision(link.owner, id);
   }
 
   async test() {
@@ -174,7 +205,7 @@ export class MedicationReminders extends DurableObject {
     return this.ctx.storage.transaction(async storage => {
       const previous = await storage.get("state");
       if (revision <= (previous?.revision ?? 0)) return publicState(previous);
-      if (link && previous?.link?.owner === link.owner && previous.link.revision > link.revision && previous.plan) {
+      if (link && previous?.link?.owner === link.owner && Math.max(previous.link.revision, previous.rejectedAccountRevision ?? 0) > link.revision && previous.plan) {
         const state = { ...previous, revision };
         await saveState(storage, state, await storage.getAlarm());
         return publicState(state);
@@ -190,20 +221,24 @@ export class MedicationReminders extends DurableObject {
     return this.ctx.storage.transaction(async storage => {
       const state = await storage.get("state");
       if (!state?.plan || state.link?.owner !== owner) return "unlinked";
-      if (state.link.revision >= revision) return "current";
+      if (revision < (state.rejectedAccountRevision ?? 0) ||
+          (state.link.revision >= revision && !state.accountPlanError)) return "current";
+      if (revision === state.rejectedAccountRevision) return "invalid";
       const now = Date.now();
       const { zone, subscription, language } = state.plan;
       const today = Math.floor(localWall(now, timezone(zone)) / dayMs);
       const raw = scheduleForPush({ ...records.settings, ...records, reminderDetails: state.link.details }, zone, today, now);
-      const plan = validSchedule(raw);
-      const link = { ...state.link, revision };
-      if (!plan || encoder.encode(JSON.stringify({ ...raw, subscription, language })).length > reminderRequestLimit) {
-        await storage.put("state", { ...state, link, accountPlanError: "bad_schedule" });
-        return "invalid";
-      }
-      await saveState(storage, { ...state, link, plan: { ...plan, subscription, language },
-        next: nextCareReminder(plan, now), attempts: 0, accountPlanError: null });
-      return "updated";
+      const { plan, suspendedKinds } = replacementPlan(raw, subscription, language);
+      const rejected = suspendedKinds.length > 0;
+      await saveState(storage, { ...state,
+        link: rejected ? state.link : { ...state.link, revision },
+        rejectedAccountRevision: rejected ? revision : null,
+        accountPlanError: rejected ? "bad_schedule" : null,
+        suspendedKinds,
+        plan: { ...plan, subscription, language },
+        next: nextCareReminder(plan, now), attempts: 0
+      });
+      return rejected ? "invalid" : "updated";
     });
   }
 
@@ -211,13 +246,14 @@ export class MedicationReminders extends DurableObject {
     return this.ctx.storage.transaction(async storage => {
       const state = await storage.get("state");
       if (state?.link?.owner !== owner || (revision !== undefined && state.revision !== revision)) return;
-      await saveState(storage, { ...state, plan: null, next: null, link: null, accountPlanError: null });
+      await saveState(storage, { ...state, plan: null, next: null, link: null, accountPlanError: null, rejectedAccountRevision: null, suspendedKinds: [] });
     });
   }
 
   async alarm() {
     const state = await this.ctx.storage.get("state");
-    if (!state?.next || !state.plan) return;
+    // Older versions retained a superseded plan without recording which revision failed.
+    if (!state?.next || !state.plan || (state.accountPlanError && state.rejectedAccountRevision == null)) return;
     const now = Date.now();
     const due = state.next.at;
     if (this.env.MEDORA_PAUSE_PUSH === "true") {
@@ -232,13 +268,20 @@ export class MedicationReminders extends DurableObject {
     const singleRoutine = dueKinds.length === 1 && dueKinds[0] === "routine";
     const tag = `${dueKinds.length === 1 ? dueKinds[0] : "care"}-${due.toString(36)}`;
     const currentIs = current => current?.revision === state.revision && current?.next?.at === due &&
-      current.link?.revision === state.link?.revision;
+      current.link?.revision === state.link?.revision &&
+      current.rejectedAccountRevision === state.rejectedAccountRevision;
     const result = dueKinds.length && now - due < sendWindow ? await sendPush(this.env, state.plan.subscription, {
       ...reminderCopy(state.next, dueKinds, state.plan.language, state.plan.zone, now),
       kind: dueKinds.length === 1 ? dueKinds[0] : undefined, tag,
       ...(singleRoutine && state.next.routineId ? { routineId: state.next.routineId } : {}),
       day: new Date(state.next.day * 86_400_000).toISOString().slice(0, 10)
-    }, 300, async () => currentIs(await this.ctx.storage.get("state"))) : { status: "expired" };
+    }, 300, async () => {
+      if (state.link?.owner && this.env.EMAIL_ACCOUNTS) {
+        const revision = state.rejectedAccountRevision ?? state.link.revision;
+        if (await this.accountRevision(state.link) !== revision) return false;
+      }
+      return currentIs(await this.ctx.storage.get("state"));
+    }) : { status: "expired" };
 
     if (dueKinds.length && result.status !== "superseded") {
       const metrics = dueKinds.map(kind => `push:${kind}:${result.status}`);

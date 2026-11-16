@@ -14,6 +14,7 @@ import { careSyncLimit } from "../public/medication/domain/care-records.js";
 import { advanceHash, emptyHash, openPart } from "../src/operations/backup-parts-format.mjs";
 import { dayMs, localWall, timezone } from "../public/medication/domain/wall-clock.js";
 import { decryptBackup, encryptBackup } from "../public/medication/features/backups/crypto.js";
+import { importRecoveryKey, sealPrivateCare } from "../public/medication/features/sync/private-care.js";
 import { mergeCare } from "../public/medication/features/sync/merge.js";
 
 const require = createRequire(import.meta.url);
@@ -75,7 +76,7 @@ test("encrypted migration restores existing login, account history and a pending
       PROMOTIONS: "Promotions", OPERATIONS: "Operations", REMINDERS: "MedicationReminders", PILOT: "PushPilot", FAMILIES: "Families" })
       .map(([key, className]) => [key, { className, useSQLite: true }])),
     ratelimits: { EMAIL_AUTH_LIMIT: { namespace_id: "750503", simple: { limit: 8, period: 60 } } },
-    bindings: { EMAIL_AUTH_SECRET: secret, MIGRATION_TOKEN: migrationToken, VAPID_PUBLIC_KEY: publicKey,
+    bindings: { EMAIL_AUTH_SECRET: secret, MIGRATION_TOKEN: migrationToken, MIGRATION_TOKEN_EXPIRES_AT: String(Date.now() + 3_600_000), VAPID_PUBLIC_KEY: publicKey,
       VAPID_PRIVATE_KEY: privateKey.toString("base64url"), VAPID_SUBJECT: "mailto:push@medora.test",
       REMINDER_SIGNING_KEY: "c".repeat(64), ...extra },
     outboundService: async request => {
@@ -118,17 +119,19 @@ test("encrypted migration restores existing login, account history and a pending
     assert.equal((await api(source, carePath)).status, 401);
     assert.deepEqual(await (await api(source, carePath, "GET", session)).json(), { owner, revision: 0, records: null });
     const start = 20770;
-    const records = { settings: { waterGoal: 2000, cycleEnabled: true },
+    const legacyCare = { settings: { waterGoal: 2000, cycleEnabled: true },
       medicines: { m: { id: "m", name: "Sample", unit: "tablet", stock: null,
         phases: [{ start, end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 1000 }] }] } },
-      doses: {}, visits: { v: { id: "v", name: "Visit", day: start, time: "10:00" } },
+      doses: {}, visits: { v: { id: "v", name: "Visit", day: start, time: "10:00", note: "Synthetic private note" } },
       routines: { r: { id: "r", name: "Walk", category: "walking", mode: "done",
         start, interval: 1, mask: 127, minute: 540 } }, routineLogs: {},
       cycleRecords: { [start]: { end: null, flow: "", note: "" } },
       water: [{ id: "water-1", day: start, time: "12:00", amount: 250 }] };
+    const records = await sealPrivateCare(legacyCare, await importRecoveryKey("7".repeat(64)));
     const update = { owner, revision: 0, records, zone: "America/Toronto" };
     assert.equal((await api(source, carePath, "PUT", session, update)).status, 200);
     assert.equal((await api(source, carePath, "PUT", session, update)).status, 409);
+    assert.equal((await api(source, carePath, "PUT", session, { ...update, revision: 1, records: legacyCare })).status, 422);
     assert.equal((await api(source, carePath, "GET", { ...session, "If-None-Match": `"${owner}:1"` })).status, 304);
     assert.equal((await api(source, carePath, "GET", { "If-None-Match": `"${owner}:1"` })).status, 401);
     // Use a chunked upload so the server detects the limit at the end of the body.
@@ -372,7 +375,7 @@ test("encrypted migration restores existing login, account history and a pending
     await sleep(1300);
     assert.deepEqual(await (await queue()).json(), { version: release, status: "complete" });
     assert.equal(outbound.length, 2, "the same deployed revision is only announced once");
-    const largeRecords = structuredClone(records);
+    const largeRecords = structuredClone(legacyCare);
     const nearLimit = { owner: caregiver, revision: 0, zone: "UTC", records: largeRecords };
     largeRecords.medicines.m.instructions = "";
     const overhead = Buffer.byteLength(JSON.stringify(nearLimit));

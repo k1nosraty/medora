@@ -187,6 +187,15 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
   await expect(page.locator("#cycle-dialog")).toBeVisible();
 });
 
+test("startup falls back to Persian when language storage access fails", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", { get() { throw new DOMException("blocked", "SecurityError"); } });
+  });
+  await page.goto("/medication/");
+  await expect(page.locator("#welcome-start")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "fa");
+});
+
 test("first launch reaches the app without a permission detour", async ({ page }) => {
   await page.goto("/medication/");
   await page.locator("#welcome-start").click();
@@ -292,8 +301,18 @@ test("family entry controls respect view, record and add permissions", async ({ 
   await selectMember();
   await expect(page.locator("#open-quick")).toBeVisible();
   const count = (await actions()).length;
+  await page.route("**/api/family", async route => {
+    if (route.request().postDataJSON()?.action === "record") {
+      await route.fetch();
+      await route.abort();
+    } else await route.continue();
+  }, { times: 1 });
   await page.locator("#today-water-quick").click();
   await expect.poll(async () => (await actions()).length).toBe(count + 1);
+  await expect(page.locator("#family-notice")).toBeVisible();
+  await page.locator("#today-water-quick").click();
+  await expect.poll(async () => (await actions()).length).toBe(count + 2);
+  expect((await actions()).at(-1).operation).toEqual((await actions()).at(-2).operation);
   expect((await actions()).at(-1)).toMatchObject({ action: "record", target, group, kind: "water", amount: 250 });
   const personalWater = await page.evaluate(async () => {
     const { accessCare } = await import("/medication/shared/storage.js");

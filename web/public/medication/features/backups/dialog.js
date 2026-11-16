@@ -1,3 +1,5 @@
+import { isRestoreMode } from "../../domain/restore-intent.js";
+import { portable } from "../../domain/care-records.js";
 import { t } from "../../shared/i18n/locale.js";
 import { $ } from "../../shared/ui/dom.js";
 import { localZone } from "../../domain/care-plan.js";
@@ -5,7 +7,7 @@ import { changeReminderRevision } from "../reminders/controller.js";
 import { accessCare } from "../../shared/storage.js";
 import { isoDay } from "../../domain/care-index.js";
 
-export function installBackupRestore(mutate, validatePhases) {
+export function installBackupRestore(mutate, validatePhases, prepareRestore) {
   const backupForm = $("android-restore");
   const backupInput = $("android-backup-file");
   const emptyBackupFilename = $("android-backup-filename").textContent;
@@ -13,6 +15,17 @@ export function installBackupRestore(mutate, validatePhases) {
   const download = $("web-backup-download");
   let downloadUrl;
   let exportGeneration = 0;
+
+  $("clear-device-records").addEventListener("click", async () => {
+    if (!confirm(t("ui.clear-device-confirm"))) return;
+    if (await mutate(state => {
+      const reminders = state.reminders;
+      changeReminderRevision(state);
+      for (const key of Object.keys(state)) delete state[key];
+      Object.assign(state, { intro: "done", medicines: {}, doses: {}, water: [], routineLogs: {}, preventAutoRestore: true });
+      if (reminders) state.reminders = { ...reminders, enabled: false };
+    }, t("ui.clear-device-done"), true)) exportFeedback("ui.clear-device-done", "success");
+  });
 
   const backupOpen = () => $("settings-dialog").open && $("settings-dialog").dataset.panel === "backup-settings";
   function exportFeedback(message = "", state = "") {
@@ -51,7 +64,11 @@ export function installBackupRestore(mutate, validatePhases) {
     exportFeedback("در حال ساخت فایل رمزدار…", "busy");
     try {
       const { writeWebBackup } = await import("./web-format.js");
-      const bytes = await writeWebBackup(await accessCare(), password, validatePhases);
+      const saved = await accessCare();
+      const recovery = $("web-backup-use-recovery").checked;
+      if (recovery && !saved.restoreRecovery) throw new Error("restore_recovery_missing");
+      const backupState = recovery ? { ...saved.restoreRecovery, ...saved.restoreRecovery.settings } : saved;
+      const bytes = await writeWebBackup(backupState, password, validatePhases);
       if (!current()) return;
       $("web-backup-password").value = $("web-backup-confirm").value = "";
       downloadUrl = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
@@ -63,7 +80,8 @@ export function installBackupRestore(mutate, validatePhases) {
       exportFeedback("فایل رمزدار آمادهٔ دانلود است.", "success");
       download.focus({ preventScroll: true });
     } catch (error) {
-      if (current()) exportFeedback(error.message === "backup_too_large" ? "حجم فایل از ۱۶ مگابایت بیشتر است." :
+      if (current()) exportFeedback(error.message === "restore_recovery_missing" ? "ui.restore-recovery-missing" :
+        error.message === "backup_too_large" ? "حجم فایل از ۱۶ مگابایت بیشتر است." :
         error.message === "backup_password" ? "برای رمز فایل حداقل ۱۵ نویسه وارد کن." : "ساخت پشتیبان انجام نشد. دوباره تلاش کنید.", "error");
     } finally {
       submit.disabled = false;
@@ -99,7 +117,10 @@ export function installBackupRestore(mutate, validatePhases) {
     }
     const password = field.value;
     field.value = "";
-    const isCurrent = () => backupOpen() && backupInput.files[0] === file;
+    const mode = $("backup-restore-mode").value;
+    if (!isRestoreMode(mode)) return;
+    const confirmed = () => $("android-backup-confirm").checked;
+    const isCurrent = () => backupOpen() && backupInput.files[0] === file && $("backup-restore-mode").value === mode;
     submit.disabled = true;
     backupFeedback(t("ui.checking-the-backup"), "busy");
     try {
@@ -115,22 +136,39 @@ export function installBackupRestore(mutate, validatePhases) {
       const backup = web ? await readWebBackup(bytes, password, validatePhases) :
         await (await import("./android-format.js")).readAndroidBackup(bytes, password, validatePhases, localZone());
       if (!isCurrent()) return;
-      if (!$("android-backup-confirm").checked) {
+      if (!confirmed()) {
         backupFeedback("", "");
         return;
       }
+      let target;
+      try {
+        target = await prepareRestore(mode);
+      } catch {
+        if (isCurrent()) backupFeedback(t("ui.restore-cloud-unavailable"), "error");
+        return;
+      }
+      if (!isCurrent() || !confirmed()) return;
+      if (mode === "replace" && !confirm(t("ui.restore-replace-confirm", target.revision))) return;
+      const restoreId = crypto.randomUUID();
       const success = await mutate(state => {
+        state.restoreRecovery = portable(state);
         changeReminderRevision(state);
         if (state.reminders) state.reminders.enabled = false;
         if (web) for (const key of webBackupSettings) delete state[key];
         if (web) delete state.cycleRecords;
         delete state.scheduleHistory;
         Object.assign(state, backup);
+        delete state.preventAutoRestore;
+        const account = state.accountCare;
+        if (target.owner && account?.owner && target.owner !== account.owner) throw new Error(t("ui.restore-cloud-unavailable"));
+        state.accountCare = { ...account, enabled: mode !== "device",
+          ...(target.owner && { owner: target.owner }),
+          restore: { ...target, id: restoreId, ...(mode !== "device" && { records: portable(state) }) } };
       }, t("ui.records-restored"), true);
       if (!isCurrent()) return;
       if (success) {
         backupForm.reset();
-        backupFeedback(t("ui.records-restored-turn-on-reminders-again-in-settings"), "success");
+        backupFeedback(t(mode === "device" ? "ui.restore-device-done" : "ui.restore-cloud-queued"), "success");
       } else {
         backupFeedback(t("ui.could-not-save-your-records-try-again"), "error");
       }

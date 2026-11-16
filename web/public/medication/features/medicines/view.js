@@ -93,7 +93,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     const details = element("div");
     details.className = "treatment-details";
     details.append(top, status);
-    if (medicine.instructions) details.append(element("p", medicine.instructions));
+    if (medicine.instructions || medicine.sharedInstructions) details.append(element("p", medicine.instructions || medicine.sharedInstructions));
     if (medicine.phased || medicine.phases.length > 1) details.append(element("p", t("ui.value-stage-s", localDigits(medicine.phases.length))));
     else details.append(element("p", t("ui.dose-times-value", medicine.phases[0].slots.map(slot => localDigits(timeText(slot.minute))).join(" · "))));
     details.append(element("p", t("ui.starts-value", formatDay(medicine.phases[0].start))));
@@ -162,7 +162,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     $("medicine-details-icon").replaceChildren(medicationBadge(medicine.icon, medicine.color));
     const entries = Object.values(getState().doses).filter(dose => dose.medicineId === medicine.id && dose.status)
       .sort((a, b) => b.day - a.day || b.minute - a.minute);
-    const summary = element("p", medicine.instructions || t("ui.no-instructions-added"));
+    const summary = element("p", medicine.instructions || medicine.sharedInstructions || t("ui.no-instructions-added"));
     const edit = action(t("ui.edit-medicine"), () => { $("medicine-details").close(); openEditor(medicine); });
     const heading = element("h3", t("ui.dose-history"));
     const history = element("ul");
@@ -196,7 +196,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     card.dataset.ink = color;
     const heading = element("h3", dose.name || plan?.name || t("ui.medicine"));
     heading.dir = "auto";
-    const instructions = dose.instructions ?? plan?.instructions;
+    const instructions = dose.instructions || plan?.instructions || plan?.sharedInstructions;
     const planned = dose.planned === null ? "" : `${amountText(dose.planned)} ${doseUnit(unit, dose.planned)}`;
     let recorded = doseStates[dose.status] ?? t(calendar ?
       (scheduledAt(dose.day, dose.minute) > Date.now() ? "برنامه‌ریزی‌شده" : "بدون ثبت") : "در انتظار ثبت");

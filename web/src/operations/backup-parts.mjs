@@ -137,7 +137,9 @@ export async function handleBackupParts(request, env, url) {
       assertBackup(mediaIdPattern.test(id) && isHash(key) &&
         continuityNames.every(name => typeof env[name] === "string" && env[name].length > 0) && (env.EMAIL_AUTH_SECRET || env.EMAIL_ACCOUNT_ID_KEY));
       const continuity = Object.fromEntries([...continuityNames, ...authKeyNames].filter(name => typeof env[name] === "string").map(name => [name, env[name]]));
-      return new Response(await sealPart({ type: "keys", continuity }, key, id, 0), {
+      const sealed = await sealPart({ type: "keys", continuity }, key, id, 0);
+      await store.audit("migration", "continuity_exported");
+      return new Response(sealed, {
         headers: { ...headers, "Content-Type": "application/octet-stream" }
       });
     }
@@ -151,6 +153,7 @@ export async function handleBackupParts(request, env, url) {
         throw error;
       }
       const bytes = await sealPart(record, key, id, index);
+      if (index === 0) await store.audit("migration", "archive_exported");
       return new Response(bytes, { headers: { ...headers, "Content-Type": "application/octet-stream" } });
     }
 

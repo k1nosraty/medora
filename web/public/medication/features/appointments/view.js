@@ -80,8 +80,8 @@ export function appointmentView({
     else if (visit.completed) details.append(element("p", t("ui.attended"), "badge visit-attended"));
     else if (calendar) details.append(element("p", t(local.instant > Date.now() ? "برنامه‌ریزی‌شده" : "بدون ثبت حضور"), "badge"));
     const notes = [
-      ...((visit.note || visit.notes) ? [element("p", visit.note || visit.notes)] : []),
-      ...(visit.contact ? [element("p", t("ui.contact-value", visit.contact), "quiet")] : [])
+      ...((visit.note || visit.notes || visit.sharedNote) ? [element("p", visit.note || visit.notes || visit.sharedNote)] : []),
+      ...((visit.contact || visit.sharedContact) ? [element("p", t("ui.contact-value", visit.contact || visit.sharedContact), "quiet")] : [])
     ];
     if (!calendar) details.append(...notes);
     if (!layout && details !== card) card.append(details);

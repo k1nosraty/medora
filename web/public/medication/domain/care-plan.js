@@ -71,6 +71,33 @@ function reminderLabel(text, limit) {
   return String(text ?? "").replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, " ").trim().slice(0, limit);
 }
 
+// An installation can be on either side of UTC midnight. Keep today's
+// suppression data in every device zone and keep previous-day live snoozes.
+export function reminderCareProjection(records, now = Date.now()) {
+  const earliestDay = Math.floor(now / dayMs) - 1;
+  const fields = (row, keys) => Object.fromEntries(keys.filter(key => row[key] !== undefined).map(key => [key, row[key]]));
+  const rows = (source, keys, include = () => true) => Object.fromEntries(Object.entries(source ?? {})
+    .filter(([, row]) => include(row)).map(([id, row]) => [id, fields(row, keys)]));
+  const routineLogs = Object.fromEntries(Object.entries(records.routineLogs ?? {}).filter(([day]) => Number(day) >= earliestDay)
+    .map(([day, logs]) => [day, Object.fromEntries(Object.entries(logs).map(([id, row]) =>
+      [id, { mode: "done", done: routineComplete(row) }]))]));
+  return {
+    settings: fields(records.settings, ["waterGoal", "waterReminders", "appointmentReminders"]),
+    medicines: Object.fromEntries(Object.entries(records.medicines ?? {}).map(([id, row]) => [id, {
+      ...fields(row, ["id", "name", "unit", "paused", "archived", "dates", "effectiveFrom"]),
+      phases: row.phases.map(phase => ({ ...fields(phase, ["start", "end", "interval", "mask"]),
+        slots: phase.slots.map(slot => fields(slot, ["minute", "amount"])) }))
+    }])),
+    doses: rows(records.doses, ["medicineId", "day", "minute", "status", "snoozeUntil"],
+      row => row.day >= earliestDay || (row.status === "snoozed" && row.snoozeUntil > now)),
+    visits: rows(records.visits, ["day", "time", "zone", "name", "cancelled", "completed", "remindersOff", "offsets"],
+      row => row.day >= earliestDay),
+    routines: rows(records.routines, ["id", "start", "interval", "mask", "minute", "reminder", "paused", "name", "unit", "mode", "target"]),
+    routineLogs,
+    water: (records.water ?? []).filter(row => row.day >= earliestDay).map(row => fields(row, ["day", "amount"]))
+  };
+}
+
 export function scheduleForPush(state, zone, today, now = Date.now()) {
   const details = state.reminderDetails === true;
   const excluded = new Map();

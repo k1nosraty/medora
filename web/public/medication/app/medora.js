@@ -3,7 +3,7 @@ import { preserveFocus } from "../shared/ui/focus.js";
 import { routeFromLocation } from "./routes.js";
 import { installCareSync } from "../features/sync/controller.js";
 import { language, localizeMarkup, selectLanguage, t } from "../shared/i18n/locale.js";
-import { accessCare } from "../shared/storage.js";
+import { accessCare, storageMessage } from "../shared/storage.js";
 import { $ } from "../shared/ui/dom.js";
 import { installPickers } from "../shared/ui/pickers.js";
 import { dayNumber, today } from "../shared/ui/dates.js";
@@ -80,18 +80,22 @@ async function mutate(change, success, scheduleChanged = false, day) {
       if (scheduleChanged) changeReminderRevision(state);
       needsSync = state.reminders?.revision !== revision;
     }, { snapshot: care, day });
-    render();
-    $("status").textContent = success;
     if (needsSync) void syncReminders(false, care);
     accountSync.schedule();
-    return true;
   } catch (error) {
-    $("status").textContent = error instanceof Error && error.name === "Error" ? error.message : t("ui.could-not-save-try-again");
+    $("status").textContent = error instanceof Error && error.name === "Error" ? error.message : t(storageMessage(error, "ui.could-not-save-try-again"));
     return false;
   } finally {
     busy = false;
     $("app").removeAttribute("aria-busy");
   }
+  try {
+    render();
+    $("status").textContent = success;
+  } catch {
+    $("status").textContent = t("ui.saved-refresh-view");
+  }
+  return true;
 }
 
 let indexedState;
@@ -137,8 +141,8 @@ async function reload() {
     if (busy || care !== snapshot || latest === snapshot) return;
     care = latest;
     render();
-  } catch {
-    $("status").textContent = t("ui.could-not-read-your-local-records");
+  } catch (error) {
+    $("status").textContent = t(storageMessage(error, "ui.could-not-read-your-local-records"));
   }
 }
 
@@ -245,7 +249,7 @@ const params = new URLSearchParams(location.search);
 const view = params.get("view");
 if (view === "account") void openAccount();
 
-installBackupRestore(mutate, phases => engine.validMedicationPhases(compilePhases(engine, phases)));
+installBackupRestore(mutate, phases => engine.validMedicationPhases(compilePhases(engine, phases)), accountSync.prepareRestore);
 
 try {
   care = await accessCare();
@@ -275,6 +279,6 @@ try {
   family.openInvitation();
   void family.refreshGroup();
   void initializeReminders();
-} catch {
-  $("boot-status").textContent = t("ui.the-schedule-engine-or-local-storage-is-unavailable");
+} catch (error) {
+  $("boot-status").textContent = t(storageMessage(error, "ui.the-schedule-engine-or-local-storage-is-unavailable"));
 }

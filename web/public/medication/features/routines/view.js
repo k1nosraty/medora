@@ -316,7 +316,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     const banner = card(entry, day, { dayCard: true, readOnly, summaryOnly: true });
     banner.querySelector("h3").id = "routine-log-title";
     fields("log-banner").replaceChildren(banner);
-    const notes = plan?.notes;
+    const notes = plan?.notes || plan?.sharedNotes;
     fields("log-notes").textContent = notes;
     fields("log-notes").hidden = !notes;
     fields("log-status").textContent = "";

@@ -61,7 +61,7 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
     if (summaryOnly) return row;
     const view = getFamilyView();
     if (view) {
-      if (entry.notes) copy.append(element("p", entry.notes));
+      if (entry.notes || entry.sharedNotes) copy.append(element("p", entry.notes || entry.sharedNotes));
       if (entry.recordedBy) copy.append(element("small", t("ui.recorded-by-value", view.authorName(entry)), "family-stamp"));
       if (!manage && !readOnly && !completed && view.canRecord("routine", day)) {
         const action = recordAction(entry.mode === "done" ? "ثبت انجام" : "ثبت پیشرفت", () =>

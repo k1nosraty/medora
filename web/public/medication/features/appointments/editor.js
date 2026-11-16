@@ -143,7 +143,7 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     $("visit-day").value = isoDay(visit?.day ?? target?.day ?? defaultDay());
     $("visit-time").value = visit?.time ?? localClock();
     $("visit-place").value = visit?.place ?? "";
-    $("visit-note").value = visit?.note ?? "";
+    $("visit-note").value = visit?.note ?? visit?.notes ?? "";
     $("visit-contact").value = visit?.contact ?? "";
     $("visit-zone").value = visit?.zone ?? target?.zone ?? localZone();
     $("visit-extra").open = Boolean(visit?.note || visit?.contact || visit?.zone && visit.zone !== localZone());
@@ -223,7 +223,8 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
       const previous = visits[id];
       const offsets = [...retainedVisitOffsets(previous), ...chosenOffsets];
       const completed = previous?.completed && previous.day === day && previous.time === time && previous.zone === zone;
-      visits[id] = { ...plan, offsets, cancelled: previous?.cancelled ?? false,
+      visits[id] = { ...(previous?.sharedNote && { sharedNote: previous.sharedNote }),
+        ...(previous?.sharedContact && { sharedContact: previous.sharedContact }), ...plan, offsets, cancelled: previous?.cancelled ?? false,
         ...(completed ? { completed, resolvedAt: previous.resolvedAt } : {}) };
     }, t("ui.appointment-saved"), true);
     submit.disabled = false;

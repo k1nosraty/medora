@@ -8,6 +8,7 @@ import { pilotConfig, smallJson, validSubscription } from "./http/validation.mjs
 import { handleMedicationReminders } from "./reminders/medication-reminders.mjs";
 import { sendPush } from "./reminders/push.mjs";
 import { handleAdminAccounts, handleEmailAuth } from "./accounts/email-auth.mjs";
+import { operations } from "./operations/audit.mjs";
 import { handleOperations } from "./operations/routes.mjs";
 import { handlePromotions } from "./promotions/routes.mjs";
 
@@ -28,76 +29,88 @@ function reply(data, status = 200) {
 
 export default {
   async scheduled(_event, env) {
-    if (env.MEDORA_MAINTENANCE !== "true") await familyStore(env)?.pruneAudit();
+    if (env.MEDORA_MAINTENANCE !== "true") {
+      await Promise.all([familyStore(env)?.pruneAudit(), operations(env)?.pruneTickets()]);
+    }
     if (/^[a-f0-9]{40}$/.test(env.MEDORA_RELEASE ?? "")) {
       await env.OPERATIONS.getByName("operations").publishRelease(env.MEDORA_RELEASE);
     }
   },
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
-    if (["backup", "verify", "restore", "keys"].some(action => url.pathname === "/api/migration/parts/" + action)) {
-      return handleBackupParts(request, env, url);
+    try {
+      return await routeRequest(request, env, ctx);
+    } catch (error) {
+      console.warn("medora_api_failure", error?.overloaded ? "overloaded" : "unexpected");
+      return Response.json({ error: "unavailable" }, { status: 503,
+        headers: { "Cache-Control": "no-store", "Retry-After": "30", "X-Content-Type-Options": "nosniff" } });
     }
-    if (["/api/migration/backup", "/api/migration/verify", "/api/migration/restore"].includes(url.pathname)) return handleMigration(request, env, url);
-    if (env.MEDORA_MAINTENANCE === "true") {
-      return Response.json({ error: "maintenance" }, { status: 503, headers: {
-        "Cache-Control": "no-store", "Retry-After": "60"
-      } });
-    }
-    if (url.pathname === "/api/operations/release" && request.method === "GET") {
-      const version = env.MEDORA_RELEASE;
-      if (!/^[a-f0-9]{40}$/.test(version ?? "") || url.searchParams.get("version") !== version) {
-        return reply({ error: "not_found" }, 404);
-      }
-      return reply({ version, status: await env.OPERATIONS.getByName("operations").publishRelease(version) });
-    }
-    if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url, ctx);
-    if (url.pathname === "/api/family") return handleFamily(request, env, url);
-    if (url.pathname === "/api/account/care") return handleCareSync(request, env, url);
-    if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url, ctx);
-    if (["/api/promotion", "/api/admin/promotion"].some(path => url.pathname === path || url.pathname.startsWith(path + "/"))) {
-      return handlePromotions(request, env, ctx, url);
-    }
-
-    if (url.pathname === "/api/support" || ["/api/operations", "/api/operations/activity"].includes(url.pathname) ||
-        ["/api/admin/operations", "/api/admin/operations/access", "/api/admin/operations/export", "/api/admin/operations/tickets"].includes(url.pathname)) {
-      return handleOperations(request, env, url, ctx);
-    }
-
-    const vapid = pilotConfig(env);
-    if (!vapid) return reply({ error: "unconfigured" }, 503);
-    if (url.pathname === "/api/config" && request.method === "GET") {
-      return reply({ publicKey: vapid.publicKey });
-    }
-    if (["/api/reminders", "/api/reminders/enroll", "/api/reminders/test"].includes(url.pathname)) {
-      return handleMedicationReminders(request, env, url);
-    }
-
-    if (request.method !== "POST" || !["/api/test", "/api/status"].includes(url.pathname)) {
-      return reply({ error: "not_found" }, 404);
-    }
-
-    const authorization = request.headers.get("Authorization") ?? "";
-    if (request.headers.get("Origin") !== url.origin || !/^Bearer [a-f0-9]{36}$/.test(authorization) || !/^[a-f0-9]{36}$/.test(env.PILOT_ACCESS_CODE) ||
-        !crypto.subtle.timingSafeEqual(encoder.encode(authorization.slice(7)), encoder.encode(env.PILOT_ACCESS_CODE))) {
-      return reply({ error: "unauthorized" }, 401);
-    }
-
-    const body = await smallJson(request);
-    const pilot = env.PILOT.getByName("medora-push-pilot");
-    if (url.pathname === "/api/status") {
-      if (typeof body?.id !== "string" || !/^[a-f0-9-]{36}$/.test(body.id)) return reply({ error: "bad_request" }, 400);
-      const result = await pilot.status(body.id);
-      return result ? reply(result) : reply({ error: "not_found" }, 404);
-    }
-
-    const subscription = validSubscription(body?.subscription);
-    if (!subscription || ![0, 60].includes(body?.delaySeconds)) return reply({ error: "bad_subscription" }, 400);
-    const result = await pilot.start(subscription, body.delaySeconds);
-    return result.error ? reply(result, result.error === "rate_limit" ? 429 : 409) : reply(result, 202);
   }
 };
+
+async function routeRequest(request, env, ctx) {
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+  if (["backup", "verify", "restore", "keys"].some(action => url.pathname === "/api/migration/parts/" + action)) {
+    return handleBackupParts(request, env, url);
+  }
+  if (["/api/migration/backup", "/api/migration/verify", "/api/migration/restore"].includes(url.pathname)) return handleMigration(request, env, url);
+  if (env.MEDORA_MAINTENANCE === "true") {
+    return Response.json({ error: "maintenance" }, { status: 503, headers: {
+      "Cache-Control": "no-store", "Retry-After": "60"
+    } });
+  }
+  if (url.pathname === "/api/operations/release" && request.method === "GET") {
+    const version = env.MEDORA_RELEASE;
+    if (!/^[a-f0-9]{40}$/.test(version ?? "") || url.searchParams.get("version") !== version) {
+      return reply({ error: "not_found" }, 404);
+    }
+    return reply({ version, status: await env.OPERATIONS.getByName("operations").publishRelease(version) });
+  }
+  if (url.pathname.startsWith("/api/auth/")) return handleEmailAuth(request, env, url, ctx);
+  if (url.pathname === "/api/family") return handleFamily(request, env, url);
+  if (url.pathname === "/api/account/care") return handleCareSync(request, env, url);
+  if (url.pathname === "/api/admin/accounts") return handleAdminAccounts(request, env, url, ctx);
+  if (["/api/promotion", "/api/admin/promotion"].some(path => url.pathname === path || url.pathname.startsWith(path + "/"))) {
+    return handlePromotions(request, env, ctx, url);
+  }
+
+  if (url.pathname === "/api/support" || ["/api/operations", "/api/operations/activity"].includes(url.pathname) ||
+      ["/api/admin/operations", "/api/admin/operations/access", "/api/admin/operations/export", "/api/admin/operations/tickets"].includes(url.pathname)) {
+    return handleOperations(request, env, url, ctx);
+  }
+
+  const vapid = pilotConfig(env);
+  if (!vapid) return reply({ error: "unconfigured" }, 503);
+  if (url.pathname === "/api/config" && request.method === "GET") {
+    return reply({ publicKey: vapid.publicKey });
+  }
+  if (["/api/reminders", "/api/reminders/enroll", "/api/reminders/test"].includes(url.pathname)) {
+    return handleMedicationReminders(request, env, url);
+  }
+
+  if (request.method !== "POST" || !["/api/test", "/api/status"].includes(url.pathname)) {
+    return reply({ error: "not_found" }, 404);
+  }
+
+  const authorization = request.headers.get("Authorization") ?? "";
+  if (request.headers.get("Origin") !== url.origin || !/^Bearer [a-f0-9]{36}$/.test(authorization) || !/^[a-f0-9]{36}$/.test(env.PILOT_ACCESS_CODE) ||
+      !crypto.subtle.timingSafeEqual(encoder.encode(authorization.slice(7)), encoder.encode(env.PILOT_ACCESS_CODE))) {
+    return reply({ error: "unauthorized" }, 401);
+  }
+
+  const body = await smallJson(request);
+  const pilot = env.PILOT.getByName("medora-push-pilot");
+  if (url.pathname === "/api/status") {
+    if (typeof body?.id !== "string" || !/^[a-f0-9-]{36}$/.test(body.id)) return reply({ error: "bad_request" }, 400);
+    const result = await pilot.status(body.id);
+    return result ? reply(result) : reply({ error: "not_found" }, 404);
+  }
+
+  const subscription = validSubscription(body?.subscription);
+  if (!subscription || ![0, 60].includes(body?.delaySeconds)) return reply({ error: "bad_subscription" }, 400);
+  const result = await pilot.start(subscription, body.delaySeconds);
+  return result.error ? reply(result, result.error === "rate_limit" ? 429 : 409) : reply(result, 202);
+}
 
 export class PushPilot extends DurableObject {
   async start(subscription, delaySeconds) {

@@ -109,7 +109,9 @@ test("family invitations, sharing and revocation are directional and group scope
   }
   async function signup(username) {
     const email = username + "@example.com";
+    const previous = mail.get(email);
     const { challenge } = await (await call("auth/register-code", { email })).json();
+    await until(() => mail.has(email) && mail.get(email) !== previous);
     const code = mail.get(email).match(/[۰-۹]{6}/)[0].replace(/[۰-۹]/g, char => String(char.charCodeAt(0) & 15));
     const { grant } = await (await call("auth/confirm-email", { email, challenge, code })).json();
     const response = await call("auth/register", { email, grant, username, password: "family login sample" });
@@ -270,6 +272,24 @@ test("family invitations, sharing and revocation are directional and group scope
     assert.equal((await family(a, { action: "add", group, target: bId, operation: randomUUID(), kind: "visit",
       day: today + 2, time: "14:00", name: "A future visit" })).status, 200);
     await until(async () => (await device.status()).nextKinds.includes("appointment"));
+
+    const health = await (await call("account/care", null, b)).json();
+    const overloaded = structuredClone(health.records);
+    for (let index = 0; index < 101; index++) {
+      const id = "synthetic-" + index;
+      overloaded.medicines[id] = { id, name: id, unit: "tablet", phases: [
+        { start: today, end: null, interval: 1, mask: 127, slots: [{ minute, amount: 1000 }] }
+      ] };
+    }
+    const rejected = await (await call("account/care", { ...health, records: overloaded }, b, "PUT")).json();
+    await until(async () => (await device.status()).rejectedAccountRevision === rejected.revision);
+    const degraded = await device.status();
+    assert.deepEqual(degraded.suspendedKinds, ["dose"]);
+    assert.deepEqual(degraded.nextKinds, ["appointment"]);
+    assert.equal(degraded.appliedAccountRevision, health.revision);
+    assert.equal(await device.replaceAccountPlan(owner, rejected.revision, overloaded), "invalid");
+    assert.equal((await call("account/care", { ...rejected, records: health.records }, b, "PUT")).status, 200);
+    await until(async () => !(await device.status()).accountPlanError);
 
     await account.pauseViews();
     const pendingView = view(a, bId);

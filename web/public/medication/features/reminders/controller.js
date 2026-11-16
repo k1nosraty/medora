@@ -155,6 +155,9 @@ async function sync(check = false, snapshot) {
       });
       controls(updated.reminders);
       status(t("ui.the-notification-subscription-expired-enable-notification"));
+    } else if (remote.accountSchedule?.status === "pending") {
+      status(t("ui.syncing-reminders"));
+      settingsBadge(t("ui.syncing-reminders"));
     } else if (remote.accountPlanError) {
       status(t("ui.could-not-save-the-schedule-check-your-stages-and-upcomin"));
       settingsBadge(t("اعلان‌ها به‌روز نیستند"));

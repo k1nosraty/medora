@@ -31,7 +31,7 @@ function planFor(data, zone) {
         !present(instructions, 2000) || (stock !== null && !integer(stock, 0, 1_000_000_000)) ||
         !integer(threshold, 0, Number.MAX_SAFE_INTEGER) || !asset(icon) || !asset(color)) return null;
     scope = "medicines";
-    row = { id, name, unit, instructions, stock, threshold, icon, color, phased: phased === true, revision: 1, dates,
+    row = { id, name, unit, sharedInstructions: instructions, stock, threshold, icon, color, phased: phased === true, revision: 1, dates,
       phases: phases.map(({ start, end, interval, mask, slots, autoEnd }) => ({ start, end, interval, mask,
         slots: slots.map(({ minute, amount }) => ({ minute, amount })), ...(autoEnd === true && { autoEnd }) })) };
   } else if (kind === "visit") {
@@ -40,7 +40,7 @@ function planFor(data, zone) {
         !present(categoryName, 100) || !asset(category) || !asset(color) ||
         !Array.isArray(offsets) || offsets.length > 20 || !present(plan.zone, 64)) return null;
     scope = "visits";
-    row = { id, name, day, time, place, note, contact, category, color, categoryName, offsets,
+    row = { id, name, day, time, place, sharedNote: note, sharedContact: contact, category, color, categoryName, offsets,
       zone: plan.zone || zone, cancelled: false, remindersOff: remindersOff === true };
   } else if (kind === "routine") {
     const { start, mask, interval, minute, reminder, mode, notes, target, unit, steps, category, color } = plan;
@@ -48,7 +48,7 @@ function planFor(data, zone) {
         (steps !== undefined && (!Array.isArray(steps) || !steps.every(step => present(step, 70)))) ||
         (reminder === true && minute === null)) return null;
     scope = "routines";
-    row = { id, name, start, mask, interval, minute, reminder: reminder === true, mode, notes, category, color, paused: false, revision: 1,
+    row = { id, name, start, mask, interval, minute, reminder: reminder === true, mode, sharedNotes: notes, category, color, paused: false, revision: 1,
       ...(mode === "quantity" && { target, unit }), ...(mode === "steps" && { steps }) };
   } else return null;
   try {
@@ -87,7 +87,7 @@ export function applyFamilyChange(snapshot, data, actor, homeZone, now = Date.no
         phases: [{ start: day, end: data.repeat === "once" ? day + 1 : null, interval: 1, mask: 127,
           slots: [{ minute: scheduledTime, amount: data.amount }] }], ...author };
     } else if (kind === "visit") {
-      records.visits[id] = { id, name, day, time: data.time, zone: homeZone, notes: "", ...author };
+      records.visits[id] = { id, name, day, time: data.time, zone: homeZone, ...author };
     } else if (kind === "routine") {
       records.routines[id] = { id, name, start: day, interval: 1, mask: 127, minute: scheduledTime, category: "custom",
         mode: "done", color: "coral", paused: false, reminder: false, revision: 1, ...author };
@@ -146,7 +146,7 @@ export function applyFamilyChange(snapshot, data, actor, homeZone, now = Date.no
         typeof note !== "string" || note.length > 500) return "invalid";
     const cycles = records.cycleRecords ??= {};
     if (Object.hasOwn(cycles, day)) return "already_recorded";
-    cycles[day] = { end, flow: data.flow, note: note.trim(), ...author };
+    cycles[day] = { end, flow: data.flow, ...(note.trim() && { sharedNote: note.trim() }), ...author };
   } else return "invalid";
   return records;
 }

@@ -245,8 +245,11 @@ export class Families extends DurableObject {
     });
   }
 
-  pruneAudit() {
-    this.sql.exec("DELETE FROM family_audit WHERE time<?", Date.now() - 90 * oneDay);
+  pruneAudit(now = Date.now()) {
+    this.ctx.storage.transactionSync(() => {
+      this.sql.exec("DELETE FROM family_audit WHERE time<?", now - 90 * oneDay);
+      this.sql.exec("DELETE FROM family_invites WHERE expires<?", now - 30 * oneDay);
+    });
   }
 
   invite(actor, group, email) {

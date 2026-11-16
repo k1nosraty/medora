@@ -66,8 +66,9 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
         state.cycleRecords ??= {};
         if (day !== previous && Object.hasOwn(state.cycleRecords, day)) throw new Error(t("ui.a-cycle-is-already-logged-for-that-date"));
         if (previous !== undefined && !Object.hasOwn(state.cycleRecords, previous)) throw new Error(t("ui.this-entry-is-no-longer-available"));
+        const sharedNote = state.cycleRecords[previous]?.sharedNote;
         if (previous !== undefined) delete state.cycleRecords[previous];
-        state.cycleRecords[day] = entry;
+        state.cycleRecords[day] = { ...entry, ...(sharedNote && { sharedNote }) };
       }, t("ui.cycle-saved"))) dialog.close();
       else error.textContent = $("status").textContent;
     } catch (reason) { error.textContent = reason.message; }
@@ -89,7 +90,7 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
       copy.append(element("strong", formatDay(day)));
       if (record.end !== null) copy.append(element("p", t("ui.through-value", formatDay(record.end))));
       if (record.flow) copy.append(element("p", t({ light: "کم", medium: "متوسط", heavy: "زیاد" }[record.flow])));
-      if (record.note) copy.append(element("p", record.note));
+      if (record.note || record.sharedNote) copy.append(element("p", record.note || record.sharedNote));
       const view = getFamilyView();
       if (view) {
         if (record.recordedBy) copy.append(element("small", t("ui.recorded-by-value", view.authorName(record)), "family-stamp"));

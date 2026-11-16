@@ -4,6 +4,7 @@ import { DurableObject } from "cloudflare:workers";
 import { scryptSync } from "node:crypto";
 import { applyFamilyChange } from "../family/care.mjs";
 import { profileName } from "../../public/medication/domain/profile.js";
+import { reminderCareProjection } from "../../public/medication/domain/care-plan.js";
 import { smallJson } from "../http/validation.mjs";
 import { careSnapshotFits, careVersion } from "../../public/medication/domain/care-records.js";
 
@@ -12,6 +13,7 @@ const minute = 60_000;
 const day = 24 * 60 * minute;
 const sessionAge = 30 * day;
 const familyReplayAge = 7 * day;
+const adminSessionMaxAge = 10 * minute;
 const encoder = new TextEncoder();
 const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
 const sessionPattern = /^([a-f0-9]{64})\.([a-f0-9]{64})\.([a-f0-9]{64})$/;
@@ -118,6 +120,10 @@ export async function handleAdminAccounts(request, env, url, ctx) {
     return reply({ users, next: records.length > 25 ? users.at(-1).username : null });
   }
   if (request.headers.get("Origin") !== url.origin) return reply({ error: "forbidden" }, 403);
+  const session = await readSession(request, sessionKey(env));
+  if (!await env.EMAIL_ACCOUNTS.getByName(session.id).recentSession(session.token, actor)) {
+    return reply({ error: "reauthenticate" }, 403);
+  }
   const body = await smallJson(request, 4096);
   const username = usernameOf(body?.username);
   if (!username || typeof body.tag !== "string" || !/^[a-f0-9]{64}$/.test(body.tag)) {
@@ -194,23 +200,18 @@ export async function handleEmailAuth(request, env, url, ctx) {
   const secret = codeKey(env);
   const id = await accountId(env, email);
   const client = env.EMAIL_ACCOUNTS.getByName(id);
-  if (route === "reset-code") {
+  if (route === "reset-code" || route === "register-code") {
     if (!canSendCode(env)) return reply({ error: "unavailable" }, 503);
+    const reset = route === "reset-code";
     const challenge = crypto.randomUUID();
-    // Return the same response before lookup and delivery for every address.
+    // Both registered and unregistered addresses receive the same response.
     ctx.waitUntil((async () => {
-      if (await index.usernameFor(id)) await client.start(email, body.language === "en" ? "en" : "fa", challenge, true);
-    })());
-    const signature = await hmac(secret, "reset-challenge-v1", `${id}.${challenge}`);
+      if (Boolean(await index.usernameFor(id)) === reset) {
+        await client.start(email, body.language === "en" ? "en" : "fa", challenge, reset);
+      }
+    })().catch(() => console.warn("medora_code_delivery_failed")));
+    const signature = await hmac(secret, reset ? "reset-challenge-v1" : "challenge-v1", `${id}.${challenge}`);
     return reply({ challenge: `${challenge}.${signature}` }, 202);
-  }
-  if (route === "register-code") {
-    if (!canSendCode(env)) return reply({ error: "unavailable" }, 503);
-    const result = await index.usernameFor(id) ? { challenge: crypto.randomUUID() } :
-      await env.EMAIL_ACCOUNTS.getByName(id).start(email, body.language === "en" ? "en" : "fa");
-    if (result.error) return reply(result, result.error === "rate_limit" ? 429 : 503);
-    const signature = await hmac(secret, "challenge-v1", `${id}.${result.challenge}`);
-    return reply({ challenge: `${result.challenge}.${signature}` }, 202);
   }
   const { code } = body;
   const match = typeof body.challenge === "string" && body.challenge.match(challengePattern);
@@ -222,7 +223,9 @@ export async function handleEmailAuth(request, env, url, ctx) {
   }
   if (reset) {
     if (!validPassword(body.password)) return reply({ error: "password" }, 400);
-    if (!await client.resetPassword(id, match[1], code, body.password)) return reply({ error: "invalid_code" }, 400);
+    const resetResult = await client.resetPassword(id, match[1], code, body.password);
+    if (resetResult?.retry) return reply({ error: "reset_retry" }, 503);
+    if (!resetResult) return reply({ error: "invalid_code" }, 400);
     return reply({}, 200, cookie("", 0));
   }
   const grant = await client.confirmCode(match[1], code);
@@ -254,6 +257,8 @@ export class EmailAccount extends DurableObject {
       CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, sent INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS challenge (id TEXT PRIMARY KEY, proof TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE IF NOT EXISTS reset_challenge (id TEXT PRIMARY KEY, proof TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS pending_password_reset
+        (id TEXT PRIMARY KEY REFERENCES reset_challenge(id) ON DELETE CASCADE, salt TEXT NOT NULL, proof TEXT NOT NULL, version TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS password_attempts (id INTEGER PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS account_reset (id INTEGER PRIMARY KEY, epoch TEXT NOT NULL);
@@ -268,6 +273,9 @@ export class EmailAccount extends DurableObject {
     const proof = await hmac(codeKey(this.env), reset ? "reset-code-v1" : "code-v1", `${id}:${code}`);
     const now = Date.now();
     this.prune(now);
+    if (reset && this.sql.exec("SELECT 1 FROM reset_challenge LIMIT 1").toArray().length) {
+      return { error: "rate_limit" };
+    }
     const recent = this.sql.exec("SELECT sent FROM deliveries ORDER BY sent DESC").toArray();
     if (recent.length >= 5 || now - (recent[0]?.sent ?? 0) < minute) return { error: "rate_limit" };
     this.ctx.storage.transactionSync(() => {
@@ -305,7 +313,7 @@ export class EmailAccount extends DurableObject {
     return { error: "delivery" };
   }
 
-  async takeCode(challenge, code, reset = false) {
+  async takeCode(challenge, code, reset = false, consume = true) {
     const table = reset ? "reset_challenge" : "challenge";
     const proof = await hmac(codeKey(this.env), reset ? "reset-code-v1" : "code-v1", `${challenge}:${code}`);
     const row = this.sql.exec(`SELECT proof, attempts FROM ${table} WHERE id = ? AND expires > ?`, challenge, Date.now()).toArray()[0];
@@ -315,7 +323,7 @@ export class EmailAccount extends DurableObject {
       else this.sql.exec(`UPDATE ${table} SET attempts = attempts + 1 WHERE id = ?`, challenge);
       return false;
     }
-    this.sql.exec(`DELETE FROM ${table} WHERE id = ?`, challenge);
+    if (consume) this.sql.exec(`DELETE FROM ${table} WHERE id = ?`, challenge);
     return reset || { expires: Date.now() + 10 * minute, epoch: this.epoch() };
   }
 
@@ -325,11 +333,28 @@ export class EmailAccount extends DurableObject {
 
   async resetPassword(id, challenge, code, password) {
     return this.ctx.blockConcurrencyWhile(async () => {
-      if (!await this.takeCode(challenge, code, true)) return false;
-      const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-      const proof = await passwordProof(passwordKey(this.env), password, salt);
-      this.sql.exec("DELETE FROM sessions; DELETE FROM password_attempts; DELETE FROM reset_challenge;");
-      return credentials(this.env).replacePassword(id, salt, proof, passwordVersion(this.env));
+      if (!await this.takeCode(challenge, code, true, false)) return false;
+      const previous = this.sql.exec("SELECT salt, proof, version FROM pending_password_reset WHERE id=?", challenge).toArray()[0];
+      const salt = previous?.salt ?? hex(crypto.getRandomValues(new Uint8Array(16)));
+      const version = previous?.version ?? passwordVersion(this.env);
+      const pepper = passwordKey(this.env, version);
+      if (!pepper) return false;
+      const proof = await passwordProof(pepper, password, salt);
+      if (previous && !equal(previous.proof, proof)) return false;
+      this.ctx.storage.transactionSync(() => {
+        this.sql.exec("INSERT OR IGNORE INTO pending_password_reset VALUES (?,?,?,?)", challenge, salt, proof, version);
+        this.sql.exec("DELETE FROM sessions");
+      });
+      try {
+        if (!await credentials(this.env).replacePassword(id, salt, proof, version)) return false;
+      } catch {
+        // Return a retryable error while keeping the verified challenge.
+        return { retry: true };
+      }
+      this.ctx.storage.transactionSync(() => {
+        this.sql.exec("DELETE FROM password_attempts; DELETE FROM reset_challenge;");
+      });
+      return true;
     });
   }
 
@@ -403,6 +428,11 @@ export class EmailAccount extends DurableObject {
       if (!job.familyDone) {
         job.counts.familyRows += await this.env.FAMILIES?.getByName("care-groups").eraseAccount(job.owner, job.email) ?? 0;
         job.familyDone = true;
+        await storage.put("account-deletion", job);
+      }
+      if (!job.supportDone) {
+        await operations(this.env)?.eraseSupportTickets(job.email);
+        job.supportDone = true;
         await storage.put("account-deletion", job);
       }
       const batch = job.devices.slice(0, 15);
@@ -520,14 +550,14 @@ export class EmailAccount extends DurableObject {
     });
   }
 
-  async readCareForSession(token, owner, known) {
+  async readCareForSession(token, owner, known, includeZone = false) {
     const hash = await sessionHash(token);
     return this.ctx.storage.transaction(async storage => {
       if (!this.activeSessionEmail(hash)) return null;
       const snapshot = await storage.get("care-sync") ?? { revision: 0, records: null };
       const epoch = this.epoch();
       if (known && known === careVersion(accountScope(owner, epoch), snapshot.revision)) return { unchanged: known };
-      return { epoch, ...snapshot };
+      return { epoch, ...snapshot, ...(includeZone && { zone: await storage.get("care-zone") ?? null }) };
     });
   }
 
@@ -538,15 +568,40 @@ export class EmailAccount extends DurableObject {
       if (generation !== this.epoch()) return null;
       const current = await storage.get("care-sync") ?? { revision: 0 };
       if (current.revision !== revision) return null;
+      if (current.records?.privacyVersion && current.records.privacyKey !== records.privacyKey) return { privacyKey: true };
       const next = { revision: revision + 1, records };
       const owner = accountScope(id, generation);
       if (!careSnapshotFits(owner, next.revision, records, zone ?? await storage.get("care-zone") ?? "Asia/Tehran")) {
         return { tooLarge: true };
       }
       await storage.put("care-sync", next);
-      if (zone) await storage.put("care-zone", zone);
+      if (zone && !(await storage.get("care-zone"))) await storage.put("care-zone", zone);
       await this.queueReminderUpdate(storage, owner);
       return next;
+    });
+  }
+
+  async setCareZone(id, epoch, revision, token, zone) {
+    const hash = await sessionHash(token);
+    return this.ctx.storage.transaction(async storage => {
+      if (!this.activeSessionEmail(hash)) return { signedOut: true };
+      if (epoch !== this.epoch()) return null;
+      const snapshot = await storage.get("care-sync");
+      if (revision !== (snapshot?.revision ?? 0)) return null;
+      if (zone === await storage.get("care-zone")) return { zone, revision };
+      await storage.put("care-zone", zone);
+      if (!snapshot) return { zone, revision };
+      const next = revision + 1;
+      await storage.put("care-sync", { ...snapshot, revision: next });
+      await this.queueReminderUpdate(storage, accountScope(id, epoch));
+      return { zone, revision: next };
+    });
+  }
+
+  async reminderRevision(owner, id) {
+    return this.ctx.storage.transaction(async storage => {
+      if (owner !== accountScope(id, this.epoch())) return null;
+      return (await storage.get("care-sync"))?.revision ?? null;
     });
   }
 
@@ -593,13 +648,14 @@ export class EmailAccount extends DurableObject {
       await txn.get("reminder-update"), await txn.get("care-sync"), await txn.get("reminder-devices") ?? []
     ]);
     if (!job || !snapshot?.records || job.at > Date.now()) return;
+    const projection = reminderCareProjection(snapshot.records);
     let failed = false;
     const unlinked = new Set();
     if (this.env.MEDORA_MAINTENANCE === "true" || this.env.MEDORA_PAUSE_PUSH === "true") failed = true;
     else for (let i = 0; i < devices.length; i += 3) {
       const batch = devices.slice(i, i + 3);
       const results = await Promise.allSettled(batch.map(device =>
-        this.env.REMINDERS.getByName(device).replaceAccountPlan(job.owner, snapshot.revision, snapshot.records)));
+        this.env.REMINDERS.getByName(device).replaceAccountPlan(job.owner, snapshot.revision, projection)));
       failed ||= results.some(result => result.status === "rejected");
       results.forEach((result, index) => {
         if (result.status === "fulfilled" && result.value === "unlinked") unlinked.add(batch[index]);
@@ -638,6 +694,12 @@ export class EmailAccount extends DurableObject {
   async session(token) {
     const hash = await sessionHash(token);
     return this.activeSessionEmail(hash);
+  }
+
+  async recentSession(token, email) {
+    const hash = await sessionHash(token);
+    const expires = this.sql.exec("SELECT expires FROM sessions WHERE hash = ? AND email = ?", hash, email).toArray()[0]?.expires;
+    return Number.isSafeInteger(expires) && expires > Date.now() + sessionAge - adminSessionMaxAge;
   }
 
   activeSessionEmail(hash) {

@@ -1,6 +1,13 @@
 import { webBackupSettings } from "../../domain/care-records.js";
 
-const equal = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+export function equal(left, right) {
+  if (left === right) return true;
+  if (!left || !right || typeof left !== "object" || typeof right !== "object" ||
+      Array.isArray(left) !== Array.isArray(right)) return false;
+  const keys = Object.keys(left).filter(key => left[key] !== undefined);
+  return keys.length === Object.keys(right).filter(key => right[key] !== undefined).length &&
+    keys.every(key => Object.hasOwn(right, key) && equal(left[key], right[key]));
+}
 
 function mergeMap(base = {}, local = {}, remote = {}, mergeValue) {
   return Object.fromEntries([...new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(remote)])].flatMap(key => {
@@ -26,10 +33,20 @@ function debits(snapshot) {
   return totals;
 }
 
+const scheduleFields = ["phases", "dates", "phased", "paused", "archived", "effectiveFrom", "scheduleFrom", "unit", "stockTrackedFrom"];
+const doseResultFields = ["status", "actual", "unit", "debit", "snoozeUntil"];
+const select = (row, fields) => !row ? undefined : fields.map(key => row[key]);
+function diverged(before, ours, theirs) {
+  return !equal(before, ours) && !equal(before, theirs) && !equal(ours, theirs);
+}
+
 function mergeMedicines(base, local, remote, merged) {
   const totals = [base, local, remote, { ...merged, medicines: local.medicines }].map(debits);
   return mergeMap(base.medicines, local.medicines, remote.medicines, (before, ours, theirs) => {
-    // A deletion wins against a concurrent edit. A new medicine keeps its original record.
+    if (diverged(select(before, scheduleFields), select(ours, scheduleFields), select(theirs, scheduleFields))) {
+      throw new Error("care_conflict");
+    }
+    // Deletion wins where the other device only changed presentation or stock.
     if (!before) return ours ?? theirs;
     if (!ours || !theirs) return undefined;
     const scope = row => JSON.stringify([row.unit, row.stockTrackedFrom, Number.isSafeInteger(row.stock)]);
@@ -60,6 +77,9 @@ export function mergeCare(base, local, remote) {
   remote ??= {};
   const merged = Object.fromEntries(records.map(key => [key, mergeMap(base[key], local[key], remote[key])]));
   merged.doses = mergeMap(base.doses, local.doses, remote.doses, (before, ours, theirs) => {
+    if (diverged(select(before, doseResultFields), select(ours, doseResultFields), select(theirs, doseResultFields))) {
+      throw new Error("care_conflict");
+    }
     const takeRemote = equal(before, ours);
     const row = takeRemote ? theirs : ours;
     if (!row || row.unit !== undefined) return row;
@@ -80,6 +100,18 @@ export function mergeCare(base, local, remote) {
     byVersion(base.scheduleHistory?.[key]), byVersion(local.scheduleHistory?.[key]), byVersion(remote.scheduleHistory?.[key])
   ))]));
   return merged;
+}
+
+export function mergeRestoredCare(restored, cloud) {
+  // Every existing cloud record wins a collision. A file's omissions carry
+  // no deletion intent because the file has no common synchronization base.
+  if (!cloud) return mergeCare(null, restored, null);
+  const missing = { ...restored };
+  for (const field of ["medicines", "doses"]) {
+    missing[field] = Object.fromEntries(Object.entries(restored[field] ?? {})
+      .filter(([id]) => !Object.hasOwn(cloud[field] ?? {}, id)));
+  }
+  return mergeCare(null, cloud, missing);
 }
 
 export function applyPortable(state, data) {

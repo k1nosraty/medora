@@ -37,7 +37,14 @@ export function validatedPromotion(value) {
   return { title, description, url, enabled: value.enabled, mediaType, mediaUrl, mediaId, linkLabel: linkLabel.trim(), startsAt, endsAt, frequency };
 }
 
-function creative(row, prefix) {
+function permittedMedia(row, env) {
+  if (!row?.mediaUrl) return true;
+  const host = URL.parse(row.mediaUrl)?.hostname;
+  return Boolean(host && (env.PROMOTION_MEDIA_HOSTS ?? "").toLowerCase().split(",").some(value => value.trim() === host));
+}
+
+function creative(row, prefix, env) {
+  if (!permittedMedia(row, env)) return { ...row, mediaType: "", mediaUrl: "" };
   if (!row?.mediaId) return row;
   const { mediaId, ...copy } = row;
   return { ...copy, mediaUrl: `${prefix}/media/${mediaId}` };
@@ -53,7 +60,7 @@ export async function handlePromotions(request, env, ctx, url) {
     const cached = await caches.default.match(cacheKey);
     if (cached) return cached;
     const { current, ttl } = await promotions.current();
-    const response = reply({ promotion: creative(current, publicPath) }, 200, `public, max-age=${ttl}`);
+    const response = reply({ promotion: creative(current, publicPath, env) }, 200, `public, max-age=${ttl}`);
     if (ttl > 0) ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
     return response;
   }
@@ -105,10 +112,10 @@ export async function handlePromotions(request, env, ctx, url) {
     }
   }
   if (path === adminPath + "/preview") {
-    if (method === "GET") return reply({ promotion: creative(await promotions.preview(), adminPath) });
+    if (method === "GET") return reply({ promotion: creative(await promotions.preview(), adminPath, env) });
     if (method === "PUT") {
       const row = validatedPromotion(await smallJson(request, 4096));
-      if (!row || !await promotions.savePreview(row)) return reply({ error: "invalid_promotion" }, 400);
+      if (!row || !permittedMedia(row, env) || !await promotions.savePreview(row)) return reply({ error: "invalid_promotion" }, 400);
       return reply({});
     }
   }
@@ -125,7 +132,7 @@ export async function handlePromotions(request, env, ctx, url) {
   if (method !== "PUT") return reply({ error: "method" }, 405);
   const body = await smallJson(request, 4096);
   const row = validatedPromotion(body);
-  if (!row || !await promotions.validMedia(row) || (body.id != null && (typeof body.id !== "string" || !mediaIdPattern.test(body.id)))) {
+  if (!row || !permittedMedia(row, env) || !await promotions.validMedia(row) || (body.id != null && (typeof body.id !== "string" || !mediaIdPattern.test(body.id)))) {
     return reply({ error: "invalid_promotion" }, 400);
   }
   const current = await promotions.save(row, body.id, body.archived === true, body.create === true);

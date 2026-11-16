@@ -1,7 +1,10 @@
 import messagesFa from "./messages-fa.js";
 const key = "medora-language";
 const previewLanguage = location.pathname.startsWith("/design/") && new URLSearchParams(location.search).get("lang");
-export const language = (previewLanguage || localStorage.getItem(key)) === "en" ? "en" : "fa";
+function savedLanguage() {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+export const language = (previewLanguage || savedLanguage()) === "en" ? "en" : "fa";
 const messages = language === "en" ? (await import("./messages-en.js")).default : messagesFa;
 const english = language === "en" ? {
   ...(await import("./english.js")).default,
@@ -26,7 +29,7 @@ export function localDigits(value) {
 
 export function selectLanguage(next) {
   if (next !== language && (next === "fa" || next === "en")) {
-    localStorage.setItem(key, next);
+    try { localStorage.setItem(key, next); } catch { return; }
     location.reload();
   }
 }

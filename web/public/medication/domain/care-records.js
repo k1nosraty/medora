@@ -1,3 +1,4 @@
+import { isRecoveryKeyId, privateFields, privateRows, validPrivateText } from "./private-fields.js";
 import { maxRoutineAmount, maxRoutineSteps } from "./routine-plan.js";
 import { availableAccents } from "./accents.js";
 import { finishes, genders, validPersonalProfile } from "./profile.js";
@@ -48,6 +49,7 @@ export function portable(state) {
     routines: state.routines ?? {}, routineLogs: state.routineLogs ?? {},
     ...(Object.keys(state.scheduleHistory ?? {}).length ? { scheduleHistory: state.scheduleHistory } : {}),
     ...(state.cycleRecords !== undefined ? { cycleRecords: state.cycleRecords } : {}),
+    ...(state.privacyVersion !== undefined && { privacyVersion: state.privacyVersion, privacyKey: state.privacyKey }),
     settings: Object.fromEntries(webBackupSettings.filter(key => state[key] !== undefined).map(key => [key, state[key]]))
   };
 }
@@ -90,6 +92,18 @@ function validHistory(history, validatePhases) {
     }));
 }
 
+function validPrivacy(data) {
+  const protectedRecords = data.privacyVersion === 1 && isRecoveryKeyId(data.privacyKey);
+  if (!protectedRecords && (data.privacyVersion !== undefined || data.privacyKey !== undefined)) return false;
+  for (const { kind, rows, key } of privateRows(data)) {
+    const row = rows[key];
+    if (!object(row) || (protectedRecords
+      ? privateFields[kind].some(field => Object.hasOwn(row, field)) || !optional(row.privateText, validPrivateText)
+      : row.privateText !== undefined)) return false;
+  }
+  return true;
+}
+
 export function validatePortable(data, validatePhases) {
   if (!object(data) || !object(data.settings) || !Object.entries(data.settings).every(([key, value]) =>
     Object.hasOwn(settings, key) && settings[key](value)) ||
@@ -105,10 +119,11 @@ export function validatePortable(data, validatePhases) {
     !record(data.routines, (row, id) => row.id === id && validRoutinePlan(row)) ||
     !optional(data.cycleRecords, records => record(records, (row, id) =>
       day(Number(id)) && String(Number(id)) === id && (row.end === null || (day(row.end) && row.end >= Number(id))) &&
-      ["", "light", "medium", "heavy"].includes(row.flow) && text(row.note) && row.note.length <= 500)) ||
+      ["", "light", "medium", "heavy"].includes(row.flow) &&
+      optional(row.note, value => text(value) && value.length <= 500))) ||
     !optional(data.scheduleHistory, history => validHistory(history, validatePhases)) ||
     !record(data.routineLogs, (rows, key) => String(Number(key)) === key && day(Number(key)) &&
-      record(rows, validRoutine))) throw new Error("invalid_backup");
+      record(rows, validRoutine)) || !validPrivacy(data)) throw new Error("invalid_backup");
   const { settings: preferences, ...records } = portable({ ...data, ...data.settings });
   return { ...records, ...preferences, intro: "done" };
 }

@@ -225,7 +225,8 @@ confirm.addEventListener("click", async () => {
     const result = await request(accountsPath, "DELETE", { username, tag });
     if (!result) return;
     if (result.error) {
-      status("admin-delete-status", result.error === "protected_account" ? "حساب مدیر قابل حذف نیست." :
+      status("admin-delete-status", result.error === "reauthenticate" ? "دوباره وارد حساب مدیر شوید و عملیات را تکرار کنید." :
+        result.error === "protected_account" ? "حساب مدیر قابل حذف نیست." :
         "این حساب تغییر کرده است. فهرست را دوباره بارگذاری کنید.", true);
       return;
     }

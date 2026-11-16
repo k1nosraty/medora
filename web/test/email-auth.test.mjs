@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { setTimeout as sleep } from "node:timers/promises";
 
 const require = createRequire(import.meta.url);
 const { Miniflare, Response, convertV4MiniflareOptions } = require("miniflare");
@@ -11,7 +12,21 @@ const { build } = require("esbuild");
 test("registration, password recovery and account deletion preserve authorization", { timeout: 20_000 }, async () => {
   const { outputFiles } = await build({
     absWorkingDir: fileURLToPath(new URL("..", import.meta.url)),
-    entryPoints: ["src/worker.mjs"], bundle: true, platform: "browser",
+    stdin: { resolveDir: fileURLToPath(new URL("..", import.meta.url)), contents: `
+      export { default, EmailAccount, Operations, Promotions } from "./src/worker.mjs";
+      import { Credentials } from "./src/worker.mjs";
+      export class FailingCredentials extends Credentials {
+        loseNextResetResponse() { this.loseResponse = true; }
+        replacePassword(...args) {
+          const result = super.replacePassword(...args);
+          if (this.loseResponse) {
+            this.loseResponse = false;
+            throw new Error("Synthetic lost credential response");
+          }
+          return result;
+        }
+      }
+    ` }, bundle: true, platform: "browser",
     format: "esm", external: ["cloudflare:workers", "node:crypto", "node:buffer"], write: false
   });
   const deliveries = [];
@@ -21,14 +36,14 @@ test("registration, password recovery and account deletion preserve authorizatio
     compatibilityFlags: ["nodejs_compat"],
     durableObjects: {
       EMAIL_ACCOUNTS: { className: "EmailAccount", useSQLite: true },
-      CREDENTIALS: { className: "Credentials", useSQLite: true },
+      CREDENTIALS: { className: "FailingCredentials", useSQLite: true },
       PROMOTIONS: { className: "Promotions", useSQLite: true },
       OPERATIONS: { className: "Operations", useSQLite: true }
     },
     ratelimits: { EMAIL_AUTH_LIMIT: { namespace_id: "750503", simple: { limit: 8, period: 60 } } },
     bindings: {
       EMAIL_AUTH_SECRET: "d".repeat(64), EMAIL_FROM: "login@medora.example", RESEND_API_KEY: "test",
-      ADMIN_EMAIL: "Me@Example.com", SUPPORT_EMAILS: "english@example.com", ...bindings
+      ADMIN_EMAIL: "Me@Example.com", PROMOTION_MEDIA_HOSTS: "media.example.com", SUPPORT_EMAILS: "english@example.com", ...bindings
     },
     outboundService: async request => {
       assert.equal(request.url, "https://api.resend.com/emails");
@@ -48,6 +63,11 @@ test("registration, password recovery and account deletion preserve authorizatio
       },
       body: body ? JSON.stringify(body) : undefined
     });
+  async function awaitDelivery(index) {
+    for (let i = 0; deliveries.length <= index && i < 100; i++) await sleep(20);
+    assert.ok(deliveries[index], "expected a synthetic email");
+    return deliveries[index];
+  }
   const readCode = index => deliveries[index].text.match(/[۰-۹]{6}/)[0].replace(/[۰-۹]/g, char => String(char.charCodeAt(0) & 15));
   const admin = (cookie, body, requestOrigin = origin) => mf.dispatchFetch(`${origin}/api/admin/promotion`, {
     method: body ? "PUT" : "GET",
@@ -85,8 +105,8 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal(started.status, 202);
     assert.match(started.headers.get("Cache-Control"), /no-store/);
     const { challenge } = await started.json();
-    assert.deepEqual(deliveries[0].to, [email]);
-    assert.equal((await auth("register-code", { email }, null, "192.0.2.3")).status, 429);
+    assert.deepEqual((await awaitDelivery(0)).to, [email]);
+    assert.equal((await auth("register-code", { email }, null, "192.0.2.3")).status, 202);
     const codeProof = { email, challenge, code: readCode(0) };
     assert.equal((await auth("confirm-email", { ...codeProof, email: "someone@example.com" })).status, 400);
     const confirmation = await Promise.all([auth("confirm-email", codeProof), auth("confirm-email", codeProof)]);
@@ -128,6 +148,7 @@ test("registration, password recovery and account deletion preserve authorizatio
       mediaUrl: "https://media.example.com/poster.gif", linkLabel: "Instagram" };
     assert.equal((await admin(cookie, { ...image, mediaType: "html" })).status, 400);
     assert.equal((await admin(cookie, { ...image, mediaUrl: "http://example.com/poster.gif" })).status, 400);
+    assert.equal((await admin(cookie, { ...image, mediaUrl: "https://other.example.com/poster.gif" })).status, 400);
     assert.equal((await admin(cookie, { ...image, startsAt: 10, endsAt: 5 })).status, 400);
     const scheduled = (await (await admin(cookie, { ...image, startsAt: Date.now() + 60_000 })).json()).promotion;
     assert.equal(scheduled.id, published.id);
@@ -155,7 +176,7 @@ test("registration, password recovery and account deletion preserve authorizatio
     const other = "english@example.com";
     const sent = await auth("register-code", { email: other, language: "en" });
     assert.equal(sent.status, 202);
-    assert.equal(deliveries[1].subject, "Verify your email for Medora");
+    assert.equal((await awaitDelivery(1)).subject, "Verify your email for Medora");
     const secondProof = { email: other, challenge: (await sent.json()).challenge, code: deliveries[1].text.match(/\b\d{6}\b/)[0] };
     const secondGrant = (await (await auth("confirm-email", secondProof)).json()).grant;
     const duplicate = await auth("register", { email: other, grant: secondGrant, username: "MEDORA_ADMIN", password });
@@ -287,6 +308,7 @@ test("registration, password recovery and account deletion preserve authorizatio
     assert.equal((await auth("register", repeatedSignup, null, "192.0.2.31")).status, 401);
     const newCode = await auth("register-code", { email: other });
     assert.equal(newCode.status, 202);
+    await awaitDelivery(2);
     const freshProof = { email: other, challenge: (await newCode.json()).challenge, code: readCode(2) };
     const freshGrant = (await (await auth("confirm-email", freshProof)).json()).grant;
     assert.equal((await auth("register", { ...repeatedSignup, grant: freshGrant }, null, "192.0.2.31")).status, 200);
@@ -309,9 +331,16 @@ test("registration, password recovery and account deletion preserve authorizatio
     const resetInput = { email: legacyEmail, challenge: resetChallenge, code: message.text.match(/\b\d{6}\b/)[0], password: nextPassword };
     assert.equal((await auth("confirm-email", resetInput, null, "192.0.2.40")).status, 400);
     assert.equal((await auth("reset-password", resetInput, null, "192.0.2.40", "https://other.test")).status, 403);
+    const credentialIndex = (await mf.getDurableObjectNamespace("CREDENTIALS")).getByName("medora-credentials-v1");
+    await credentialIndex.loseNextResetResponse();
+    const interrupted = await auth("reset-password", resetInput, null, "192.0.2.41");
+    assert.equal(interrupted.status, 503);
+    assert.deepEqual(await interrupted.json(), { error: "reset_retry" });
+    const afterInterrupted = await credentialIndex.find("legacy");
     const resets = await Promise.all([auth("reset-password", resetInput, null, "192.0.2.40"),
       auth("reset-password", resetInput, null, "192.0.2.40")]);
     assert.deepEqual(resets.map(result => result.status).sort(), [200, 400]);
+    assert.equal((await credentialIndex.find("legacy")).salt, afterInterrupted.salt);
     assert.equal((await (await auth("session", null, cookieOf(legacyLogin))).json()).email, null);
     assert.equal((await login("legacy", password, "192.0.2.40")).status, 401);
     assert.equal((await login("legacy", nextPassword, "192.0.2.40")).status, 200);
@@ -324,6 +353,7 @@ test("registration, password recovery and account deletion preserve authorizatio
       const sent = await auth("register-code", { email }, null, ip);
       assert.equal(sent.status, 202);
       const { challenge } = await sent.json();
+      await awaitDelivery(delivery);
       const verified = await auth("confirm-email", { email, challenge, code: readCode(delivery) }, null, ip);
       assert.equal(verified.status, 200);
       const { grant } = await verified.json();
@@ -337,6 +367,7 @@ test("registration, password recovery and account deletion preserve authorizatio
     const rotatingEmail = "rotate-code@example.com";
     const rotatingDelivery = deliveries.length;
     const rotatingCode = await (await auth("register-code", { email: rotatingEmail }, null, "192.0.2.60")).json();
+    await awaitDelivery(rotatingDelivery);
     const priorCode = { email: rotatingEmail, challenge: rotatingCode.challenge, code: readCode(rotatingDelivery) };
     const beforeRotation = await login("legacy", nextPassword, "192.0.2.60");
     const legacyOwner = cookieOf(beforeRotation).split("=")[1].split(".")[0];

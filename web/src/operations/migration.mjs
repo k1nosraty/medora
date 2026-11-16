@@ -183,8 +183,10 @@ export function authorizeMigration(request, env, url) {
   const token = env.MIGRATION_TOKEN;
   const provided = request.headers.get("Authorization")?.slice(7);
   if (!hex(token, 64)) return reply({ error: "not_found" }, 404);
-  if (env.MIGRATION_TOKEN_EXPIRES_AT &&
-      !(Number(env.MIGRATION_TOKEN_EXPIRES_AT) > Date.now())) return reply({ error: "not_found" }, 404);
+  const remaining = Number(env.MIGRATION_TOKEN_EXPIRES_AT) - Date.now();
+  if (!Number.isSafeInteger(remaining) || remaining <= 0 || remaining > 24 * 60 * 60_000) {
+    return reply({ error: "not_found" }, 404);
+  }
   if (url.protocol !== "https:" && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
     return reply({ error: "https_required" }, 400);
   }
@@ -207,6 +209,7 @@ export async function handleMigration(request, env, url) {
       const data = await collect(env, store, credentials, promotion);
       await validate(data, env);
       const archive = await encryptBackup(data, password, magic);
+      await store.audit("migration", "archive_exported");
       return new Response(archive, { headers: { ...headers, "Content-Type": "application/octet-stream",
         "Content-Disposition": 'attachment; filename="medora-server.medbackup"' } });
     }

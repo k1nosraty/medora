@@ -1,3 +1,4 @@
+import { quickActions } from "./quick-action.js";
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { glassObject } from "../../design/three-dimensional.js";
@@ -89,6 +90,8 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   const personalName = () => getState()?.personalProfile?.firstName || overview?.label || t("ui.me");
   const groupInView = () => overview?.groups.find(item => item.id === activeGroup) ?? overview?.groups[0];
+  const waterActions = quickActions();
+
   function renderInboxBadge(invitations) {
     const count = invitations.length;
     const text = localDigits(count);
@@ -625,10 +628,14 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
 
   async function quickWater(view, day, amount, control) {
     if (!view.canRecord("water", day)) return;
+    const key = JSON.stringify([view.group.id, view.member.id, day, amount]);
+    const attempt = waterActions.start(key, () => clockFor(view.zone));
+    if (!attempt) return;
     control.disabled = true;
     try {
-      await familyRequest("record", { group: view.group.id, target: view.member.id, operation: crypto.randomUUID(),
-        kind: "water", day, amount, time: clockFor(view.zone) });
+      await familyRequest("record", { group: view.group.id, target: view.member.id, operation: attempt.operation,
+        kind: "water", day, amount, time: attempt.time });
+      waterActions.finish(key, true);
       if (view.member.id === getFamilyView()?.member.id && view.group.id === getFamilyView()?.group.id) {
         await checkAccess({ feedback: t("ui.water-logged"), force: true });
       }
@@ -640,7 +647,10 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
           $("family-notice").hidden = false;
         }
       }
-    } finally { control.disabled = false; }
+    } finally {
+      waterActions.finish(key, false);
+      control.disabled = false;
+    }
   }
 
   function recordFor(group, member, details) {
