@@ -105,7 +105,7 @@ test("family projections exclude unknown fields and deeply nested legacy extensi
     id: "sample", name: "Synthetic", unit: "tablet", sharedInstructions: "Share this",
     extension: "private legacy extra",
     phases: [{ start: 20000, end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 1000, extension: "private slot extra" }] }]
-  } }, water: [{ id: "water", day: 20000, time: "10:00", amount: 200, extension: "private water extra" }] };
+  } }, water: [{ id: "water", day: 20000, time: "10:00", amount: 200, recordedBy: { extension: "private author extra" }, extension: "private water extra" }] };
   const view = sharedCare(source, ["medicines", "water"]);
   assert.equal(view.medicines.sample.sharedInstructions, "Share this");
   assert.equal(view.medicines.sample.phases[0].slots[0].amount, 1000);

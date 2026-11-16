@@ -52,9 +52,16 @@ test("browser restore honors intent against the Worker and transfers private not
     expect(seed.status).toBe(200);
     const latest = async () => (await dispatch(care)).json();
     let loseRotationAcknowledgement = false;
+    let disabledReminder;
     const connect = page => page.route("**/api/**", async route => {
       const request = route.request();
       const { pathname, search } = new URL(request.url());
+      if (pathname === "/api/reminders" && request.method() === "PUT" &&
+          request.headers().authorization === "Bearer synthetic-clearing-token") {
+        disabledReminder = request.postDataJSON();
+        await route.fulfill({ json: { enabled: false, revision: disabledReminder.revision } });
+        return;
+      }
       const response = await dispatch(pathname + search, request.method(), request.postDataBuffer() ?? undefined);
       if (loseRotationAcknowledgement && request.method() === "PUT" && pathname === care &&
           request.postDataJSON()?.rotationProof && response.ok) {
@@ -166,12 +173,20 @@ test("browser restore honors intent against the Worker and transfers private not
     await page.locator("#account-sync-keep-cloud").click();
     await expect.poll(async () => (await state(page)).water).toEqual([cloudEdit]);
     await page.locator('[data-account-shortcut="backup-settings"]').click();
+    await page.evaluate(async () => {
+      const { accessCareSettings } = await import("/medication/shared/storage.js");
+      await accessCareSettings(state => {
+        state.reminders = { token: "synthetic-clearing-token", revision: 3, synced: 3, enabled: false, details: true };
+      });
+    });
     page.once("dialog", dialog => dialog.dismiss());
     await page.locator("#clear-device-records").click();
     expect((await state(page)).water).toEqual([cloudEdit]);
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#clear-device-records").click();
     await expect.poll(async () => (await state(page)).water).toEqual([]);
+    await expect.poll(async () => (await state(page)).reminders).toBeUndefined();
+    expect(disabledReminder).toEqual({ enabled: false, revision: 4 });
     expect((await latest()).records.water).toEqual([cloudEdit]);
   } finally {
     await secondContext?.close();

@@ -22,8 +22,16 @@ const projectionFields = {
   cycleRecords: ["end", "flow", "sharedNote", ...attribution]
 };
 
+const listFields = ["dates", "offsets", "steps", "checked"];
+const scalar = value => value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
+
 function selectFields(row, keys) {
-  return Object.fromEntries(keys.filter(key => Object.hasOwn(row ?? {}, key)).map(key => [key, row[key]]));
+  return Object.fromEntries(keys.flatMap(key => {
+    if (!Object.hasOwn(row ?? {}, key)) return [];
+    const value = row[key];
+    if (scalar(value) || (listFields.includes(key) && Array.isArray(value) && value.every(scalar))) return [[key, value]];
+    return [];
+  }));
 }
 
 function project(kind, row) {

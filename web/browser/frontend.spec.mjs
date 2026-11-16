@@ -343,6 +343,19 @@ test("failed storage writes preserve records and repaint errors do not undo a co
   await page.locator("#today-water-quick").click();
   await expect(page.locator("#status")).toHaveText(/Browser storage is full/);
   expect(await water()).toHaveLength(0);
+  await page.evaluate(() => {
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (...args) {
+      if (this.name === "days") {
+        IDBObjectStore.prototype.put = put;
+        throw new Error("synthetic private storage diagnostic");
+      }
+      return put.apply(this, args);
+    };
+  });
+  await page.locator("#today-water-quick").click();
+  await expect(page.locator("#status")).toHaveText("Could not save. Try again.");
+  expect(await water()).toHaveLength(0);
 
   await page.evaluate(() => {
     const paint = Element.prototype.replaceChildren;
