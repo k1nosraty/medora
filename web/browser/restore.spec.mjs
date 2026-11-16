@@ -21,6 +21,8 @@ const visit = { id: "v", name: "Synthetic visit", day: 20000, time: "15:00", not
 
 test.use({ serviceWorkers: "block" });
 test("browser restore honors intent against the Worker and transfers private notes only with the recovery key", async ({ page, browser }) => {
+  // The two-device restore and rotation exercises several cryptographic operations on CI.
+  test.setTimeout(90_000);
   const { outputFiles } = await build({
     absWorkingDir: fileURLToPath(new URL("../", import.meta.url)), entryPoints: ["src/worker.mjs"],
     bundle: true, platform: "browser", format: "esm", external: ["cloudflare:workers", "node:crypto", "node:buffer"], write: false

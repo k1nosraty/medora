@@ -512,9 +512,12 @@ test("design gallery opens shared forms", async ({ page }) => {
   await page.locator('[data-open-visit]').first().evaluate(button => button.click());
   await expect(page.locator("#visit-dialog")).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.setViewportSize({ width: 320, height: 640 });
+  await expect(page.locator("#visit-dialog")).toBeHidden();
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  for (const width of [320, 300]) {
+    await page.setViewportSize({ width, height: 640 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  }
   expect(errors).toEqual([]);
 });
 

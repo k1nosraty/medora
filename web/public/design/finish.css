@@ -120,6 +120,8 @@
   .medora .gallery #today-dates .day-week button[aria-current="date"] { background: var(--action); backdrop-filter: none; }
   .medora .gallery .gallery-calendar { grid-template-columns: repeat(7, minmax(0, 1fr)); }
   .medora .gallery .gallery-calendar button { padding-inline: 0; }
+  .medora .gallery .gallery-banner { grid-template-columns: minmax(0, 1fr) min(35%, 5rem); }
+  .medora .gallery .gallery-banner > :first-child { min-inline-size: 0; overflow-wrap: anywhere; }
   .medora .gallery .program-grid:has(> .program-card),
   .medora .gallery :is(#today-water, .glass-comparison-pair, #gallery-finish-comparison) { grid-template-columns: minmax(0, 1fr); }
   .medora .gallery .today-water-art { display: none; }
