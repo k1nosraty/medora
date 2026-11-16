@@ -107,6 +107,13 @@ async function sync(check = false, snapshot) {
   try {
     let remote;
     let latest;
+    if (settings.clearing && registration) {
+      const currentSubscription = await registration.pushManager.getSubscription().catch(() => null);
+      if (currentSubscription && await matchesSubscriptionId(settings.token.split(".")[0], currentSubscription.toJSON())) {
+        await currentSubscription.unsubscribe().catch(() => false);
+        subscription = null;
+      }
+    }
     if (settings.revision > (settings.synced ?? 0)) {
       status(t("ui.syncing-reminders"));
       if (settings.enabled && !subscription) return status(t("ui.setting-up-the-notification-subscription"));
@@ -127,7 +134,14 @@ async function sync(check = false, snapshot) {
       remote = await request(api, "PUT", settings.token, body);
       latest = (await accessCareSettings(current => {
         const reminder = current.reminders;
-        if (reminder?.token === settings.token) reminder.synced = Math.max(reminder.synced ?? 0, settings.revision);
+        if (reminder?.token !== settings.token) return;
+        if (settings.clearing && reminder.revision === settings.revision && remote.enabled === false && remote.revision >= settings.revision) {
+          delete current.reminders;
+        } else if (!settings.clearing) {
+          reminder.synced = Math.max(reminder.synced ?? 0, settings.revision);
+        } else if (remote.revision >= settings.revision) {
+          reminder.revision = remote.revision + 1;
+        }
       })).reminders;
     } else if (check) {
       remote = await request(api, "GET", settings.token);

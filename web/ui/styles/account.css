@@ -102,3 +102,5 @@
 .account-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
 .medora .account-shortcuts button { display: flex; justify-content: center; align-items: center; gap: .3rem; padding-inline: .2rem; }
 .medora .account-shortcuts svg { inline-size: 1rem; block-size: 1rem; }
+
+#account-sync-review pre { white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 14rem; overflow: auto; }

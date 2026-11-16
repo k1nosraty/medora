@@ -1,3 +1,4 @@
+import { CareInputError } from "../shared/ui/care-error.js";
 import { installEntryActions } from "./entry-actions.js";
 import { preserveFocus } from "../shared/ui/focus.js";
 import { routeFromLocation } from "./routes.js";
@@ -81,7 +82,7 @@ async function mutate(change, success, scheduleChanged = false, day) {
       needsSync = state.reminders?.revision !== revision;
     }, { snapshot: care, day });
   } catch (error) {
-    $("status").textContent = error instanceof Error && error.name === "Error" ? error.message : t(storageMessage(error, "ui.could-not-save-try-again"));
+    $("status").textContent = error instanceof CareInputError ? error.message : t(storageMessage(error, "ui.could-not-save-try-again"));
     return false;
   } finally {
     busy = false;
@@ -284,4 +285,30 @@ try {
   void initializeReminders();
 } catch (error) {
   $("boot-status").textContent = t(storageMessage(error, "ui.the-schedule-engine-or-local-storage-is-unavailable"));
+  $("boot-recovery").hidden = false;
+  $("boot-recovery-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const password = $("boot-recovery-password");
+    const status = $("boot-recovery-status");
+    event.submitter.disabled = true;
+    try {
+      const [{ encryptBackup }, { readCareRecovery }] = await Promise.all([
+        import("../shared/crypto/backup.js"), import("../shared/storage.js")
+      ]);
+      const data = await readCareRecovery();
+      const bytes = await encryptBackup(data, password.value, new TextEncoder().encode("MEDORAID"));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "medora-storage-recovery.medoraid";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      status.textContent = t("ui.storage-recovery-ready");
+    } catch {
+      status.textContent = t("ui.storage-recovery-failed");
+    } finally {
+      password.value = "";
+      event.submitter.disabled = false;
+    }
+  });
 }

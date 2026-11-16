@@ -1,3 +1,5 @@
+import { equalCareValues } from "../../public/medication/domain/care-contract.js";
+import { rotationContents } from "../../public/medication/domain/private-fields.js";
 import { codeKey, identityKey, passwordKey, passwordVersion, sessionKey, validAuthKeys } from "./keys.mjs";
 import { operations, logOperation } from "../operations/audit.mjs";
 import { DurableObject } from "cloudflare:workers";
@@ -14,6 +16,17 @@ const day = 24 * 60 * minute;
 const sessionAge = 30 * day;
 const familyReplayAge = 7 * day;
 const adminSessionMaxAge = 10 * minute;
+const loginFailureFloor = 220;
+const loginSourceWindow = 15 * minute;
+const loginSourceLimit = 10;
+const maxTrackedLoginSources = 64;
+
+async function loginFailure(started) {
+  const jitter = crypto.getRandomValues(new Uint8Array(1))[0] % 31;
+  const remaining = started + loginFailureFloor + jitter - Date.now();
+  if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
+  return reply({ error: "credentials" }, 401);
+}
 const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
 const sessionPattern = /^([a-f0-9]{64})\.([a-f0-9]{64})\.([a-f0-9]{64})$/;
 const challengePattern = /^([a-f0-9-]{36})\.([a-f0-9]{64})$/;
@@ -143,19 +156,21 @@ export async function handleEmailAuth(request, env, url, ctx) {
   const body = await smallJson(request, 4096);
   const index = credentials(env);
   if (route === "login") {
+    const started = Date.now();
     const username = usernameOf(body?.username);
-    if (!username || !validPassword(body?.password)) return reply({ error: "credentials" }, 401);
+    if (!username || !validPassword(body?.password)) return loginFailure(started);
     const record = await index.find(username);
     if (!record) {
       const task = operations(env)?.count(["login:failed"]).catch(() => {});
       if (task) ctx.waitUntil(task);
-      return reply({ error: "credentials" }, 401);
+      return loginFailure(started);
     }
     const client = env.EMAIL_ACCOUNTS.getByName(record.email_id);
-    const result = await client.login(username, record.email_id, body.password);
+    const source = await hmac(sessionKey(env), "login-source-v1", record.email_id + ":" + ip);
+    const result = await client.login(username, record.email_id, body.password, source);
     const task = operations(env)?.count([result.token ? "login:success" : "login:failed"]).catch(() => {});
     if (task) ctx.waitUntil(task);
-    if (!result.token) return reply({ error: result.error }, result.error === "rate_limit" ? 429 : 401);
+    if (!result.token) return loginFailure(started);
     return signedIn(env, record.email, username, record.email_id, result.token);
   }
   if (route === "register") {
@@ -239,6 +254,7 @@ export class EmailAccount extends DurableObject {
       CREATE TABLE IF NOT EXISTS pending_password_reset
         (id TEXT PRIMARY KEY REFERENCES reset_challenge(id) ON DELETE CASCADE, salt TEXT NOT NULL, proof TEXT NOT NULL, version TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS password_sources (source TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS password_attempts (id INTEGER PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS account_reset (id INTEGER PRIMARY KEY, epoch TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS family_operations (operation TEXT PRIMARY KEY, expires INTEGER NOT NULL);
@@ -331,7 +347,7 @@ export class EmailAccount extends DurableObject {
         return { retry: true };
       }
       this.ctx.storage.transactionSync(() => {
-        this.sql.exec("DELETE FROM password_attempts; DELETE FROM reset_challenge;");
+        this.sql.exec("DELETE FROM password_attempts; DELETE FROM password_sources; DELETE FROM reset_challenge;");
       });
       return true;
     });
@@ -354,16 +370,20 @@ export class EmailAccount extends DurableObject {
     });
   }
 
-  async login(username, emailId, password) {
+  async login(username, emailId, password, source) {
     return this.ctx.blockConcurrencyWhile(async () => {
       const record = await credentials(this.env).find(username);
       if (record?.email_id !== emailId) return { error: "credentials" };
       if (await this.ctx.storage.get("account-deletion")) return { error: "credentials" };
       const now = Date.now();
-      const attempts = this.sql.exec("SELECT count, expires FROM password_attempts WHERE id = 1 AND expires > ?", now).toArray()[0];
-      if (attempts?.count >= 10) return { error: "rate_limit" };
-      this.sql.exec("INSERT OR REPLACE INTO password_attempts VALUES (1, ?, ?)",
-        (attempts?.count ?? 0) + 1, attempts?.expires ?? now + 15 * minute);
+      this.sql.exec("DELETE FROM password_sources WHERE expires <= ?", now);
+      const attempts = this.sql.exec("SELECT count, expires FROM password_sources WHERE source = ?", source).toArray()[0];
+      if (attempts?.count >= loginSourceLimit) return { error: "credentials" };
+      this.sql.exec("INSERT OR REPLACE INTO password_sources VALUES (?, ?, ?)", source,
+        (attempts?.count ?? 0) + 1, attempts?.expires ?? now + loginSourceWindow);
+      this.sql.exec("DELETE FROM password_sources WHERE source IN (SELECT source FROM password_sources ORDER BY expires DESC LIMIT -1 OFFSET ?)",
+        maxTrackedLoginSources);
+      await this.scheduleCleanup();
       const currentVersion = passwordVersion(this.env);
       const key = passwordKey(this.env, record.password_key);
       if (!key || !equal(record.proof, await passwordProof(key, password, record.salt))) return { error: "credentials" };
@@ -372,7 +392,7 @@ export class EmailAccount extends DurableObject {
         const proof = await passwordProof(passwordKey(this.env), password, salt);
         await credentials(this.env).replacePassword(emailId, salt, proof, currentVersion);
       }
-      this.sql.exec("DELETE FROM password_attempts WHERE id = 1");
+      this.sql.exec("DELETE FROM password_sources WHERE source = ?", source);
       return { token: await this.createSession(record.email) };
     });
   }
@@ -387,7 +407,7 @@ export class EmailAccount extends DurableObject {
         const job = { username, emailId, salt, email: record.email, owner: accountScope(emailId, this.epoch()),
           devices: await storage.get("reminder-devices") ?? [], at: Date.now() + 100,
           counts: { familyRows: 0, devices: 0, operationKeys: this.sql.exec("SELECT count(*) AS n FROM family_operations").one().n } };
-        this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM reset_challenge; DELETE FROM deliveries; DELETE FROM password_attempts; DELETE FROM family_operations;");
+        this.sql.exec("DELETE FROM sessions; DELETE FROM challenge; DELETE FROM reset_challenge; DELETE FROM deliveries; DELETE FROM password_attempts; DELETE FROM password_sources; DELETE FROM family_operations;");
         this.sql.exec("INSERT OR REPLACE INTO account_reset VALUES (1, ?)", hex(crypto.getRandomValues(new Uint8Array(16))));
         await storage.delete(["care-sync", "care-zone", "reminder-devices", "reminder-update"]);
         await storage.put("account-deletion", job);
@@ -542,14 +562,21 @@ export class EmailAccount extends DurableObject {
     });
   }
 
-  async saveCareSnapshot(revision, records, generation, token, zone, id) {
+  async saveCareSnapshot(revision, records, generation, token, zone, id, rotationProof) {
     const hash = await sessionHash(token);
     return this.ctx.storage.transaction(async storage => {
       if (!this.activeSessionEmail(hash)) return { signedOut: true };
       if (generation !== this.epoch()) return null;
       const current = await storage.get("care-sync") ?? { revision: 0 };
       if (current.revision !== revision) return null;
-      if (current.records?.privacyVersion && current.records.privacyKey !== records.privacyKey) return { privacyKey: true };
+      const currentRecords = current.records;
+      if (rotationProof !== undefined) {
+        if (!currentRecords?.privacyRotation || !records.privacyRotation || records.privacyKey === currentRecords.privacyKey ||
+            records.privacyRotation === currentRecords.privacyRotation ||
+            !equal(currentRecords.privacyRotation, await sessionHash(rotationProof)) ||
+            !equalCareValues(rotationContents(currentRecords), rotationContents(records))) return { privacyKey: true };
+      } else if (currentRecords?.privacyVersion && (currentRecords.privacyKey !== records.privacyKey ||
+          currentRecords.privacyRotation !== records.privacyRotation)) return { privacyKey: true };
       const next = { revision: revision + 1, records };
       const owner = accountScope(id, generation);
       if (!careSnapshotFits(owner, next.revision, records, zone ?? await storage.get("care-zone") ?? "Asia/Tehran")) {
@@ -693,6 +720,7 @@ export class EmailAccount extends DurableObject {
   }
 
   prune(now) {
+    this.sql.exec("DELETE FROM password_sources WHERE expires <= ?", now);
     this.sql.exec("DELETE FROM deliveries WHERE sent <= ?", now - day);
     this.sql.exec("DELETE FROM challenge WHERE expires <= ?", now);
     this.sql.exec("DELETE FROM reset_challenge WHERE expires <= ?", now);
@@ -720,11 +748,12 @@ export class EmailAccount extends DurableObject {
   async scheduleCleanup() {
     await this.ctx.storage.transaction(async storage => {
       const { next } = this.sql.exec("SELECT MIN(value) AS next FROM (SELECT sent + ? AS value FROM deliveries UNION ALL SELECT expires FROM challenge UNION ALL SELECT expires FROM reset_challenge UNION ALL SELECT expires FROM sessions UNION ALL SELECT expires FROM family_operations)", day).one();
+      const { sourceExpiry } = this.sql.exec("SELECT MIN(expires) AS sourceExpiry FROM password_sources").one();
       const job = await storage.get("reminder-update");
       const deletion = await storage.get("account-deletion");
       const summary = await storage.get("account-deletion-summary");
       const legacy = await storage.get("family-operations-migrated") ? Infinity : Date.now() + 250;
-      const alarm = Math.min(next ?? Infinity, job?.at ?? Infinity, deletion?.at ?? Infinity, summary?.expires ?? Infinity, legacy);
+      const alarm = Math.min(next ?? Infinity, sourceExpiry ?? Infinity, job?.at ?? Infinity, deletion?.at ?? Infinity, summary?.expires ?? Infinity, legacy);
       if (Number.isFinite(alarm)) await storage.setAlarm(alarm);
     });
   }

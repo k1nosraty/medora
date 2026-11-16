@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { assertRestoreRevision, restoreTarget } from "../public/medication/domain/restore-intent.js";
 import { saveMedicinePlan } from "../public/medication/domain/medicine-command.js";
-import { mergeCare, mergeRestoredCare } from "../public/medication/features/sync/merge.js";
-import { emptyCareRecords } from "../public/medication/domain/family.js";
+import { CareConflict, conflictChoice, mergeCare, mergeRestoredCare } from "../public/medication/features/sync/merge.js";
+import { emptyCareRecords, sharedCare } from "../public/medication/domain/family.js";
 import { validateCareRecords } from "../public/medication/domain/care-records.js";
 import { reminderCareProjection } from "../public/medication/domain/care-plan.js";
 
@@ -24,6 +24,9 @@ test("conflicting dose outcomes and incompatible medication schedule edits keep 
   const taken = { ...base, doses: { "m|20000|480": { ...dose, status: "taken", actual: 1000 } } };
   const skipped = { ...base, doses: { "m|20000|480": { ...dose, status: "skipped" } } };
   assert.throws(() => mergeCare(base, taken, skipped), /care_conflict/);
+  const localNote = { ...taken, doses: { "m|20000|480": { ...taken.doses["m|20000|480"], instructions: "Local note" } } };
+  const cloudNote = { ...taken, doses: { "m|20000|480": { ...taken.doses["m|20000|480"], instructions: "Cloud note" } } };
+  assert.throws(() => mergeCare(taken, localNote, cloudNote), /care_conflict/);
   const dates = { ...base, medicines: { m: { ...medicine, dates: [20001] } } };
   const phases = { ...base, medicines: { m: { ...medicine, phases: [{ ...medicine.phases[0], mask: 1 }] } } };
   assert.throws(() => mergeCare(base, dates, phases), /care_conflict/);
@@ -61,6 +64,51 @@ test("versioned care writes reject duplicate identities, while legacy data remai
   const water = { id: "water", day: 20000, time: "10:00", amount: 250 };
   const legacy = { ...emptyCareRecords(), water: [water, water] };
   assert.doesNotThrow(() => validateCareRecords(legacy));
+  assert.throws(() => mergeCare(null, legacy, null), /invalid_backup/);
   assert.throws(() => validateCareRecords({ ...legacy, careSchemaVersion: 1 }), /invalid_backup/);
   assert.doesNotThrow(() => validateCareRecords({ ...legacy, water: [water], careSchemaVersion: 1 }));
+});
+
+
+test("a choice is scoped to the competing record versions and independent edits still merge", () => {
+  const original = { id: "visit", name: "Synthetic", day: 20000, time: "09:00" };
+  const base = { visits: { visit: original } };
+  const local = { visits: { visit: { ...original, time: "10:00" } }, settings: { waterGoal: 1000 } };
+  const cloud = { visits: { visit: { ...original, time: "11:00" } } };
+  let choices = [];
+  assert.throws(() => mergeCare(base, local, cloud), error => {
+    assert.ok(error instanceof CareConflict);
+    assert.deepEqual(error.path, ["visits", "visit"]);
+    choices = [{ ...error, side: "cloud" }];
+    return true;
+  });
+  const merged = mergeCare(base, local, cloud, conflict => conflictChoice(conflict, choices));
+  assert.equal(merged.visits.visit.time, "11:00");
+  assert.equal(merged.settings.waterGoal, 1000);
+  assert.throws(() => mergeCare(base, local, { visits: { visit: { ...original, time: "12:00" } } },
+    conflict => conflictChoice(conflict, choices)), /care_conflict/);
+});
+
+test("bounded snapshots reject oversized and deeply nested extensions without invalidating legacy reads", () => {
+  const visit = { id: "v", name: "Synthetic", day: 20000, time: "09:00", note: "x".repeat(17_000) };
+  const legacy = { ...emptyCareRecords(), visits: { v: visit } };
+  assert.doesNotThrow(() => validateCareRecords(legacy));
+  assert.throws(() => validateCareRecords({ ...legacy, careSchemaVersion: 2 }), /invalid_backup/);
+  let extension = {};
+  for (let i = 0; i < 15; i++) extension = { nested: extension };
+  assert.throws(() => validateCareRecords({ ...emptyCareRecords(), extension, careSchemaVersion: 2 }), /invalid_backup/);
+  assert.throws(() => validateCareRecords({ ...emptyCareRecords(), careSchemaVersion: 3 }), /invalid_backup/);
+});
+
+test("family projections exclude unknown fields and deeply nested legacy extensions", () => {
+  const source = { ...emptyCareRecords(), medicines: { sample: {
+    id: "sample", name: "Synthetic", unit: "tablet", sharedInstructions: "Share this",
+    extension: "private legacy extra",
+    phases: [{ start: 20000, end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 1000, extension: "private slot extra" }] }]
+  } }, water: [{ id: "water", day: 20000, time: "10:00", amount: 200, extension: "private water extra" }] };
+  const view = sharedCare(source, ["medicines", "water"]);
+  assert.equal(view.medicines.sample.sharedInstructions, "Share this");
+  assert.equal(view.medicines.sample.phases[0].slots[0].amount, 1000);
+  assert.equal(view.water[0].amount, 200);
+  assert.doesNotMatch(JSON.stringify(view), /private .* extra/);
 });

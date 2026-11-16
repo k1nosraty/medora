@@ -1,3 +1,4 @@
+import { CareInputError } from "../../shared/ui/care-error.js";
 import { isRestoreMode } from "../../domain/restore-intent.js";
 import { portable } from "../../domain/care-records.js";
 import { t } from "../../shared/i18n/locale.js";
@@ -20,12 +21,17 @@ export function installBackupRestore(mutate, validatePhases, { prepareRestore, c
     if (!confirm(t("ui.clear-device-confirm"))) return;
     if (await mutate(state => {
       const reminders = state.reminders;
-      changeReminderRevision(state);
       for (const key of Object.keys(state)) delete state[key];
       Object.assign(state, { intro: "done", medicines: {}, doses: {}, water: [], routineLogs: {}, preventAutoRestore: true });
-      if (reminders) state.reminders = { ...reminders, enabled: false };
+      if (reminders?.token) state.reminders = {
+        token: reminders.token, revision: Math.max(reminders.revision ?? 0, reminders.synced ?? 0) + 1,
+        enabled: false, clearing: true
+      };
     }, t("ui.clear-device-done"), true)) {
       clearRecovery();
+      try {
+        for (const key of ["medora-family-active-group", "medora-family-quick-actions-v1"]) sessionStorage.removeItem(key);
+      } catch {}
       exportFeedback("ui.clear-device-done", "success");
     }
   });
@@ -163,7 +169,7 @@ export function installBackupRestore(mutate, validatePhases, { prepareRestore, c
         Object.assign(state, backup);
         delete state.preventAutoRestore;
         const account = state.accountCare;
-        if (target.owner && account?.owner && target.owner !== account.owner) throw new Error(t("ui.restore-cloud-unavailable"));
+        if (target.owner && account?.owner && target.owner !== account.owner) throw new CareInputError(t("ui.restore-cloud-unavailable"));
         state.accountCare = { ...account, enabled: mode !== "device",
           ...(target.owner && { owner: target.owner }),
           restore: { ...target, id: restoreId, ...(mode !== "device" && { records: portable(state) }) } };

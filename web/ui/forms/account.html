@@ -79,6 +79,7 @@
             <label>{{msg:ui.sync-recovery-key}}<input id="account-care-key" type="password" dir="ltr" autocomplete="off" spellcheck="false" maxlength="64"></label>
             <button type="button" id="account-care-key-generate" class="secondary">{{msg:ui.sync-generate-key}}</button>
             <button type="button" id="account-care-key-unlock" class="secondary">{{msg:ui.sync-unlock-key}}</button>
+            <button type="button" id="account-care-key-rotate" class="secondary">{{msg:ui.sync-rotate-key}}</button>
             <p id="account-care-key-status" class="settings-message" role="status"></p>
           </details>
           <details id="account-care-zone-open">
@@ -92,6 +93,13 @@
           <button id="account-sync-disable" type="button" class="text-button" hidden>{{msg:ui.pause-sync-on-this-device}}</button>
           <p id="account-sync-last" class="quiet" hidden></p>
           <p id="account-sync-status" class="quiet" role="status"></p>
+          <div id="account-sync-review" hidden>
+            <p><bdi id="account-sync-record"></bdi></p>
+            <details><summary>{{msg:ui.sync-device-version}}</summary><pre id="account-sync-local"></pre></details>
+            <details><summary>{{msg:ui.sync-cloud-version}}</summary><pre id="account-sync-cloud"></pre></details>
+            <button id="account-sync-keep-device" type="button" class="secondary">{{msg:ui.sync-keep-device}}</button>
+            <button id="account-sync-keep-cloud" type="button" class="secondary">{{msg:ui.sync-keep-cloud}}</button>
+          </div>
         </section>
         <div class="account-shortcuts">
           <button type="button" class="secondary" data-account-shortcut="notification-settings"><svg aria-hidden="true"><use href="#i-bell"/></svg>{{msg:ui.notifications}}</button>

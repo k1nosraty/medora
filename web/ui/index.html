@@ -20,6 +20,15 @@
   <main class="app-content">
     <p id="boot-status" role="status">{{msg:ui.loading-medora}}</p>
     <button id="boot-retry" type="button" hidden>{{msg:ui.reload}}</button>
+    <details id="boot-recovery" hidden>
+      <summary>{{msg:ui.storage-export-recovery}}</summary>
+      <p>{{msg:ui.storage-recovery-description}}</p>
+      <form id="boot-recovery-form">
+        <label>{{msg:ui.backup-password}} <input id="boot-recovery-password" type="password" minlength="15" maxlength="128" autocomplete="new-password" required></label>
+        <button type="submit">{{msg:ui.storage-export-recovery}}</button>
+      </form>
+      <p id="boot-recovery-status" role="status"></p>
+    </details>
     <div id="app" hidden>
       <div class="page-heading"><h1 id="screen-title" tabindex="-1">{{msg:ui.today}}</h1><p id="header-date"></p></div>
       <!-- include layout/family-context.html -->

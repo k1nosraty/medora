@@ -1,5 +1,14 @@
+import { recordObject } from "../domain/care-contract.js";
 const databaseName = "medora-medication-prototype";
 const snapshots = new WeakMap();
+const corruptStorage = () => new DOMException("Invalid care database", "DataError");
+
+function validBucket(bucket) {
+  return Number.isInteger(bucket?.day) && recordObject(bucket.doses) && Array.isArray(bucket.water) &&
+    (bucket.routines === undefined || recordObject(bucket.routines)) &&
+    bucket.water.every(row => recordObject(row) && row.day === bucket.day) &&
+    Object.values(bucket.doses).every(row => recordObject(row) && row.day === bucket.day);
+}
 
 function blankDay(day) {
   return { day, doses: {}, water: [], routines: {} };
@@ -54,6 +63,11 @@ function openDatabase() {
     };
     request.onsuccess = () => {
       if (blocked) { request.result.close(); return; }
+      if (!["care", "days"].every(name => request.result.objectStoreNames.contains(name))) {
+        request.result.close();
+        reject(corruptStorage());
+        return;
+      }
       request.result.onversionchange = () => request.result.close();
       resolve(request.result);
     };
@@ -83,7 +97,9 @@ async function transact(change, { snapshot, day, settingsOnly } = {}) {
       }
       const read = care.get("state");
       read.onsuccess = () => attempt(() => {
-        const stored = read.result ?? { settings: { medicines: {} }, revision: 0 };
+        const stored = read.result === undefined ? { settings: { medicines: {} }, revision: 0 } : read.result;
+        if (!recordObject(stored?.settings) || !recordObject(stored.settings.medicines) ||
+            !Number.isSafeInteger(stored.revision) || stored.revision < 0) throw corruptStorage();
         const { settings, revision } = stored;
         if (settingsOnly) {
           change?.(settings);
@@ -151,11 +167,13 @@ async function transact(change, { snapshot, day, settingsOnly } = {}) {
         }
 
         // Full commands may mutate arbitrary history, so they use a fresh copy.
-        if (!read.result) apply(new Map());
-        else if (matching && (!change || Number.isInteger(day))) apply(matching.days);
+        if (matching && (!change || Number.isInteger(day))) apply(matching.days);
         else {
           const records = history.getAll();
-          records.onsuccess = () => attempt(() => apply(new Map(records.result.map(bucket => [bucket.day, bucket]))));
+          records.onsuccess = () => attempt(() => {
+            if ((read.result === undefined && records.result.length) || !records.result.every(validBucket)) throw corruptStorage();
+            apply(new Map(records.result.map(bucket => [bucket.day, bucket])));
+          });
         }
       });
       transaction.oncomplete = () => resolve(result);
@@ -177,9 +195,42 @@ export function accessCareSettings(change) {
 export function storageMessage(error, fallback) {
   return ({
     BlockedError: "ui.storage-blocked",
+    DataError: "ui.storage-damaged",
+    NotFoundError: "ui.storage-damaged",
     VersionError: "ui.storage-version",
     QuotaExceededError: "ui.storage-quota",
     SecurityError: "ui.storage-unavailable",
     InvalidStateError: "ui.storage-unavailable"
   })[error?.name] ?? fallback;
+}
+
+// Read the existing version in a separate read-only transaction. Recovery must
+// never create, upgrade or delete a database.
+export function readCareRecovery() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(databaseName);
+    request.onupgradeneeded = () => request.transaction.abort();
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      try {
+        const names = ["care", "days"].filter(name => db.objectStoreNames.contains(name));
+        if (!names.length) throw corruptStorage();
+        const transaction = db.transaction(names);
+        const care = names.includes("care") ? transaction.objectStore("care").get("state") : null;
+        const days = names.includes("days") ? transaction.objectStore("days").getAll() : null;
+        transaction.onabort = () => reject(transaction.error);
+        transaction.oncomplete = () => {
+          const state = care?.result;
+          for (const data of [state, state?.settings]) {
+            if (!recordObject(data)) continue;
+            delete data.accountCare;
+            delete data.reminders;
+          }
+          resolve({ databaseVersion: db.version, care: state ?? null, days: days?.result ?? [] });
+        };
+      } catch (error) { reject(error); }
+      finally { db.close(); }
+    };
+  });
 }

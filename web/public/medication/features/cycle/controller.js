@@ -1,3 +1,4 @@
+import { CareInputError } from "../../shared/ui/care-error.js";
 import { $, button, element } from "../../shared/ui/dom.js";
 import { mountDayCard } from "../../shared/ui/day-card.js";
 import { glassObject } from "../../design/three-dimensional.js";
@@ -62,10 +63,10 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
     try {
       if (delegation) await delegation.save({ day, ...entry });
       else if (await mutate(state => {
-        if (!cycleIsEnabled(state)) throw new Error(t("ui.cycle-is-turned-off"));
+        if (!cycleIsEnabled(state)) throw new CareInputError(t("ui.cycle-is-turned-off"));
         state.cycleRecords ??= {};
-        if (day !== previous && Object.hasOwn(state.cycleRecords, day)) throw new Error(t("ui.a-cycle-is-already-logged-for-that-date"));
-        if (previous !== undefined && !Object.hasOwn(state.cycleRecords, previous)) throw new Error(t("ui.this-entry-is-no-longer-available"));
+        if (day !== previous && Object.hasOwn(state.cycleRecords, day)) throw new CareInputError(t("ui.a-cycle-is-already-logged-for-that-date"));
+        if (previous !== undefined && !Object.hasOwn(state.cycleRecords, previous)) throw new CareInputError(t("ui.this-entry-is-no-longer-available"));
         const sharedNote = state.cycleRecords[previous]?.sharedNote;
         if (previous !== undefined) delete state.cycleRecords[previous];
         state.cycleRecords[day] = { ...entry, ...(sharedNote && { sharedNote }) };
@@ -103,7 +104,7 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
           title: t("ui.delete-this-cycle-entry"),
           message: formatDay(day),
           change: state => {
-            if (!cycleIsEnabled(state)) throw new Error(t("ui.cycle-is-turned-off"));
+            if (!cycleIsEnabled(state)) throw new CareInputError(t("ui.cycle-is-turned-off"));
             delete state.cycleRecords?.[day];
           },
           success: t("ui.cycle-entry-deleted"),

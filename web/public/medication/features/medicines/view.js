@@ -1,3 +1,4 @@
+import { CareInputError } from "../../shared/ui/care-error.js";
 import { listSeparator, locale, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, action, dayCardOptions, element } from "../../shared/ui/dom.js";
 import { mountDayCard } from "../../shared/ui/day-card.js";
@@ -123,7 +124,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
         event.preventDefault();
         try {
           const added = quantity(amount);
-          if (added === 0) throw new Error(t("ui.enter-a-purchase-amount-greater-than-zero"));
+          if (added === 0) throw new CareInputError(t("ui.enter-a-purchase-amount-greater-than-zero"));
           void mutate(state => {
             const saved = state.medicines[medicine.id];
             saved.stock = engine.updateStock(saved.stock, 0, 0, added);
@@ -257,26 +258,26 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
       try {
         amountError.textContent = "";
         const entered = status === "taken" ? quantity(amount, true) : null;
-        if (entered === 0) throw new Error(t("ui.enter-an-amount-greater-than-zero"));
+        if (entered === 0) throw new CareInputError(t("ui.enter-an-amount-greater-than-zero"));
         await mutate(state => {
           const saved = state.medicines[medicine.id];
-          if (!saved) throw new Error(t("ui.this-schedule-is-paused"));
+          if (!saved) throw new CareInputError(t("ui.this-schedule-is-paused"));
           const id = doseId(saved, dose.day, dose.minute);
           const existing = state.doses[id];
           const current = createCareIndex(state, engine, localZone(), today()).dosesOn(dose.day)
             .find(slot => slot.medicineId === saved.id && slot.minute === dose.minute);
-          if (!current) throw new Error(t("ui.this-dose-changed-refresh-the-page"));
+          if (!current) throw new CareInputError(t("ui.this-dose-changed-refresh-the-page"));
           const archived = current.historyPlan;
-          if (saved.paused && !archived) throw new Error(t("ui.this-schedule-is-paused"));
+          if (saved.paused && !archived) throw new CareInputError(t("ui.this-schedule-is-paused"));
           if (status === "snoozed" && (dose.day !== today() || archived ||
-            !slotsFor(saved, dose.day).some(slot => slot.minuteOfDay === dose.minute))) throw new Error(t("ui.this-dose-can-no-longer-be-snoozed"));
+            !slotsFor(saved, dose.day).some(slot => slot.minuteOfDay === dose.minute))) throw new CareInputError(t("ui.this-dose-can-no-longer-be-snoozed"));
           const planned = current.planned;
           const actual = status === "taken" ? entered ?? existing?.actual ?? planned : null;
           const scheduled = doseTime(dose.day, dose.minute);
           const tracked = saved.stock !== null && (existing?.unit ?? archived?.unit ?? saved.unit) === saved.unit &&
             scheduled >= (saved.stockTrackedFrom ?? 0);
           if (tracked && status === "taken" && actual === null) {
-            throw new Error(t("ui.enter-the-amount-taken-to-deduct-it-from-your-stock"));
+            throw new CareInputError(t("ui.enter-the-amount-taken-to-deduct-it-from-your-stock"));
           }
           const debit = tracked ? actual ?? 0 : 0;
           if (saved.stock !== null) saved.stock = engine.updateStock(saved.stock, existing?.debit ?? 0, debit, 0);

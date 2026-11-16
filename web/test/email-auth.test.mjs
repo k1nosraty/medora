@@ -282,7 +282,14 @@ test("registration, password recovery and account deletion preserve authorizatio
     for (let i = 0; i < 10; i++) {
       assert.equal((await login("second_user", "this is a wrong password", `192.0.2.${10 + i}`)).status, 401);
     }
-    assert.equal((await login("second_user", password, "192.0.2.30")).status, 429);
+    // Independent sources cannot globally lock an account. The existing
+    // independent edge limiter still limits repeated attempts per source.
+    assert.equal((await login("second_user", password, "192.0.2.30")).status, 200);
+    const repeatedSource = "192.0.2.250";
+    for (let i = 0; i < 8; i++) {
+      assert.equal((await login("unregistered_user", password, repeatedSource)).status, 401);
+    }
+    assert.equal((await login("second_user", password, repeatedSource)).status, 429);
     assert.equal(deliveries.length, 2);
 
     const adminCookie = cookieOf(loggedIn);

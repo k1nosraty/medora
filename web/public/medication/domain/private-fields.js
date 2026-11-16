@@ -67,3 +67,16 @@ export function validPrivateText(value) {
     value.data.length <= 4 * 1024 * 1024 && value.data.length % 4 === 0 &&
     /^[A-Za-z0-9+/]+={0,2}$/.test(value.data);
 }
+
+// Rotation may replace encrypted bytes only. Keep the fact that a row had an
+// envelope in the comparison to prevent removal of private fields by rotation.
+/** @param {PrivateCareSnapshot & {privacyKey?: string, privacyRotation?: string}} records */
+export function rotationContents(records) {
+  const copy = structuredClone(records);
+  delete copy.privacyKey;
+  delete copy.privacyRotation;
+  for (const { rows, key } of privateRows(copy)) {
+    if (rows[key].privateText !== undefined) rows[key].privateText = true;
+  }
+  return copy;
+}

@@ -1,13 +1,18 @@
-import { assertRestoreRevision, restoreTarget } from "../../domain/restore-intent.js";
+import { assertRestoreRevision, isCloudRevision, restoreTarget } from "../../domain/restore-intent.js";
 import { $ } from "../../shared/ui/dom.js";
 import { t } from "../../shared/i18n/locale.js";
 import { accessCare, accessCareSettings } from "../../shared/storage.js";
 import { localZone } from "../../domain/care-plan.js";
-import { careSnapshotFits, careVersion, portable, validateCareRecords } from "../../domain/care-records.js";
+import { careSnapshotFits, careSyncLimit, careVersion, portable, validateCareRecords } from "../../domain/care-records.js";
 import { hasPrivateText } from "../../domain/private-fields.js";
-import { applyPortable, equal as same, mergeCare, mergeRestoredCare } from "./merge.js";
+import { applyPortable, CareConflict, conflictChoice, equal as same, mergeCare, mergeRestoredCare } from "./merge.js";
 import { generateRecoveryKey, importRecoveryKey, normalizePrivateCare, openPrivateCare, sealPrivateCare } from "./private-care.js";
 const path = "/api/account/care";
+
+function syncError(response) {
+  return new Error(({ 400: "invalid_sync", 401: "sign_in", 403: "forbidden", 413: "care_too_large",
+    422: "private_key", 429: "rate_limit" })[response.status] ?? "sync_failed");
+}
 
 export function installCareSync({ reload, remindersChanged, readCare = accessCare, readSettings = accessCareSettings,
   transport = fetch, now = Date.now }) {
@@ -19,12 +24,36 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
   let message = "";
   let pendingSignIn = false;
   let recovery;
+  let conflict;
+  let conflictOwner;
+  let resumeActivation = false;
+  const choices = [];
   let authGeneration = 0;
   let retryCount = 0;
   let retryAt = 0;
   const maxAutomaticRetries = 4;
   const keyInput = $("account-care-key");
   const keyStatus = $("account-care-key-status");
+  const review = $("account-sync-review");
+  function showConflict(value) {
+    conflict = value;
+    review.hidden = !value;
+    $("account-sync-record").textContent = value?.path.join(" / ") ?? "";
+    for (const side of ["local", "cloud"]) {
+      $("account-sync-" + side).textContent = !value ? "" : value[side] === undefined
+        ? t("ui.sync-record-deleted") : JSON.stringify(value[side], null, 2);
+    }
+  }
+
+  for (const side of ["device", "cloud"]) {
+    $("account-sync-keep-" + side).addEventListener("click", () => {
+      if (running || !conflict) return;
+      choices.push({ path: conflict.path, local: conflict.local, cloud: conflict.cloud, side });
+      showConflict(undefined);
+      retryCount = retryAt = 0;
+      void sync(resumeActivation);
+    });
+  }
   const zoneInput = $("account-care-zone");
   const zoneStatus = $("account-care-zone-status");
 
@@ -70,6 +99,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
     const key = recovery;
     message = "در حال همگام‌سازی سوابق…";
     void refresh();
+    let accountOwner;
     try {
       if (!activate && !signedIn && !((await readSettings()).accountCare?.enabled)) {
         message = "";
@@ -90,12 +120,17 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
         await signedOut();
         return;
       }
-      if (response.status !== 304 && !response.ok) throw new Error();
+      if (response.status !== 304 && !response.ok) throw syncError(response);
       const wire = response.status === 304 ? { owner: binding.owner, revision: binding.revision, records: binding.base } : await response.json();
+      if (!isCloudRevision(wire)) throw new Error("invalid_sync");
       if ((restore?.owner ?? binding?.owner) && (restore?.owner ?? binding.owner) !== wire.owner) {
         message = "سوابق این مرورگر به حساب دیگری متصل‌اند. برای حساب جدید از نمایهٔ جداگانهٔ مرورگر استفاده کنید.";
         return;
       }
+      if (response.status !== 304 && wire.records !== null) validateCareRecords(wire.records);
+      accountOwner = wire.owner;
+      if (conflictOwner !== accountOwner) choices.length = 0;
+      const choose = value => conflictChoice(value, choices);
       const original = normalizePrivateCare(portable(local));
       const remote = { ...wire, records: normalizePrivateCare(await openPrivateCare(wire.records, key)) };
       if (currentGeneration !== authGeneration) return;
@@ -108,14 +143,15 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
       const mergeRestore = Boolean(restore) && !replace;
       const restored = normalizePrivateCare(restore?.records);
       const candidate = replace ? mergeCare(null, restored, null) : mergeRestore ? mergeRestoredCare(restored ?? original, remote.records) :
-        autoRestore ? remote.records : mergeCare(binding?.base, original, remote.records);
+        autoRestore ? remote.records : mergeCare(binding?.base, original, remote.records, choose);
       const sameRecords = remote.records && same(candidate, mergeCare(null, remote.records, null));
       if (restore) assertRestoreRevision(restore, remote, Boolean(sameRecords));
       let confirmed = remote;
       let privacyKey = wire.records?.privacyKey;
       if ((!autoRestore && !sameRecords) || (!privacyKey && key)) {
         const zone = localZone();
-        const protectedRecords = await sealPrivateCare({ ...candidate, careSchemaVersion: 1 }, key);
+        const protectedRecords = await sealPrivateCare({ ...candidate, careSchemaVersion: 2 }, key,
+          Boolean(key && (!privacyKey || wire.records.privacyRotation)));
         validateCareRecords(protectedRecords);
         if (currentGeneration !== authGeneration) return;
         if (!careSnapshotFits(remote.owner, remote.revision, protectedRecords, zone)) throw new Error("care_too_large");
@@ -130,9 +166,13 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
           else retry(1000);
           return;
         }
-        if (!uploaded.ok) throw new Error((await uploaded.json().catch(() => ({}))).error ?? "sync_failed");
+        if (!uploaded.ok) throw syncError(uploaded);
         const saved = await uploaded.json();
-        privacyKey = saved.records?.privacyKey;
+        if (!isCloudRevision(saved) || saved.owner !== remote.owner || saved.revision !== remote.revision + 1) {
+          throw new Error("invalid_sync");
+        }
+        validateCareRecords(saved.records);
+        privacyKey = saved.records.privacyKey;
         confirmed = { ...saved, records: normalizePrivateCare(await openPrivateCare(saved.records, key)) };
       }
       if (currentGeneration !== authGeneration) return;
@@ -146,7 +186,7 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
             (!activate && !autoRestore && !current?.enabled) ||
             (current?.revision ?? 0) > confirmed.revision) return;
         const snapshot = normalizePrivateCare(portable(state));
-        const result = mergeCare(restored ?? original, snapshot, confirmed.records);
+        const result = mergeCare(restored ?? original, snapshot, confirmed.records, choose);
         edited = !same(result, mergeCare(null, confirmed.records, null));
         changed = !same(result, mergeCare(null, snapshot, null));
         linkChanged = !current?.enabled || current.sessionValid === false || current.owner !== remote.owner;
@@ -160,17 +200,27 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
           base: confirmed.records, syncedAt: now(), sessionValid: true, privacyKey };
       }, { snapshot: local });
       retryCount = retryAt = 0;
+      showConflict(undefined);
+      choices.length = 0;
       await reload(changed || linkChanged);
       message = !privacyKey && hasPrivateText(confirmed.records)
         ? "ui.sync-legacy-private-text" : "سوابق با حساب همگام شدند.";
       if (edited) schedule();
     } catch (error) {
+      if (error instanceof CareConflict && currentGeneration === authGeneration) {
+        conflictOwner = accountOwner;
+        resumeActivation = activate;
+        retryAt = Infinity;
+        showConflict(error);
+        message = "ui.sync-care-conflict";
+        return;
+      }
       if (error.message === "sign_in") {
         message = "برای ادامهٔ همگام‌سازی دوباره وارد حساب شوید.";
         await signedOut();
         return;
       }
-      if (["private_key", "private_corrupt", "restore_conflict", "care_conflict", "invalid_backup", "invalid_sync"].includes(error.message)) {
+      if (["private_key", "private_corrupt", "restore_conflict", "care_conflict", "invalid_backup", "invalid_sync", "forbidden"].includes(error.message)) {
         retryAt = Infinity;
         message = ({
           private_key: "ui.sync-recovery-key-required",
@@ -178,7 +228,8 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
           restore_conflict: "ui.restore-cloud-conflict",
           care_conflict: "ui.sync-care-conflict",
           invalid_backup: "ui.sync-invalid",
-          invalid_sync: "ui.sync-invalid"
+          invalid_sync: "ui.sync-invalid",
+          forbidden: "ui.sync-not-authorized"
         })[error.message];
         return;
       }
@@ -187,7 +238,8 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
         message = "حجم سوابق از ظرفیت همگام‌سازی بیشتر است. سوابق روی دستگاه باقی ماندند.";
         return;
       }
-      message = "همگام‌سازی انجام نشد. سوابق روی دستگاه باقی ماندند.";
+      message = error.message === "rate_limit" ? "ui.too-many-requests-check-again-in-one-minute" :
+        "همگام‌سازی انجام نشد. سوابق روی دستگاه باقی ماندند.";
       if (!activate) retry(30_000);
     } finally {
       running = enable.disabled = disable.disabled = false;
@@ -268,6 +320,57 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
     keyInput.select();
     keyStatus.textContent = t("ui.sync-save-recovery-key");
   });
+  $("account-care-key-rotate").addEventListener("click", async event => {
+    if (running) return;
+    const control = event.currentTarget;
+    const previous = recovery;
+    const input = keyInput.value.trim().toLowerCase();
+    const generation = authGeneration;
+    if (!previous) {
+      keyStatus.textContent = t("ui.sync-recovery-key-required");
+      return;
+    }
+    if (!confirm(t("ui.sync-rotate-confirm"))) return;
+    running = control.disabled = enable.disabled = disable.disabled = true;
+    try {
+      const replacement = await importRecoveryKey(input);
+      if (replacement.id === previous.id) throw new Error("private_key");
+      const response = await transport(path, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
+      if (!response.ok) throw new Error("rotation_failed");
+      const { owner, revision, records } = await response.json();
+      validateCareRecords(records);
+      if (!records.privacyRotation) throw new Error("rotation_legacy");
+      if (records.privacyKey === replacement.id) {
+        await openPrivateCare(records, replacement);
+      } else {
+        const clear = await openPrivateCare(records, previous);
+        const sealed = await sealPrivateCare(clear, replacement, true);
+        const body = JSON.stringify({ owner, revision, records: sealed, rotationProof: previous.rotationProof });
+        if (generation !== authGeneration) return;
+        if (new TextEncoder().encode(body).length > careSyncLimit) throw new Error("rotation_failed");
+        const saved = await transport(path, {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body, signal: AbortSignal.timeout(12_000)
+        });
+        if (!saved.ok) throw new Error("rotation_failed");
+        await openPrivateCare((await saved.json()).records, replacement);
+      }
+      if (generation !== authGeneration) return;
+      recovery = replacement;
+      keyInput.value = "";
+      keyInput.type = "password";
+      keyStatus.textContent = t("ui.sync-key-rotated");
+      schedule(0);
+    } catch (error) {
+      if (generation === authGeneration) keyStatus.textContent = t(error.message === "rotation_legacy"
+        ? "ui.sync-rotation-legacy" : "ui.sync-rotation-failed");
+    } finally {
+      running = control.disabled = enable.disabled = disable.disabled = false;
+      if (pendingSignIn) {
+        pendingSignIn = false;
+        void sync(false, true);
+      }
+    }
+  });
   $("account-care-key-unlock").addEventListener("click", async () => {
     try {
       recovery = await importRecoveryKey(keyInput.value.trim().toLowerCase());
@@ -282,6 +385,8 @@ export function installCareSync({ reload, remindersChanged, readCare = accessCar
   });
   function clearRecovery() {
     authGeneration++;
+    showConflict(undefined);
+    choices.length = 0;
     recovery = undefined;
     keyInput.value = "";
     keyInput.type = "password";

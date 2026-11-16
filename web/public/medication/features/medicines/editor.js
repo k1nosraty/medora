@@ -1,3 +1,4 @@
+import { CareInputError } from "../../shared/ui/care-error.js";
 import { saveMedicinePlan } from "../../domain/medicine-command.js";
 import { listSeparator, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, action, element } from "../../shared/ui/dom.js";
@@ -336,7 +337,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       if (editorStep === 0) {
         if (!name) {
           $("name").focus();
-          throw new Error(t("ui.enter-the-medicine-name"));
+          throw new CareInputError(t("ui.enter-the-medicine-name"));
         }
         showEditorStep(1);
         return;
@@ -344,7 +345,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       const phased = $("phased-mode").checked;
       const { phases, dates } = editorPhases();
       if (!engine.validMedicationPhases(compilePhases(engine, phases))) {
-        throw new Error(t("ui.check-the-date-order-overlapping-stages-selected-days-and"));
+        throw new CareInputError(t("ui.check-the-date-order-overlapping-stages-selected-days-and"));
       }
       const unit = $("unit").value.trim();
       if (!name || (!unit && phases.some(phase => phase.slots.some(slot => slot.amount !== null)))) {
@@ -378,7 +379,7 @@ export function installMedicineEditor({ getState, isBusy, mutate, removeMedicine
       }
       if (await mutate(state => {
         if (!saveMedicinePlan(state, plan, editing ? editingRevision : null, Date.now())) {
-          throw new Error(t("ui.this-schedule-changed-in-another-window-reopen-it-to-edit"));
+          throw new CareInputError(t("ui.this-schedule-changed-in-another-window-reopen-it-to-edit"));
         }
       }, t("ui.medication-schedule-saved"), true)) {
         $("medication-dialog").close();

@@ -118,3 +118,12 @@ test("the service worker displays a notification without an open client", async 
     assert.equal(paths.at(-1), `/medication/?day=2026-11-09&view=${destination}`);
   }
 });
+
+test("bounded JSON distinguishes media types and rejects malformed UTF-8", async () => {
+  const request = (contentType, body) => new Request("https://medora.test/", {
+    method: "POST", headers: { "Content-Type": contentType }, body
+  });
+  assert.deepEqual(await smallJson(request("Application/JSON; charset=utf-8", '{"ok":true}')), { ok: true });
+  assert.equal(await smallJson(request("application/jsonp", '{"ok":true}')), null);
+  assert.equal(await smallJson(request("application/json", Uint8Array.of(34, 255, 34))), null);
+});

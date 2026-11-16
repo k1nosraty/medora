@@ -1,3 +1,4 @@
+import { isRecoveryKeyId } from "../../public/medication/domain/private-fields.js";
 import { careSession } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
 import { careSyncLimit, careVersion, portable, validateCareRecords } from "../../public/medication/domain/care-records.js";
@@ -37,6 +38,7 @@ export async function handleCareSync(request, env, url) {
   if (data?.tooLarge) return reply({ error: "care_too_large" }, 413);
   const scope = typeof data?.owner === "string" && /^([a-f0-9]{64})(?:\.([a-f0-9]{32}))?$/.exec(data.owner);
   if (!scope || scope[1] !== owner || !Number.isSafeInteger(data.revision) || data.revision < 0) return reply({ error: "invalid_sync" }, 400);
+  if (data.rotationProof !== undefined && !isRecoveryKeyId(data.rotationProof)) return reply({ error: "invalid_sync" }, 400);
   let records;
   try {
     records = portable(validateCareRecords(data.records));
@@ -47,7 +49,7 @@ export async function handleCareSync(request, env, url) {
   if (typeof data.zone === "string" && data.zone.length <= 64) {
     try { timezone(data.zone); zone = data.zone; } catch {}
   }
-  const saved = await client.saveCareSnapshot(data.revision, records, scope[2] ?? "", token, zone, owner);
+  const saved = await client.saveCareSnapshot(data.revision, records, scope[2] ?? "", token, zone, owner, data.rotationProof);
   if (saved?.signedOut) return reply({ error: "sign_in" }, 401);
   if (saved?.privacyKey) return reply({ error: "private_key" }, 422);
   if (saved?.tooLarge) return reply({ error: "care_too_large" }, 413);

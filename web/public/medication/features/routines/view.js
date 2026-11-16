@@ -1,3 +1,4 @@
+import { CareInputError } from "../../shared/ui/care-error.js";
 import { appearanceColors } from "../medicines/appearance.js";
 import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
@@ -177,23 +178,23 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     const name = fields("name").value.trim();
     if (!name) {
       fields("name").focus();
-      throw new Error(t("ui.enter-a-routine-name"));
+      throw new CareInputError(t("ui.enter-a-routine-name"));
     }
     const start = Date.parse(fields("start").value + "T00:00:00Z") / dayMs;
     const date = fields("start").value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(start) || isoDay(start) !== date) {
       fields("options").open = true;
-      throw new Error(t("ui.enter-a-complete-date"));
+      throw new CareInputError(t("ui.enter-a-complete-date"));
     }
     const weekly = fields("repeat").value === "weekly";
     const mask = weekly ? weekdayFields.reduce((bits, input) => bits | (input.checked ? Number(input.value) : 0), 0) : 127;
-    if (!mask) throw new Error(t("ui.select-at-least-one-day"));
+    if (!mask) throw new CareInputError(t("ui.select-at-least-one-day"));
     const time = fields("time").value;
     const minute = time ? clockMinute(time) : null;
     const reminder = fields("reminder").checked;
     if (reminder && minute === null) {
       fields("options").open = true;
-      throw new Error(t("ui.enter-a-routine-time-to-get-a-reminder"));
+      throw new CareInputError(t("ui.enter-a-routine-time-to-get-a-reminder"));
     }
     const mode = fields("mode").value;
     const target = readAmount(fields("target").value);
@@ -201,12 +202,12 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     if (mode === "quantity" && (!Number.isInteger(target) || target < 1 || target > maxRoutineAmount)) {
       fields("options").open = true;
       fields("target").focus();
-      throw new Error(t("ui.enter-a-target-from-1-to-99-999"));
+      throw new CareInputError(t("ui.enter-a-target-from-1-to-99-999"));
     }
     if (mode === "steps" && (!steps.length || steps.length > maxRoutineSteps || steps.some(step => step.length > 70))) {
       fields("options").open = true;
       fields("steps").focus();
-      throw new Error(t("ui.enter-1-to-12-steps-of-up-to-70-characters-each"));
+      throw new CareInputError(t("ui.enter-1-to-12-steps-of-up-to-70-characters-each"));
     }
     return {
       id: editing?.id ?? crypto.randomUUID(), name, category, color: colorOf(colors.find(input => input.checked)?.value), start, mask,
@@ -242,7 +243,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
       const ok = await mutate(state => {
         const routines = state.routines ??= {};
         if (previous) ensureCurrent(state, previous);
-        else if (Object.keys(routines).length >= maxRoutines) throw new Error(t("ui.you-can-have-up-to-value-routines", localDigits(maxRoutines)));
+        else if (Object.keys(routines).length >= maxRoutines) throw new CareInputError(t("ui.you-can-have-up-to-value-routines", localDigits(maxRoutines)));
         trackSchedule(state, "routines", routines[plan.id], plan, Date.now());
         routines[plan.id] = plan;
       }, t("ui.routine-saved"), plan.reminder || Boolean(previous?.reminder), today());
@@ -292,7 +293,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
   async function saveLog({ entry, day, plan, recorded }, result) {
     return mutate(state => {
       const currentDay = today();
-      if (day > currentDay) throw new Error(t("ui.this-occurrence-can-no-longer-be-logged"));
+      if (day > currentDay) throw new CareInputError(t("ui.this-occurrence-can-no-longer-be-logged"));
       ensureCurrent(state, plan);
       const records = state.routineLogs[day];
       const previous = records[entry.id];

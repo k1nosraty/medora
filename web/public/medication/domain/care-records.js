@@ -1,3 +1,4 @@
+import { boundedCarePayload, boundedText } from "./care-contract.js";
 import { isRecoveryKeyId, privateFields, privateRows, validPrivateText } from "./private-fields.js";
 import { maxRoutineAmount, maxRoutineSteps } from "./routine-plan.js";
 import { availableAccents } from "./accents.js";
@@ -50,7 +51,8 @@ export function portable(state) {
     ...(Object.keys(state.scheduleHistory ?? {}).length ? { scheduleHistory: state.scheduleHistory } : {}),
     ...(state.cycleRecords !== undefined ? { cycleRecords: state.cycleRecords } : {}),
     ...(state.careSchemaVersion !== undefined && { careSchemaVersion: state.careSchemaVersion }),
-    ...(state.privacyVersion !== undefined && { privacyVersion: state.privacyVersion, privacyKey: state.privacyKey }),
+    ...(state.privacyVersion !== undefined && { privacyVersion: state.privacyVersion, privacyKey: state.privacyKey,
+      ...(state.privacyRotation !== undefined && { privacyRotation: state.privacyRotation }) }),
     settings: Object.fromEntries(webBackupSettings.filter(key => state[key] !== undefined).map(key => [key, state[key]]))
   };
 }
@@ -94,12 +96,24 @@ function validHistory(history, validatePhases) {
 }
 
 // v0 is the original portable format. v1 is emitted by current sync
-// clients. Existing archives and untouched older cloud rows remain valid.
+// clients that predate the bounded v2 contract. Older archives remain readable.
 function validContract(data) {
   if (data.careSchemaVersion === undefined) return true;
-  if (data.careSchemaVersion !== 1) return false;
+  if (![1, 2].includes(data.careSchemaVersion)) return false;
   const ids = data.water.map(row => row.id);
   if (new Set(ids).size !== ids.length) return false;
+  if (data.careSchemaVersion === 2 && !(
+    Object.values(data.medicines).every(row => boundedText(row.name, 256) && boundedText(row.unit, 128) &&
+      row.phases.length <= 364 && row.phases.every(phase =>
+        phase.slots.length <= 1440 && optional(phase.autoEnd, flag)) &&
+      optional(row.archived, flag) && optional(row.paused, flag) && optional(row.phased, flag)) &&
+    Object.values(data.visits).every(row => boundedText(row.name, 256) &&
+      optional(row.place, value => boundedText(value, 1024)) &&
+      optional(row.offsets, offsets => offsets.length <= 1440)) &&
+    Object.values(data.routines).every(row => boundedText(row.name, 256) && boundedText(row.category, 128) &&
+      optional(row.paused, flag) && optional(row.reminder, flag)) &&
+    Object.values(data.scheduleHistory ?? {}).every(rows => new Set(rows.map(({ plan, until }) =>
+      JSON.stringify([plan.id, until]))).size === rows.length))) return false;
   return Object.values(data.visits).every(row =>
     optional(row.cancelled, flag) && optional(row.completed, flag) && optional(row.remindersOff, flag) &&
     optional(row.note, text) && optional(row.notes, text) && optional(row.contact, text));
@@ -107,7 +121,9 @@ function validContract(data) {
 
 function validPrivacy(data) {
   const protectedRecords = data.privacyVersion === 1 && isRecoveryKeyId(data.privacyKey);
-  if (!protectedRecords && (data.privacyVersion !== undefined || data.privacyKey !== undefined)) return false;
+  if (!protectedRecords && (data.privacyVersion !== undefined || data.privacyKey !== undefined || data.privacyRotation !== undefined)) return false;
+  if (data.privacyRotation !== undefined &&
+      (!isRecoveryKeyId(data.privacyRotation) || data.careSchemaVersion !== 2)) return false;
   for (const { kind, rows, key } of privateRows(data)) {
     const row = rows[key];
     if (!object(row) || (protectedRecords
@@ -118,7 +134,7 @@ function validPrivacy(data) {
 }
 
 export function validatePortable(data, validatePhases) {
-  if (!object(data) || !object(data.settings) || !Object.entries(data.settings).every(([key, value]) =>
+  if (!object(data) || (data.careSchemaVersion === 2 && !boundedCarePayload(data)) || !object(data.settings) || !Object.entries(data.settings).every(([key, value]) =>
     Object.hasOwn(settings, key) && settings[key](value)) ||
     !record(data.medicines, (row, id) => row.id === id && validMedicine(row, validatePhases)) ||
     !record(data.doses, (row, id) => safeId(row.medicineId) && day(row.day) && minute(row.minute) &&

@@ -1,3 +1,4 @@
+import { CareInputError } from "../../shared/ui/care-error.js";
 import { localDigits, locale, t } from "../../shared/i18n/locale.js";
 import { $, button, element } from "../../shared/ui/dom.js";
 import { dayMs } from "../../domain/wall-clock.js";
@@ -33,7 +34,7 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
       const list = state.water ??= [];
       const index = list.findIndex(item => item.id === entry.id);
       if (index >= 0) list[index] = entry;
-      else if (id) throw new Error(t("ui.this-water-entry-has-been-deleted"));
+      else if (id) throw new CareInputError(t("ui.this-water-entry-has-been-deleted"));
       else list.push(entry);
     }, t("ui.water-logged"), id ? undefined : day);
     return saved ? entry : null;
@@ -70,7 +71,7 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
     if (!entry) return;
     if (await mutateWater(state => {
       const record = findQuickWater(state, entry);
-      if (!record) throw new Error(t("ui.this-entry-has-changed-or-been-removed"));
+      if (!record) throw new CareInputError(t("ui.this-entry-has-changed-or-been-removed"));
       state.water = state.water.filter(item => item.id !== entry.id);
     }, t("ui.water-entry-undone"), entry.day)) quickWaterButton.focus({ preventScroll: true });
   });

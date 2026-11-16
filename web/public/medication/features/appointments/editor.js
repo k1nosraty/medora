@@ -1,3 +1,4 @@
+import { CareInputError } from "../../shared/ui/care-error.js";
 import { locale, t } from "../../shared/i18n/locale.js";
 import { appointmentDefaults, appointmentOffsets, appointmentReminders, localZone } from "../../domain/care-plan.js";
 import { dayMs, localWall, timezone } from "../../domain/wall-clock.js";
@@ -219,7 +220,7 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
     }
     const saved = await mutate(state => {
       const visits = state.visits ??= {};
-      if (existingId && !visits[id]) throw new Error(t("ui.this-appointment-has-been-deleted"));
+      if (existingId && !visits[id]) throw new CareInputError(t("ui.this-appointment-has-been-deleted"));
       const previous = visits[id];
       const offsets = [...retainedVisitOffsets(previous), ...chosenOffsets];
       const completed = previous?.completed && previous.day === day && previous.time === time && previous.zone === zone;

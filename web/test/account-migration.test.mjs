@@ -52,7 +52,8 @@ test("merges stock movements and dose records as one change", () => {
   const secondDose = { ...morning, medicines: { m: { ...medicine, stock: 8 } },
     doses: { ...morning.doses, evening: dose("evening") } };
   assert.equal(mergeCare(morning, correction, secondDose).medicines.m.stock, 7);
-  assert.equal(mergeCare(base, morning, { ...base, medicines: {} }).medicines.m, undefined);
+  assert.throws(() => mergeCare(base, morning, { ...base, medicines: {} }), /care_conflict/);
+  assert.equal(mergeCare(base, morning, { ...base, medicines: {} }, () => "cloud").medicines.m, undefined);
   const newUnit = { ...base, medicines: { m: { ...medicine, unit: "mL", stock: 20, stockTrackedFrom: 100 } } };
   assert.equal(mergeCare(base, morning, newUnit).medicines.m.stock, 20);
   assert.equal(mergeCare(base, morning, newUnit).doses.morning.unit, "tablet");

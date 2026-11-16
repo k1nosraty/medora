@@ -359,6 +359,40 @@ test("failed storage writes preserve records and repaint errors do not undo a co
   expect(await water()).toHaveLength(1);
 });
 
+test("a damaged or newer local database can be read for recovery without rewriting it", async ({ page }) => {
+  await open(page, { language: "en" });
+  await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    await accessCare(state => { state.water = [{ id: "recovery", day: 20000, time: "10:00", amount: 250 }]; });
+    await new Promise((resolve, reject) => {
+      const request = indexedDB.open("medora-medication-prototype");
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction("care", "readwrite");
+        transaction.objectStore("care").put({ revision: "damaged", settings: { reminders: { token: "synthetic" } } }, "state");
+        transaction.oncomplete = () => { db.close(); resolve(); };
+        transaction.onabort = () => reject(transaction.error);
+      };
+    });
+  });
+  await page.reload();
+  await expect(page.locator("#boot-status")).toContainText("could not be opened safely");
+  await expect(page.locator("#boot-recovery")).toBeVisible();
+  const recovery = async () => page.evaluate(async () => (await import("/medication/shared/storage.js")).readCareRecovery());
+  expect((await recovery()).days[0].water[0].id).toBe("recovery");
+  expect((await recovery()).care).toEqual({ revision: "damaged", settings: {} });
+  await page.evaluate(async () => new Promise((resolve, reject) => {
+    const request = indexedDB.open("medora-medication-prototype", 4);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => { request.result.close(); resolve(); };
+  }));
+  await page.reload();
+  await expect(page.locator("#boot-status")).toContainText("older version");
+  expect((await recovery()).databaseVersion).toBe(4);
+  expect((await recovery()).days[0].water[0].id).toBe("recovery");
+});
+
 test("notification deep links keep the requested date", async ({ page }) => {
   await open(page);
   const day = await page.locator("#day").inputValue();

@@ -3,6 +3,7 @@ import { hasPrivateText, isRecoveryKeyId, privateFields, privateRows, validPriva
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const hex = bytes => Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+const digest = async bytes => hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
 const unhex = value => Uint8Array.from(value.match(/../g), byte => Number.parseInt(byte, 16));
 
 function base64(buffer) {
@@ -20,8 +21,11 @@ export async function importRecoveryKey(value) {
   if (!isRecoveryKeyId(value)) throw new Error("private_key");
   const raw = unhex(value);
   try {
-    const id = hex(new Uint8Array(await crypto.subtle.digest("SHA-256", raw)));
-    return { id, key: await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]) };
+    const id = await digest(raw);
+    const signer = await crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const rotationProof = hex(new Uint8Array(await crypto.subtle.sign("HMAC", signer, encoder.encode("Medora recovery rotation v1"))));
+    const rotationVerifier = await digest(encoder.encode(rotationProof));
+    return { id, rotationProof, rotationVerifier, key: await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]) };
   } finally {
     raw.fill(0);
   }
@@ -48,7 +52,7 @@ export function normalizePrivateCare(records) {
   return result;
 }
 
-export async function sealPrivateCare(records, recovery) {
+export async function sealPrivateCare(records, recovery, withRotation = false) {
   if (!recovery) {
     if (hasPrivateText(records)) throw new Error("private_key");
     return records;
@@ -70,12 +74,14 @@ export async function sealPrivateCare(records, recovery) {
       plain.fill(0);
     }
   });
-  return { ...result, privacyVersion: 1, privacyKey: recovery.id };
+  return { ...result, privacyVersion: 1, privacyKey: recovery.id,
+    ...(withRotation && { privacyRotation: recovery.rotationVerifier }) };
 }
 
 export async function openPrivateCare(records, recovery) {
   if (!records || records.privacyVersion === undefined) return records;
-  if (!recovery || recovery.id !== records.privacyKey) throw new Error("private_key");
+  if (!recovery || recovery.id !== records.privacyKey ||
+      (records.privacyRotation && recovery.rotationVerifier !== records.privacyRotation)) throw new Error("private_key");
   try {
     const result = await transform(records, async (kind, path, row) => {
       const clean = withoutPrivateFields(kind, row);
@@ -96,6 +102,7 @@ export async function openPrivateCare(records, recovery) {
     });
     delete result.privacyVersion;
     delete result.privacyKey;
+    delete result.privacyRotation;
     return result;
   } catch {
     throw new Error("private_corrupt");

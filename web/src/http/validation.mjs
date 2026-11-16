@@ -1,5 +1,6 @@
 const base64url = /^[A-Za-z0-9_-]+$/;
 
+/** @param {unknown} value */
 export function validSubject(value) {
   if (typeof value !== "string" || value.length > 256 || /[\s"\\]/.test(value)) return false;
   if (/^mailto:[^:@]+@[^:@]+\.[^:@]+$/.test(value)) return true;
@@ -11,20 +12,26 @@ export function validSubject(value) {
   }
 }
 
+/** @param {unknown} value @param {number} length */
 function decodedKey(value, length) {
   if (typeof value !== "string" || value.length !== Math.ceil(length * 4 / 3) || !base64url.test(value)) return null;
   const bytes = Uint8Array.from(atob(value.replaceAll("-", "+").replaceAll("_", "/")), c => c.charCodeAt(0));
   return bytes.length === length ? bytes : null;
 }
 
+/** @param {{VAPID_PUBLIC_KEY?: string, VAPID_PRIVATE_KEY?: string, VAPID_SUBJECT?: string}} env */
 export function pilotConfig(env) {
   if (decodedKey(env.VAPID_PUBLIC_KEY, 65)?.[0] !== 4 ||
       !decodedKey(env.VAPID_PRIVATE_KEY, 32) || !validSubject(env.VAPID_SUBJECT)) return null;
   return { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY };
 }
 
-export function validSubscription(value) {
-  if (!value || typeof value.endpoint !== "string" || value.endpoint.length > 1800 ||
+/** @param {unknown} input */
+export function validSubscription(input) {
+  if (!input || typeof input !== "object") return null;
+  const value = /** @type {{endpoint?: unknown, keys?: {p256dh?: unknown, auth?: unknown}}} */ (input);
+  if (typeof value.keys?.p256dh !== "string" || typeof value.keys?.auth !== "string" ||
+      typeof value.endpoint !== "string" || value.endpoint.length > 1800 ||
       decodedKey(value.keys?.p256dh, 65)?.[0] !== 4 || !decodedKey(value.keys?.auth, 16)) return null;
 
   let endpoint;
@@ -44,9 +51,12 @@ export function validSubscription(value) {
   return { endpoint: endpoint.href, expirationTime: null, keys: { p256dh: value.keys.p256dh, auth: value.keys.auth } };
 }
 
+/** @param {{keys: {p256dh: string}}} subscription */
 export async function validSubscriptionKey(subscription) {
   try {
-    await crypto.subtle.importKey("raw", decodedKey(subscription.keys.p256dh, 65),
+    const key = decodedKey(subscription.keys.p256dh, 65);
+    if (!key) return false;
+    await crypto.subtle.importKey("raw", key,
       { name: "ECDH", namedCurve: "P-256" }, false, []);
     return true;
   } catch {
@@ -54,8 +64,14 @@ export async function validSubscriptionKey(subscription) {
   }
 }
 
+/**
+ * @param {Request} request
+ * @param {number} [limit]
+ * @param {{onLimit?: () => unknown}} [options]
+ * @returns {Promise<unknown>}
+ */
 export async function smallJson(request, limit = 4096, { onLimit = () => null } = {}) {
-  if (!request.headers.get("content-type")?.startsWith("application/json") || !request.body) return null;
+  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json" || !request.body) return null;
   const reader = request.body.getReader();
   const buffer = new Uint8Array(limit);
   let size = 0;
@@ -64,13 +80,13 @@ export async function smallJson(request, limit = 4096, { onLimit = () => null } 
       const { value, done } = await reader.read();
       if (done) break;
       if (size + value.length > buffer.length) {
-        await reader.cancel();
+        await reader.cancel().catch(() => {});
         return onLimit();
       }
       buffer.set(value, size);
       size += value.length;
     }
-    return JSON.parse(new TextDecoder().decode(buffer.subarray(0, size)));
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, size)));
   } catch {
     return null;
   } finally {
