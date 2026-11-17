@@ -25,6 +25,23 @@
 .medora .sleep-actions .block-action { --action: #81511f; }
 .sleep-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
 .sleep-fields label { min-inline-size: 0; }
+.medora #sleep-form .sheet-body { display: grid; gap: .7rem; }
+.medora #sleep-form label { display: grid; gap: .3rem; margin: 0; min-inline-size: 0; font-size: .86rem; }
+.medora #sleep-form :is(.picker-control, .picker-field, input, select, textarea) { min-inline-size: 0; inline-size: 100%; }
+.medora #sleep-form .picker-field { border-radius: .85rem; padding-inline: .4rem; font-size: .88rem; }
+.medora .sleep-endpoint {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: .55rem;
+  margin: 0;
+  padding: .5rem .6rem .65rem;
+  border: 1px solid var(--surface-edge);
+  border-radius: 1rem;
+  background: var(--surface-fill);
+}
+.sleep-endpoint legend { font-size: .86rem; font-weight: 700; padding-inline: .3rem; color: var(--category-sleep-ink); }
+#sleep-duration-preview { margin: 0; text-align: center; }
+#sleep-duration-preview:empty { display: none; }
 .sleep-periods { display: flex; flex-wrap: wrap; gap: .38rem; }
 .sleep-chart { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); list-style: none; padding: 0; gap: .18rem; }
 .sleep-chart li { min-inline-size: 0; }

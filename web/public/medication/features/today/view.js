@@ -2,7 +2,7 @@ import { glassObject } from "../../design/three-dimensional.js";
 import { localDigits, t } from "../../shared/i18n/locale.js";
 import { routineComplete } from "../../domain/routine-plan.js";
 import { doseTime } from "../../domain/care-index.js";
-import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
+import { $, button, element } from "../../shared/ui/dom.js";
 
 const slotOf = event => event.time == null ? null : Math.floor(event.time / 60_000);
 let selectedSlot;
@@ -162,24 +162,27 @@ function renderGroup(focus, controls, group, selection) {
       card.classList.add("day-focus-enter");
     }
     if (group.length > 1) {
-      const previous = arrow(t("ui.previous-item"), "previous");
-      const next = arrow(t("ui.next-item"), "next");
-      previous.setAttribute("aria-disabled", String(index === 0));
-      next.setAttribute("aria-disabled", String(index === group.length - 1));
-      previous.addEventListener("click", () => show(index - 1, previous.dataset.focusKey));
-      next.addEventListener("click", () => show(index + 1, next.dataset.focusKey));
-      const position = t("ui.value-of-value", localDigits(index + 1), localDigits(group.length));
-      const picker = dayCardOptions(t("ui.same-time-plans", position), ...group.map((event, option) => {
-        const choice = button(event.title, () => show(option, "day-focus-picker"));
-        choice.dir = "auto";
-        if (option === index) choice.setAttribute("aria-current", "true");
-        return choice;
+      controls.setAttribute("role", "group");
+      controls.setAttribute("aria-label", t("ui.same-time-plans",
+        t("ui.value-of-value", localDigits(index + 1), localDigits(group.length))));
+      controls.replaceChildren(...group.map((event, option) => {
+        const dot = button("", () => show(option, "day-focus-dot-" + option));
+        dot.className = "day-focus-dot";
+        dot.dataset.focusKey = "day-focus-dot-" + option;
+        dot.setAttribute("aria-label", event.title + " · " +
+          t("ui.value-of-value", localDigits(option + 1), localDigits(group.length)));
+        dot.setAttribute("aria-pressed", String(option === index));
+        dot.tabIndex = option === index ? 0 : -1;
+        dot.addEventListener("keydown", key => {
+          const direction = { ArrowLeft: rtl ? 1 : -1, ArrowRight: rtl ? -1 : 1 }[key.key];
+          const destination = key.key === "Home" ? 0 : key.key === "End" ? group.length - 1 :
+            direction ? index + direction : null;
+          if (destination === null || !group[destination]) return;
+          key.preventDefault();
+          show(destination, "day-focus-dot-" + destination);
+        });
+        return dot;
       }));
-      picker.classList.add("day-focus-picker");
-      const trigger = picker.querySelector("summary");
-      trigger.textContent = position;
-      trigger.dataset.focusKey = "day-focus-picker";
-      controls.replaceChildren(previous, picker, next);
     }
     viewport.replaceChildren(card);
     if (source) controls.querySelector(`[data-focus-key="${source}"]`)?.focus({ preventScroll: true });
@@ -238,24 +241,6 @@ function featuredCard(event, status) {
   copy.append(content);
   if (actions) copy.append(actions);
   return card;
-}
-
-function arrow(label, direction) {
-  const control = element("button", "", `secondary icon-button day-focus-${direction}`);
-  control.type = "button";
-  control.dataset.focusKey = `day-focus-${direction}`;
-  control.setAttribute("aria-label", label);
-  control.append(icon("expand"));
-  return control;
-}
-
-function icon(name) {
-  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  const use = document.createElementNS(icon.namespaceURI, "use");
-  icon.setAttribute("aria-hidden", "true");
-  use.setAttribute("href", "#i-" + name);
-  icon.append(use);
-  return icon;
 }
 
 function byTime(a, b) {

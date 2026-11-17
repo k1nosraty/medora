@@ -16,6 +16,19 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
   let editingWater = null;
   let delegation;
   let quickWaterEntry;
+  let quickWaterTimer;
+
+  function dismissQuickFeedback() {
+    clearTimeout(quickWaterTimer);
+    quickWaterEntry = null;
+    $("today-water-feedback").hidden = true;
+  }
+
+  function expireQuickFeedback() {
+    if ($("today-water-feedback").contains(document.activeElement)) {
+      quickWaterTimer = setTimeout(expireQuickFeedback, 2000);
+    } else dismissQuickFeedback();
+  }
 
   function mutateWater(change, success, day) {
     const currentDay = today();
@@ -57,12 +70,14 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
       quickWaterEntry = entry;
       $("today-water-message").textContent = t("ui.logged-value-ml", numbers.format(entry.amount));
       renderQuickWaterFeedback(getState(), selectedDay());
+      clearTimeout(quickWaterTimer);
+      quickWaterTimer = setTimeout(expireQuickFeedback, 6000);
     } finally {
       quickWaterButton.disabled = false;
     }
   }
   $("today-water-dismiss").addEventListener("click", () => {
-    quickWaterEntry = null;
+    dismissQuickFeedback();
     renderQuickWaterFeedback(getState(), selectedDay());
     quickWaterButton.focus({ preventScroll: true });
   });

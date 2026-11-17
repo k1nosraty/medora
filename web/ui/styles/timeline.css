@@ -116,49 +116,42 @@ html[dir="rtl"] .medora .daily-heading output { --day-progress-direction: to lef
   font-weight: 750;
 }
 .day-focus-controls {
-  grid-column: 2;
-  justify-self: center;
-  display: grid;
-  grid-template-columns: clamp(1.75rem, 8vw, 2.75rem) auto clamp(1.75rem, 8vw, 2.75rem);
-  align-items: center;
+  display: flex;
+  justify-content: safe center;
+  gap: .05rem;
+  max-inline-size: 100%;
+  margin-inline: auto;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.medora .day-focus-controls:has(details[open]) { z-index: 3; }
-.medora .day-focus-controls :is(.icon-button, summary) {
+.day-focus-controls::-webkit-scrollbar { display: none; }
+.medora .day-focus-controls .day-focus-dot {
   display: grid;
   place-items: center;
+  flex: 0 0 2rem;
   min-inline-size: 0;
   min-block-size: 2.75rem;
-  inline-size: 100%;
   padding: 0;
   border: 0;
+  border-radius: .6rem;
   background: transparent;
   box-shadow: none;
-  color: var(--action);
 }
-.medora .day-focus-controls .icon-button[aria-disabled="true"] { opacity: .45; cursor: default; }
-.medora .day-focus-controls svg { inline-size: 1rem; block-size: 1rem; rotate: -90deg; }
-html[dir="rtl"] .medora .day-focus-next svg, html[dir="ltr"] .medora .day-focus-previous svg { rotate: 90deg; }
-.medora .day-focus-controls .day-focus-picker { inline-size: auto; }
-.medora .day-focus-controls .day-focus-picker > summary {
-  padding-inline: .18rem;
-  font-size: .75rem;
-  text-decoration: underline;
-  text-underline-offset: .18em;
-  white-space: nowrap;
+.day-focus-dot::before {
+  content: "";
+  inline-size: .4rem;
+  block-size: .4rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--action) 25%, var(--outline));
+  transition: inline-size 160ms ease, background-color 160ms ease;
 }
-.medora .day-focus-picker .day-card-menu {
-  inset-block: calc(100% - .15rem) auto;
-  inset-inline: 0;
-  margin-inline: auto;
-  inline-size: min(100%, 18rem);
-  max-block-size: 13rem;
-  overflow: auto;
+.day-focus-dot[aria-pressed="true"]::before {
+  inline-size: 1rem;
+  background: var(--action);
 }
-.medora .day-focus-picker .day-card-menu button {
-  text-align: start;
-  overflow-wrap: anywhere;
+@media (prefers-reduced-motion: reduce) {
+  .day-focus-dot::before { transition: none; }
 }
-.medora .day-focus-picker .day-card-menu [aria-current] { background: var(--dock-active); }
 .day-focus-swipe { touch-action: pan-y pinch-zoom; }
 .day-focus-dragging { overflow: clip; }
 .day-focus-dragging > article { translate: var(--day-focus-drag); animation: none; }

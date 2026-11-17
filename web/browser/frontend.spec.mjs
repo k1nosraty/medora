@@ -182,24 +182,21 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
   const banner = page.locator("#today-focus .day-card");
   const title = banner.locator(".day-card-title");
   const navigation = page.locator("#day-focus-navigation");
-  const picker = navigation.locator(".day-focus-picker summary");
+  const dots = navigation.locator(".day-focus-dot");
   await expect(title).toHaveText("Sample tablet");
   const featuredHeight = (await banner.boundingBox()).height;
-  await expect(picker).toHaveText("۱ از ۳");
+  await expect(dots).toHaveCount(3);
+  await expect(dots.nth(0)).toHaveAttribute("aria-pressed", "true");
   await expect(banner.locator(".day-focus-status")).toBeVisible();
-  expect(await navigation.evaluate(node => {
-    const center = element => {
-      const { top, height } = element.getBoundingClientRect();
-      return top + height / 2;
-    };
-    return [...node.parentElement.children].every(element => Math.abs(center(element) - center(node)) < 1);
-  })).toBe(true);
-  await navigation.locator(".day-focus-next").click();
+  expect((await navigation.boundingBox()).y).toBeGreaterThanOrEqual((await banner.boundingBox()).y + featuredHeight);
+  await dots.nth(1).click();
   await expect(title).toHaveText("Follow-up");
-  await picker.click();
-  await navigation.getByRole("button", { name: "Walk", exact: true }).click();
+  await dots.nth(2).click();
   await expect(title).toHaveText("Walk");
-  await expect(picker).toBeFocused();
+  await expect(dots.nth(2)).toBeFocused();
+  await dots.nth(2).press("ArrowRight");
+  await expect(title).toHaveText("Follow-up");
+  await dots.nth(2).click();
   await banner.locator(".day-card-title").evaluate(node => {
     for (const [type, x] of [["pointerdown", 150], ["pointermove", 75], ["pointerup", 75]]) {
       node.dispatchEvent(new PointerEvent(type, {
@@ -214,10 +211,11 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
   await visitOptions.press("Escape");
   await cardFor("visit").locator(".care-record-action").click();
   await expect(title).toHaveText("Walk");
-  await expect(picker).toHaveText("۲ از ۲");
+  await expect(dots).toHaveCount(2);
+  await expect(dots.nth(1)).toHaveAttribute("aria-pressed", "true");
   await cardFor("routine").locator(".care-record-action").click();
   await expect(title).toHaveText("Sample tablet");
-  await expect(picker).toHaveCount(0);
+  await expect(dots).toHaveCount(0);
   expect((await banner.boundingBox()).height).toBe(featuredHeight);
   await cardFor("medicine").locator(".care-record-action").click();
   await expect(cardFor("medicine")).toHaveAttribute("data-day-state", "done");
@@ -717,6 +715,41 @@ test("water history uses the glass actions and retains quick entry and editing",
   await expect(page.locator("#water-dialog")).toBeVisible();
 });
 
+test("water confirmations expire and a newer error stays visible", async ({ page }) => {
+  await open(page, { language: "en" });
+  await page.clock.install();
+  await page.locator("#today-water-quick").click();
+  await expect(page.locator("#today-water-feedback")).toBeVisible();
+  await expect(page.locator("#status")).toContainText("Water logged");
+  await page.clock.fastForward(6500);
+  await expect(page.locator("#today-water-feedback")).toBeHidden();
+  await expect(page.locator("#status")).toBeEmpty();
+  await page.evaluate(async () => {
+    const { showFeedback } = await import("/medication/shared/ui/controls.js");
+    const status = document.getElementById("status");
+    showFeedback(status, "Saved", "success");
+    showFeedback(status, "Please try again", "error");
+  });
+  await page.clock.fastForward(5000);
+  await expect(page.locator("#status")).toHaveText("Please try again");
+});
+
+test("sleep entry fields fit mobile and report incomplete times", async ({ page }) => {
+  await open(page, { language: "en", width: 320 });
+  await page.locator("#today-sleep-manual").click();
+  const form = page.locator("#sleep-form");
+  const fits = await form.locator(".picker-field, select, textarea").evaluateAll(nodes =>
+    nodes.every(node => {
+      const bounds = node.getBoundingClientRect(), parent = node.parentElement.getBoundingClientRect();
+      return bounds.width > 0 && bounds.width <= parent.width + 1 &&
+        bounds.left >= parent.left - 1 && bounds.right <= parent.right + 1;
+    }));
+  expect(fits).toBe(true);
+  await form.locator("button[type=submit]").click();
+  await expect(page.locator("#sleep-error")).not.toBeEmpty();
+  await expect(page.locator("#sleep-dialog")).toBeVisible();
+});
+
 test("gaming routines retain the controller artwork, palette and record after reload", async ({ page, context }) => {
   await open(page, { language: "en" });
   await page.goto("/medication/?view=routines");
@@ -1081,6 +1114,7 @@ test("cycle daily log, past dates, estimate, print and privacy controls work in 
   const waterNotice = await page.locator("#today-water-feedback").boundingBox();
   const cycleNotice = await feedback.boundingBox();
   expect(waterNotice.y + waterNotice.height).toBeLessThan(cycleNotice.y);
+  await page.locator("#today-water-dismiss").click();
   await feedback.getByRole("button", { name: "Close" }).click();
   await expect(feedback).toBeHidden();
   const options = cycleCard.locator(".day-card-more");
@@ -1107,7 +1141,6 @@ test("cycle daily log, past dates, estimate, print and privacy controls work in 
   await end.click();
   await expect(end).toBeDisabled();
   await feedback.getByRole("button", { name: "Close" }).click();
-  await page.locator("#today-water-dismiss").click();
   await expect(cycleCard.locator(".tracker-actions button:visible")).toHaveCount(3);
   await page.locator("#cycle-today-card [data-cycle-log]").click();
   await page.locator("#cycle-day-flow").selectOption("spotting");

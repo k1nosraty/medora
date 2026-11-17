@@ -1,14 +1,24 @@
 import { element } from "./dom.js";
 import { locale } from "../i18n/locale.js";
 
+const feedbackTimers = new WeakMap();
+
 export function setPressed(controls, matches) {
   for (const control of controls) control.setAttribute("aria-pressed", String(matches(control)));
 }
 
 export function showFeedback(target, message = "", state = "") {
+  clearTimeout(feedbackTimers.get(target));
   target.classList.add("feedback");
   target.textContent = message ?? "";
   target.dataset.state = state;
+  if (message && state === "success") {
+    feedbackTimers.set(target, setTimeout(() => {
+      target.textContent = "";
+      delete target.dataset.state;
+      feedbackTimers.delete(target);
+    }, 4500));
+  }
 }
 
 export function searchField(input, label) {
