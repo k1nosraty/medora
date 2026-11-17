@@ -56,12 +56,6 @@
   float: none;
   inline-size: 100%;
 }
-.medora #visit-appearance-preview {
-  border-radius: 1rem;
-  background: radial-gradient(ellipse at 30% 22%, #fff4, transparent 58%),
-    linear-gradient(135deg, color-mix(in srgb, var(--banner-tint) 42%, var(--stage)), transparent),
-    var(--pill-fill, var(--stage));
-}
 .medora #plans .treatment-profile .medication-banner { block-size: auto; min-block-size: 5.2rem; margin: 0; }
 .medora #plans .treatment-profile .medication-banner .medication-badge {
   inline-size: min(93%, 5.5rem);

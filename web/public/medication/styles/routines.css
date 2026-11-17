@@ -67,7 +67,7 @@
   --pill-fill: var(--program-visit-fill);
   --pill-ink: var(--program-visit-ink);
 }
-.medora :is(.routine-row, .day-card[data-card-kind="routine"])[data-ink="coral"] {
+.medora :is(.routine-row, .day-card[data-card-kind="routine"], #routine-appearance)[data-ink="coral"] {
   --pill-base: var(--category-routine-art);
   --pill-fill: var(--routine-fill);
   --pill-ink: var(--routine-ink);
@@ -81,14 +81,14 @@
 
 .medora #today-programs { inline-size: var(--today-rail-width); margin-inline: auto; }
 .medora .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
-.medora .program-card, .medora .plan-panel-banner {
+.medora .program-card, .medora .program-banner-surface {
   border: 1px solid color-mix(in srgb, var(--program-ink) 19%, var(--outline));
   background: radial-gradient(ellipse at var(--art-side, 16%) 14%, var(--glass-glint), transparent 58%),
     linear-gradient(160deg, var(--program-fill), color-mix(in srgb, var(--program-fill) 89%, var(--program-ink)));
   box-shadow: inset 0 1px 0 var(--glass-glint);
   color: var(--program-ink);
 }
-html[dir="ltr"] .medora :is(.program-card, .plan-panel-banner) { --art-side: 84%; }
+html[dir="ltr"] .medora :is(.program-card, .program-banner-surface) { --art-side: 84%; }
 .medora .plan-panel-banner {
   display: flex;
   align-items: center;
@@ -174,9 +174,7 @@ html[dir="rtl"] .medora .plan-panel-row { --plan-art-origin: 88%; }
   stroke-width: .9;
 }
 .medora .routine-fields label { margin-block: 0; }
-.medora #routine-colors { margin: 0; padding: 0; border: 0; background: transparent; }
-.medora #routine-colors legend { padding: 0; margin-block-end: .3rem; }
-.medora #routine-form :is(label:not(.routine-check, #routine-weekdays label, .visit-color-grid label), .routine-category-choice) {
+.medora #routine-form label:not(.routine-check, #routine-weekdays label, .visit-color-grid label) {
   display: grid;
   gap: .25rem;
 }
@@ -213,13 +211,6 @@ html[dir="rtl"] .medora .plan-panel-row { --plan-art-origin: 88%; }
 }
 
 
-.medora .routine-category-choice { display: grid; }
-.medora .routine-category-choice button {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .55rem;
-  min-block-size: 3rem; padding: .24rem .48rem; text-align: start;
-}
-.medora #routine-preview { inline-size: 2.35rem; }
-.medora .routine-category-choice button > svg { inline-size: 1rem; block-size: 1rem; }
 .medora .routine-category-group h3 { margin: .3rem 0; font-size: .88rem; }
 .medora .routine-category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.4rem), 1fr)); gap: .4rem; }
 .medora .routine-category-grid button {

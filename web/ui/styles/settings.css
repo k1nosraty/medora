@@ -75,11 +75,9 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 .medora #water-pause-card .quiet { color: inherit; }
 .settings-push-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-block: .65rem; }
 .settings-push-actions button { flex: 1 1 auto; }
-.medora .settings-message { padding: .55rem .7rem; background: var(--stage); border-radius: .8rem; overflow-wrap: anywhere; font-size: .88rem; }
 .medora #settings-status { flex: none; margin: 0 .75rem .65rem; }
-.medora .settings-message:empty, .medora #push-delivery:empty, .medora #android-restore-status:empty { display: none; }
-.medora .settings-message[data-state="error"], .medora .settings-restore-note { color: var(--error); background: var(--error-bg); }
-.medora .settings-message[data-state="success"] { color: var(--ok); background: var(--ok-bg); }
+.medora #push-delivery:empty, .medora #android-restore-status:empty { display: none; }
+.medora .settings-restore-note { color: var(--error); background: var(--error-bg); }
 .medora .settings-restore-note { border-radius: .85rem; padding: .55rem .7rem; font-size: .88rem; }
 .medora :is(.settings-themes, .settings-choices) { display: grid; gap: .35rem; padding: 0; border: 0; background: transparent; }
 .settings-themes { grid-template-columns: repeat(3, minmax(0, 1fr)); }

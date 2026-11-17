@@ -1,10 +1,10 @@
 html[dir="ltr"] .medora { font-family: system-ui, -apple-system, sans-serif; }
 html[dir="ltr"] .medora h1, html[dir="ltr"] .medora .story-copy h2 { letter-spacing: -.045em; }
 html[dir="ltr"] .medora :is(#screen-back, #settings-back) svg { scale: -1 1; }
-.medora :is(#picker-previous-month, #report-chart-previous) svg { transform: scaleX(1); }
-.medora :is(#picker-next-month, #report-chart-next) svg { transform: scaleX(-1); }
-html[dir="ltr"] .medora :is(#picker-previous-month, #report-chart-previous) svg { transform: scaleX(-1); }
-html[dir="ltr"] .medora :is(#picker-next-month, #report-chart-next) svg { transform: scaleX(1); }
+.medora #report-chart-previous svg { transform: scaleX(1); }
+.medora #report-chart-next svg { transform: scaleX(-1); }
+html[dir="ltr"] .medora #report-chart-previous svg { transform: scaleX(-1); }
+html[dir="ltr"] .medora #report-chart-next svg { transform: scaleX(1); }
 .medora .app-content { max-inline-size: 55rem; }
 .medora .app-content { box-sizing: border-box; }
 .medora .header-tools svg { inline-size: 1.18rem; block-size: 1.18rem; }

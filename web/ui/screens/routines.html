@@ -1,10 +1,5 @@
       <div data-screen="routines" hidden>
-        <section class="plan-panel-banner program-routine" aria-labelledby="routine-banner-title">
-          <div><h2 id="routine-banner-title">{{msg:ui.my-routines}}</h2><p id="routine-progress" aria-live="polite"></p>
-            <button id="routine-add" type="button" class="secondary plan-panel-add" data-open-routine><svg aria-hidden="true"><use href="#i-plus"/></svg>{{msg:ui.new-routine}}</button>
-          </div>
-          <svg class="category-art routine-category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
-        </section>
+        <!-- include layout/program-banner.html {"kind":"routine","titleId":"routine-banner-title","title":"ui.my-routines","summaryId":"routine-progress","buttonId":"routine-add","action":"routine","button":"ui.new-routine","art":"routine","artClass":"routine-category-art","href":"/medication/assets/icons/routines.svg#banner","viewBox":"0 0 128 100"} -->
         <div id="routine-dates" data-day-host="routines"></div>
         <div class="plan-panel-filters segmented glass-toolbar program-routine" role="group" aria-label="{{msg:ui.routine-view}}">
           <button type="button" data-routine-filter="today" aria-pressed="true">{{msg:ui.today}}</button>

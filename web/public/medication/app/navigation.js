@@ -2,6 +2,7 @@ import { installDayNavigation } from "./day-navigation.js";
 import { installRoutes } from "./routes.js";
 import { defaultCalendar, listSeparator, t } from "../shared/i18n/locale.js";
 import { $ } from "../shared/ui/dom.js";
+import { setPressed } from "../shared/ui/controls.js";
 import { installInsights } from "../features/reports/controller.js";
 import { applyDisplay } from "../styles/display.js";
 import { installSettings } from "../features/settings/dialog.js";
@@ -162,7 +163,7 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
 
   const visitFilters = document.querySelectorAll("[data-visit-filter]");
   function setVisitFilter(value) {
-    for (const option of visitFilters) option.setAttribute("aria-pressed", String(option.dataset.visitFilter === value));
+    setPressed(visitFilters, option => option.dataset.visitFilter === value);
     appointments.setFilter(value);
   }
   for (const option of visitFilters) option.addEventListener("click", () => {

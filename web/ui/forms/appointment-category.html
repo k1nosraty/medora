@@ -1,7 +1,7 @@
-  <dialog id="visit-category-dialog" class="sheet" aria-labelledby="visit-category-title">
+  <dialog id="visit-category-dialog" class="sheet choice-sheet" aria-labelledby="visit-category-title">
     <div class="sheet-header"><svg aria-hidden="true"><use href="#i-search"/></svg><h2 id="visit-category-title">{{msg:ui.choose-a-visit-type}}</h2><button type="button" class="icon-button" data-close="visit-category-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
     <div class="sheet-body">
-      <label class="cabinet-search"><svg aria-hidden="true"><use href="#i-search"/></svg><input id="visit-category-search" type="search" placeholder="{{msg:ui.search-specialties-or-services}}" aria-label="{{msg:ui.search-specialties-or-services}}" autocomplete="off"></label>
+      <!-- include layout/choice-search.html {"id":"visit-category-search","label":"ui.search-specialties-or-services"} -->
       <p id="visit-category-empty" class="empty" role="status" hidden>{{msg:ui.no-specialty-or-service-matches-that-search}}</p>
       <div id="visit-category-results"></div>
     </div>

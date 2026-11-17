@@ -39,11 +39,14 @@ export function installPickers({ today, selectedDay, dashboard }) {
 
   function drawDate() {
     $("picker-month").textContent = dashboard.formatMonth(shownMonth);
+    const currentDay = today();
+    $("picker-today").hidden = currentDay > dateLimit ||
+      (pickedDay === currentDay && shownMonth === dashboard.monthStart(currentDay));
     if (!birthJump.hidden) setBirthMonths();
     const end = dashboard.monthStart(shownMonth + 32);
     const grid = $("picker-days");
     renderMonthGrid(grid, {
-      start: shownMonth, end: end - 1, selected: pickedDay, active: focusedDay, last: dateLimit, minCells: 42,
+      start: shownMonth, end: end - 1, selected: pickedDay, active: focusedDay, today: today(), last: dateLimit, minCells: 42,
       formatDay: dashboard.formatDay, formatNumber: dashboard.formatDayNumber,
       onSelect(day) {
         pickedDay = focusedDay = day;
@@ -91,6 +94,7 @@ export function installPickers({ today, selectedDay, dashboard }) {
     pickedDay = focusedDay = Math.min(today(), dateLimit);
     shownMonth = dashboard.monthStart(pickedDay);
     drawDate();
+    $("picker-days").querySelector('button[tabindex="0"]')?.focus({ preventScroll: true });
   });
   $("picker-date-confirm").addEventListener("click", () => {
     dateSheet.close();

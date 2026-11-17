@@ -12,12 +12,12 @@
         </div>
         <p id="visit-zone-summary" class="quiet"></p>
         <label class="editor-field">{{msg:ui.location}}<input id="visit-place" maxlength="160"></label>
-        <details id="visit-appearance" class="editor-options">
-          <summary><span class="visit-appearance-dot" aria-hidden="true"></span>{{msg:ui.visit-appearance-optional}}</summary>
-          <div id="visit-appearance-preview" class="visit-banner"></div>
-          <div class="visit-type-field">
+        <details id="visit-appearance" class="editor-options appearance-options">
+          <summary><span class="appearance-dot" aria-hidden="true"></span>{{msg:ui.visit-appearance-optional}}</summary>
+          <!-- include layout/appearance-poster.html {"id":"visit-appearance-preview"} -->
+          <div class="appearance-type">
             <span id="visit-type-label">{{msg:ui.visit-type}}</span>
-            <button id="visit-category-open" type="button" class="secondary" aria-haspopup="dialog" aria-labelledby="visit-type-label visit-category-selected"><span id="visit-category-selected"></span><svg aria-hidden="true"><use href="#i-search"/></svg></button>
+            <button id="visit-category-open" type="button" class="secondary appearance-type-picker" aria-haspopup="dialog" aria-labelledby="visit-type-label visit-category-selected"><span id="visit-category-selected"></span><svg aria-hidden="true"><use href="#i-search"/></svg></button>
             <select id="visit-category" hidden>
               <option value="general">{{msg:ui.general}}</option>
               <optgroup label="پزشکان و تخصص‌ها">
@@ -82,7 +82,7 @@
             </select>
           </div>
           <label class="editor-field" id="visit-category-name-field" hidden>{{msg:ui.custom-category-name-optional}}<input id="visit-category-name" dir="auto" maxlength="60"></label>
-          <fieldset id="visit-colors"><legend>{{msg:ui.visit-color}}</legend><div class="visit-color-grid"></div></fieldset>
+          <fieldset id="visit-colors" class="appearance-colors"><legend>{{msg:ui.visit-color}}</legend><div class="visit-color-grid"></div></fieldset>
         </details>
         <details id="visit-extra" class="editor-options"><summary>{{msg:ui.more-options}}</summary>
           <label class="editor-field">{{msg:ui.contact-information}}<input id="visit-contact" maxlength="160"></label>

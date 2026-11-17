@@ -136,14 +136,14 @@
         <div id="admin-tickets"></div>
       </section>
     </div>
-    <dialog class="sheet" id="admin-account-delete" aria-labelledby="admin-account-delete-title">
+    <dialog class="sheet shared-panel" id="admin-account-delete" role="alertdialog" aria-labelledby="admin-account-delete-title" aria-describedby="admin-account-delete-message">
       <div class="sheet-header"><h2 id="admin-account-delete-title">حذف حساب</h2></div>
       <div class="sheet-body">
         <p id="admin-account-delete-email" dir="ltr"></p>
-        <p>ورودهای فعال این حساب باطل می‌شوند. کاربر می‌تواند پس از تأیید دوبارهٔ ایمیل، حساب تازه بسازد. سوابق روی دستگاه کاربر باقی می‌مانند.</p>
+        <p id="admin-account-delete-message">ورودهای فعال این حساب باطل می‌شوند. کاربر می‌تواند پس از تأیید دوبارهٔ ایمیل، حساب تازه بسازد. سوابق روی دستگاه کاربر باقی می‌مانند.</p>
         <p id="admin-delete-status" role="status"></p>
-        <div class="buttons">
-          <button type="button" class="secondary" id="admin-delete-cancel">انصراف</button>
+        <div class="panel-action-bar">
+          <button type="button" class="secondary" id="admin-delete-cancel" autofocus>انصراف</button>
           <button type="button" class="danger-button" id="admin-delete-confirm">حذف حساب</button>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { CareInputError } from "../../shared/ui/care-error.js";
-import { appearanceColors } from "../medicines/appearance.js";
+import { appearanceColors, mountAppearanceColors } from "../medicines/appearance.js";
 import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
+import { installChoiceSearch, setPressed } from "../../shared/ui/controls.js";
 import { isoDay, scheduledRoutinesOn, timeText, trackSchedule } from "../../domain/care-index.js";
 import { clockMinute } from "../../domain/care-plan.js";
 import { integer as readAmount } from "../../shared/ui/input-values.js";
@@ -40,13 +41,13 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
   const fitCategory = fitDialogToViewport(categoryDialog);
   const categoryOpen = fields("category-open");
   const categorySearch = fields("category-search");
+  const appearance = fields("appearance");
   let category = "custom";
 
   function chooseCategory(key) {
     category = Object.hasOwn(routineLabels, key) ? key : "custom";
-    fields("preview").replaceChildren(glyph(category, fields("preview").dataset.ink));
+    fields("preview").replaceChildren(glyph(category, appearance.dataset.ink));
     fields("category-label").textContent = labelFor(category);
-    categoryOpen.setAttribute("aria-label", t("ui.routine-type-value", labelFor(category)));
     for (const control of fields("categories").querySelectorAll("button")) {
       control.setAttribute("aria-pressed", String(control.dataset.category === category));
     }
@@ -72,45 +73,28 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     }
   }
 
-  function filterCategories() {
-    const search = normalizeSearch(categorySearch.value);
-    let any = false;
-    for (const group of fields("categories").children) {
-      let found = false;
-      const heading = normalizeSearch(group.firstElementChild.textContent);
-      for (const control of group.querySelectorAll("button")) {
-        const match = (heading + normalizeSearch(control.textContent)).includes(search);
-        control.hidden = !match;
-        found ||= match;
-      }
-      group.hidden = !found;
-      any ||= found;
-    }
-    fields("no-categories").hidden = any;
-  }
-  categorySearch.addEventListener("input", filterCategories);
+  const resetCategorySearch = installChoiceSearch({
+    input: categorySearch, empty: fields("no-categories"),
+    groups: () => [...fields("categories").children].map(group => ({
+      group, rows: [...group.querySelectorAll("button")].map(control => ({
+        control, key: group.firstElementChild.textContent + " " + control.textContent
+      }))
+    }))
+  });
   categoryOpen.addEventListener("click", () => {
-    categorySearch.value = "";
     buildCategories();
-    filterCategories();
+    resetCategorySearch();
     categoryDialog.showModal();
     categoryDialog.scrollTop = 0;
     fitCategory();
+    categorySearch.focus({ preventScroll: true });
   });
 
-  const colorGrid = fields("colors").querySelector(".visit-color-grid");
-  const colors = Object.entries(appearanceColors).map(([id, title]) => {
-    const option = element("label");
-    const input = document.createElement("input");
-    input.type = "radio";
-    input.name = "routine-color";
-    input.value = id;
-    input.dataset.ink = id;
-    option.append(input, element("span", title));
-    colorGrid.append(option);
-    return input;
+  const colors = mountAppearanceColors(fields("colors").querySelector(".visit-color-grid"), "routine-color");
+  fields("colors").addEventListener("change", event => {
+    appearance.dataset.ink = event.target.value;
+    chooseCategory(category);
   });
-  fields("colors").addEventListener("change", event => { fields("preview").dataset.ink = event.target.value; chooseCategory(category); });
 
   const weekdayFields = (language === "fa" ? [5, 6, 0, 1, 2, 3, 4] : [6, 0, 1, 2, 3, 4, 5]).map(index => {
     const field = document.createElement("label");
@@ -141,7 +125,8 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     fields("name").value = plan?.name ?? "";
     const color = colorOf(plan?.color);
     for (const input of colors) input.checked = input.value === color;
-    fields("preview").dataset.ink = color;
+    appearance.open = false;
+    appearance.dataset.ink = color;
     chooseCategory(plan?.category);
     fields("repeat").value = plan && (plan.mask !== 127 || plan.interval !== 1) ? "weekly" : "daily";
     fields("interval").value = plan?.interval ?? 1;
@@ -384,7 +369,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
 
   function focusLogAction(id) {
     const row = document.querySelector(`[data-screen]:not([hidden]) [data-routine-id="${CSS.escape(id)}"]`);
-    const control = row?.querySelector(":scope > button, .day-card-actions > button") ??
+    const control = row?.querySelector(".plan-panel-actions > button, .day-card-actions > button") ??
       row?.querySelector(".day-card-more > summary");
     control?.focus({ preventScroll: true });
   }
@@ -433,7 +418,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
   for (const control of filters) control.addEventListener("click", () => {
     filter = control.dataset.routineFilter;
     fields("search").value = "";
-    for (const item of filters) item.setAttribute("aria-pressed", String(item === control));
+    setPressed(filters, item => item === control);
     render();
   });
   fields("search").addEventListener("input", () => { historyLimit = 14; render(); });

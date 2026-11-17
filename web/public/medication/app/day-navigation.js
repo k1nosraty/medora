@@ -19,10 +19,11 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
     history.replaceState({ ...history.state, medoraDay: day }, "", location.href);
     onDayChange(screen);
     render();
-    if (restoreFocus) $(restoreFocus).querySelector('[aria-current="date"]')?.focus();
+    if (restoreFocus) ($(restoreFocus).querySelector('[aria-pressed="true"]') ?? $("pick-day")).focus({ preventScroll: true });
   }
   for (const [id, delta] of [["previous-day", -1], ["next-day", 1]]) {
     $(id).addEventListener("click", () => {
+      if (screen === "water" && selectedDay() + delta > today()) return;
       const animate = screen === "today" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
         getComputedStyle(dayWeek).gridTemplateColumns.split(" ").length === 7;
       const outgoing = animate ? dayWeek.children[delta > 0 ? 0 : 6]?.cloneNode(true) : null;
@@ -53,7 +54,8 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
     control.append(element("span", weekday));
     control.setAttribute("aria-label", number + " " + weekday + ", " + dates.formatDay(day, true));
     control.dataset.focusKey = `day-${day}`;
-    if (day === selected) control.setAttribute("aria-current", "date");
+    control.setAttribute("aria-pressed", String(day === selected));
+    if (day === today()) control.setAttribute("aria-current", "date");
     return control;
   }
 
@@ -68,7 +70,7 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
     screen = destination;
     dayControls.hidden = !host;
     dayControls.classList.toggle("single-date", screen !== "today");
-    dayControls.classList.toggle("compact-day", ["medications", "appointments", "routines"].includes(screen));
+    dayControls.classList.toggle("compact-day", screen !== "today");
     $("today-dates").hidden = screen !== "today";
   }
 
@@ -77,14 +79,13 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
     const dates = getDates();
     $("day-label").textContent = screen === "today" ? dates.month(day) : day === today() ? t("ui.today") : dates.formatDay(day);
     $("pick-day").setAttribute("aria-label", $("day-label").textContent + ", " + t("ui.choose-date-value", dates.formatDay(day, true)));
-    if (screen !== "today") return;
     $("today-reset").hidden = day === today();
+    $("next-day").disabled = screen === "water" && day >= today();
+    if (screen !== "today") return;
     weekSlide?.cancel();
     dayWeek.replaceChildren(...Array.from({ length: 7 }, (_, offset) => {
       const date = day - 3 + offset;
-      const control = dateButton(date, day, selected => chooseDay(selected, "day-week"));
-      if (date === today()) control.classList.add("calendar-today");
-      return control;
+      return dateButton(date, day, selected => chooseDay(selected, "day-week"));
     }));
   }
 

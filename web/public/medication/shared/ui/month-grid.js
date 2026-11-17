@@ -1,7 +1,7 @@
 import { shortWeek, weekIndex } from "../i18n/locale.js";
 import { button, element } from "./dom.js";
 
-export function renderMonthGrid(root, { start, end, selected, active = selected, last = Infinity,
+export function renderMonthGrid(root, { start, end, selected, active = selected, today, last = Infinity,
   minCells = 0, formatDay, formatNumber, onSelect, onMove = onSelect, decorate = () => {} }) {
   const hadFocus = root.contains(document.activeElement);
   const direction = document.documentElement.dir === "rtl" ? -1 : 1;
@@ -14,6 +14,7 @@ export function renderMonthGrid(root, { start, end, selected, active = selected,
     control.disabled = day > last;
     control.setAttribute("aria-label", formatDay(day, true));
     control.setAttribute("aria-pressed", String(day === selected));
+    if (day === today) control.setAttribute("aria-current", "date");
     control.addEventListener("keydown", event => {
       const target = { ArrowLeft: day - direction, ArrowRight: day + direction,
         ArrowUp: day - 7, ArrowDown: day + 7, Home: day - weekIndex(day), End: day + 6 - weekIndex(day) }[event.key];

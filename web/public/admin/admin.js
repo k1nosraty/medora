@@ -1,5 +1,6 @@
 import { loadOperations, loadTickets } from "./operations.js";
 import { $, button, element } from "/medication/shared/ui/dom.js";
+import { installConfirmation, setPressed, showFeedback } from "/medication/shared/ui/controls.js";
 import { localDigits, localizeMarkup, t } from "/medication/shared/i18n/locale.js";
 import { applyDisplay } from "/medication/styles/display.js";
 import { accessCareSettings } from "/medication/shared/storage.js";
@@ -34,8 +35,7 @@ let mediaId = "";
 let previewKey;
 
 function status(id, message, error = false) {
-  $(id).textContent = message ? t(message) : "";
-  $(id).toggleAttribute("data-error", error);
+  showFeedback($(id), message ? t(message) : "", error ? "error" : "");
 }
 function httpsUrl(value) {
   try {
@@ -226,44 +226,40 @@ search.addEventListener("submit", event => {
   void loadAccounts();
 });
 more.addEventListener("click", () => void loadAccounts(true));
-cancel.addEventListener("click", () => confirmation.close());
-confirmation.addEventListener("cancel", event => {
-  if (confirm.disabled) event.preventDefault();
-});
-confirm.addEventListener("click", async () => {
-  if (!selectedAccount || confirm.disabled) return;
-  confirm.disabled = cancel.disabled = true;
-  status("admin-delete-status", "در حال ارتباط…");
-  try {
-    const { username, tag } = selectedAccount;
-    const result = await request(accountsPath, "DELETE", { username, tag });
-    if (!result) return;
-    if (result.error) {
-      status("admin-delete-status", result.error === "reauthenticate" ? "دوباره وارد حساب مدیر شوید و عملیات را تکرار کنید." :
-        result.error === "protected_account" ? "حساب مدیر قابل حذف نیست." :
-        "این حساب تغییر کرده است. فهرست را دوباره بارگذاری کنید.", true);
-      return;
+installConfirmation({
+  dialog: confirmation, confirm, cancel,
+  async perform() {
+    if (!selectedAccount) return;
+    showFeedback($("admin-delete-status"), t("در حال ارتباط…"), "loading");
+    try {
+      const { username, tag } = selectedAccount;
+      const result = await request(accountsPath, "DELETE", { username, tag });
+      if (!result) return;
+      if (result.error) {
+        status("admin-delete-status", result.error === "reauthenticate" ? "دوباره وارد حساب مدیر شوید و عملیات را تکرار کنید." :
+          result.error === "protected_account" ? "حساب مدیر قابل حذف نیست." :
+          "این حساب تغییر کرده است. فهرست را دوباره بارگذاری کنید.", true);
+        return;
+      }
+      confirmation.close();
+      const cleanup = result.cleanup;
+      const message = cleanup?.status === "pending"
+        ? t("دسترسی حساب قطع شد. پاک‌سازی ادامه دارد. دستگاه‌های باقی‌مانده {0}", localDigits(cleanup.remainingDevices))
+        : Number.isInteger(cleanup?.familyRows)
+          ? t("حساب و {0} رکورد وابستهٔ خانوادگی حذف شدند.", localDigits(cleanup.familyRows))
+          : "حساب حذف شد.";
+      await loadAccounts(false, message);
+      if (!panel.hidden) search.elements.query.focus({ preventScroll: true });
+    } catch {
+      status("admin-delete-status", "حذف حساب انجام نشد. دوباره تلاش کنید.", true);
     }
-    confirmation.close();
-    const cleanup = result.cleanup;
-    const message = cleanup?.status === "pending"
-      ? t("دسترسی حساب قطع شد. پاک‌سازی ادامه دارد. دستگاه‌های باقی‌مانده {0}", localDigits(cleanup.remainingDevices))
-      : Number.isInteger(cleanup?.familyRows)
-        ? t("حساب و {0} رکورد وابستهٔ خانوادگی حذف شدند.", localDigits(cleanup.familyRows))
-        : "حساب حذف شد.";
-    await loadAccounts(false, message);
-    if (!panel.hidden) search.elements.query.focus({ preventScroll: true });
-  } catch {
-    status("admin-delete-status", "حذف حساب انجام نشد. دوباره تلاش کنید.", true);
-  } finally {
-    confirm.disabled = cancel.disabled = false;
   }
 });
 
 const tabs = [...document.querySelectorAll("[data-admin-tab]")];
 for (const tab of tabs) tab.addEventListener("click", async () => {
+  setPressed(tabs, item => item === tab);
   for (const item of tabs) {
-    item.setAttribute("aria-pressed", String(item === tab));
     $(item.getAttribute("aria-controls")).hidden = item !== tab;
   }
   if (tab.dataset.adminTab === "operations") void loadOperations();

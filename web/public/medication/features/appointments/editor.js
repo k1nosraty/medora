@@ -3,8 +3,9 @@ import { locale, t } from "../../shared/i18n/locale.js";
 import { appointmentDefaults, appointmentOffsets, appointmentReminders, localZone } from "../../domain/care-plan.js";
 import { dayMs, localWall, timezone } from "../../domain/wall-clock.js";
 import { isoDay } from "../../domain/care-index.js";
-import { appearanceColors } from "../medicines/appearance.js";
+import { appearanceColors, mountAppearanceColors } from "../medicines/appearance.js";
 import { $, button, element } from "../../shared/ui/dom.js";
+import { installChoiceSearch, setPressed } from "../../shared/ui/controls.js";
 import { timeZoneCity } from "../../shared/ui/time-zone-picker.js";
 import { appointmentView, visitIllustration } from "./view.js";
 
@@ -24,8 +25,6 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
   const visitAppearance = $("visit-appearance");
   const categoryDialog = $("visit-category-dialog");
   const categorySearch = $("visit-category-search");
-  const categoryKey = value => value.normalize("NFKC").toLocaleLowerCase(locale)
-    .replaceAll("ي", "ی").replaceAll("ك", "ک").replace(/[\p{M}\p{P}\p{Z}\u200c\u200d]/gu, "");
   const categoryAliases = { ent: "ENT", psychiatry: "روانپزشک", radiology: "اشعه ایکس رادیوگرافی x-ray", dental: "دندانپزشک dentist" };
   const categoryGroups = [];
   for (const item of visitCategory.children) {
@@ -41,51 +40,22 @@ export function installAppointments({ getState, getFamilyView = () => null, toda
       control.dataset.category = option.value;
       control.prepend(visitIllustration(option.value));
       group.append(control);
-      return { control, key: categoryKey(`${option.text} ${option.value} ${categoryAliases[option.value] ?? ""}`) };
+      return { control, key: `${option.text} ${option.value} ${categoryAliases[option.value] ?? ""}` };
     });
     $("visit-category-results").append(group);
     categoryGroups.push({ group, rows });
   }
-  function filterVisitCategories() {
-    const terms = categorySearch.value.split(/\s+/).map(categoryKey).filter(Boolean);
-    let found = false;
-    for (const { group, rows } of categoryGroups) {
-      let visible = false;
-      for (const { control, key } of rows) {
-        control.hidden = !terms.every(term => key.includes(term));
-        visible ||= !control.hidden;
-      }
-      group.hidden = !visible;
-      found ||= visible;
-    }
-    $("visit-category-empty").hidden = found;
-  }
-  categorySearch.addEventListener("input", filterVisitCategories);
-  categorySearch.addEventListener("keydown", event => {
-    if (event.key !== "Enter" || event.isComposing) return;
-    const matches = $("visit-category-results").querySelectorAll("button:not([hidden])");
-    if (matches.length === 1) matches[0].click();
+  const resetCategorySearch = installChoiceSearch({
+    input: categorySearch, empty: $("visit-category-empty"), groups: () => categoryGroups
   });
   $("visit-category-open").addEventListener("click", () => {
-    categorySearch.value = "";
-    filterVisitCategories();
-    for (const { rows } of categoryGroups) for (const { control } of rows) {
-      control.setAttribute("aria-pressed", String(control.dataset.category === visitCategory.value));
-    }
+    resetCategorySearch();
+    setPressed(categoryGroups.flatMap(({ rows }) => rows.map(({ control }) => control)),
+      control => control.dataset.category === visitCategory.value);
     categoryDialog.showModal();
     categorySearch.focus({ preventScroll: true });
   });
-  const visitColors = Object.entries(appearanceColors).map(([color, title]) => {
-    const choice = element("input");
-    choice.type = "radio";
-    choice.name = "visit-color";
-    choice.value = color;
-    choice.dataset.ink = color;
-    const label = element("label");
-    label.append(choice, element("span", title));
-    $("visit-colors").querySelector(".visit-color-grid").append(label);
-    return choice;
-  });
+  const visitColors = mountAppearanceColors($("visit-colors").querySelector(".visit-color-grid"), "visit-color");
   function selectedVisitColor() {
     return visitColorOf(visitColors.find(choice => choice.checked)?.value);
   }

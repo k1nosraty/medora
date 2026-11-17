@@ -166,7 +166,7 @@
 .day-week { inline-size: 100%; }
 .medora .day-week button, .medora .calendar-grid button { display: grid; align-content: center; gap: .1rem; border: 0; background: transparent; color: var(--ink); min-block-size: 2.85rem; padding: .1rem; font-size: .84rem; line-height: 1.35; }
 .day-week button span { font-size: .74rem; font-weight: 400; }
-.medora .day-week button[aria-current="date"] { background: var(--action); color: var(--on-action); }
+.medora .day-week button[aria-pressed="true"] { background: var(--action); color: var(--on-action); }
 .single-date:not(.compact-day) .day-arrow, .single-date .day-week { display: none; }
 .medora .feature, .medora article { margin-block: .45rem; border-radius: 1.2rem; padding: .65rem .75rem; }
 .medora .empty { background: var(--panel); border-style: solid; }
@@ -189,8 +189,6 @@
 .medora .water-quick button[aria-pressed="true"] { background: var(--visit); border-color: var(--visit); }
 .medora .timeline { margin-block-start: .45rem; }
 .dose-card { position: relative; }
-.dose-header { display: flex; align-items: center; gap: .6rem; padding-inline-end: 2.3rem; }
-.dose-header p { color: var(--muted); font-size: .82rem; }
 .dose-result { display: flex; align-items: center; flex-wrap: wrap; gap: .38rem; }
 .medora .dose-card > button { display: block; margin-inline-start: auto; min-block-size: 2.75rem; font-size: .83rem; }
 .medora .treatment-name { flex: 1; font-weight: 750; text-align: start; }
@@ -335,7 +333,6 @@
 .medora .reminder-options { display: flex; flex-wrap: wrap; gap: .25rem .6rem; }
 .medora .reminder-options label { display: inline-flex; align-items: center; gap: .3rem; min-block-size: 2.75rem; }
 .medora .reminder-options input { inline-size: 1.1rem; min-block-size: auto; accent-color: var(--action); }
-.medora .dose-quick { margin-block-start: .45rem; }
 .medora .badge[data-status="snoozed"] { color: var(--warn); }
 .medora #android-restore .backup-file-picker {
   position: relative;
@@ -423,7 +420,7 @@
 .medora .day-controls { gap: .2rem; background: var(--panel); border-radius: 1.2rem; margin-block: .7rem 1.25rem; padding: .35rem .45rem; }
 .medora .day-week { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .medora .day-week button { min-block-size: 2.7rem; }
-.medora .day-week button[aria-current="date"] { background: var(--dock-active); color: var(--action); }
+.medora .day-week button[aria-pressed="true"] { background: var(--dock-active); color: var(--action); }
 .medora #day-title, .medora #med-day-title { margin-block: .5rem .7rem; font-weight: 800; }
 
 .medication-banner {
@@ -491,7 +488,7 @@
 .medora .refill form { margin-block: 0 .55rem; }
 .medora #medicine-details-body > .medication-banner { margin-block-end: .55rem; }
 .medora .treatment-name { font-size: 1.12rem; color: inherit; }
-.medora :is(.treatment-name, .dose-header h3, .sheet-header h2, .visit-title) { min-inline-size: 0; overflow-wrap: anywhere; }
+.medora :is(.treatment-name, .sheet-header h2, .visit-title) { min-inline-size: 0; overflow-wrap: anywhere; }
 .medora .treatment input[role="switch"] { flex: none; }
 .medora #appearance-preview { display: block; padding: 0; background: transparent; border: 0; }
 .medora #appearance-preview-icon { display: block; }

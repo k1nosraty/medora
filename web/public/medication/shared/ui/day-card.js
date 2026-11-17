@@ -1,6 +1,13 @@
 import { element } from "./dom.js";
 import { t } from "../i18n/locale.js";
 
+export function appendPlanActions(card, ...controls) {
+  if (!controls.length) return;
+  const actions = element("div", "", "plan-panel-actions");
+  actions.append(...controls);
+  card.append(actions);
+}
+
 export function mountDayCard(card, { kind, label, image, title, time, dateTime, untimed = false, summary, featured = false }) {
   card.classList.add("day-card");
   card.dataset.cardKind = kind;

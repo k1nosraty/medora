@@ -8,14 +8,19 @@ import { fileURLToPath } from "node:url";
 const ui = fileURLToPath(new URL("../ui/", import.meta.url));
 const publicDir = new URL("../public/", import.meta.url);
 const medication = new URL("medication/", publicDir);
-const include = /(?:<!-- include ([\w./-]+) -->|\/\* include ([\w./-]+) \*\/)/g;
+const include = /(?:<!-- include ([\w./-]+)(?: (\{[^\n]*\}))? -->|\/\* include ([\w./-]+) \*\/)/g;
 
-async function render(file, parents = []) {
+async function render(file, parents = [], parameters = {}) {
   const path = resolve(ui, file);
   if (!path.startsWith(ui) || parents.includes(path)) throw new Error("Invalid template include: " + file);
-  const source = await readFile(path, "utf8");
+  const source = (await readFile(path, "utf8")).replace(/\{\{param:([a-zA-Z]+)\}\}/g, (_, key) => {
+    const value = parameters[key];
+    if (typeof value !== "string" || /[<>"&]/.test(value)) throw new Error("Invalid template parameter: " + file + " " + key);
+    return value;
+  });
   const matches = [...source.matchAll(include)];
-  const parts = await Promise.all(matches.map(match => render(match[1] ?? match[2], [...parents, path])));
+  const parts = await Promise.all(matches.map(([, html, params, css]) =>
+    render(html ?? css, [...parents, path], params ? JSON.parse(params) : {})));
   let index = 0;
   return source.replace(include, () => parts[index++].trimEnd());
 }

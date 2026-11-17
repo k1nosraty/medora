@@ -35,12 +35,8 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
   $("calendar-cycle-key").hidden = !cycleEnabled;
   $("calendar-month").textContent = formatMonth(start);
   renderMonthGrid($("calendar-days"), {
-    start, end, selected: day, formatDay, formatNumber, onSelect: selectDay,
+    start, end, selected: day, today, formatDay, formatNumber, onSelect: selectDay,
     decorate(control, date) {
-      if (date === today) {
-        control.classList.add("calendar-today");
-        control.setAttribute("aria-current", "date");
-      }
       const dots = element("span", "", "calendar-dots");
       dots.setAttribute("aria-hidden", "true");
       for (const [exists, kind, label] of [

@@ -17,7 +17,6 @@
 .admin-account-identity { display: grid; justify-items: start; min-inline-size: 0; overflow-wrap: anywhere; }
 .medora .admin-account button { color: var(--error); }
 .admin :is(#admin-status, #admin-account-status, #admin-delete-status, #promotion-status):empty { display: none; }
-.admin :is(#admin-status, #admin-account-status, #admin-delete-status, #promotion-status)[data-error] { color: var(--error); }
 .medora .admin form { margin: 0; }
 .medora .admin fieldset { border: 0; padding: 0; margin: 0; }
 .admin legend { font-weight: 750; }

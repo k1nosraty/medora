@@ -1,3 +1,4 @@
+import { showFeedback } from "../shared/ui/controls.js";
 import { CareInputError } from "../shared/ui/care-error.js";
 import { installEntryActions } from "./entry-actions.js";
 import { preserveFocus } from "../shared/ui/focus.js";
@@ -82,7 +83,7 @@ async function mutate(change, success, scheduleChanged = false, day) {
       needsSync = state.reminders?.revision !== revision;
     }, { snapshot: care, day });
   } catch (error) {
-    $("status").textContent = error instanceof CareInputError ? error.message : t(storageMessage(error, "ui.could-not-save-try-again"));
+    showFeedback($("status"), error instanceof CareInputError ? error.message : t(storageMessage(error, "ui.could-not-save-try-again")), "error");
     return false;
   } finally {
     busy = false;
@@ -92,9 +93,9 @@ async function mutate(change, success, scheduleChanged = false, day) {
   accountSync.schedule();
   try {
     render();
-    $("status").textContent = success;
+    showFeedback($("status"), success, "success");
   } catch {
-    $("status").textContent = t("ui.saved-refresh-view");
+    showFeedback($("status"), t("ui.saved-refresh-view"));
   }
   return true;
 }
@@ -143,7 +144,7 @@ async function reload() {
     care = latest;
     render();
   } catch (error) {
-    $("status").textContent = t(storageMessage(error, "ui.could-not-read-your-local-records"));
+    showFeedback($("status"), t(storageMessage(error, "ui.could-not-read-your-local-records")), "error");
   }
 }
 

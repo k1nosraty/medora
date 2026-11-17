@@ -44,9 +44,6 @@
 }
 .cycle-panel-heading > button { flex: none; font-size: .77rem; }
 .cycle-week-heading p { margin: 0; color: var(--muted); font-size: .82rem; text-align: center; }
-.cycle-week-heading svg { inline-size: 1rem; block-size: 1rem; rotate: 90deg; }
-#cycle-next-week svg, html[dir="rtl"] #cycle-previous-week svg { rotate: -90deg; }
-html[dir="rtl"] #cycle-next-week svg { rotate: 90deg; }
 .cycle-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .2rem; }
 .medora .cycle-days > :is(button, span) {
   display: grid;

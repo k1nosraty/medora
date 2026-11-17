@@ -1,22 +1,13 @@
       <div data-screen="medications" hidden>
-        <section aria-labelledby="plans-title">
-          <div class="plan-panel-banner program-medicine">
-            <div>
-              <h2 id="plans-title">{{msg:ui.my-medicines}}</h2>
-              <p id="med-day-count" aria-live="polite"></p>
-              <button id="add" type="button" class="secondary plan-panel-add" data-open-medication><svg aria-hidden="true"><use href="#i-plus"/></svg>{{msg:ui.new-medicine}}</button>
-            </div>
-            <svg data-surface-art="bottle" class="category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-bottle"/></svg>
-          </div>
-          <div id="medicine-cabinet">
-            <label class="cabinet-search" id="cabinet-search-wrap" hidden><svg aria-hidden="true"><use href="#i-search"/></svg><input id="cabinet-search" type="search" placeholder="{{msg:ui.search-medicines}}" aria-label="{{msg:ui.search-medicines}}"></label>
-            <div id="plans" data-context-list role="region" aria-label="{{msg:ui.medicine-list}}" tabindex="0"></div>
-            <p class="empty" id="cabinet-empty" role="status" hidden>{{msg:ui.no-medicines-match-your-search}}</p>
-          </div>
-        </section>
+        <!-- include layout/program-banner.html {"kind":"medicine","titleId":"plans-title","title":"ui.my-medicines","summaryId":"med-day-count","buttonId":"add","action":"medication","button":"ui.new-medicine","art":"bottle","artClass":"","href":"#art-bottle","viewBox":"0 0 128 100"} -->
+        <div id="medicine-cabinet">
+          <label class="cabinet-search" id="cabinet-search-wrap" hidden><svg aria-hidden="true"><use href="#i-search"/></svg><input id="cabinet-search" type="search" placeholder="{{msg:ui.search-medicines}}" aria-label="{{msg:ui.search-medicines}}"></label>
+          <div id="plans" data-context-list role="region" aria-label="{{msg:ui.medicine-list}}" tabindex="0"></div>
+          <p class="empty" id="cabinet-empty" role="status" hidden>{{msg:ui.no-medicines-match-your-search}}</p>
+        </div>
         <section aria-labelledby="med-day-title">
           <h2 id="med-day-title">{{msg:ui.daily-doses}}</h2>
           <div data-day-host="medications"></div>
-          <div id="med-day-doses" data-context-list></div>
+          <div id="med-day-doses" class="compact-card-list" data-context-list></div>
         </section>
       </div>

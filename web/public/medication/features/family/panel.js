@@ -1,3 +1,4 @@
+import { installChoiceSearch, searchField, showFeedback } from "../../shared/ui/controls.js";
 import { watchFamilyAccess } from "./access.js";
 import { quickActions } from "./quick-action.js";
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
@@ -139,9 +140,8 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   let invite = inviteHash.exec(location.hash)?.[1];
 
   function message(value = "", error = false) {
-    status.textContent = value ? t(value) : "";
+    showFeedback(status, value ? t(value) : "", error ? "error" : "");
     status.hidden = !value;
-    status.toggleAttribute("data-error", error);
   }
 
   function page(title, parent) {
@@ -307,7 +307,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     const options = element("fieldset", "", "family-icon-options");
     options.append(element("legend", t("ui.group-icon")));
     const tiles = element("div", "", "family-icon-grid");
-    for (const [id, label] of Object.entries(groupIcons)) {
+    const rows = Object.entries(groupIcons).map(([id, label]) => {
       const tile = element("label");
       tile.title = t(label);
       const input = document.createElement("input");
@@ -315,8 +315,12 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       input.setAttribute("aria-label", t(label));
       tile.append(input, groupArt(id));
       tiles.append(tile);
-    }
-    options.append(tiles);
+      return { control: tile, key: t(label), select: input };
+    });
+    const query = element("input");
+    const empty = element("p", t("ui.no-matching-icons"), "empty");
+    options.append(searchField(query, t("ui.search-group-icons")), tiles, empty);
+    installChoiceSearch({ input: query, empty, groups: () => [{ group: tiles, rows }] })();
     nameInput.addEventListener("input", () => {
       banner.querySelector("strong").textContent = nameInput.value.trim() || group?.name || t("ui.new-group");
     });

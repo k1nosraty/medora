@@ -181,11 +181,7 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
 
 .medora .water-history-card {
   padding: .85rem;
-  border: 1px solid var(--accent-glass-rim);
   border-radius: 1.3rem;
-  background: linear-gradient(135deg, var(--glass-glint), transparent 62%), var(--category-water-fill);
-  color: var(--water-ink);
-  box-shadow: var(--surface-shadow);
 }
 .medora[data-finish="matte"] .water-history-card { background: var(--category-water-fill); }
 .medora #water-summary {

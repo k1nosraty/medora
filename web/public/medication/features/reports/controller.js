@@ -1,3 +1,4 @@
+import { setPressed } from "../../shared/ui/controls.js";
 import { weekIndex } from "../../shared/i18n/locale.js";
 import { renderCalendar, renderReports } from "./view.js";
 
@@ -12,7 +13,7 @@ export function installInsights({ root, today, getFamilyView, getDates, render, 
     const key = `data-${attribute}`;
     const buttons = root.querySelectorAll(`[${key}]`);
     function choose(value) {
-      for (const option of buttons) option.setAttribute("aria-pressed", String(option.getAttribute(key) === value));
+      setPressed(buttons, option => option.getAttribute(key) === value);
       select(value);
     }
     for (const button of buttons) button.addEventListener("click", () => {

@@ -2,7 +2,7 @@ import { recordAction } from "../family/context.js";
 import { localDigits, t } from "../../shared/i18n/locale.js";
 import { isoDay } from "../../domain/care-index.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
-import { mountDayCard } from "../../shared/ui/day-card.js";
+import { appendPlanActions, mountDayCard } from "../../shared/ui/day-card.js";
 import { timeZoneCity } from "../../shared/ui/time-zone-picker.js";
 
 import { visitGlass } from "../../design/three-dimensional.js";
@@ -88,7 +88,7 @@ export function appointmentView({
         options.push(recordAction("ثبت حضور", () => view.record({ kind: "visit", day: local.day, id: visit.id, title: visit.name })));
       }
       if (layout) layout.addActions(...options);
-      else if (options.length) card.append(...options);
+      else appendPlanActions(card, ...options);
       return card;
     }
     if (actionable) {
@@ -121,18 +121,14 @@ export function appointmentView({
       });
       const remove = button(t("ui.delete-appointment"), () => deleteVisit(visit.id));
       remove.className = "text-button danger-link";
-      if (compactDay) {
-        const actions = attendance && visit.completed ? [attendance, edit, cancel, remove] : [edit, cancel, remove];
-        layout.addActions(dayCardOptions(t("ui.appointment-options"), ...(calendar ? notes : []), ...actions),
-          ...(attendance && !visit.completed ? [attendance] : []));
-      } else if (layout) {
+      if (variant === "day-featured") {
         layout.addActions(...(attendance ? [attendance] : []), dayCardOptions(t("ui.appointment-options"), edit, cancel, remove));
       } else {
-        const controls = element("div", "", "visit-row-actions");
-        const manage = visit.completed && attendance ? [attendance, edit, cancel, remove] : [edit, cancel, remove];
-        controls.append(dayCardOptions(t("ui.appointment-options"), ...manage));
-        if (attendance && !visit.completed) controls.append(attendance);
-        card.append(controls);
+        const more = dayCardOptions(t("ui.appointment-options"), ...(calendar ? notes : []),
+          ...(visit.completed && attendance ? [attendance] : []), edit, cancel, remove);
+        const controls = [more, ...(attendance && !visit.completed ? [attendance] : [])];
+        if (compactDay) layout.addActions(...controls);
+        else appendPlanActions(card, ...controls);
       }
     }
     return card;

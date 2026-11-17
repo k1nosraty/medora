@@ -189,9 +189,9 @@ html[dir="ltr"] .medora #today-dates .day-controls {
 .medora #today-dates .day-week .day-week-ghost { position: absolute; inline-size: calc(100% / 7); }
 .day-week-ghost[data-edge="start"] { inset-inline-end: 100%; }
 .day-week-ghost[data-edge="end"] { inset-inline-start: 100%; }
-.medora #today-dates .day-week .calendar-today:not([aria-current="date"]) { box-shadow: inset 0 0 0 1px var(--action); }
+.medora #today-dates .day-week [aria-current="date"]:not([aria-pressed="true"]) { box-shadow: inset 0 0 0 1px var(--action); }
 .medora #today-dates .day-week button span { color: var(--muted); font-size: .68rem; }
-.medora :is(.today-water-actions [data-open-water], #today-dates .day-week button[aria-current="date"]) {
+.medora :is(.today-water-actions [data-open-water], #today-dates .day-week button[aria-pressed="true"]) {
   border: 1px solid var(--accent-glass-rim);
   color: var(--on-action);
   background: radial-gradient(ellipse 105% 82% at 34% 0%, #fff2, transparent 65%),
@@ -200,11 +200,11 @@ html[dir="ltr"] .medora #today-dates .day-controls {
   -webkit-backdrop-filter: blur(8px) saturate(125%);
   backdrop-filter: blur(8px) saturate(125%);
 }
-.medora #today-dates .day-week button[aria-current="date"]:focus-visible { outline-color: var(--on-action); }
-.medora #today-dates .day-week button[aria-current="date"] span { color: inherit; }
+.medora #today-dates .day-week button[aria-pressed="true"]:focus-visible { outline-color: var(--on-action); }
+.medora #today-dates .day-week button[aria-pressed="true"] span { color: inherit; }
 .medora #today-focus .day-card-actions > .care-record-action,
-.medora :is(#doses, #calendar-entries) .day-card-actions > button.secondary,
-.medora[data-finish="glass"] :is(#today-water .today-water-actions > button, #cycle-log-end) {
+.medora :is(#app, .gallery) .compact-card-list .day-card-actions > button.secondary,
+.medora[data-finish="glass"] :is(#today-water .today-water-actions > button, #cycle-log-end, .glass-secondary-action, .glass-secondary-actions > button) {
   position: relative;
   isolation: isolate;
   box-shadow: none;
@@ -216,8 +216,8 @@ html[dir="ltr"] .medora #today-dates .day-controls {
   backdrop-filter: none;
 }
 .medora #today-focus .day-card-actions > .care-record-action::before,
-.medora :is(#doses, #calendar-entries) .day-card-actions > button.secondary::before,
-.medora[data-finish="glass"] :is(#today-water .today-water-actions > button, #cycle-log-end)::before {
+.medora :is(#app, .gallery) .compact-card-list .day-card-actions > button.secondary::before,
+.medora[data-finish="glass"] :is(#today-water .today-water-actions > button, #cycle-log-end, .glass-secondary-action, .glass-secondary-actions > button)::before {
   content: "";
   position: absolute;
   z-index: -1;

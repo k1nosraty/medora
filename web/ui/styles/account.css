@@ -82,7 +82,6 @@
 .account-footer { border-block-start: 1px solid var(--outline); margin-block-start: .6rem; text-align: center; }
 .medora .account-footer p { margin: 0; font-size: .76rem; }
 .medora #account-status:empty { margin: 0; }
-.medora #account-status[data-error] { color: var(--error); }
 
 @media (max-height: 510px) {
   .account-cover { padding-block: .65rem; }

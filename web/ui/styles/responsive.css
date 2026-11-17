@@ -45,7 +45,7 @@
   .medora #today-dates #previous-day { grid-area: 2 / 1; }
   .medora #today-dates #next-day { grid-area: 2 / 3; }
   .medora #today-dates .day-week-window { grid-area: 3 / 1 / 4 / -1; }
-  .medora #today-dates .day-week button[aria-current="date"] { background: var(--action); backdrop-filter: none; }
+  .medora #today-dates .day-week button[aria-pressed="true"] { background: var(--action); backdrop-filter: none; }
   .medora #today-dates .day-week { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .12rem; }
   .medora #today-dates .day-week-ghost { display: none; }
   .medora #today-dates .day-week button { min-block-size: 2.75rem; }
@@ -70,9 +70,6 @@
   .medora #visit-filters { flex-wrap: wrap; }
   .medora :is(.plan-panel-add, #visit-filters button) { white-space: normal; max-inline-size: 100%; overflow-wrap: anywhere; }
   .medora #visit-filters button { flex: 1 1 auto; }
-  .medora #visits .visit-panel-row { grid-template-columns: auto minmax(0, 1fr); }
-  .medora .visit-row-actions { grid-column: 1 / -1; max-inline-size: 100%; }
-  .medora .visit-row-actions button { white-space: normal; overflow-wrap: anywhere; }
   .medora #calendar-today { white-space: normal; min-inline-size: min(100%, 3rem); }
   .medora .today-story .story-art { display: none; }
   .medora #today-water .water-info { grid-template-columns: minmax(0, 1fr); }
@@ -84,22 +81,22 @@
   .medora .timeline-sort { max-inline-size: 100%; min-inline-size: 0; }
   .medora #today-reminders button { max-inline-size: 100%; white-space: normal; }
   .medora #timeline-order { min-inline-size: 0; max-inline-size: 100%; flex: 1 1 auto; }
-  .medora :is(#doses, #calendar-entries, #today-focus) .day-card {
+  .medora :is(.compact-card-list, #today-focus) .day-card {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: .2rem;
   }
-  .medora :is(#doses, #calendar-entries, #today-focus) :is(.day-card-art, .day-focus-media) { display: none; }
+  .medora :is(.compact-card-list, #today-focus) :is(.day-card-art, .day-focus-media) { display: none; }
   .medora #today-focus .day-focus-copy { display: contents; }
-  .medora :is(#doses, #calendar-entries, #today-focus) .day-card-actions {
+  .medora :is(.compact-card-list, #today-focus) .day-card-actions {
     max-inline-size: 100%;
     align-self: stretch;
     align-items: stretch;
     flex-wrap: wrap;
   }
-  .medora :is(#doses, #calendar-entries, #today-focus) .day-card-actions button { white-space: normal; min-inline-size: min(100%, 4rem); }
-  .medora :is(#doses, #calendar-entries) .day-card-time { border: 0; margin: 0; justify-content: start; }
+  .medora :is(.compact-card-list, #today-focus) .day-card-actions button { white-space: normal; min-inline-size: min(100%, 4rem); }
+  .medora :is(#app, .gallery) .compact-card-list .day-card-time { border: 0; margin: 0; justify-content: start; }
   .medora :is(.insights-tabs, #report-range) { flex-wrap: wrap; }
   .medora :is(.insights-tabs, #report-range) button { flex: 1 1 auto; }
   .medora #calendar-panel { grid-template-columns: minmax(0, 1fr); }

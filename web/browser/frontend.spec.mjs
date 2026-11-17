@@ -651,6 +651,63 @@ test("design gallery opens shared forms", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("appointment and routine appearance posters fit their artwork and follow the chosen color", async ({ page }) => {
+  await open(page, { language: "en", width: 320 });
+  const posters = [
+    { view: "appointments", add: "#visit-add", details: "#visit-appearance", preview: "#visit-appearance-preview", color: "visit-color", search: "#visit-category-search", query: "dentist", art: "visit-dental" },
+    { view: "routines", add: "#routine-add", details: "#routine-appearance", preview: "#routine-preview", color: "routine-color", search: "#routine-category-search", query: "jump rope", art: "routine-rope" }
+  ];
+  for (const { view, add, details, preview, color, search, query, art } of posters) {
+    await page.goto("/medication/?view=" + view);
+    await page.locator(add).click();
+    await page.locator(details + " > summary").click();
+    const poster = page.locator(preview);
+    const image = poster.locator("img");
+    async function checkFit() {
+      await expect(image).toBeVisible();
+      await image.evaluate(img => img.decode());
+      const fits = await image.evaluate(img => {
+        const bounds = img.getBoundingClientRect();
+        const frame = img.parentElement.getBoundingClientRect();
+        return bounds.width > 0 && Math.abs(bounds.width - bounds.height) < 1 &&
+          bounds.top >= frame.top && bounds.bottom <= frame.bottom &&
+          bounds.left >= frame.left && bounds.right <= frame.right;
+      });
+      expect(fits).toBe(true);
+    }
+    await checkFit();
+    const original = await poster.evaluate(el => getComputedStyle(el).backgroundColor);
+    await page.locator(`input[name="${color}"][value="gold"]`).check();
+    await expect(page.locator(details)).toHaveAttribute("data-ink", "gold");
+    expect(await poster.evaluate(el => getComputedStyle(el).getPropertyValue("--pill-base").trim())).toBe("#f3c56a");
+    expect(await poster.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(original);
+    await page.locator(details + " .appearance-type-picker").click();
+    await page.locator(search).fill(query);
+    await page.locator(search).press("Enter");
+    await expect(image).toHaveAttribute("data-art", art);
+    await checkFit();
+  }
+});
+
+test("water history uses the glass actions and retains quick entry and editing", async ({ page }) => {
+  await open(page);
+  await page.goto("/medication/?view=water");
+  const preset = page.locator("#water-entry [data-water-add='250']");
+  const custom = page.locator("#water-custom-action");
+  for (const action of [preset, custom]) {
+    await expect(action).toBeVisible();
+    expect(await action.evaluate(button => getComputedStyle(button, "::before").backgroundImage)).toContain("radial-gradient");
+  }
+  await preset.click();
+  const row = page.locator("#water-entries .entry-row");
+  await expect(row).toHaveCount(1);
+  for (const button of await row.getByRole("button").all()) {
+    expect(await button.evaluate(el => getComputedStyle(el, "::before").backgroundImage)).toContain("radial-gradient");
+  }
+  await row.getByRole("button", { name: "ویرایش" }).click();
+  await expect(page.locator("#water-dialog")).toBeVisible();
+});
+
 test.describe("appointments on a device in Tehran", () => {
   test.use({ timezoneId: "Asia/Tehran" });
 

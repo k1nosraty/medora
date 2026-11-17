@@ -2,9 +2,12 @@
     <div class="sheet-body">
       <h2 id="date-picker-title">{{msg:ui.choose-date}}</h2>
       <div class="feature-head calendar-head">
-        <button type="button" id="picker-previous-month" class="icon-button" aria-label="{{msg:ui.previous-month}}"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
-        <strong id="picker-month"></strong>
-        <button type="button" id="picker-next-month" class="icon-button reverse" aria-label="{{msg:ui.next-month}}"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+        <button type="button" id="picker-previous-month" data-date-arrow="previous" class="icon-button" aria-label="{{msg:ui.previous-month}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+        <div class="date-caption">
+          <strong id="picker-month"></strong>
+          <button type="button" class="secondary date-reset" id="picker-today" aria-label="{{msg:ui.today-return-label}}" hidden>{{msg:ui.today}}</button>
+        </div>
+        <button type="button" id="picker-next-month" data-date-arrow="next" class="icon-button reverse" aria-label="{{msg:ui.next-month}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
       </div>
       <div id="picker-birth-jump" class="family-field-pair" hidden>
         <label>{{msg:ui.year}}<select id="picker-birth-year"></select></label>
@@ -15,7 +18,6 @@
         <button type="button" class="text-button" data-close="date-picker">{{msg:ui.cancel}}</button>
         <div>
           <button type="button" class="text-button" id="picker-clear-date" hidden>{{msg:ui.clear}}</button>
-          <button type="button" class="text-button" id="picker-today">{{msg:ui.today}}</button>
           <button type="button" id="picker-date-confirm">{{msg:ui.select}}</button>
         </div>
       </div>

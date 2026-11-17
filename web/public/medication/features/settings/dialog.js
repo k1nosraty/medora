@@ -1,3 +1,4 @@
+import { showFeedback } from "../../shared/ui/controls.js";
 import { defaultCalendar, language, locale, selectLanguage, t } from "../../shared/i18n/locale.js";
 import { $, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { integer } from "../../shared/ui/input-values.js";
@@ -63,9 +64,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
     select.value = value;
   }
   function settingsFeedback(message = "", state = "") {
-    const status = $("settings-status");
-    status.textContent = message;
-    status.dataset.state = state;
+    showFeedback($("settings-status"), message, state);
   }
   function refreshSettingsHome(data) {
     const water = data.waterReminders ?? waterDefaults;

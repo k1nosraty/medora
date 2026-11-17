@@ -1,6 +1,6 @@
       <div data-screen="insights" hidden>
         <div id="insights-header">
-          <div class="insights-tabs glass-toolbar" role="group" aria-label="{{msg:ui.calendar-and-reports}}">
+          <div class="insights-tabs segmented glass-toolbar" role="group" aria-label="{{msg:ui.calendar-and-reports}}">
             <button type="button" data-insight="calendar" aria-controls="calendar-panel" aria-pressed="true"><svg aria-hidden="true"><use href="#i-calendar"/></svg>{{msg:ui.calendar}}</button>
             <button type="button" data-insight="reports" aria-controls="reports-panel" aria-pressed="false"><svg aria-hidden="true"><use href="#i-reports"/></svg>{{msg:ui.reports-2}}</button>
           </div>
@@ -8,9 +8,11 @@
         <div id="calendar-panel">
           <section class="feature calendar-card" aria-labelledby="calendar-month">
             <div class="feature-head calendar-head">
-              <button type="button" id="previous-month" class="icon-button" aria-label="{{msg:ui.previous-month}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
-              <h2 id="calendar-month" aria-live="polite"></h2>
-              <button type="button" id="next-month" class="icon-button reverse" aria-label="{{msg:ui.next-month}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+              <button type="button" id="previous-month" data-date-arrow="previous" class="icon-button" aria-label="{{msg:ui.previous-month}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+              <div class="date-caption"><h2 id="calendar-month" aria-live="polite"></h2>
+                <button type="button" id="calendar-today" class="secondary date-reset" aria-label="{{msg:ui.today-return-label}}" hidden>{{msg:ui.today}}</button>
+              </div>
+              <button type="button" id="next-month" data-date-arrow="next" class="icon-button reverse" aria-label="{{msg:ui.next-month}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
             </div>
             <div id="calendar-days" class="calendar-grid" role="group" aria-labelledby="calendar-month"></div>
             <ul class="calendar-key" aria-label="{{msg:ui.calendar-key}}">
@@ -24,9 +26,8 @@
           <section id="calendar-activity" aria-labelledby="calendar-date">
             <header class="calendar-agenda-head">
               <div><h2 id="calendar-date" aria-live="polite"></h2><p id="calendar-agenda-label"></p></div>
-              <button type="button" id="calendar-today" class="secondary" hidden>{{msg:ui.back-to-today}}</button>
             </header>
-            <div id="calendar-entries"></div>
+            <div id="calendar-entries" class="compact-card-list"></div>
           </section>
         </div>
         <div id="reports-panel" hidden>
@@ -47,6 +48,7 @@
                 <p id="report-average" class="report-caption">{{msg:ui.average-on-days-with-entries}}</p>
                 <p id="report-water-empty" class="report-empty" hidden>{{msg:ui.no-water-logged-in-this-period}}</p>
               </div>
+              <button type="button" class="text-button report-water-link" data-destination="water">{{msg:ui.water-history}} <svg aria-hidden="true"><use href="#i-back"/></svg></button>
               <div id="report-water-trend" class="report-trend">
                 <p class="report-goal"><span aria-hidden="true"></span><span id="report-goal-label"></span></p>
                 <div id="report-chart" class="report-chart" role="group" aria-label="{{msg:ui.water-intake-chart}}"></div>
@@ -74,7 +76,7 @@
               </div>
               <progress id="report-dose-progress" class="report-progress" max="1" value="0" aria-label="{{msg:ui.share-of-due-or-logged-doses-taken}}" hidden></progress>
               <dl class="report-stats" id="report-dose-breakdown" hidden></dl>
-              <button type="button" class="report-card-open" data-destination="medications" aria-label="{{msg:ui.medication-intake}}"></button>
+              <button type="button" class="report-card-open" data-destination="medications" aria-labelledby="report-dose-open-label report-dose-title"><span id="report-dose-open-label" class="report-open-label">{{msg:ui.open-details}} <svg aria-hidden="true"><use href="#i-back"/></svg></span></button>
             </section>
             <section class="feature program-routine report-card" aria-labelledby="report-routine-title">
               <div class="report-hero">
@@ -85,7 +87,7 @@
               </div>
               <progress id="report-routine-progress" class="report-progress" max="1" value="0" aria-label="{{msg:ui.share-of-routines-completed}}" hidden></progress>
               <dl class="report-stats" id="report-routine-breakdown" hidden></dl>
-              <button type="button" class="report-card-open" data-destination="routines" aria-label="{{msg:ui.routines}}"></button>
+              <button type="button" class="report-card-open" data-destination="routines" aria-labelledby="report-routine-open-label report-routine-title"><span id="report-routine-open-label" class="report-open-label">{{msg:ui.open-details}} <svg aria-hidden="true"><use href="#i-back"/></svg></span></button>
             </section>
             <section class="feature visit report-card program-visit" aria-labelledby="report-visit-title">
               <div class="report-hero">
@@ -95,7 +97,7 @@
                 <p id="report-visits" class="report-caption"></p>
               </div>
               <dl class="report-stats" id="report-visit-breakdown" hidden></dl>
-              <button type="button" class="report-card-open" data-destination="appointments" aria-label="{{msg:ui.visits}}"></button>
+              <button type="button" class="report-card-open" data-destination="appointments" aria-labelledby="report-visit-open-label report-visit-title"><span id="report-visit-open-label" class="report-open-label">{{msg:ui.open-details}} <svg aria-hidden="true"><use href="#i-back"/></svg></span></button>
             </section>
             <section id="report-cycle-card" class="feature report-card program-cycle" aria-labelledby="report-cycle-title" hidden>
               <div class="report-hero">
@@ -104,7 +106,7 @@
                 <p id="report-cycle-empty" class="report-empty">{{msg:ui.no-cycle-records-in-this-period}}</p>
               </div>
               <dl id="report-cycle-breakdown" class="report-stats" hidden></dl>
-              <button type="button" class="report-card-open" data-destination="cycle" aria-label="{{msg:ui.cycle-history}}"></button>
+              <button type="button" class="report-card-open" data-destination="cycle" aria-labelledby="report-cycle-open-label report-cycle-title"><span id="report-cycle-open-label" class="report-open-label">{{msg:ui.open-details}} <svg aria-hidden="true"><use href="#i-back"/></svg></span></button>
             </section>
           </div>
         </div>

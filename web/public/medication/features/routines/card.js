@@ -1,6 +1,6 @@
 import { recordAction } from "../family/context.js";
 import { button, dayCardOptions, element } from "../../shared/ui/dom.js";
-import { mountDayCard } from "../../shared/ui/day-card.js";
+import { appendPlanActions, mountDayCard } from "../../shared/ui/day-card.js";
 import { listSeparator, localDigits, t } from "../../shared/i18n/locale.js";
 import { doseTime, timeText } from "../../domain/care-index.js";
 import { routineComplete } from "../../domain/routine-plan.js";
@@ -67,7 +67,7 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
         const action = recordAction(entry.mode === "done" ? "ثبت انجام" : "ثبت پیشرفت", () =>
           view.record({ kind: "routine", day, id: entry.id, title: entry.name, routine: entry }));
         if (layout) layout.addActions(action);
-        else row.append(action);
+        else appendPlanActions(row, action);
       }
       return row;
     }
@@ -75,7 +75,7 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
     if (manage) {
       const edit = button(t("ui.edit"), () => openEditor(entry));
       edit.setAttribute("aria-label", t("ui.edit-routine-value", entry.name));
-      row.append(edit);
+      appendPlanActions(row, dayCardOptions(t("ui.routine-options"), edit));
     } else if (!readOnly && day <= today() && plan) {
       const activity = { entry, day, plan, recorded: state.routineLogs[day]?.[entry.id] };
       logAction = entry.mode === "done" ?
@@ -90,9 +90,14 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
       } else logAction.setAttribute("aria-label", t("ui.log-progress-for-value", entry.name));
       if (!completed) logAction.classList.add("care-record-action");
       row.dataset.complete = String(completed);
-      if (!layout) row.append(logAction);
+      if (!layout && completed) copy.append(element("span", t("ui.done"), "routine-row-state"));
     } else if (completed && !dayCard) row.append(element("span", t("ui.done"), "routine-row-state"));
-    if (layout && plan) {
+    if (!layout && !manage && !readOnly && plan) {
+      const edit = button(t("ui.edit"), () => openEditor(plan));
+      edit.setAttribute("aria-label", t("ui.edit-routine-value", entry.name));
+      const more = dayCardOptions(t("ui.routine-options"), ...(completed && logAction ? [logAction] : []), edit);
+      appendPlanActions(row, more, ...(logAction && !completed ? [logAction] : []));
+    } else if (layout && plan) {
       const edit = button(t("ui.edit"), () => openEditor(plan));
       edit.setAttribute("aria-label", t("ui.edit-routine-value", entry.name));
       if (compactDay) {

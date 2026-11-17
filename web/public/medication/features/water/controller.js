@@ -182,7 +182,7 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
     const entries = [...index.waterOn(day)].reverse()
       .sort((a, b) => b.time.localeCompare(a.time));
     $("water-entries").replaceChildren(...(entries.length ? entries.map(entry => {
-      const row = element("article", "", "entry-row");
+      const row = element("article", "", "entry-row glass-secondary-actions");
       row.dataset.focusScope = "water:" + entry.id;
       row.append(element("span", t("ui.value-ml-value", numbers.format(entry.amount), clockText(entry.time))));
       if (view) {

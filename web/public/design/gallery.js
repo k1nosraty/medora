@@ -1,6 +1,8 @@
 import { installEntryActions } from "../medication/app/entry-actions.js";
-import { $, button, element } from "../medication/shared/ui/dom.js";
-import { defaultCalendar, language, localDigits, localizeMarkup } from "../medication/shared/i18n/locale.js";
+import { $, button, dayCardOptions, element } from "../medication/shared/ui/dom.js";
+import { mountDayCard } from "../medication/shared/ui/day-card.js";
+import { showFeedback } from "../medication/shared/ui/controls.js";
+import { defaultCalendar, language, localDigits, localizeMarkup, t } from "../medication/shared/i18n/locale.js";
 import { applyDisplay } from "../medication/styles/display.js";
 import { availableAccents } from "../medication/styles/theme.js";
 import { installMedicineEditor } from "../medication/features/medicines/editor.js";
@@ -219,10 +221,35 @@ function renderSurfaces() {
     reports.append(card);
   }
   $("gallery-reports").replaceChildren(reports);
-  const agenda = element("div", "", "gallery-stack");
-  agenda.append(element("h3",text("تقویم و برنامهٔ روز","Calendar and agenda")));
-  agenda.append(...cards.map(([family,label,draw]) => banner(label, text("نمونهٔ کارت تقویم","Sample calendar card"), family, draw())));
-  $("gallery-agenda").replaceChildren(agenda);
+  const art = $("gallery-program-banner").querySelector(".category-art");
+  const sampleArt = medicineGlass("bottle");
+  sampleArt.classList.add("category-art");
+  art.replaceWith(sampleArt);
+  $("gallery-dose-summary").textContent = t("ui.value-of-value-taken", localDigits(1), localDigits(3));
+  const agenda = element("div", "", "compact-card-list");
+  const example = [
+    ["medicine", "ui.medicine", text("ویتامین دی", "Vitamin D"), "08:00", medicineGlass("bottle"), "ui.mark-as-taken", "ui.taken", "ui.dose-options"],
+    ["visit", "ui.appointment", text("معاینهٔ دندان", "Dental check-up"), "10:30", visitGlass("dental"), "حضور یافتم", "ui.attended", "ui.appointment-options"],
+    ["routine", "ui.routine", text("پیاده‌روی", "Walk"), "", routineGlass("walking"), "انجام دادم", "ui.done", "ui.routine-options"]
+  ];
+  for (const [kind, label, title, time, image, action, done, options] of example) {
+    const card = element("article", "", `program-${kind}`);
+    card.dataset.ink = { medicine: "purple", visit: "green", routine: "coral" }[kind];
+    const layout = mountDayCard(card, { kind, label: t(label), title: element("h3", title), image,
+      time: localDigits(time), dateTime: time, untimed: !time });
+    const status = element("p");
+    status.setAttribute("role", "status");
+    layout.details.append(status);
+    const record = button(t(action), () => {
+      showFeedback(status, t(done), "success");
+      record.disabled = true;
+    });
+    record.classList.add("care-record-action");
+    const editor = { medicine: () => openMedicine(), visit: () => appointments.openVisit(), routine: () => routines.openEditor() };
+    layout.addActions(dayCardOptions(t(options), button(t("ui.edit"), editor[kind])), record);
+    agenda.append(card);
+  }
+  $("gallery-agenda").replaceChildren(element("h3",text("تقویم و برنامهٔ روز","Calendar and agenda")), agenda);
   const quick = $("quick-dialog").querySelector(".quick-items");
   $("cycle-program")?.remove();
   $("cycle-quick")?.remove();
@@ -329,9 +356,9 @@ const forms = [
   [text("داروی جدید","New medication"),() => openMedicine()],
   [text("ظاهر دارو","Medication appearance"),() => { openMedicine(); $("medicine-appearance").click(); }],
   [text("قرار جدید","New appointment"),() => document.querySelector("[data-open-visit]").click()],
-  [text("نوع قرار","Appointment category"),() => { document.querySelector("[data-open-visit]").click(); $("visit-category-open").click(); }],
+  [text("نوع قرار","Appointment category"),() => { document.querySelector("[data-open-visit]").click(); $("visit-appearance").open = true; $("visit-category-open").click(); }],
   [text("روتین جدید","New routine"),() => document.querySelector("[data-open-routine]").click()],
-  [text("نوع روتین","Routine category"),() => { document.querySelector("[data-open-routine]").click(); $("routine-category-open").click(); }],
+  [text("نوع روتین","Routine category"),() => { document.querySelector("[data-open-routine]").click(); $("routine-appearance").open = true; $("routine-category-open").click(); }],
   [text("ثبت پیشرفت روتین","Log routine progress"),openRoutineLog],
   [text("ثبت آب","Log water"),() => water.openWater()],
   [text("حساب مدورا","Account"),() => openAccount()],

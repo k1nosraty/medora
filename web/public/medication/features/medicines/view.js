@@ -183,10 +183,8 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
   function renderDose(medicine, dose, variant) {
     const view = getFamilyView();
     const scheduledAt = view?.timeOf ?? doseTime;
-    const dayCard = Boolean(variant);
     const featured = variant === "featured";
     const calendar = variant === "calendar";
-    const compactDay = dayCard && !featured;
     const card = element("article", "", "medicine dose-card");
     const plan = dose.historyPlan ?? medicine;
     const unit = dose.unit ?? plan?.unit ?? "";
@@ -206,18 +204,12 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
     badge.dataset.status = dose.status ?? "pending";
     const snoozedTime = featured && dose.status === "snoozed" ? dose.snoozeUntil : null;
     const time = snoozedTime ? new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(snoozedTime) : localDigits(timeText(dose.minute));
-    const layout = dayCard ? mountDayCard(card, {
+    const layout = mountDayCard(card, {
       kind: "medicine", label: t("ui.medicine"), image: medicationBadge(icon, color),
       title: heading, time, dateTime: snoozedTime ? new Date(snoozedTime).toISOString() : timeText(dose.minute),
       summary: featured ? planned : "", featured
-    }) : null;
-    const info = layout?.details ?? element("div", "", "dose-info");
-    if (!layout) {
-      info.append(heading, element("p", t("ui.at-value", time)));
-      const header = element("div", "", "dose-header");
-      header.append(medicationBadge(icon, color), info);
-      card.append(header);
-    }
+    });
+    const info = layout.details;
     const result = element("div");
     result.className = "dose-result";
     if (!featured && (!view || view.has("doses"))) result.append(badge);
@@ -230,12 +222,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
           !["taken", "skipped"].includes(dose.status) && scheduledAt(dose.day, dose.minute) <= Date.now()) {
         const control = recordAction("ثبت مصرف", () => view.record({ kind: "medicine", day: dose.day,
           id: medicine.id, minute: dose.minute, amount: dose.planned, title: heading.textContent, unit }));
-        if (layout) layout.addActions(control);
-        else {
-          const footer = element("div", "", "dose-quick");
-          footer.append(control);
-          card.append(footer);
-        }
+        layout.addActions(control);
       }
       return card;
     }
@@ -308,30 +295,18 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
       ...(canSnooze ? [snooze()] : []),
       ...(dose.status !== "skipped" ? [action(t("ui.skip-dose"), () => record("skipped"), true)] : []),
       ...(dose.status ? [action(t("ui.undo-log"), () => record(null), true)] : []));
-    if (layout) {
-      taken.classList.add("secondary");
-      if (compactDay) {
-        layout.addActions(options, ...(pending ? [taken] : []));
-      } else {
-        const postpone = pending && canSnooze ? snooze() : null;
-        postpone?.classList.add("day-card-snooze");
-        layout.addActions(taken, ...(postpone ? [postpone] : []), options);
-      }
-    } else {
-      card.append(options);
-      if (pending) {
-        const quick = element("div", "", "action-pair dose-quick");
-        quick.append(taken);
-        if (canSnooze) quick.append(snooze());
-        card.append(quick);
-      }
-    }
+    taken.classList.add("secondary");
+    if (featured) {
+      const postpone = pending && canSnooze ? snooze() : null;
+      postpone?.classList.add("day-card-snooze");
+      layout.addActions(taken, ...(postpone ? [postpone] : []), options);
+    } else layout.addActions(options, ...(pending ? [taken] : []));
     if (dose.status === "snoozed") {
       const reminder = element("p", t("ui.next-reminder-value", new Intl.DateTimeFormat(locale, {
         dateStyle: "medium", timeStyle: "short"
       }).format(dose.snoozeUntil)));
       reminder.className = "dose-snoozed";
-      (layout ? info : card).append(reminder);
+      info.append(reminder);
     }
     return card;
   }
@@ -354,7 +329,7 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
       summary.textContent = "";
     }
     summary.hidden = !summary.textContent;
-    const doseCard = dose => renderDose(getState().medicines[dose.medicineId], dose);
+    const doseCard = dose => renderDose(getState().medicines[dose.medicineId], dose, "day");
     const noDoses = element("p", t("ui.no-medication-doses-scheduled-for-this-day"));
     noDoses.className = "empty";
     $("med-day-doses").replaceChildren(...(daily.length ? daily.map(doseCard) : [noDoses]));

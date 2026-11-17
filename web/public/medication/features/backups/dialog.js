@@ -1,3 +1,4 @@
+import { showFeedback } from "../../shared/ui/controls.js";
 import { CareInputError } from "../../shared/ui/care-error.js";
 import { isRestoreMode } from "../../domain/restore-intent.js";
 import { portable } from "../../domain/care-records.js";
@@ -38,8 +39,7 @@ export function installBackupRestore(mutate, validatePhases, { prepareRestore, c
 
   const backupOpen = () => $("settings-dialog").open && $("settings-dialog").dataset.panel === "backup-settings";
   function exportFeedback(message = "", state = "") {
-    $("web-backup-status").textContent = t(message);
-    $("web-backup-status").dataset.state = state;
+    showFeedback($("web-backup-status"), t(message), state);
   }
   function clearDownload() {
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
@@ -99,8 +99,7 @@ export function installBackupRestore(mutate, validatePhases, { prepareRestore, c
 
   function backupFeedback(message, state) {
     const status = $("android-restore-status");
-    status.dataset.state = state;
-    status.textContent = message;
+    showFeedback(status, message, state);
     if (message) status.scrollIntoView({ block: "nearest" });
   }
 

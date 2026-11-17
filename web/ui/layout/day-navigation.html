@@ -10,10 +10,10 @@
       <div id="day-controls" class="day-controls">
         <div class="day-toolbar">
           <button id="pick-day" class="date-field" type="button"><span id="day-label" aria-live="polite"></span><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
-          <button type="button" id="today-reset" class="secondary" aria-label="{{msg:ui.today-return-label}}" hidden>{{msg:ui.today}}</button>
+          <button type="button" id="today-reset" class="secondary date-reset" aria-label="{{msg:ui.today-return-label}}" hidden>{{msg:ui.today}}</button>
         </div>
         <input id="day" type="date" hidden>
-        <button type="button" class="secondary day-arrow icon-button" id="previous-day" aria-label="{{msg:ui.previous-day}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+        <button type="button" class="secondary day-arrow icon-button" id="previous-day" data-date-arrow="previous" aria-label="{{msg:ui.previous-day}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
         <div class="day-week-window"><div id="day-week" class="day-week" aria-label="{{msg:ui.days-of-the-week}}"></div></div>
-        <button type="button" class="secondary day-arrow icon-button reverse" id="next-day" aria-label="{{msg:ui.next-day}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+        <button type="button" class="secondary day-arrow icon-button reverse" id="next-day" data-date-arrow="next" aria-label="{{msg:ui.next-day}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
       </div>

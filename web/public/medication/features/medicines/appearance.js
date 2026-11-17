@@ -1,5 +1,5 @@
 import { language, t } from "../../shared/i18n/locale.js";
-import { $ } from "../../shared/ui/dom.js";
+import { $, element } from "../../shared/ui/dom.js";
 import { glassObject } from "../../design/three-dimensional.js";
 export const defaultMedicineIcon = "bottle";
 const defaultMedicineColor = "purple";
@@ -11,6 +11,20 @@ export const appearanceColors = {
   gold: t("ui.gold"), peach: t("ui.peach"), coral: t("ui.coral"), rose: t("ui.pink"), purple: t("ui.lilac"),
   indigo: t("ui.indigo"), blue: t("ui.blue"), green: t("ui.teal"), pistachio: t("ui.pistachio"), slate: t("ui.gray")
 };
+
+export function mountAppearanceColors(grid, name) {
+  return Object.entries(appearanceColors).map(([color, title]) => {
+    const choice = element("input");
+    choice.type = "radio";
+    choice.name = name;
+    choice.value = color;
+    choice.dataset.ink = color;
+    const label = element("label");
+    label.append(choice, element("span", title));
+    grid.append(label);
+    return choice;
+  });
+}
 const knownShape = shape => Object.hasOwn(medicineShapes, shape) ? shape : defaultMedicineIcon;
 export const medicineColorOf = color => Object.hasOwn(appearanceColors, color) ? color : defaultMedicineColor;
 

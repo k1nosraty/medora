@@ -1,3 +1,4 @@
+import { showFeedback } from "../../shared/ui/controls.js";
 import { language, t } from "../../shared/i18n/locale.js";
 import { $, fitDialogToViewport } from "../../shared/ui/dom.js";
 
@@ -64,8 +65,7 @@ export function installAccount({ onSignIn = () => {}, onSignOut = () => {}, onSh
     if (dialog.open && focus) $(field ?? "account-dismiss").focus({ preventScroll: true });
   }
   function status(message = "", error = false) {
-    $("account-status").textContent = t(message);
-    $("account-status").toggleAttribute("data-error", error);
+    showFeedback($("account-status"), t(message), error ? "error" : "");
   }
   async function request(route, body) {
     if (busy) return null;

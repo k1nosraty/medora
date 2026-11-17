@@ -1,5 +1,5 @@
       <div data-screen="cycle" hidden>
-        <section id="cycle-banner" class="program-cycle" aria-labelledby="cycle-banner-title">
+        <section id="cycle-banner" class="program-cycle program-banner-surface" aria-labelledby="cycle-banner-title">
           <h2 id="cycle-banner-title">{{msg:ui.next-cycle-start}}</h2>
           <p id="cycle-forecast" aria-live="polite"></p>
           <button id="cycle-add" class="primary-action" type="button">{{msg:ui.log-period-start}}</button>
@@ -10,9 +10,9 @@
             <button id="cycle-full-calendar" class="text-button" type="button">{{msg:ui.cycle-full-calendar}}</button>
           </div>
           <div class="cycle-week-heading">
-            <button id="cycle-previous-week" class="icon-button" type="button" aria-label="{{msg:ui.cycle-previous-week}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+            <button id="cycle-previous-week" data-date-arrow="previous" class="icon-button" type="button" aria-label="{{msg:ui.cycle-previous-week}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
             <p id="cycle-week-label" aria-live="polite"></p>
-            <button id="cycle-next-week" class="icon-button" type="button" aria-label="{{msg:ui.cycle-next-week}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+            <button id="cycle-next-week" data-date-arrow="next" class="icon-button" type="button" aria-label="{{msg:ui.cycle-next-week}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
           </div>
           <div id="cycle-days" class="cycle-days" data-context-list></div>
           <ul class="cycle-calendar-key">

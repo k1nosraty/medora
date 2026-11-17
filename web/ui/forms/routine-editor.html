@@ -6,15 +6,17 @@
       </div>
       <div class="sheet-body routine-fields">
         <label class="editor-field">{{msg:ui.routine-name}}<input id="routine-name" type="text" dir="auto" maxlength="80" placeholder="{{msg:ui.e-g-morning-stretch}}" required></label>
-        <div class="routine-category-choice">
-          <span>{{msg:ui.routine-type}}</span>
-          <button id="routine-category-open" type="button" class="secondary" aria-haspopup="dialog">
-            <span class="routine-glyph" id="routine-preview"></span>
-            <span id="routine-category-label"></span>
-            <svg aria-hidden="true"><use href="#i-expand"/></svg>
-          </button>
-        </div>
-        <fieldset id="routine-colors"><legend>{{msg:ui.routine-color}}</legend><div class="visit-color-grid"></div></fieldset>
+        <details id="routine-appearance" class="editor-options appearance-options">
+          <summary><span class="appearance-dot" aria-hidden="true"></span>{{msg:ui.routine-appearance-optional}}</summary>
+          <!-- include layout/appearance-poster.html {"id":"routine-preview"} -->
+          <div class="appearance-type">
+            <span id="routine-type-label">{{msg:ui.routine-type}}</span>
+            <button id="routine-category-open" type="button" class="secondary appearance-type-picker" aria-haspopup="dialog" aria-labelledby="routine-type-label routine-category-label">
+              <span id="routine-category-label"></span><svg aria-hidden="true"><use href="#i-search"/></svg>
+            </button>
+          </div>
+          <fieldset id="routine-colors" class="appearance-colors"><legend>{{msg:ui.routine-color}}</legend><div class="visit-color-grid"></div></fieldset>
+        </details>
         <fieldset class="routine-schedule">
           <legend>{{msg:ui.repeat-2}}</legend>
           <select id="routine-repeat" aria-label="{{msg:ui.repeat-2}}"><option value="daily">{{msg:ui.every-day}}</option><option value="weekly">{{msg:ui.selected-days}}</option></select>
