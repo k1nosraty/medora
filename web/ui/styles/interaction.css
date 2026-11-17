@@ -7,10 +7,15 @@
 .medora[data-finish="glass"] button:is(
   .primary-action, .block-action, [type="submit"], .picker-actions button
 ):not(.secondary, .text-button, .danger-button, .icon-button),
-.medora[data-finish="glass"] .dock #open-quick {
+.medora[data-finish="glass"] .dock #open-quick,
+.medora[data-finish="glass"] .plan-panel-banner .plan-panel-add {
   background-image: var(--filled-button-reflection);
   border-color: var(--filled-button-rim);
   box-shadow: var(--pressed-shadow, var(--filled-button-shadow));
+}
+.medora[data-finish="glass"] .plan-panel-banner .plan-panel-add {
+  background-color: color-mix(in srgb, var(--panel) 50%, transparent);
+  color: var(--ink);
 }
 .medora :is(button, summary, label:has(> input:is([type="radio"], [type="checkbox"]))):not(:disabled, :has(> input:disabled)) {
   cursor: pointer;

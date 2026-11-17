@@ -2,7 +2,7 @@ import { shortWeek, t, weekIndex } from "../shared/i18n/locale.js";
 import { button, element } from "../shared/ui/dom.js";
 import { isoDay as iso } from "../domain/care-index.js";
 
-export function installDayNavigation({ root, getDates, render, selectedDay, today }) {
+export function installDayNavigation({ root, getDates, render, selectedDay, today, onDayChange }) {
   const $ = id => root.querySelector("#" + id);
   const dayControls = $("day-controls");
   const selectedDates = new Map();
@@ -11,12 +11,13 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
   let weekSlide;
 
   function chooseDay(day, restoreFocus) {
-    if (["today", "medications", "routines", "water"].includes(screen)) {
+    if (["today", "medications", "appointments", "routines", "water"].includes(screen)) {
       if (day === today()) selectedDates.delete(screen);
       else selectedDates.set(screen, day);
     }
     $("day").value = iso(day);
     history.replaceState({ ...history.state, medoraDay: day }, "", location.href);
+    onDayChange(screen);
     render();
     if (restoreFocus) $(restoreFocus).querySelector('[aria-current="date"]')?.focus();
   }
@@ -67,7 +68,7 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
     screen = destination;
     dayControls.hidden = !host;
     dayControls.classList.toggle("single-date", screen !== "today");
-    dayControls.classList.toggle("compact-day", screen === "medications" || screen === "routines");
+    dayControls.classList.toggle("compact-day", ["medications", "appointments", "routines"].includes(screen));
     $("today-dates").hidden = screen !== "today";
   }
 

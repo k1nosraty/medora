@@ -139,13 +139,6 @@ function timelineCard(event) {
   const card = event.render(false);
   card.dataset.focusScope = event.key;
   if (event.state === "done") card.dataset.dayState = "done";
-  if (event.time == null) {
-    const marker = element("span", "", "day-card-time");
-    marker.setAttribute("role", "img");
-    marker.setAttribute("aria-label", t("ui.no-scheduled-time"));
-    marker.append(icon("clock-off"));
-    card.querySelector(".day-card-title").after(marker);
-  }
   return card;
 }
 

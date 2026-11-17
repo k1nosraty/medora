@@ -223,6 +223,95 @@ test("daily plans and the cycle forecast use the same card slots", async ({ page
   await expect(page.locator("#cycle-dialog")).toBeVisible();
 });
 
+test("cycle trends and recorded days open the matching history card", async ({ page }) => {
+  await open(page, { language: "en", width: 360 });
+  const starts = await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { today } = await import("/medication/shared/ui/dates.js");
+    const last = today();
+    await accessCare(state => {
+      state.gender = "female";
+      state.cycleEnabled = true;
+    });
+    return [last - 56, last - 29, last];
+  });
+  await page.reload();
+  await page.locator("#program-cycle").click();
+  await expect(page.locator("#cycle-add")).toHaveText("Log your first start");
+  await expect(page.locator("#cycle-calendar")).toBeHidden();
+  await expect(page.locator("#cycle-trend")).toBeHidden();
+  await page.evaluate(async ([first, second, last]) => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    await accessCare(state => {
+      state.cycleRecords = {
+        [first]: { end: first + 3, flow: "light", note: "" },
+        [second]: { end: second + 4, flow: "medium", note: "An example note" },
+        [last]: { end: null, flow: "", note: "" }
+      };
+    });
+  }, starts);
+  await page.reload();
+  await expect(page.locator("#cycle-forecast")).toContainText("Estimated:");
+  await expect(page.locator("#cycle-bars strong")).toHaveText(["27 days", "29 days"]);
+  await page.locator('#cycle-days button[data-cycle-mark="recorded"]').click();
+  await expect(page.locator("#cycle-entry-" + starts[2])).toBeFocused();
+  await page.locator('[data-cycle-metric="duration"]').click();
+  await expect(page.locator("#cycle-bars strong")).toHaveText(["4 days", "5 days"]);
+  await page.locator("#cycle-bars li").last().getByRole("button").click();
+  const entry = page.locator("#cycle-entry-" + starts[1]);
+  await expect(entry).toBeFocused();
+  await entry.locator(".cycle-record-note summary").click();
+  await expect(entry.locator(".cycle-record-note p")).toHaveText("An example note");
+  await entry.locator(".day-card-more summary").click();
+  await entry.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.locator("#cycle-dialog")).toBeVisible();
+  await page.locator('[data-close="cycle-dialog"]').click();
+  await page.locator("#cycle-log-end").click();
+  const end = page.locator('[data-for="cycle-end"]');
+  await expect(end).toBeFocused();
+  await end.click();
+  await page.locator("#picker-date-confirm").click();
+  await page.locator('#cycle-form button[type="submit"]').click();
+  await expect(page.locator("#cycle-log-end")).toBeHidden();
+  await expect(page.locator("#cycle-bars strong")).toHaveText(["4 days", "5 days", "1 day"]);
+  await page.locator("#cycle-full-calendar").click();
+  await expect(page.locator("#calendar-panel")).toBeVisible();
+  await expect(page.locator('#calendar-days button[data-cycle-status="recorded"]')).not.toHaveCount(0);
+});
+
+test("the appointment calendar filters the day and preselects it for a new visit", async ({ page }) => {
+  await open(page, { language: "en", width: 360 });
+  const nextDate = await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { today } = await import("/medication/shared/ui/dates.js");
+    const { isoDay } = await import("/medication/domain/care-index.js");
+    const day = today() + 1;
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    await accessCare(state => {
+      state.visits = {
+        next: { id: "next", name: "Clinic visit", day, time: "09:00", zone },
+        later: { id: "later", name: "Later visit", day: day + 1, time: "09:00", zone }
+      };
+    });
+    return isoDay(day);
+  });
+  await page.reload();
+  await page.locator('.program-card[data-destination="appointments"]').click();
+  await expect(page.locator("#visits .visit-panel-row")).toHaveCount(2);
+  await page.locator("#visit-dates #next-day").click();
+  await expect(page.locator('[data-visit-filter="day"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#visits h3")).toHaveText(["Clinic visit"]);
+  await page.locator("#visit-add").click();
+  await expect(page.locator("#visit-day")).toHaveValue(nextDate);
+  await page.locator('[data-close="visit-dialog"]').first().click();
+  await page.locator('[data-visit-filter="all"]').click();
+  await expect(page.locator("#visits .visit-panel-row")).toHaveCount(2);
+  await page.locator("#screen-back").click();
+  await page.locator('.program-card[data-destination="routines"]').click();
+  await page.locator(".plan-panel-banner #routine-add").click();
+  await expect(page.locator("#routine-editor")).toBeVisible();
+});
+
 test("startup falls back to Persian when language storage access fails", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(window, "localStorage", { get() { throw new DOMException("blocked", "SecurityError"); } });

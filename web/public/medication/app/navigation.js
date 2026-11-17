@@ -25,7 +25,12 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
   const formatDay = (day, includeWeekday) => dates.formatDay(day, includeWeekday);
   const monthStart = day => dates.monthStart(day);
 
-  const days = installDayNavigation({ root: $("app"), getDates: () => dates, render, selectedDay, today });
+  const days = installDayNavigation({
+    root: $("app"), getDates: () => dates, render, selectedDay, today,
+    onDayChange(destination) {
+      if (destination === "appointments") setVisitFilter("day");
+    }
+  });
   const settings = installSettings({ getState: getPersonalState, mutate, refreshFields });
   const water = installWater({
     getState, selectedDay, today, actionDay, getFamilyView, mutate, refreshFields, formatDay,
@@ -33,18 +38,25 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
   });
   const appointments = installAppointments({
     getState, getFamilyView, today, selectedDate: () => {
-      if (screen === "insights" || screen === "today" && selectedDay() !== today()) return actionDay();
+      if (screen === "insights" ||
+        (screen === "today" || screen === "appointments") && selectedDay() !== today() ||
+        screen === "appointments" && appointments.isDayFiltered()) return actionDay();
     },
     render, mutate, requestDeletion, refreshFields, formatDay,
     formatDayNumber: day => dates.dayNumber(day),
     formatShortMonth: day => dates.shortMonth(day)
   });
-  const cycle = installCycle({ getState, getFamilyView, mutate, today, formatDay, requestDeletion, refreshFields });
-
   const insights = installInsights({
     root: document.querySelector('[data-screen="insights"]'), today, getFamilyView, getDates: () => dates,
     render, renderDose, renderRoutine, visitCard: appointments.visitCard,
     openWaterHistory: () => show("water"), openWater: () => entry("water")
+  });
+  const cycle = installCycle({
+    getState, getFamilyView, getDates: () => dates, mutate, today, requestDeletion, refreshFields,
+    openCalendar(day) {
+      insights.openCalendar(day);
+      show("insights");
+    }
   });
   let entry;
   const { show } = installRoutes({
@@ -98,7 +110,7 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     $("today-programs").hidden = Boolean(view && !["medications", "appointments", "routines", "cycle"]
       .some(key => view.canView(key) && (key !== "cycle" || cycleEnabled)));
     document.querySelector('.dock [data-destination="insights"]').hidden = Boolean(view && !view.canView("insights"));
-    for (const [id, kind] of [["add", "medicine"], ["visit-add", "visit"], ["cycle-add", "cycle"]]) {
+    for (const [id, kind] of [["add", "medicine"], ["visit-add", "visit"], ["routine-add", "routine"], ["cycle-add", "cycle"]]) {
       $(id).hidden = Boolean(view && !(kind === "cycle" ? view.canRecord(kind) : view.canAdd(kind)));
     }
     $("program-cycle").hidden = !cycleEnabled;
@@ -118,8 +130,8 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     for (const label of document.querySelectorAll("[data-family-scope]")) {
       label.hidden = Boolean(view && !view.canView(label.dataset.familyScope));
     }
-    $("plans-title").textContent = t(view ? "قفسهٔ داروها" : "قفسهٔ داروهای من");
-    $("visits-title").textContent = t(view ? "قرارها" : "قرارهای من");
+    $("plans-title").textContent = t(view ? "ui.medicines" : "ui.my-medicines");
+    $("visits-title").textContent = t(view ? "ui.visits" : "ui.my-visits");
     $("routine-banner-title").textContent = t(view ? "روتین‌ها" : "روتین‌های من");
     const reminderSetup = $("today-reminders");
     const hasPlans = [state.medicines, state.visits, state.routines].some(plans => Object.keys(plans ?? {}).length > 0);
@@ -128,7 +140,7 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     document.body.toggleAttribute("data-cycle-enabled", cycleEnabled);
     if (!cycleEnabled) {
       $("cycle-dialog").close();
-      $("cycle-history").replaceChildren();
+      cycle.reset();
       if (screen === "cycle") {
         show("today");
         return;
@@ -144,22 +156,24 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
         water.renderTodayWater(state, day, total, goal, progress);
       } else water.renderWater(day, index, total, goal, progress);
     } else if (screen === "cycle") cycle.render(state);
-    else if (screen === "appointments") appointments.renderVisits(index);
+    else if (screen === "appointments") appointments.renderVisits(index, day);
     else if (screen === "insights") insights.paint(state, index);
   }
 
-  function chooseOption(attribute, change) {
-    const options = document.querySelectorAll(`[data-${attribute}]`);
-    for (const option of options) option.addEventListener("click", () => {
-      for (const item of options) item.setAttribute("aria-pressed", String(item === option));
-      change(option.getAttribute(`data-${attribute}`));
-      render();
-    });
+  const visitFilters = document.querySelectorAll("[data-visit-filter]");
+  function setVisitFilter(value) {
+    for (const option of visitFilters) option.setAttribute("aria-pressed", String(option.dataset.visitFilter === value));
+    appointments.setFilter(value);
   }
-  chooseOption("visit-filter", appointments.setFilter);
+  for (const option of visitFilters) option.addEventListener("click", () => {
+    setVisitFilter(option.dataset.visitFilter);
+    render();
+  });
   function changeContext() {
     days.reset();
     insights.reset();
+    cycle.reset();
+    setVisitFilter("all");
     for (const panel of $("app").querySelectorAll("[data-screen]")) {
       for (const list of panel.querySelectorAll("[data-context-list]")) list.replaceChildren();
       for (const search of panel.querySelectorAll('input[type="search"]')) search.value = "";

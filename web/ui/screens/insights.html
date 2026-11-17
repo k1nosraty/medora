@@ -74,6 +74,7 @@
               </div>
               <progress id="report-dose-progress" class="report-progress" max="1" value="0" aria-label="{{msg:ui.share-of-due-or-logged-doses-taken}}" hidden></progress>
               <dl class="report-stats" id="report-dose-breakdown" hidden></dl>
+              <button type="button" class="report-card-open" data-destination="medications" aria-label="{{msg:ui.medication-intake}}"></button>
             </section>
             <section class="feature program-routine report-card" aria-labelledby="report-routine-title">
               <div class="report-hero">
@@ -84,6 +85,7 @@
               </div>
               <progress id="report-routine-progress" class="report-progress" max="1" value="0" aria-label="{{msg:ui.share-of-routines-completed}}" hidden></progress>
               <dl class="report-stats" id="report-routine-breakdown" hidden></dl>
+              <button type="button" class="report-card-open" data-destination="routines" aria-label="{{msg:ui.routines}}"></button>
             </section>
             <section class="feature visit report-card program-visit" aria-labelledby="report-visit-title">
               <div class="report-hero">
@@ -93,6 +95,7 @@
                 <p id="report-visits" class="report-caption"></p>
               </div>
               <dl class="report-stats" id="report-visit-breakdown" hidden></dl>
+              <button type="button" class="report-card-open" data-destination="appointments" aria-label="{{msg:ui.visits}}"></button>
             </section>
             <section id="report-cycle-card" class="feature report-card program-cycle" aria-labelledby="report-cycle-title" hidden>
               <div class="report-hero">
@@ -101,7 +104,7 @@
                 <p id="report-cycle-empty" class="report-empty">{{msg:ui.no-cycle-records-in-this-period}}</p>
               </div>
               <dl id="report-cycle-breakdown" class="report-stats" hidden></dl>
-              <button type="button" class="secondary" data-destination="cycle">{{msg:ui.cycle-history}}</button>
+              <button type="button" class="report-card-open" data-destination="cycle" aria-label="{{msg:ui.cycle-history}}"></button>
             </section>
           </div>
         </div>

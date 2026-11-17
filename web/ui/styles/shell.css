@@ -22,7 +22,7 @@ html[dir="ltr"] .medora :is(#picker-next-month, #report-chart-next) svg { transf
 .medora .header-tools .language-switch svg { inline-size: 1.02rem; block-size: 1.02rem; }
 .medora .page-heading { margin-block: .4rem .65rem; }
 .medora #app:not([data-active-screen]) .page-heading,
-.medora #app:is([data-active-screen="today"], [data-active-screen="insights"], [data-active-screen="routines"]) .page-heading {
+.medora #app:is([data-active-screen="today"], [data-active-screen="insights"], [data-active-screen="medications"], [data-active-screen="appointments"], [data-active-screen="routines"]) .page-heading {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;

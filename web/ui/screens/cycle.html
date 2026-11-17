@@ -2,9 +2,33 @@
         <section id="cycle-banner" class="program-cycle" aria-labelledby="cycle-banner-title">
           <h2 id="cycle-banner-title">{{msg:ui.next-cycle-start}}</h2>
           <p id="cycle-forecast" aria-live="polite"></p>
-          <button id="cycle-add" class="secondary care-record-action" type="button">{{msg:ui.log-period-start}}</button>
+          <button id="cycle-add" class="primary-action" type="button">{{msg:ui.log-period-start}}</button>
         </section>
-        <section class="feature cycle-history" aria-labelledby="cycle-history-title">
+        <section id="cycle-calendar" class="cycle-panel" aria-labelledby="cycle-calendar-title" hidden>
+          <div class="cycle-panel-heading">
+            <h2 id="cycle-calendar-title">{{msg:ui.calendar}}</h2>
+            <button id="cycle-full-calendar" class="text-button" type="button">{{msg:ui.cycle-full-calendar}}</button>
+          </div>
+          <div class="cycle-week-heading">
+            <button id="cycle-previous-week" class="icon-button" type="button" aria-label="{{msg:ui.cycle-previous-week}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+            <p id="cycle-week-label" aria-live="polite"></p>
+            <button id="cycle-next-week" class="icon-button" type="button" aria-label="{{msg:ui.cycle-next-week}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+          </div>
+          <div id="cycle-days" class="cycle-days" data-context-list></div>
+          <ul class="cycle-calendar-key">
+            <li><span data-cycle-mark="recorded" aria-hidden="true"></span>{{msg:ui.logged-cycle}}</li>
+            <li><span data-cycle-mark="forecast" aria-hidden="true"></span>{{msg:ui.estimated-cycle-start}}</li>
+          </ul>
+        </section>
+        <section id="cycle-trend" class="cycle-panel" aria-labelledby="cycle-trend-title" hidden>
+          <h2 id="cycle-trend-title">{{msg:ui.cycle-recent-trend}}</h2>
+          <div class="cycle-metrics" role="group" aria-labelledby="cycle-trend-title">
+            <button type="button" class="secondary" data-cycle-metric="interval" aria-pressed="true">{{msg:ui.cycle-start-interval}}</button>
+            <button type="button" class="secondary" data-cycle-metric="duration" aria-pressed="false">{{msg:ui.cycle-period-duration}}</button>
+          </div>
+          <ol id="cycle-bars" class="cycle-bars" aria-live="polite" data-context-list></ol>
+        </section>
+        <section id="cycle-records" class="cycle-panel cycle-history" aria-labelledby="cycle-history-title" hidden>
           <h2 id="cycle-history-title">{{msg:ui.cycle-history}}</h2>
           <div id="cycle-history" data-context-list></div>
         </section>

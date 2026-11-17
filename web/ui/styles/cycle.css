@@ -7,19 +7,143 @@
   .medora:not([data-theme="light"]) { --cycle-fill: #3d2431; --cycle-ink: #f7b8d2; }
 }
 .medora .program-cycle { --program-fill: var(--cycle-fill); --program-ink: var(--cycle-ink); }
-.medora [data-screen="cycle"] { inline-size: var(--today-rail-width); margin-inline: auto; }
+.medora [data-screen="cycle"] {
+  --action: var(--cycle-ink);
+  inline-size: var(--today-rail-width);
+  margin-inline: auto;
+}
+.medora [data-screen="cycle"] > section + section { margin-block-start: .75rem; }
+.medora #cycle-banner {
+  grid-template-columns: minmax(3.5rem, 25%) minmax(0, 1fr);
+  gap: .35rem .7rem;
+  padding: .75rem;
+}
+.medora #cycle-banner .day-card-actions { grid-area: 2 / 1 / 3 / -1; align-items: center; }
+.medora[data-finish="glass"] #cycle-log-end { background: transparent; }
+.medora #cycle-banner .day-card-art { grid-row: 1; }
+.medora #cycle-banner .day-card-art > img { transform: none; }
+.medora #cycle-latest { color: var(--cycle-ink); font-weight: 740; }
+#cycle-latest:empty { display: none; }
 .medora #cycle-form .sheet-body { display: grid; gap: .55rem; }
 .medora #cycle-form select { inline-size: 100%; }
-.medora .cycle-record {
+.medora .cycle-panel {
+  margin: 0;
+  padding: .75rem;
+  border: 1px solid var(--surface-edge);
+  border-radius: 1.2rem;
+  background: var(--surface-fill);
+}
+.medora[data-finish="glass"] .cycle-panel { box-shadow: var(--surface-shadow); }
+.medora[data-finish="matte"] .cycle-panel { background: var(--panel); }
+.cycle-panel h2 { margin: 0; font-size: 1.04rem; }
+.cycle-panel-heading, .cycle-week-heading, .cycle-record-heading {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: .4rem;
-  padding-block: .55rem;
 }
-.medora .cycle-record + .cycle-record { border-block-start: 1px solid var(--outline); }
-.medora .cycle-record p { margin: .15rem 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cycle-panel-heading > button { flex: none; font-size: .77rem; }
+.cycle-week-heading p { margin: 0; color: var(--muted); font-size: .82rem; text-align: center; }
+.cycle-week-heading svg { inline-size: 1rem; block-size: 1rem; rotate: 90deg; }
+#cycle-next-week svg, html[dir="rtl"] #cycle-previous-week svg { rotate: -90deg; }
+html[dir="rtl"] #cycle-next-week svg { rotate: 90deg; }
+.cycle-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .2rem; }
+.medora .cycle-days > :is(button, span) {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-block-size: 2.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: .65rem;
+  color: var(--muted);
+  background: transparent;
+  font-size: .8rem;
+}
+.medora .cycle-days > [aria-current="date"] { border-color: var(--outline); color: var(--ink); font-weight: 760; }
+.cycle-calendar-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .75rem;
+  padding: 0;
+  margin: .6rem 0 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: .75rem;
+}
+.cycle-calendar-key li { display: flex; align-items: center; gap: .3rem; }
+.cycle-calendar-key span { inline-size: .65rem; block-size: .65rem; border-radius: .2rem; }
+.medora .cycle-panel [data-cycle-mark="recorded"] { background: var(--cycle-ink); color: var(--on-action); }
+.medora .cycle-panel [data-cycle-mark="forecast"] { border: 1px dashed var(--cycle-ink); color: var(--cycle-ink); }
+.cycle-metrics { display: flex; flex-wrap: wrap; gap: .35rem; margin-block: .55rem .35rem; }
+.medora .cycle-metrics button { flex: 1; font-size: .8rem; }
+.medora .cycle-metrics [aria-pressed="true"] { background: var(--cycle-fill); color: var(--cycle-ink); }
+.cycle-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 2.2rem), 1fr));
+  gap: .25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.medora .cycle-bars button {
+  display: grid;
+  inline-size: 100%;
+  justify-items: center;
+  gap: .2rem;
+  padding: .15rem .1rem;
+  border: 0;
+  background: transparent;
+  color: var(--cycle-ink);
+  font-size: .85rem;
+}
+.cycle-bars small { color: var(--muted); font-size: .72rem; line-height: 1.25; }
+.cycle-bar-track {
+  display: flex;
+  align-items: end;
+  inline-size: min(100%, 1.5rem);
+  block-size: 3.75rem;
+  border-radius: .4rem;
+  background: var(--cycle-fill);
+}
+.cycle-bar { inline-size: 100%; border-radius: .4rem; background: var(--cycle-ink); }
+#cycle-history { display: grid; gap: .45rem; margin-block-start: .55rem; }
+.medora .cycle-record {
+  position: relative;
+  display: grid;
+  gap: .28rem;
+  padding: .55rem .65rem;
+  border-color: color-mix(in srgb, var(--cycle-ink) 18%, var(--outline));
+  background: var(--cycle-fill);
+  color: var(--cycle-ink);
+}
+.cycle-record-heading h3 { margin: 0; font-size: .95rem; min-inline-size: 0; overflow-wrap: anywhere; }
+.medora .cycle-record .day-card-more { inline-size: auto; block-size: auto; }
+.medora .cycle-record .day-card-more > summary { inline-size: 2.75rem; }
+.medora .cycle-record:has(.day-card-more[open]) { z-index: 2; }
+.cycle-record-facts { display: flex; flex-wrap: wrap; gap: .35rem; }
+.cycle-record-facts > span {
+  padding: .1rem .4rem;
+  border-radius: .55rem;
+  background: color-mix(in srgb, var(--panel) 68%, transparent);
+  font-size: .75rem;
+}
+.cycle-record-note { color: var(--muted); font-size: .8rem; }
+.cycle-record-note summary { display: flex; gap: .35rem; min-block-size: 2rem; align-items: center; list-style: none; }
+.cycle-record-note summary::before {
+  content: "";
+  flex: none;
+  inline-size: .35rem;
+  block-size: .35rem;
+  border: solid currentColor;
+  border-width: 0 1px 1px 0;
+  rotate: 45deg;
+}
+.cycle-record-note[open] summary::before { rotate: 225deg; }
+.cycle-record-note summary::-webkit-details-marker { display: none; }
+.cycle-record-note[open] .cycle-note-preview { display: none; }
+.cycle-note-preview { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cycle-record-note p { margin: .15rem 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .calendar-cycle-dot { inline-size: .55rem; block-size: .55rem; border-radius: 50%; background: var(--cycle-ink); }
 .medora #calendar-days button[data-cycle-status="recorded"] {
   background: #9c3857;

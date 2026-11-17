@@ -202,8 +202,9 @@ html[dir="ltr"] .medora #today-dates .day-controls {
 }
 .medora #today-dates .day-week button[aria-current="date"]:focus-visible { outline-color: var(--on-action); }
 .medora #today-dates .day-week button[aria-current="date"] span { color: inherit; }
-.medora :is(#today-focus, #doses) .day-card-actions > .care-record-action,
-.medora[data-finish="glass"] #today-water .today-water-actions > button {
+.medora #today-focus .day-card-actions > .care-record-action,
+.medora :is(#doses, #calendar-entries) .day-card-actions > button.secondary,
+.medora[data-finish="glass"] :is(#today-water .today-water-actions > button, #cycle-log-end) {
   position: relative;
   isolation: isolate;
   box-shadow: none;
@@ -214,8 +215,9 @@ html[dir="ltr"] .medora #today-dates .day-controls {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.medora :is(#today-focus, #doses) .day-card-actions > .care-record-action::before,
-.medora[data-finish="glass"] #today-water .today-water-actions > button::before {
+.medora #today-focus .day-card-actions > .care-record-action::before,
+.medora :is(#doses, #calendar-entries) .day-card-actions > button.secondary::before,
+.medora[data-finish="glass"] :is(#today-water .today-water-actions > button, #cycle-log-end)::before {
   content: "";
   position: absolute;
   z-index: -1;

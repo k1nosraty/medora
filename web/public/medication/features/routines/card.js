@@ -15,7 +15,7 @@ function entryText(entry, displayAmount) {
 export function routineCard({ getState, getFamilyView, today, colorOf, labelFor, days, formatDay, openEditor, saveLog, focusLogAction, openLog, displayAmount }) {
   function card(entry, day, { manage = false, readOnly = false, dayCard = false, featured = false, summaryOnly = false, calendar = false } = {}) {
     const compactDay = dayCard && !featured;
-    const row = element("article", "", dayCard ? "" : "routine-row");
+    const row = element("article", "", dayCard ? "" : "routine-row plan-panel-row");
     if (!summaryOnly) row.dataset.routineId = entry.id;
     row.dataset.focusScope = "routine:" + entry.id;
     const state = getState();
@@ -30,9 +30,9 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
     const clock = entry.minute == null ? "" : timeText(entry.minute);
     const layout = dayCard ? mountDayCard(row, {
       kind: "routine", label: t("ui.routine"), image, title: name,
-      time: localDigits(clock), dateTime: clock, featured
+      time: localDigits(clock), dateTime: clock, untimed: compactDay && entry.minute == null, featured
     }) : null;
-    const copy = layout?.details ?? element("div", "", "routine-row-copy");
+    const copy = layout?.details ?? element("div", "", "routine-row-copy plan-panel-copy");
     const completed = routineComplete(entry);
     const detail = [labelFor(entry.category)];
     if (manage) {
@@ -45,7 +45,7 @@ export function routineCard({ getState, getFamilyView, today, colorOf, labelFor,
     }
     if (!layout) {
       if (clock) detail.push(localDigits(clock));
-      const art = element("span", "", "routine-glyph");
+      const art = element("span", "", "plan-panel-art");
       art.append(image);
       row.append(art, copy);
       copy.append(name);

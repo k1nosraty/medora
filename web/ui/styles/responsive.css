@@ -10,15 +10,6 @@
   .medora #today-water { margin-block-end: 0; }
   .medora #today-reminders { margin-block: 0; }
   #plans { grid-auto-columns: min(48%, 23rem); }
-  #visits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #visits > :is(h2, .visit-empty, .visit-featured) { grid-column: 1 / -1; }
-  .medora #visits .visit-featured {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    gap: .95rem;
-    min-block-size: 0;
-  }
-  .medora #visits .visit-featured .visit-banner { block-size: auto; min-block-size: 10rem; margin: 0; }
   .report-cards { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); align-items: start; }
   .medora .report-cards .water { grid-row: span 2; }
   .medora .report-cards .visit { grid-column: 1 / -1; }
@@ -32,8 +23,6 @@
     padding-right: max(.7rem, env(safe-area-inset-right));
   }
   .medora .today-story { padding-inline: .85rem; }
-  .medora #calendar-entries .day-card { --day-art-width: 3.05rem; --day-actions-width: 4.65rem; }
-  .medora #visit-add { font-size: .875rem; }
 }
 .medora #today-dates .day-week { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 
@@ -78,8 +67,8 @@
   .medora .water-history-entries .entry-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .medora .water-history-entries .entry-row > :not(button) { grid-column: 1 / -1; }
   .medora .water-history-entries .entry-row button { min-inline-size: 0; white-space: normal; overflow-wrap: anywhere; }
-  .medora #visits-heading, .medora #visit-filters { flex-wrap: wrap; }
-  .medora :is(#visit-add, #visit-filters button) { white-space: normal; max-inline-size: 100%; overflow-wrap: anywhere; }
+  .medora #visit-filters { flex-wrap: wrap; }
+  .medora :is(.plan-panel-add, #visit-filters button) { white-space: normal; max-inline-size: 100%; overflow-wrap: anywhere; }
   .medora #visit-filters button { flex: 1 1 auto; }
   .medora #calendar-today { white-space: normal; min-inline-size: min(100%, 3rem); }
   .medora .today-story .story-art { display: none; }
@@ -107,7 +96,7 @@
     flex-wrap: wrap;
   }
   .medora :is(#doses, #calendar-entries, #today-focus) .day-card-actions button { white-space: normal; min-inline-size: min(100%, 4rem); }
-  .medora #doses .day-card-time { border: 0; margin: 0; justify-content: start; }
+  .medora :is(#doses, #calendar-entries) .day-card-time { border: 0; margin: 0; justify-content: start; }
   .medora :is(.insights-tabs, #report-range) { flex-wrap: wrap; }
   .medora :is(.insights-tabs, #report-range) button { flex: 1 1 auto; }
   .medora #calendar-panel { grid-template-columns: minmax(0, 1fr); }
@@ -118,8 +107,7 @@
   .medora .report-hero { padding-inline-end: 0; }
   .medora .report-hero .report-art { display: none; }
   .medora .report-stats { grid-template-columns: minmax(0, 1fr); }
-  .medora #visits { grid-template-columns: minmax(0, 1fr); }
-  .medora #visits .visit-featured, .medora #plans .treatment-profile { display: block; }
+  .medora #plans .treatment-profile { display: block; }
   .medora #plans .treatment-profile .medication-banner { display: none; }
   .medora .app-content :is(h1, h2, h3, strong, .quiet) { overflow-wrap: anywhere; }
 }

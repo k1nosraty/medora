@@ -400,12 +400,9 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
     fields("progress").textContent = entries.length
       ? t("ui.value-of-value-routines-done", localDigits(done), localDigits(entries.length))
       : t("ui.no-routines-for-this-day");
-    fields("meter").value = entries.length ? done / entries.length : 0;
-    fields("meter").hidden = !entries.length;
     document.querySelector('[data-routine-filter="today"]').textContent = day === today() ? t("ui.today") : t("ui.this-day");
     fields("search-wrap").hidden = filter === "today" ||
       (filter === "all" ? !plans.length : !Object.keys(state.routineLogs).length);
-    fields("first").hidden = plans.length > 0 || getFamilyView()?.canAdd("routine") === false;
     fields("more").hidden = true;
     let rows;
     let empty;

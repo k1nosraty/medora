@@ -1,6 +1,7 @@
 import { element } from "./dom.js";
+import { t } from "../i18n/locale.js";
 
-export function mountDayCard(card, { kind, label, image, title, time, dateTime, summary, featured = false }) {
+export function mountDayCard(card, { kind, label, image, title, time, dateTime, untimed = false, summary, featured = false }) {
   card.classList.add("day-card");
   card.dataset.cardKind = kind;
   card.toggleAttribute("data-featured", featured);
@@ -18,6 +19,12 @@ export function mountDayCard(card, { kind, label, image, title, time, dateTime, 
     digits.dir = "ltr";
     clock.append(digits);
     if (dateTime) clock.dateTime = dateTime;
+    content.append(clock);
+  } else if (untimed) {
+    const clock = element("span", "", "day-card-time");
+    clock.setAttribute("role", "img");
+    clock.setAttribute("aria-label", t("ui.no-scheduled-time"));
+    addIcon(clock, "clock-off");
     content.append(clock);
   }
   if (summary) content.append(element("small", summary, "day-card-summary"));

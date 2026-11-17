@@ -25,7 +25,7 @@ export function appointmentView({
   let visitFilter = "all";
   let visitLimit = pageSize;
 
-  function visitCard(local, zone, actionable, variant = "compact") {
+  function visitCard(local, zone, actionable, variant = "shelf") {
     const { visit } = local;
     const calendar = variant === "calendar";
     const compactDay = variant === "day" || calendar;
@@ -34,15 +34,12 @@ export function appointmentView({
     const category = categoryOf(visit.category);
     card.dataset.focusScope = "visit:" + visit.id;
     card.dataset.ink = colorOf(visit.color);
-    if (!dayCard && variant !== "compact") {
-      card.classList.add("visit-shelf-card");
-      const banner = element("div", "", "visit-banner");
-      banner.append(visitIllustration(category, card.dataset.ink));
-      if (variant === "next") {
-        card.classList.add("visit-featured");
-        banner.append(element("span", t("ui.next-appointment"), "visit-eyebrow"));
-      }
-      card.append(banner);
+    if (!dayCard) {
+      card.classList.add("plan-panel-row", "visit-panel-row");
+      const art = element("span", "", "plan-panel-art");
+      art.setAttribute("aria-hidden", "true");
+      art.append(visitIllustration(category, card.dataset.ink));
+      card.append(art);
     }
     const title = element("h3", visit.name, dayCard ? "" : "visit-title");
     title.dir = "auto";
@@ -52,26 +49,23 @@ export function appointmentView({
       kind: "visit", label: t("ui.appointment"), image: visitIllustration(category, card.dataset.ink),
       title, time, dateTime, featured: variant === "day-featured"
     }) : null;
-    const details = layout?.details ?? (variant === "compact" ? card : element("div", "", "visit-shelf-details"));
-    let metadata = details;
+    const details = layout?.details ?? element("div", "", "plan-panel-copy");
     if (!layout) {
-      const day = element("time", "", "visit-date");
-      day.dateTime = isoDay(local.day);
-      day.setAttribute("aria-label", formatDay(local.day, true));
-      day.append(element("strong", formatDayNumber(local.day)), element("span", formatShortMonth(local.day)));
-      const hour = element("time", time, "visit-hour");
-      hour.dateTime = dateTime;
-      hour.dir = "ltr";
-      const body = element("div", "", "visit-card-body");
-      body.append(title, hour);
-      const header = element("div", "", "visit-card-header");
-      header.append(day, body);
-      details.append(header);
-      metadata = body;
+      if (variant === "next") details.append(element("small", t("ui.next-appointment"), "visit-next-label"));
+      const when = element("small", "", "visit-row-when");
+      const date = element("time", formatDayNumber(local.day) + " " + formatShortMonth(local.day));
+      date.dateTime = isoDay(local.day);
+      date.setAttribute("aria-label", formatDay(local.day, true));
+      const clock = element("time", time);
+      clock.dateTime = dateTime;
+      clock.dir = "ltr";
+      when.append(date, document.createTextNode(" · "), clock);
+      details.append(title, when);
+      card.append(details);
     }
     if (category !== "general") {
       const label = category === "custom" && visit.categoryName ? visit.categoryName : categories.get(category);
-      metadata.append(element("bdi", label, layout ? "" : "visit-category"));
+      details.append(element(layout ? "bdi" : "small", label));
     }
     if (visit.zone && visit.zone !== zone) {
       details.append(element("p", t("ui.clinic-time-value-value-value", formatDay(visit.day), clockText(visit.time), timeZoneCity(visit.zone)), "quiet"));
@@ -85,7 +79,6 @@ export function appointmentView({
       ...((visit.contact || visit.sharedContact) ? [element("p", t("ui.contact-value", visit.contact || visit.sharedContact), "quiet")] : [])
     ];
     if (!calendar) details.append(...notes);
-    if (!layout && details !== card) card.append(details);
     const view = getFamilyView();
     if (view) {
       if (visit.recordedBy) details.append(element("small", t("ui.recorded-by-value", view.authorName(visit)), "family-stamp"));
@@ -95,11 +88,7 @@ export function appointmentView({
         options.push(recordAction("ثبت حضور", () => view.record({ kind: "visit", day: local.day, id: visit.id, title: visit.name })));
       }
       if (layout) layout.addActions(...options);
-      else if (options.length) {
-        const controls = element("div", "", "buttons");
-        controls.append(...options);
-        details.append(controls);
-      }
+      else if (options.length) card.append(...options);
       return card;
     }
     if (actionable) {
@@ -139,10 +128,11 @@ export function appointmentView({
       } else if (layout) {
         layout.addActions(...(attendance ? [attendance] : []), dayCardOptions(t("ui.appointment-options"), edit, cancel, remove));
       } else {
-        const controls = element("div", "", "buttons");
-        if (attendance) controls.append(attendance);
-        controls.append(edit, cancel, remove);
-        details.append(controls);
+        const controls = element("div", "", "visit-row-actions");
+        const manage = visit.completed && attendance ? [attendance, edit, cancel, remove] : [edit, cancel, remove];
+        controls.append(dayCardOptions(t("ui.appointment-options"), ...manage));
+        if (attendance && !visit.completed) controls.append(attendance);
+        card.append(controls);
       }
     }
     return card;
@@ -160,12 +150,19 @@ export function appointmentView({
       }));
   }
 
-  function renderVisits(index) {
+  function renderVisits(index, day) {
     const now = Date.now();
     const ordered = [...index.allVisits()].sort((a, b) => a.instant - b.instant);
-    const upcoming = visitFilter !== "past" ? ordered.filter(({ visit, instant }) => !visit.cancelled && !visit.completed && instant >= now) : [];
-    const past = visitFilter !== "upcoming" ? ordered.filter(({ visit, instant }) => visit.cancelled || visit.completed || instant < now).reverse() : [];
+    const scheduled = ordered.filter(({ visit, instant }) => !visit.cancelled && !visit.completed && instant >= now);
+    $("visits-summary").textContent = scheduled.length ? t("ui.upcoming-appointment-count", localDigits(scheduled.length)) : t("ui.no-upcoming-appointments");
+    document.querySelector('[data-visit-filter="day"]').textContent = t(day === today() ? "ui.today" : "ui.this-day");
+    const onlyDay = visitFilter === "day";
+    const sameDay = onlyDay ? ordered.filter(local => local.day === day) : [];
+    const upcoming = !onlyDay && visitFilter !== "past" ? scheduled : [];
+    const past = !onlyDay && visitFilter !== "upcoming"
+      ? ordered.filter(({ visit, instant }) => visit.cancelled || visit.completed || instant < now).reverse() : [];
     const content = [];
+    if (onlyDay) content.push(...sameDay.slice(0, visitLimit).map(local => visitCard(local, index.zone, true)));
     if (upcoming.length) {
       const [next, ...later] = upcoming.slice(0, visitLimit);
       content.push(visitCard(next, index.zone, true, "next"));
@@ -177,11 +174,9 @@ export function appointmentView({
       content.push(...past.slice(0, visitLimit).map(local => visitCard(local, index.zone, true, "shelf")));
     }
     if (!content.length) {
-      const card = element("div", "", "visit-card visit-empty");
-      card.append(element("h2", t("ui.no-appointments-in-this-view")), visitIllustration());
-      content.push(card);
+      content.push(element("p", t("ui.no-appointments-in-this-view"), "empty"));
     }
-    if (Math.max(upcoming.length, past.length) > visitLimit) {
+    if (Math.max(sameDay.length, upcoming.length, past.length) > visitLimit) {
       const more = button(t("ui.show-more-appointments"), () => {
         visitLimit += pageSize;
         render();
@@ -195,6 +190,7 @@ export function appointmentView({
 
   return {
     dayVisits, renderVisits, visitCard,
+    isDayFiltered: () => visitFilter === "day",
     setFilter(value) {
       visitFilter = value;
       visitLimit = pageSize;

@@ -1,14 +1,18 @@
       <div data-screen="appointments" hidden>
-        <div class="visit-toolbar glass-toolbar">
-          <div class="section-heading" id="visits-heading">
+        <section class="plan-panel-banner program-visit" aria-labelledby="visits-title">
+          <div>
             <h2 id="visits-title">{{msg:ui.my-visits}}</h2>
-            <button id="visit-add" type="button" class="primary-action" data-open-visit><svg aria-hidden="true"><use href="#i-plus"/></svg>{{msg:ui.new-appointment}}</button>
+            <p id="visits-summary" aria-live="polite"></p>
+            <button id="visit-add" type="button" class="secondary plan-panel-add" data-open-visit><svg aria-hidden="true"><use href="#i-plus"/></svg>{{msg:ui.new-appointment}}</button>
           </div>
-          <div class="segmented" id="visit-filters" role="group" aria-label="{{msg:ui.appointment-filter}}">
-            <button type="button" data-visit-filter="all" aria-pressed="true">{{msg:ui.all}}</button>
-            <button type="button" data-visit-filter="upcoming" aria-pressed="false">{{msg:ui.upcoming}}</button>
-            <button type="button" data-visit-filter="past" aria-pressed="false">{{msg:ui.past-and-cancelled}}</button>
-          </div>
+          <svg data-surface-art="visit" class="category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>
+        </section>
+        <div id="visit-dates" data-day-host="appointments"></div>
+        <div class="plan-panel-filters segmented glass-toolbar program-visit" id="visit-filters" role="group" aria-label="{{msg:ui.appointment-filter}}">
+          <button type="button" data-visit-filter="day" aria-pressed="false">{{msg:ui.today}}</button>
+          <button type="button" data-visit-filter="all" aria-pressed="true">{{msg:ui.all}}</button>
+          <button type="button" data-visit-filter="upcoming" aria-pressed="false">{{msg:ui.upcoming}}</button>
+          <button type="button" data-visit-filter="past" aria-pressed="false">{{msg:ui.past-and-cancelled}}</button>
         </div>
-        <div id="visits" data-context-list></div>
+        <div id="visits" class="plan-panel-list" data-context-list></div>
       </div>

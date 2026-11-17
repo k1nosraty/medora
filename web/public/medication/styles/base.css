@@ -87,8 +87,6 @@
 .medora .medicine { background: var(--medicine); color: var(--medicine-ink); }
 .medora .visit { background: var(--visit); color: var(--visit-ink); }
 .medora .water .quiet { color: inherit; }
-.progress-ring { display: grid; flex: none; place-items: center; inline-size: clamp(3.5rem, 20vw, 5rem); aspect-ratio: 1; border-radius: 50%; background: conic-gradient(var(--water-ink) calc(var(--percent, 0) * 1%), var(--field) 0); }
-.progress-ring span { display: grid; place-items: center; inline-size: 76%; aspect-ratio: 1; background: var(--water); border-radius: 50%; font-size: .9rem; font-weight: 700; }
 .medora button, .medora input, .medora textarea, .medora select { min-block-size: 3rem; border-color: var(--outline); border-radius: .9rem; color: var(--ink); font: inherit; }
 .medora input, .medora select, .medora textarea { background: var(--field); border: 1px solid var(--outline); padding: .5rem .7rem; box-sizing: border-box; }
 .time-zone-options { max-block-size: min(16rem, 36dvh); overflow-y: auto; overscroll-behavior: contain; margin-block-start: .35rem; }
@@ -190,10 +188,6 @@
 .medora .water-quick button[data-water-preset] { border-color: var(--outline); }
 .medora .water-quick button[aria-pressed="true"] { background: var(--visit); border-color: var(--visit); }
 .medora .timeline { margin-block-start: .45rem; }
-.medora .progress-ring { inline-size: 4.5rem; background: conic-gradient(var(--action) calc(var(--percent, 0) * 1%), var(--outline) 0); }
-.medora .progress-ring span { background: var(--panel); color: var(--action); }
-.medora #plans-heading button { border-radius: 5rem; }
-.medora #med-day-count { font-size: 1.2rem; color: var(--action); }
 .dose-card { position: relative; }
 .dose-header { display: flex; align-items: center; gap: .6rem; padding-inline-end: 2.3rem; }
 .dose-header p { color: var(--muted); font-size: .82rem; }
@@ -479,14 +473,6 @@
 
 #plans { display: grid; gap: .65rem; }
 #plans > * { margin-block: 0; }
-.medora #plans-heading {
-  margin-block-end: .65rem;
-  padding: .6rem .8rem;
-  background: linear-gradient(125deg, var(--dock-active), var(--visit));
-  border: 1px solid var(--outline);
-  border-radius: 1.25rem;
-}
-.medora #plans-heading h2 { margin: 0; }
 .medora .treatment { padding: .55rem .7rem; background: var(--panel); color: var(--ink); }
 .treatment-profile {
   display: flow-root;

@@ -81,15 +81,15 @@
 
 .medora #today-programs { inline-size: var(--today-rail-width); margin-inline: auto; }
 .medora .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
-.medora .program-card, .medora .routine-banner {
+.medora .program-card, .medora .plan-panel-banner {
   border: 1px solid color-mix(in srgb, var(--program-ink) 19%, var(--outline));
   background: radial-gradient(ellipse at var(--art-side, 16%) 14%, var(--glass-glint), transparent 58%),
     linear-gradient(160deg, var(--program-fill), color-mix(in srgb, var(--program-fill) 89%, var(--program-ink)));
   box-shadow: inset 0 1px 0 var(--glass-glint);
   color: var(--program-ink);
 }
-html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
-.medora .routine-banner {
+html[dir="ltr"] .medora :is(.program-card, .plan-panel-banner) { --art-side: 84%; }
+.medora .plan-panel-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -98,20 +98,43 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
   border-radius: 1.45rem;
   padding: .8rem 1rem;
 }
-.medora .routine-banner h2 { margin: 0; font-size: clamp(1.35rem, 5.3vw, 1.9rem); }
-.medora .routine-banner p { margin: .18rem 0; font-size: .88rem; }
-.medora .routine-banner svg { inline-size: clamp(5rem, 23vw, 8rem); block-size: auto; aspect-ratio: 1.28; }
-.medora .routine-banner progress { inline-size: min(100%, 13rem); block-size: .45rem; accent-color: var(--routine-mark); }
-.medora .routine-filters { margin-block: .75rem; }
+.medora .plan-panel-banner h2 { margin: 0; font-size: clamp(1.35rem, 5.3vw, 1.9rem); }
+.medora .plan-panel-banner p { margin: .18rem 0; font-size: .88rem; }
+.medora .plan-panel-banner > div { min-inline-size: 0; overflow-wrap: anywhere; }
+.medora .plan-panel-banner > .category-art {
+  flex: none;
+  inline-size: min(34%, clamp(4rem, 23vw, 8rem));
+  block-size: auto;
+  aspect-ratio: 1.28;
+  object-fit: contain;
+}
+.medora .plan-panel-banner .plan-panel-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  min-block-size: 2.75rem;
+  margin-block-start: .3rem;
+  padding-inline: .65rem;
+  font-size: .82rem;
+  overflow-wrap: anywhere;
+}
+.medora .plan-panel-add svg { inline-size: 1rem; block-size: 1rem; flex: none; }
+.medora .plan-panel-filters { margin-block: .75rem; }
+.medora .plan-panel-filters button[aria-pressed="true"] {
+  background: var(--program-fill);
+  color: var(--program-ink);
+  box-shadow: 0 .14rem .35rem var(--glass-shadow);
+}
 .medora .routine-search {
   display: grid;
   gap: .28rem;
   margin-block-end: .75rem;
 }
 .medora .routine-search input { inline-size: 100%; }
-.medora #routine-list { display: grid; gap: .5rem; }
-.medora .routine-row {
-  --routine-art-origin: 12%;
+.plan-panel-list { display: grid; gap: .5rem; }
+.medora .plan-panel-row {
+  --plan-art-origin: 12%;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -120,26 +143,26 @@ html[dir="ltr"] .medora :is(.program-card, .routine-banner) { --art-side: 84%; }
   margin: 0;
   border: 1px solid color-mix(in srgb, var(--pill-base) 22%, var(--outline));
   border-radius: 1.03rem;
-  background: radial-gradient(ellipse 42% 110% at var(--routine-art-origin) 25%,
+  background: radial-gradient(ellipse 42% 110% at var(--plan-art-origin) 25%,
     color-mix(in srgb, var(--pill-base) 45%, var(--panel)), transparent) var(--pill-fill);
   color: var(--pill-ink);
 }
-html[dir="rtl"] .medora .routine-row { --routine-art-origin: 88%; }
-.medora .routine-glyph {
+html[dir="rtl"] .medora .plan-panel-row { --plan-art-origin: 88%; }
+.medora :is(.routine-glyph, .plan-panel-art) {
   inline-size: clamp(2.75rem, 12vw, 3.75rem);
   filter: drop-shadow(0 .16rem .22rem var(--glass-shadow));
 }
-.medora .routine-glyph > .glass-object {
+.medora :is(.routine-glyph, .plan-panel-art) > .glass-object {
   inline-size: 100%;
   block-size: auto;
 }
-.medora .routine-row-copy { display: grid; gap: .1rem; overflow-wrap: anywhere; }
-.medora .routine-row-copy small { color: color-mix(in srgb, var(--pill-ink) 72%, var(--muted)); font-size: .73rem; }
+.medora .plan-panel-copy { display: grid; gap: .1rem; overflow-wrap: anywhere; }
+.medora .plan-panel-copy small { color: color-mix(in srgb, var(--pill-ink) 72%, var(--muted)); font-size: .73rem; }
 .medora .routine-row > button { font-size: .78rem; padding-inline: .55rem; min-block-size: 2.75rem; }
 .medora .routine-row-state { font-size: .75rem; font-weight: 700; color: var(--routine-ink); }
 .medora .routine-row[data-complete="true"] > button { background: var(--mint); color: var(--mint-ink); }
 .medora .routine-day-heading { font-size: .86rem; margin: .55rem .25rem .05rem; }
-.medora :is(#routine-more, #routine-first) { margin-block-start: .7rem; }
+.medora #routine-more { margin-block-start: .7rem; }
 .medora .routine-fields { display: grid; gap: .75rem; }
 .medora .routine-fields :is(label, input, select, textarea) { min-inline-size: 0; }
 .medora .routine-fields :is(input:not([type="checkbox"], [type="radio"]), select, textarea) { inline-size: 100%; }

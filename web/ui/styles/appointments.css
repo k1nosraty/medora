@@ -1,72 +1,29 @@
 .medora .segmented:not(.glass-toolbar) { background: var(--stage); }
 .medora .glass-toolbar { padding: .3rem; border-radius: 1.18rem; }
-.medora .visit-toolbar { margin-block: 1rem .75rem; padding: .6rem .7rem .3rem; }
-.medora #visits-heading {
-  flex-wrap: nowrap;
-  margin-block-end: .38rem;
-  padding-inline: .25rem;
-}
-.medora #visits-heading h2 { min-inline-size: 0; margin: 0; overflow-wrap: anywhere; }
-.medora #visit-filters { background: transparent; padding: 0; }
-.medora #visit-filters button { min-inline-size: 0; border-radius: .9rem; text-wrap: balance; }
-.medora #visit-filters button[aria-pressed="true"],
 .medora #report-range button[aria-pressed="true"] {
   background: var(--dock-active);
   color: var(--action);
   box-shadow: 0 .14rem .35rem var(--glass-shadow);
 }
-.medora #visit-add { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: .3rem; border-radius: 5rem; padding-inline: .75rem; }
-.medora #visit-add svg { inline-size: 1.1rem; block-size: 1.1rem; }
-#visits { display: grid; gap: .7rem; }
-.medora #visits-more { grid-column: 1 / -1; justify-self: center; padding-inline: 1rem; }
-.medora #visits > h2 { margin: .35rem .1rem 0; font-size: 1.04rem; }
-.medora #visits article { margin: 0; }
-.visit-card-header { display: flex; align-items: flex-start; gap: .75rem; }
-.visit-card-body { flex: 1; min-inline-size: 0; }
-.visit-date {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  flex: none;
-  min-inline-size: 3.2rem;
-  min-block-size: 3.3rem;
-  padding: .15rem .32rem;
-  box-sizing: border-box;
-  background: var(--panel);
-  border-radius: .95rem;
-  color: var(--visit-ink);
-  line-height: 1.2;
-}
-.visit-date strong { font-size: 1.16rem; }
-.visit-date span { font-size: .69rem; }
-.visit-hour {
-  display: inline-block;
-  border-radius: .6rem;
-  padding: .08rem .4rem;
-  background: var(--panel);
-  color: var(--visit-ink);
-  font-size: .79rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
+.medora #visit-filters button { min-inline-size: 0; text-wrap: balance; }
+.medora #visits-more { justify-self: center; padding-inline: 1rem; }
+.medora #visits > h2 { margin: .35rem .1rem 0; font-size: .88rem; }
+.medora .visit-panel-row { position: relative; }
+.medora .visit-panel-row:has(.day-card-more[open]) { z-index: 2; }
+.medora .visit-panel-row .plan-panel-art > .glass-object { max-inline-size: none; aspect-ratio: 1; object-fit: contain; }
+.medora .visit-panel-row :is(h3, p) { margin: 0; }
+.medora .visit-panel-row h3 { font-size: 1rem; }
+.medora .visit-panel-row p { font-size: .8rem; }
+.medora .visit-panel-row .badge { justify-self: start; }
+.medora .visit-panel-row .visit-next-label { color: var(--pill-ink); font-weight: 750; }
+.visit-row-actions { display: grid; justify-items: end; max-inline-size: 6rem; }
+.medora .visit-panel-row .day-card-more { block-size: auto; inline-size: auto; }
+.medora .visit-panel-row .day-card-more > summary { inline-size: 2.75rem; color: var(--pill-ink); }
+.medora .visit-panel-row > button, .medora .visit-row-actions > button { min-block-size: 2.75rem; padding: .2rem .42rem; font-size: .78rem; }
 .medora :is(.dose-card, .visit-card, .routine-row):not(.day-card) .care-record-action {
   border: 1px solid transparent;
   background: color-mix(in srgb, var(--dock-active) 52%, transparent);
   color: var(--action);
-}
-.medora .visit-card :is(.visit-date, .visit-hour, .visit-category) {
-  background: color-mix(in srgb, var(--pill-base) 24%, var(--panel));
-  color: var(--ink);
-}
-.visit-category {
-  display: inline-block;
-  max-inline-size: 100%;
-  box-sizing: border-box;
-  margin-inline-start: .28rem;
-  padding: .08rem .4rem;
-  border-radius: .6rem;
-  font-size: .79rem;
-  overflow-wrap: anywhere;
 }
 .visit-banner {
   --banner-tint: var(--pill-base, #b9a8ec);
@@ -160,22 +117,7 @@
 }
 .medora .visit-color-grid input:checked { border: .2rem solid var(--action); }
 .medora .visit-color-grid label:has(input:checked) { border-color: var(--action); }
-.medora .visit-eyebrow {
-  position: absolute;
-  inset-inline-end: .55rem;
-  inset-block-end: .45rem;
-  padding: .15rem .48rem;
-  border-radius: 5rem;
-  background: var(--panel);
-  color: var(--visit-ink);
-  font-size: .72rem;
-}
-.medora .visit-shelf-card .visit-card-header { margin-block: .4rem .15rem; align-items: center; }
-.medora .visit-shelf-card .visit-title { font-size: 1.12rem; line-height: 1.3; }
-.visit-shelf-details { display: flex; flex: 1; flex-direction: column; min-inline-size: 0; overflow-wrap: anywhere; }
-.visit-shelf-details .badge { align-self: start; }
-.medora .visit-shelf-card .buttons { margin-block-start: auto; padding-block-start: .3rem; }
-.medora .visit-illustration { inline-size: 8rem; max-inline-size: 48%; block-size: auto; aspect-ratio: 160 / 132; }
+.medora .medora .visit-illustration { inline-size: 8rem; max-inline-size: 48%; block-size: auto; aspect-ratio: 160 / 132; }
 .medora .visit-illustration.visit-specialty {
   position: relative;
   inline-size: 7.3rem;
@@ -187,14 +129,3 @@
 }
 .medora #visit-appearance-preview .visit-specialty { inline-size: 5.65rem; }
 .medora #visit-appearance-preview:has(.visit-specialty)::before { inline-size: min(72%, 8.1rem); }
-.medora .visit-empty {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .8rem;
-  min-block-size: 7rem;
-  padding: .8rem 1rem;
-  border: 1px solid var(--outline);
-  border-radius: 1.48rem;
-  background: var(--stage);
-}

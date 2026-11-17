@@ -1,21 +1,29 @@
 import { CareInputError } from "../../shared/ui/care-error.js";
-import { $, button, element } from "../../shared/ui/dom.js";
+import { $, element } from "../../shared/ui/dom.js";
 import { mountDayCard } from "../../shared/ui/day-card.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { t } from "../../shared/i18n/locale.js";
 import { dayNumber } from "../../shared/ui/dates.js";
 import { isoDay } from "../../domain/care-index.js";
-import { cycleForecast } from "../../domain/cycle.js";
 import { cycleIsEnabled } from "../../domain/profile.js";
+import { installCycleOverview } from "./overview.js";
 
-export function installCycle({ getState, getFamilyView = () => null, mutate, today, formatDay, requestDeletion, refreshFields }) {
-  const output = $("cycle-forecast");
+export function installCycle({ getState, getFamilyView, getDates, mutate, today, openCalendar, requestDeletion, refreshFields }) {
   const banner = mountDayCard($("cycle-banner"), {
     kind: "cycle", label: t("ui.cycle"), image: glassObject("cycle", "cycle"),
     title: $("cycle-banner-title"), featured: true
   });
-  banner.details.append(output);
-  banner.addActions($("cycle-add"));
+  const latest = element("p");
+  latest.id = "cycle-latest";
+  const endStatus = element("p", t("ui.cycle-end-missing"));
+  endStatus.id = "cycle-end-status";
+  endStatus.hidden = true;
+  const logEnd = element("button", t("ui.cycle-log-end"), "secondary");
+  logEnd.id = "cycle-log-end";
+  logEnd.type = "button";
+  logEnd.hidden = true;
+  banner.details.append(latest, $("cycle-forecast"), endStatus);
+  banner.addActions($("cycle-add"), logEnd);
   const dialog = $("cycle-dialog");
   const start = $("cycle-start");
   const end = $("cycle-end");
@@ -24,6 +32,25 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
   const error = $("cycle-error");
   let editing;
   let delegation;
+  const overview = installCycleOverview({
+    today, getDates, getFamilyView, openCalendar,
+    edit(day, { end: focusEnd } = {}) {
+      open(day);
+      if (focusEnd && dialog.open) (dialog.querySelector('[data-for="cycle-end"]') ?? end).focus();
+    },
+    remove(day) {
+      requestDeletion({
+        title: t("ui.delete-this-cycle-entry"),
+        message: getDates().formatDay(day),
+        change: state => {
+          if (!cycleIsEnabled(state)) throw new CareInputError(t("ui.cycle-is-turned-off"));
+          delete state.cycleRecords?.[day];
+        },
+        success: t("ui.cycle-entry-deleted"),
+        scheduleChanged: false
+      });
+    }
+  });
 
   function open(day, target) {
     delegation = target;
@@ -76,45 +103,5 @@ export function installCycle({ getState, getFamilyView = () => null, mutate, tod
     finally { submit.disabled = false; }
   });
 
-  function render(state) {
-    const records = state.cycleRecords ?? {};
-    const forecast = cycleForecast(records);
-    output.textContent = !forecast ? t("ui.an-estimate-appears-after-you-log-three-start-dates")
-      : forecast.last < today() ? t("ui.log-a-new-start-date-to-update-the-estimate")
-      : t("ui.estimated-value-to-value", formatDay(forecast.first), formatDay(forecast.last));
-    const history = $("cycle-history");
-    const dates = Object.keys(records).map(Number).sort((a, b) => b - a);
-    history.replaceChildren(...dates.map(day => {
-      const record = records[day];
-      const row = element("article", "", "cycle-record");
-      const copy = element("div");
-      copy.append(element("strong", formatDay(day)));
-      if (record.end !== null) copy.append(element("p", t("ui.through-value", formatDay(record.end))));
-      if (record.flow) copy.append(element("p", t({ light: "کم", medium: "متوسط", heavy: "زیاد" }[record.flow])));
-      if (record.note || record.sharedNote) copy.append(element("p", record.note || record.sharedNote));
-      const view = getFamilyView();
-      if (view) {
-        if (record.recordedBy) copy.append(element("small", t("ui.recorded-by-value", view.authorName(record)), "family-stamp"));
-        row.append(copy);
-        return row;
-      }
-      const actions = element("div", "", "buttons");
-      actions.append(button(t("ui.edit"), () => open(day)), button(t("ui.delete"), () => {
-        requestDeletion({
-          title: t("ui.delete-this-cycle-entry"),
-          message: formatDay(day),
-          change: state => {
-            if (!cycleIsEnabled(state)) throw new CareInputError(t("ui.cycle-is-turned-off"));
-            delete state.cycleRecords?.[day];
-          },
-          success: t("ui.cycle-entry-deleted"),
-          scheduleChanged: false
-        });
-      }));
-      row.append(copy, actions);
-      return row;
-    }));
-    if (!dates.length) history.append(element("p", t("ui.no-cycles-logged-yet"), "quiet"));
-  }
-  return { open, render };
+  return { open, render: state => overview.render(state.cycleRecords ?? {}), reset: overview.reset };
 }

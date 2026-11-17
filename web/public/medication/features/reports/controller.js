@@ -9,14 +9,19 @@ export function installInsights({ root, today, getFamilyView, getDates, render, 
   let timer;
 
   function options(attribute, select) {
-    const buttons = root.querySelectorAll(`[data-${attribute}]`);
+    const key = `data-${attribute}`;
+    const buttons = root.querySelectorAll(`[${key}]`);
+    function choose(value) {
+      for (const option of buttons) option.setAttribute("aria-pressed", String(option.getAttribute(key) === value));
+      select(value);
+    }
     for (const button of buttons) button.addEventListener("click", () => {
-      for (const option of buttons) option.setAttribute("aria-pressed", String(option === button));
-      select(button.getAttribute(`data-${attribute}`));
+      choose(button.getAttribute(key));
       render();
     });
+    return choose;
   }
-  options("insight", value => {
+  const selectSection = options("insight", value => {
     section = value;
     get("calendar-panel").hidden = value !== "calendar";
     get("reports-panel").hidden = value !== "reports";
@@ -70,5 +75,10 @@ export function installInsights({ root, today, getFamilyView, getDates, render, 
     get("report-chart-pick").onchange = null;
     for (const id of ["report-chart-previous", "report-chart-next"]) get(id).onclick = null;
   }
-  return { paint, stop, reset, actionDay: () => section === "calendar" ? selection : today() };
+  return { paint, stop, reset, actionDay: () => section === "calendar" ? selection : today(),
+    openCalendar(day) {
+      selection = day;
+      selectSection("calendar");
+    }
+  };
 }

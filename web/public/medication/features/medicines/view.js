@@ -11,7 +11,6 @@ import { amountText, doseUnit, quantity } from "./quantity.js";
 import { nextPlannedDose } from "./next-dose.js";
 
 const doseStates = { taken: t("ui.taken"), skipped: t("ui.skipped"), snoozed: t("ui.snoozed") };
-const percentFormat = new Intl.NumberFormat(locale, { style: "percent" });
 
 export function installMedicineView({ getState, today, getFamilyView, mutate, requestDeletion, openEditor, formatDay }) {
   function slotsFor(medicine, day) {
@@ -338,19 +337,24 @@ export function installMedicineView({ getState, today, getFamilyView, mutate, re
   }
 
   function renderMedications(daily) {
+    const view = getFamilyView();
+    const canViewCabinet = view?.has("medicines") !== false;
     const medicines = Object.values(getState().medicines);
-    $("cabinet-count").textContent = medicines.length === 1 ? t("ui.1-medicine") : t("ui.value-medicines", localDigits(medicines.length));
     const noPlans = element("p", t("ui.no-medicines-scheduled-yet"), "empty");
     $("plans").replaceChildren(...(medicines.length ? medicines.map(renderMedicine) : [noPlans]));
     filterCabinet();
-    $("plans-heading").parentElement.hidden = getFamilyView()?.has("medicines") === false;
-    const consumed = daily.filter(dose => dose.status === "taken").length;
+    $("medicine-cabinet").hidden = !canViewCabinet;
+    const summary = $("med-day-count");
+    if (daily.length && view?.has("doses") !== false) {
+      const consumed = daily.filter(dose => dose.status === "taken").length;
+      summary.textContent = t("ui.value-of-value-taken", localDigits(consumed), localDigits(daily.length));
+    } else if (canViewCabinet) {
+      summary.textContent = medicines.length === 1 ? t("ui.1-medicine") : t("ui.value-medicines", localDigits(medicines.length));
+    } else {
+      summary.textContent = "";
+    }
+    summary.hidden = !summary.textContent;
     const doseCard = dose => renderDose(getState().medicines[dose.medicineId], dose);
-    const percent = daily.length ? Math.round(consumed * 100 / daily.length) : 0;
-    $("med-day-summary").hidden = daily.length === 0 || getFamilyView()?.has("doses") === false;
-    $("med-day-count").textContent = t("ui.value-of-value-taken", localDigits(consumed), localDigits(daily.length));
-    $("med-day-ring").style.setProperty("--percent", percent);
-    $("med-day-ring").firstElementChild.textContent = percentFormat.format(percent / 100);
     const noDoses = element("p", t("ui.no-medication-doses-scheduled-for-this-day"));
     noDoses.className = "empty";
     $("med-day-doses").replaceChildren(...(daily.length ? daily.map(doseCard) : [noDoses]));
