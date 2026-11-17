@@ -6,7 +6,7 @@ export const routineCategories = {
   },
   "ذهن و سرگرمی": {
     reading: "مطالعه", music: "گوش‌دادن به موسیقی", instrument: "تمرین ساز",
-    journaling: "یادداشت روزانه", meditation: "مراقبه"
+    journaling: "یادداشت روزانه", meditation: "مراقبه", gaming: "بازی"
   },
   "ورزش": {
     workout: "ورزش دلخواه", walking: "پیاده‌روی", running: "دویدن",

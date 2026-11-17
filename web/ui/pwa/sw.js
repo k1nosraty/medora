@@ -5,7 +5,7 @@ const artworkCache = artPrefix + "{{version}}";
 const shell = {{assets}};
 const versioned = /^\/medication\/bundles\/(?:bootstrap|medora|chunk|style)-[a-z0-9]+\.(?:css|js)$/i;
 const legacyModule = /^\/medication\/(?!bundles\/|sw\.js$).+\.(?:css|js)$/i;
-const optionalArt = /^\/design\/(?:optical-glass|matte-3d)\/[a-z0-9-]+\.webp$/;
+const optionalArt = /^\/design\/(?:optical-glass|matte-3d)\/(?:colors\/(?:gold|peach|coral|rose|purple|indigo|blue|green|pistachio|slate)\/)?[a-z0-9-]+\.webp$/;
 const openShell = () => caches.open(cacheName);
 
 self.addEventListener("install", event => {

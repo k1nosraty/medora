@@ -1,4 +1,5 @@
 export default {
+  "ui.gaming": "Gaming",
   "ui.today-card-size": "Card size on Today",
   "ui.wide-card": "Wide",
   "ui.compact-card": "Compact",

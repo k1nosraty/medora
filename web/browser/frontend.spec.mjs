@@ -717,6 +717,46 @@ test("water history uses the glass actions and retains quick entry and editing",
   await expect(page.locator("#water-dialog")).toBeVisible();
 });
 
+test("gaming routines retain the controller artwork, palette and record after reload", async ({ page, context }) => {
+  await open(page, { language: "en" });
+  await page.goto("/medication/?view=routines");
+  await page.locator("#routine-add").click();
+  await page.locator("#routine-name").fill("Evening gaming");
+  await page.locator("#routine-appearance > summary").click();
+  await page.locator("#routine-category-open").click();
+  await page.locator("#routine-category-search").fill("gaming");
+  await page.locator('#routine-categories [data-category="gaming"]').click();
+  const preview = page.locator("#routine-preview img");
+  await expect(preview).toHaveAttribute("data-art", "routine-gaming");
+  await preview.evaluate(img => img.decode());
+  for (const color of ["blue", "gold"]) {
+    await page.locator('input[name="routine-color"][value="' + color + '"]').check();
+    await expect(preview).toHaveAttribute("src", new RegExp("/colors/" + color + "/routine-gaming\\.webp$"));
+    await preview.evaluate(img => img.decode());
+    expect(await preview.evaluate(img => img.style.filter)).toBe("");
+  }
+  await page.locator("#routine-save").click();
+  await expect(page.locator("#routine-editor")).toBeHidden();
+  const card = page.locator("#routine-list article").filter({ hasText: "Evening gaming" });
+  await expect(card.locator('img[data-art="routine-gaming"]')).toBeVisible();
+  const record = await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { portable, validateCareRecords } = await import("/medication/domain/care-records.js");
+    return Object.values(validateCareRecords(portable(await accessCare())).routines)
+      .find(row => row.name === "Evening gaming");
+  });
+  expect(record).toMatchObject({ category: "gaming", color: "gold" });
+  await page.reload();
+  await expect(card).toBeVisible();
+  await card.locator('img[data-art="routine-gaming"]').evaluate(img => img.decode());
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(async () => Boolean(await caches.match("/design/optical-glass/colors/gold/routine-gaming.webp")))).toBe(true);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(card).toBeVisible();
+  await card.locator('img[data-art="routine-gaming"]').evaluate(img => img.decode());
+});
+
 test.describe("appointments on a device in Tehran", () => {
   test.use({ timezoneId: "Asia/Tehran" });
 

@@ -1,4 +1,5 @@
 export default {
+  "ui.gaming": "بازی",
   "ui.today-card-size": "اندازهٔ کارت در «امروز»",
   "ui.wide-card": "پهن",
   "ui.compact-card": "کوچک",

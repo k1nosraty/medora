@@ -71,5 +71,9 @@ test("the installed shell serves a coherent offline page and does not intercept 
   assert.equal(await (await fetchThroughWorker(dental)).text(), "network");
   const missing = "/design/matte-3d/missing.webp";
   assert.equal((await fetchThroughWorker(missing)).status, 404);
-  assert.deepEqual(network, [origin + dental, origin + missing]);
+  const colored = "/design/optical-glass/colors/gold/routine-gaming.webp";
+  assert.equal(await (await fetchThroughWorker(colored)).text(), "network");
+  assert.equal(await (await fetchThroughWorker(colored)).text(), "network");
+  assert.equal(fetchThroughWorker("/design/optical-glass/colors/unknown/routine-gaming.webp"), undefined);
+  assert.deepEqual(network, [origin + dental, origin + missing, origin + colored]);
 });
