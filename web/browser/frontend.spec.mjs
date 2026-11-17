@@ -1,23 +1,24 @@
 import { expect, test } from "@playwright/test";
 
-async function open(page, { language = "fa", theme = "light", medicine = false, width = 390, height = 844 } = {}) {
+async function open(page, { language = "fa", theme = "light", medicine = false, sleepEnabled, width = 390, height = 844 } = {}) {
   await page.setViewportSize({ width, height });
   await page.goto("/medication/");
   await expect(page.locator("#welcome-start")).toBeVisible();
-  await page.evaluate(async ({ language, theme, medicine }) => {
+  await page.evaluate(async ({ language, theme, medicine, sleepEnabled }) => {
     localStorage.setItem("medora-language", language);
     const { accessCare } = await import("/medication/shared/storage.js");
     const { today } = await import("/medication/shared/ui/dates.js");
     await accessCare(state => {
       state.intro = "done";
       state.theme = theme;
+      if (sleepEnabled !== undefined) state.sleepEnabled = sleepEnabled;
       if (medicine) state.medicines.sample = {
         id: "sample", name: "Sample tablet", unit: "قرص", stock: 15000, threshold: 2000,
         icon: "bottle", color: "purple", revision: 1,
         phases: [{ start: today(), end: null, interval: 1, mask: 127, slots: [{ minute: 480, amount: 1000 }] }]
       };
     });
-  }, { language, theme, medicine });
+  }, { language, theme, medicine, sleepEnabled });
   await page.reload();
   await expect(page.locator("#app")).toBeVisible();
 }
@@ -107,8 +108,8 @@ test("Today’s cover follows local time and reacts to the selected accent", asy
   expect(green.rim).toBe(blue.rim);
 });
 
-test("the next dose and its action fit the first mobile view", async ({ page }) => {
-  await open(page, { medicine: true });
+test("the next dose and its action fit the first mobile view with sleep turned off", async ({ page }) => {
+  await open(page, { medicine: true, sleepEnabled: false });
   const calendar = page.locator("#today-dates");
   await expect(calendar).toBeVisible();
   expect(await calendar.evaluate(node => {
@@ -948,7 +949,7 @@ test("sleep settings expose amber, quick logging survives a restart, and the rep
 });
 
 test("sleep and cycle card sizes are independent settings that survive a reload", async ({ page }) => {
-  await open(page, { language: "en" });
+  await open(page, { language: "en", medicine: true });
   await page.evaluate(async () => {
     const { accessCare } = await import("/medication/shared/storage.js");
     await accessCare(state => { state.cycleEnabled = true; state.gender = "female"; });
@@ -961,6 +962,13 @@ test("sleep and cycle card sizes are independent settings that survive a reload"
   const closeSettings = () => page.locator('[data-close="settings-dialog"]').click();
   await expect(sleepWide).toBeVisible();
   await expect(cycleWide).toBeVisible();
+  const cards = page.locator('[data-screen="today"] > :visible');
+  const ids = await cards.evaluateAll(nodes => nodes.map(node => node.id));
+  expect(ids.slice(ids.indexOf("today-programs"), ids.indexOf("today-water") + 1))
+    .toEqual(["today-programs", "today-sleep", "cycle-today-card", "today-water"]);
+  const nextDose = page.locator("#today-focus .day-card-actions button").first();
+  await nextDose.scrollIntoViewIfNeeded();
+  await expect(nextDose).toBeInViewport();
   await openSettings();
   await page.locator("[data-settings-panel=sleep-settings]").click();
   await page.locator("#sleep-card-size").selectOption("compact");
