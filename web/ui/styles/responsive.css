@@ -70,6 +70,9 @@
   .medora #visit-filters { flex-wrap: wrap; }
   .medora :is(.plan-panel-add, #visit-filters button) { white-space: normal; max-inline-size: 100%; overflow-wrap: anywhere; }
   .medora #visit-filters button { flex: 1 1 auto; }
+  .medora #visits .visit-panel-row { grid-template-columns: auto minmax(0, 1fr); }
+  .medora .visit-row-actions { grid-column: 1 / -1; max-inline-size: 100%; }
+  .medora .visit-row-actions button { white-space: normal; overflow-wrap: anywhere; }
   .medora #calendar-today { white-space: normal; min-inline-size: min(100%, 3rem); }
   .medora .today-story .story-art { display: none; }
   .medora #today-water .water-info { grid-template-columns: minmax(0, 1fr); }

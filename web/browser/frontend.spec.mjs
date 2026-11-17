@@ -701,6 +701,15 @@ test("large text reflows care screens and the backup form at 320 pixels", async 
       if (view === "reports") await page.locator('[data-insight="reports"]').click();
       if (view === "settings") await page.locator('[data-settings-panel="backup-settings"]').click();
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth), language + " " + view).toBe(320);
+      if (view === "appointments") {
+        const card = page.locator("#visits .visit-panel-row");
+        const action = card.locator(".care-record-action");
+        await expect(action).toBeVisible();
+        const cardBounds = await card.boundingBox();
+        const controlBounds = await action.boundingBox();
+        expect(controlBounds.x).toBeGreaterThanOrEqual(cardBounds.x);
+        expect(controlBounds.x + controlBounds.width).toBeLessThanOrEqual(cardBounds.x + cardBounds.width);
+      }
       if (view === "today") {
         const box = await page.locator("#today-water button[data-open-water]").boundingBox();
         expect(box.width).toBeGreaterThanOrEqual(44);
