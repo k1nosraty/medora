@@ -1,0 +1,27 @@
+      <section id="cycle-settings" class="settings-panel health-settings" hidden>
+        <form id="cycle-settings-form" class="settings-form">
+          <label class="editor-switch settings-switch">{{msg:ui.cycle-hide-today}}<input id="cycle-hide-today" type="checkbox" role="switch"></label>
+          <label>{{msg:ui.today-card-size}}<select id="cycle-card-size"><option value="wide">{{msg:ui.wide-card}}</option><option value="compact">{{msg:ui.compact-card}}</option></select></label>
+          <label class="editor-switch settings-switch">{{msg:ui.cycle-local-only}}<input id="cycle-local-only" type="checkbox" role="switch"></label>
+          <p class="quiet">{{msg:ui.cycle-local-hint}}</p>
+          <p class="quiet" id="cycle-local-reminder-hint" hidden>{{msg:ui.cycle-local-reminder-hint}}</p>
+          <label>{{msg:ui.cycle-private-reminder}}<input id="cycle-reminder-time" type="time"></label>
+          <fieldset id="cycle-routine-choices"><legend>{{msg:ui.cycle-linked-routines}}</legend><div id="cycle-routine-list" class="cycle-routine-list"></div></fieldset>
+          <label>{{msg:ui.cycle-checklist-items}}<textarea id="cycle-checklist-items" rows="3" maxlength="400"></textarea></label>
+          <button class="block-action" type="submit">{{msg:ui.save-changes}}</button>
+        </form>
+        <form id="cycle-support-form" class="settings-form">
+          <label>{{msg:ui.cycle-support-message}}<input id="cycle-support-input" type="text" maxlength="160"></label>
+          <p class="quiet">{{msg:ui.cycle-support-hint}}</p>
+          <button type="submit" class="secondary">{{msg:ui.save-changes}}</button>
+        </form>
+        <div class="settings-callout cycle-data-controls">
+          <h3>{{msg:ui.cycle-history}}</h3>
+          <div class="settings-time-grid">
+            <button type="button" class="secondary" id="cycle-private-export">{{msg:ui.cycle-export-private}}</button>
+            <button type="button" class="secondary" id="cycle-private-import">{{msg:ui.cycle-import-private}}</button>
+          </div>
+          <input type="file" accept=".medoracycle" id="cycle-private-import-file" hidden>
+          <button type="button" class="text-button danger-link" id="cycle-private-delete">{{msg:ui.cycle-delete-all}}</button>
+        </div>
+      </section>

@@ -12,12 +12,15 @@ import { calendarFormat } from "../shared/ui/calendar-format.js";
 import { isoDay as iso } from "../domain/care-index.js";
 import { cycleIsEnabled } from "../domain/profile.js";
 import { familyPlacementOf } from "../domain/family.js";
+import { sleepIsEnabled } from "../domain/sleep.js";
+import { installSleep } from "../features/sleep/controller.js";
+import { installDailyCycle } from "../features/cycle/daily.js";
 import { installCycle } from "../features/cycle/controller.js";
 import { refreshArtwork } from "../design/three-dimensional.js";
 
-const titles = { today: t("ui.today"), medications: t("ui.medicines"), appointments: t("ui.visits"), routines: t("ui.routines"), insights: t("ui.reports-calendar"), water: t("ui.water"), cycle: t("ui.cycle") };
+const titles = { today: t("ui.today"), medications: t("ui.medicines"), appointments: t("ui.visits"), routines: t("ui.routines"), insights: t("ui.reports-calendar"), water: t("ui.water"), cycle: t("ui.cycle"), sleep: t("ui.sleep") };
 
-export function installNavigation({ getState, getFamilyView, getPersonalState, selectedDay, today, render, mutate, requestDeletion, renderDose, renderRoutine, refreshFields }) {
+export function installNavigation({ getState, getIndex, getFamilyView, getPersonalState, selectedDay, today, render, mutate, requestDeletion, renderDose, renderRoutine, refreshFields }) {
   let screen = "today";
   let calendar = defaultCalendar;
   let dates = calendarFormat(calendar);
@@ -50,7 +53,9 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
   const insights = installInsights({
     root: document.querySelector('[data-screen="insights"]'), today, getFamilyView, getDates: () => dates,
     render, renderDose, renderRoutine, visitCard: appointments.visitCard,
-    openWaterHistory: () => show("water"), openWater: () => entry("water")
+    openWaterHistory: () => show("water"), openWater: () => entry("water"),
+    openSleep: day => sleep.open(undefined, undefined, day), openSleepHistory: day => { show("sleep"); sleep.focusDay(day); },
+    cycleOpenDay: day => cycleDaily.open(day), openCycleHistory: showCycleHistory
   });
   const cycle = installCycle({
     getState, getFamilyView, getDates: () => dates, mutate, today, requestDeletion, refreshFields,
@@ -59,11 +64,24 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
       show("insights");
     }
   });
+  const sleep = installSleep({ getState, getFamilyView, getDates: () => dates, mutate, today, actionDay, requestDeletion, refreshFields, render });
+  $("today-sleep-history").addEventListener("click", () => {
+    const day = selectedDay();
+    queueMicrotask(() => { if (screen === "sleep") sleep.focusDay(day); });
+  });
+  const cycleDaily = installDailyCycle({ getState, getFamilyView, getDates: () => dates, getIndex, mutate, today, actionDay,
+    requestDeletion, refreshFields, editCycle: cycle.open, openSettings: () => { settings(); $("settings-open-cycle").click(); } });
+  $("report-sleep-card").addEventListener("click", event => {
+    if (!event.target.closest(".report-card-open")) return;
+    queueMicrotask(() => {
+      if (screen === "sleep") sleep.focusDay(undefined);
+    });
+  });
   let entry;
   const { show } = installRoutes({
     root: $("app"), titles, openSettings: settings,
     canOpen: destination => (getFamilyView()?.canView(destination) ?? true) &&
-      (destination !== "cycle" || cycleIsEnabled(getState())),
+      (destination !== "cycle" || cycleIsEnabled(getState())) && (destination !== "sleep" || sleepIsEnabled(getState())),
     activate(destination, previous, mode) {
       days.activate(destination, mode, actionDay());
       if (previous === "insights" && destination !== previous) insights.stop();
@@ -74,6 +92,14 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
       render();
     }
   });
+  function showCycleHistory() {
+    if (show("cycle") && !$("cycle-records").hidden) {
+      $("cycle-records").scrollIntoView({ block: "start" });
+      $("cycle-history-title").focus({ preventScroll: true });
+    }
+  }
+  $("program-cycle").addEventListener("click", showCycleHistory);
+
   function renderTodayHeader(day) {
     $("story-date").dateTime = iso(day);
     $("story-date").textContent = dates.weekday(day) + listSeparator + dates.shortDate(day);
@@ -105,29 +131,34 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     applyDisplay(preferences);
     if (previousFinish !== document.body.dataset.finish) refreshArtwork(document.body.dataset.finish);
     const cycleEnabled = cycleIsEnabled(state);
-    for (const control of $("today-programs").querySelectorAll("[data-destination]:not(#program-cycle)")) {
+    const sleepEnabled = sleepIsEnabled(state) && (!view || view.has("sleep"));
+    const cycleShortcut = cycleEnabled && (view ? view.canView("cycle") : !state.cycleOptions?.hideToday);
+    const sleepCompact = preferences.sleepCardSize === "compact";
+    const cycleCompact = preferences.cycleCardSize === "compact";
+    const shortcuts = $("today-programs");
+    for (const control of shortcuts.querySelectorAll("[data-destination]:not(#program-sleep, #program-cycle-compact)")) {
       control.hidden = Boolean(view && !view.canView(control.dataset.destination));
     }
-    $("today-programs").hidden = Boolean(view && !["medications", "appointments", "routines", "cycle"]
-      .some(key => view.canView(key) && (key !== "cycle" || cycleEnabled)));
+    $("program-sleep").hidden = !sleepEnabled || !sleepCompact;
+    $("program-cycle-compact").hidden = !cycleShortcut || !cycleCompact;
+    const shortcutCount = shortcuts.querySelectorAll(".program-card:not([hidden])").length;
+    const columns = shortcutCount > 3 ? 2 : Math.max(1, shortcutCount);
+    shortcuts.hidden = shortcutCount === 0;
+    shortcuts.toggleAttribute("data-two-column", columns === 2);
+    shortcuts.style.setProperty("--program-columns", String(columns));
     document.querySelector('.dock [data-destination="insights"]').hidden = Boolean(view && !view.canView("insights"));
     for (const [id, kind] of [["add", "medicine"], ["visit-add", "visit"], ["routine-add", "routine"], ["cycle-add", "cycle"]]) {
       $(id).hidden = Boolean(view && !(kind === "cycle" ? view.canRecord(kind) : view.canAdd(kind)));
     }
-    $("program-cycle").hidden = !cycleEnabled;
     const dayForEntry = actionDay();
     const quickItems = $("quick-dialog").querySelectorAll("[data-quick-kind]");
     for (const item of quickItems) {
       const kind = item.dataset.quickKind;
       const record = kind === "water" || kind === "cycle";
-      item.hidden = view ? !(record ? view.canRecord(kind, dayForEntry) : view.canAdd(kind)) : kind === "cycle" && !cycleEnabled;
+      item.hidden = view ? !(record ? view.canRecord(kind, dayForEntry) : view.canAdd(kind)) : kind === "cycle" && !cycleEnabled || kind === "sleep" && !sleepEnabled;
       item.disabled = !view && kind === "water" && dayForEntry > today();
     }
     $("open-quick").hidden = [...quickItems].every(item => item.hidden);
-    if (view) {
-      const visible = $("today-programs").querySelectorAll(".program-card:not([hidden])").length;
-      $("today-programs").style.setProperty("--family-program-columns", visible === 3 ? "3" : visible === 1 ? "1" : "2");
-    }
     for (const label of document.querySelectorAll("[data-family-scope]")) {
       label.hidden = Boolean(view && !view.canView(label.dataset.familyScope));
     }
@@ -136,11 +167,12 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     $("routine-banner-title").textContent = t(view ? "روتین‌ها" : "روتین‌های من");
     const reminderSetup = $("today-reminders");
     const hasPlans = [state.medicines, state.visits, state.routines].some(plans => Object.keys(plans ?? {}).length > 0);
-    reminderSetup.toggleAttribute("data-eligible", !view && (hasPlans || state.waterReminders?.enabled === true));
+    reminderSetup.toggleAttribute("data-eligible", !view && (hasPlans || state.waterReminders?.enabled === true || sleepEnabled && Boolean(state.sleepSettings?.bedtime || state.sleepSettings?.wake) || cycleEnabled && Number.isInteger(state.cycleOptions?.minute) && !state.cycleLocalOnly));
     reminderSetup.hidden = !reminderSetup.hasAttribute("data-eligible") || Boolean(state.reminders?.enabled);
-    document.body.toggleAttribute("data-cycle-enabled", cycleEnabled);
+    if (!sleepEnabled && screen === "sleep") { show("today"); return; }
     if (!cycleEnabled) {
       $("cycle-dialog").close();
+      cycleDaily.close();
       cycle.reset();
       if (screen === "cycle") {
         show("today");
@@ -154,9 +186,16 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
       const progress = Math.min(1, total / goal);
       if (screen === "today") {
         renderTodayHeader(day);
+        sleep.paintToday(state, day, sleepEnabled, sleepCompact);
+        cycleDaily.paintToday(state, day, cycleShortcut, cycleCompact);
+        $("cycle-companion-card").hidden = !view || !state.cycleCompanionEstimate && !state.cycleCompanionMessage;
+        $("cycle-companion-estimate").textContent = state.cycleCompanionEstimate ?
+          t("ui.estimated-value-to-value", dates.formatDay(state.cycleCompanionEstimate.first), dates.formatDay(state.cycleCompanionEstimate.last)) : "";
+        $("cycle-companion-message").textContent = state.cycleCompanionMessage ?? "";
         water.renderTodayWater(state, day, total, goal, progress);
       } else water.renderWater(day, index, total, goal, progress);
-    } else if (screen === "cycle") cycle.render(state);
+    } else if (screen === "cycle") { cycle.render(state); cycleDaily.paint(state); }
+    else if (screen === "sleep") sleep.draw(state);
     else if (screen === "appointments") appointments.renderVisits(index, day);
     else if (screen === "insights") insights.paint(state, index);
   }
@@ -174,6 +213,8 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     days.reset();
     insights.reset();
     cycle.reset();
+    cycleDaily.close();
+    sleep.reset();
     setVisitFilter("all");
     for (const panel of $("app").querySelectorAll("[data-screen]")) {
       for (const list of panel.querySelectorAll("[data-context-list]")) list.replaceChildren();
@@ -184,7 +225,7 @@ export function installNavigation({ getState, getFamilyView, getPersonalState, s
     show("today", false, { mode: "replace" });
   }
   return {
-    changeContext, setEntryAction: action => { entry = action; }, openVisit: appointments.openVisit, openWater: water.openWater, addWater: water.addWater, quickAddWater: water.quickAddWater, openCycle: cycle.open, dayVisits: appointments.dayVisits, renderScreen, monthStart, chooseDay: days.chooseDay, show, actionDay,
+    changeContext, setEntryAction: action => { entry = action; }, openVisit: appointments.openVisit, openWater: water.openWater, addWater: water.addWater, quickAddWater: water.quickAddWater, openCycle: cycle.open, openCycleDay: cycleDaily.open, openSleep: sleep.open, dayVisits: appointments.dayVisits, renderScreen, monthStart, chooseDay: days.chooseDay, show, actionDay,
     screen: () => screen,
     formatDay,
     formatMonth: day => dates.month(day),

@@ -174,7 +174,7 @@ window.addEventListener("focus", () => {
 const selectedDay = () => $("day").value ? dayNumber($("day").value) : viewToday();
 const requestDeletion = installDeletion(mutate);
 const dashboard = installNavigation({
-  getState: viewState, selectedDay, today: viewToday, getFamilyView, getPersonalState: getState, render, mutate, requestDeletion,
+  getState: viewState, getIndex: currentIndex, selectedDay, today: viewToday, getFamilyView, getPersonalState: getState, render, mutate, requestDeletion,
   renderDose: (...args) => medicines.renderDose(...args),
   refreshFields: container => pickers.refresh(container), renderRoutine: (entry, day, options) => routines.card(entry, day, options)
 });
@@ -245,6 +245,7 @@ dashboard.setEntryAction(installEntryActions({
     else if (kind === "visit") dashboard.openVisit();
     else if (kind === "routine") routines.openEditor();
     else if (kind === "cycle") dashboard.openCycle();
+    else if (kind === "sleep") dashboard.openSleep();
     else dashboard.openWater(null, null, { focusAmount: control?.id === "water-custom-action" });
   },
   addWater: dashboard.addWater, quickWater: dashboard.quickAddWater, familyWater: family.quickWater
@@ -279,6 +280,12 @@ try {
   showIntro(care, mutate);
   if (!$("app").hidden && ["settings", "notification-settings"].includes(view)) {
     dashboard.show("settings", view === "notification-settings");
+  }
+  if (!$("app").hidden && params.has("log")) {
+    if (view === "cycle") dashboard.openCycleDay();
+    if (view === "sleep") dashboard.openSleep();
+    params.delete("log");
+    history.replaceState(history.state, "", `?${params}`);
   }
   const routineId = params.get("routine");
   if (!$("app").hidden && view === "routines" && validRoutineId(routineId) && day === $("day").value) {

@@ -1,8 +1,11 @@
+import { cycleEstimate } from "./cycle.js";
 import { cycleIsEnabled } from "./profile.js";
+import { sleepIsEnabled } from "./sleep.js";
 
 export const familyPlacementOf = value => value === "top" || value === "bottom" ? value : "hidden";
 
-export const familySections = ["profile", "medicines", "doses", "visits", "routines", "water", "cycle"];
+export const allFamilySections = ["profile", "medicines", "doses", "visits", "routines", "water", "cycle"];
+export const familySections = [...allFamilySections, "sleep", "cycleForecast", "cycleSupport"];
 
 export function emptyCareRecords() {
   return { medicines: {}, doses: {}, visits: {}, routines: {}, routineLogs: {}, water: [], cycleRecords: {}, settings: {} };
@@ -19,6 +22,7 @@ const projectionFields = {
   routines: ["id", "name", "category", "color", "start", "interval", "mask", "minute", "mode", "steps", "checked",
     "target", "amount", "done", "unit", "paused", "reminder", "revision", "scheduleFrom", "sharedNotes", ...attribution],
   water: ["id", "day", "time", "amount", ...attribution],
+  sleepRecords: ["start", "end", "zone", "kind", "quality"],
   cycleRecords: ["end", "flow", "sharedNote", ...attribution]
 };
 
@@ -62,6 +66,9 @@ export function sharedCare(records, sections) {
     until: version.until, plan: project(kind, version.plan)
   }));
   const { personalProfile, gender, waterGoal } = data.settings;
+  const cycleVisible = !data.settings.cycleLocalOnly;
+  const companionEstimate = cycleVisible && allowed("cycleForecast") && cycleIsEnabled(data.settings)
+    ? cycleEstimate(data.cycleRecords) : null;
   return {
     ...(allowed("profile") && { profile: { ...selectFields(personalProfile, ["firstName", "lastName", "birthDate", "weightKg", "heightCm"]), gender } }),
     ...(allowed("medicines") && { medicines: shared("medicines") }),
@@ -70,7 +77,11 @@ export function sharedCare(records, sections) {
     ...(allowed("routines") && { routines: shared("routines"),
       routineLogs: Object.fromEntries(Object.entries(data.routineLogs ?? {}).map(([day, rows]) => [day, shared("routines", rows)])) }),
     ...(allowed("water") && { water: data.water.map(row => project("water", row)), waterGoal }),
-    ...(allowed("cycle") && { cycleRecords: shared("cycleRecords"), cycleEnabled: cycleIsEnabled(data.settings) }),
+    ...(allowed("sleep") && { sleepEnabled: sleepIsEnabled(data.settings),
+      sleepRecords: shared("sleepRecords", Object.fromEntries(Object.entries(data.sleepRecords ?? {}).filter(([, row]) => row.end !== null))) }),
+    ...(companionEstimate && { cycleCompanionEstimate: { first: companionEstimate.first, last: companionEstimate.last } }),
+    ...(cycleVisible && allowed("cycleSupport") && cycleIsEnabled(data.settings) && { cycleCompanionMessage: data.settings.cycleSupport }),
+    ...(cycleVisible && allowed("cycle") && { cycleRecords: shared("cycleRecords"), cycleEnabled: cycleIsEnabled(data.settings) }),
     scheduleHistory: {
       ...(allowed("medicines") && { medicines: history("medicines") }),
       ...(allowed("routines") && { routines: history("routines") })

@@ -33,11 +33,14 @@
 .medora .calendar-agenda-head :is(h2, p) { margin: 0; }
 .medora .calendar-agenda-head p { color: var(--muted); font-size: .78rem; }
 .medora #calendar-entries .day-card-menu p { margin: .18rem .35rem; overflow-wrap: anywhere; }
-.medora #calendar-entries .calendar-water {
-  --pill-base: var(--category-water-bar);
+.medora #calendar-entries .calendar-tracker {
+  --day-paint: var(--program-ink);
   --day-fill: var(--program-fill);
   --day-ink: var(--program-ink);
 }
+.medora #calendar-entries .calendar-water { --day-paint: var(--category-water-bar); }
+.medora #calendar-entries .program-sleep { --day-paint: var(--category-sleep-bar); }
+#calendar-entries .calendar-tracker + .day-card:not(.calendar-tracker) { margin-block-start: .35rem; }
 .medora .report-period { margin-block-end: .85rem; }
 .medora #report-range { background: transparent; padding: 0; }
 .medora #report-dates { margin: .35rem .3rem .2rem; text-align: center; color: var(--muted); font-size: .78rem; }

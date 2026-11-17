@@ -8,7 +8,7 @@ import { equal, medicineScheduleFields } from "./merge.js";
 
 const kinds = {
   medicines: "medicines", visits: "appointment", water: "water-intake",
-  routines: "routine", routineLogs: "routine-progress", cycleRecords: "cycle",
+  routines: "routine", routineLogs: "routine-progress", cycleRecords: "cycle", cycleDays: "cycle-day-log", sleepRecords: "sleep",
   doses: "medication-dose", settings: "medora-settings", scheduleHistory: "schedule-history"
 };
 const fields = {
@@ -25,7 +25,9 @@ const fields = {
   waterGoal: "water-goal", waterReminders: "water-reminders", appointmentReminders: "appointment-reminders",
   medicationSnoozeMinutes: "medication-reminder-snooze", reminderDetails: "notification-details",
   theme: "appearance", accent: "accent-color", finish: "appearance-style", gender: "gender", calendar: "calendar",
-  cycleEnabled: "cycle", personalProfile: "my-profile", firstName: "first-name", lastName: "last-name", birthDate: "date-of-birth",
+  cycleEnabled: "cycle", sleepEnabled: "sleep", sleepSettings: "sleep-settings-subtitle",
+  cycleCardSize: "today-card-size", sleepCardSize: "today-card-size",
+  cycleOptions: "cycle-tracking-settings", quality: "sleep-quality", kind: "sleep-kind", symptoms: "cycle-symptoms", tags: "cycle-tags", personalProfile: "my-profile", firstName: "first-name", lastName: "last-name", birthDate: "date-of-birth",
   heightCm: "height-cm", weightKg: "weight-kg",
   plan: "dose-schedule", until: "end-date", effectiveFrom: "sync-effective-from", scheduleFrom: "sync-effective-from",
   stockTrackedFrom: "sync-stock-tracked-from", resolvedAt: "sync-recorded-at", repeat: "repeat", pauseUntil: "sync-pause-until"
@@ -36,7 +38,9 @@ const instants = new Set(["snoozeUntil", "until", "resolvedAt", "effectiveFrom",
 const weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const enums = {
   status: { taken: "taken", skipped: "skipped", snoozed: "snoozed" },
-  flow: { light: "cycle-flow-light", medium: "cycle-flow-medium", heavy: "cycle-flow-heavy" },
+  quality: { good: "sleep-good", fair: "sleep-fair", poor: "sleep-poor" },
+  kind: { main: "sleep-main", nap: "sleep-nap" },
+  flow: { none: "cycle-no-flow", spotting: "cycle-spotting", light: "cycle-flow-light", medium: "cycle-flow-medium", heavy: "cycle-flow-heavy" },
   mode: { done: "done", quantity: "quantity-goal", steps: "steps-checklist" },
   theme: { light: "light", dark: "dark", system: "system" }
 };
@@ -47,6 +51,7 @@ function readable(value, key, kind, unit, formatDay) {
   if (value == null || value === "") return ui("sync-not-set");
   if (typeof value === "boolean") return ui(value ? "sync-yes" : "sync-no");
   if (typeof value === "number") {
+    if (kind === "sleepRecords" && (key === "start" || key === "end")) return new Date(value).toLocaleString(document.documentElement.lang);
     if (dates.has(key)) return formatDay(value - (key === "end" && kind === "medicines" ? 1 : 0));
     if (instants.has(key)) return new Date(value).toLocaleString(document.documentElement.lang);
     if (key === "minute") return localDigits(timeText(value));

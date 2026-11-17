@@ -80,7 +80,7 @@
 }
 
 .medora #today-programs { inline-size: var(--today-rail-width); margin-inline: auto; }
-.medora .program-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
+.medora .program-grid { display: grid; grid-template-columns: repeat(var(--program-columns, 3), minmax(0, 1fr)); gap: .45rem; }
 .medora .program-card, .medora .program-banner-surface {
   border: 1px solid color-mix(in srgb, var(--program-ink) 19%, var(--outline));
   background: radial-gradient(ellipse at var(--art-side, 16%) 14%, var(--glass-glint), transparent 58%),

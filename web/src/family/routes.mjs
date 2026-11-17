@@ -2,7 +2,7 @@ import { familyPageSize, familyTables, familyTableNames, validFamilyRows } from 
 import { DurableObject } from "cloudflare:workers";
 import { careSession, normalizeEmail } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
-import { familySections, sharedCare } from "../../public/medication/domain/family.js";
+import { allFamilySections, familySections, sharedCare } from "../../public/medication/domain/family.js";
 import { groupIconOf, groupIcons } from "../../public/medication/domain/group-icons.js";
 import { clean, idPattern } from "./care.mjs";
 
@@ -293,7 +293,7 @@ export class Families extends DurableObject {
       ? this.sql.exec("SELECT person FROM family_members WHERE group_id=? AND person<>?", group, actor.person).toArray()
       : this.sql.exec("SELECT person FROM family_members WHERE group_id=? AND id=? AND person<>?", group, target, actor.person).toArray();
     if (!members.length) return failure("missing");
-    const sections = data.all === true ? familySections : data.sections;
+    const sections = data.all === true ? allFamilySections : data.sections;
     let expires = data.days === null ? null : [7, 30, 90].includes(data.days) ? Date.now() + data.days * oneDay : undefined;
     if (data.days === "keep" && target !== "all") {
       expires = this.sql.exec("SELECT expires FROM family_grants WHERE group_id=? AND owner=? AND recipient=?",

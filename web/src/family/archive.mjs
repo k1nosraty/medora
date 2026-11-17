@@ -4,13 +4,13 @@ const text = max => value => typeof value === "string" && value.length > 0 && va
 const int = value => Number.isSafeInteger(value) && value >= 0;
 const nullable = check => value => value === null || check(value);
 const oneOf = values => value => values.includes(value);
-const sections = ["profile", "medicines", "doses", "visits", "routines", "water", "cycle"];
+import { familySections } from "../../public/medication/domain/family.js";
 
 const policy = value => {
   if (typeof value !== "string" || value.length > 512) return false;
   try {
     const data = JSON.parse(value);
-    return Array.isArray(data?.sections) && data.sections.length > 0 && data.sections.every(oneOf(sections)) &&
+    return Array.isArray(data?.sections) && data.sections.length > 0 && data.sections.every(oneOf(familySections)) &&
       typeof data.add === "boolean" && typeof data.record === "boolean";
   } catch { return false; }
 };

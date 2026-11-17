@@ -1,12 +1,14 @@
 import { $ } from "../shared/ui/dom.js";
 import { glassObject } from "./three-dimensional.js";
+import { sleepImage } from "../features/sleep/presentation.js";
 
 const settingsArt = {
   "": "control-settings",
   "notification-settings": "notification",
   "water-settings": "water",
+  "cycle-settings": "cycle",
   "snooze-settings": "bottle",
-  "appointment-settings": "visit",
+  "appointment-settings": "visit-main",
   "display-settings": "control-sun",
   "backup-settings": "backup",
   "profile-settings": "control-user"
@@ -20,7 +22,9 @@ export function installSurfaceArt() {
   }
   const settings = $("settings-dialog");
   const renderHeading = () => {
-    $("settings-heading-art").replaceChildren(glassObject(settingsArt[settings.dataset.panel || ""], "control"));
+    const panel = settings.dataset.panel;
+    $("settings-heading-art").replaceChildren(panel === "sleep-settings"
+      ? sleepImage() : glassObject(settingsArt[panel] ?? settingsArt[""], "control"));
   };
   new MutationObserver(renderHeading).observe(settings, { attributeFilter: ["data-panel"] });
   renderHeading();

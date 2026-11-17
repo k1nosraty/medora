@@ -18,7 +18,9 @@ export const privateFields = {
   doses: ["instructions"],
   routines: ["notes"],
   visits: ["note", "notes", "contact"],
-  cycleRecords: ["note"]
+  cycleRecords: ["note"],
+  cycleDays: ["note", "tags"],
+  sleepRecords: ["note"]
 };
 
 // Operate on cloned records in the browser. The same paths validate stored

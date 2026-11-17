@@ -1,4 +1,4 @@
-const screens = new Set(["today", "medications", "appointments", "routines", "insights", "water", "cycle"]);
+const screens = new Set(["today", "medications", "appointments", "routines", "insights", "water", "cycle", "sleep"]);
 
 export function routeFromLocation() {
   const { searchParams } = new URL(location.href);
@@ -27,6 +27,7 @@ export function installRoutes({ root, titles, canOpen, activate, openSettings })
       if (mode === "push") {
         url.searchParams.delete("day");
         url.searchParams.delete("routine");
+        url.searchParams.delete("log");
       }
       if (mode === "replace") history.replaceState({ ...history.state, medoraRoute: true }, "", url);
       else history.pushState({ medoraRoute: true, medoraBack: previous }, "", url);

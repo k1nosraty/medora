@@ -99,7 +99,7 @@ html[dir="rtl"] .medora :is(.report-open-label, .report-water-link) svg { scale:
   color: var(--water-ink);
   border-color: var(--surface-edge);
 }
-.medora[data-finish="glass"] :is(#water-entry button, .water-history-card > #water-custom-action, .water-history-entries .entry-row > button) {
+.medora[data-finish="glass"] :is(#water-entry button, .water-history-card > #water-custom-action) {
   background: transparent;
   border-color: transparent;
   min-block-size: 2.75rem;

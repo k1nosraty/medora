@@ -1,5 +1,6 @@
 import { dayMs, timezone, localWall } from "./wall-clock.js";
 import { routineComplete, routineEntriesOn, routineOccurs } from "./routine-plan.js";
+import { cycleRoutineOccurs } from "./cycle.js";
 import { visitInstant } from "./care-plan.js";
 
 export const isoDay = day => new Date(day * dayMs).toISOString().slice(0, 10);
@@ -7,7 +8,7 @@ export const timeText = minute => [Math.floor(minute / 60), minute % 60].map(par
 export const doseId = (medicine, day, minute) => `${medicine.id}|${day}|${minute}`;
 export const doseTime = (day, minute) => new Date(`${isoDay(day)}T${timeText(minute)}:00`).getTime();
 
-export function scheduledRoutinesOn(state, day, plans = Object.values(state.routines ?? {}), timeOf = doseTime) {
+export function scheduledRoutinesOn(state, day, plans = Object.values(state.routines ?? {}), timeOf = doseTime, today = Math.floor(Date.now() / dayMs)) {
   const entries = new Map();
   const scheduledAt = plan => timeOf(day, plan.minute ?? 1439);
   for (const { plan, until } of state.scheduleHistory?.routines ?? []) {
@@ -16,7 +17,7 @@ export function scheduledRoutinesOn(state, day, plans = Object.values(state.rout
     }
   }
   for (const plan of plans) {
-    if (routineOccurs(plan, day) && (!plan.scheduleFrom || scheduledAt(plan) >= plan.scheduleFrom)) entries.set(plan.id, plan);
+    if (cycleRoutineOccurs(state, plan, day, routineOccurs(plan, day), today) && (!plan.scheduleFrom || scheduledAt(plan) >= plan.scheduleFrom)) entries.set(plan.id, plan);
   }
   return entries;
 }
@@ -182,7 +183,7 @@ export function createCareIndex(state, engine, zone, today = Math.floor(localWal
 
   function calendarRoutinesOn(day) {
     if (routineCalendar.has(day)) return routineCalendar.get(day);
-    const entries = scheduledRoutinesOn(state, day, plans, timeOf);
+    const entries = scheduledRoutinesOn(state, day, plans, timeOf, today);
     for (const [id, entry] of Object.entries(state.routineLogs?.[day] ?? {})) entries.set(id, { ...entry, id });
     const result = [...entries.values()].sort((a, b) => (a.minute ?? 1440) - (b.minute ?? 1440));
     routineCalendar.set(day, result);

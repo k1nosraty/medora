@@ -7,7 +7,7 @@
     gap: .7rem;
     align-items: start;
   }
-  .medora #today-water { margin-block-end: 0; }
+  .medora .today-tracker { margin-block-end: 0; }
   .medora #today-reminders { margin-block: 0; }
   #plans { grid-auto-columns: min(48%, 23rem); }
   .report-cards { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); align-items: start; }
@@ -60,8 +60,8 @@
   }
   .medora #app #today-programs .program-card > :is(svg, .glass-object, .category-art) { display: none; }
   .medora #app #today-programs .program-card :is(strong, small) { grid-area: auto; overflow-wrap: anywhere; }
-  .medora #today-water { grid-template-columns: minmax(0, 1fr); }
-  .medora #app #today-water .today-water-art { display: none; }
+  .medora .today-tracker { grid-template-columns: minmax(0, 1fr); }
+  .medora #app .today-tracker .tracker-art { display: none; }
   .medora #water-entry .water-quick { display: flex; flex-wrap: wrap; }
   .medora #water-entry .water-quick button { flex: 1 1 auto; white-space: normal; }
   .medora .water-history-entries .entry-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -75,8 +75,8 @@
   .medora #today-water .water-info { grid-template-columns: minmax(0, 1fr); }
   .medora #today-water-percent { grid-area: auto; justify-self: start; }
   .medora #today-water .today-water-target { white-space: normal; }
-  .medora .today-water-actions { flex-wrap: wrap; }
-  .medora .today-water-actions button { min-inline-size: min(100%, 5rem); flex: 1 1 auto; }
+  .medora .tracker-actions { flex-wrap: wrap; }
+  .medora .tracker-actions button { min-inline-size: min(100%, 5rem); flex: 1 1 auto; }
   .medora :is(.daily-heading, .timeline-heading, .calendar-agenda-head, .section-heading) { display: flex; flex-wrap: wrap; }
   .medora .timeline-sort { max-inline-size: 100%; min-inline-size: 0; }
   .medora #today-reminders button { max-inline-size: 100%; white-space: normal; }

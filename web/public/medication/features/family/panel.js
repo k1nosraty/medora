@@ -6,7 +6,7 @@ import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { profileName } from "../../domain/profile.js";
 import { groupIconOf, groupIcons } from "../../domain/group-icons.js";
-import { familySections } from "../../domain/family.js";
+import { allFamilySections, familySections } from "../../domain/family.js";
 import { localWall, timezone } from "../../domain/wall-clock.js";
 import { quantityFromText } from "../../domain/medication-rules.js";
 import { familyRequest } from "./api.js";
@@ -64,7 +64,7 @@ function submitButton(label, ...values) {
 }
 
 const policyText = policy => [
-  policy.sections.length === familySections.length ? t("ui.view-everything") : policy.sections.map(key => t(sectionLabels[key])).join(t("ui.and")),
+  policy.sections.length === allFamilySections.length && allFamilySections.every(key => policy.sections.includes(key)) ? t("ui.view-everything") : policy.sections.map(key => t(sectionLabels[key])).join(t("ui.and")),
   policy.record && t("ui.record-on-their-behalf"), policy.add && t("ui.add-a-schedule")
 ].filter(Boolean).join(" · ");
 
@@ -504,11 +504,11 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       input.type = "checkbox";
       input.name = "section";
       input.value = key;
-      input.checked = existing?.sections.includes(key) ?? true;
+      input.checked = existing?.sections.includes(key) ?? allFamilySections.includes(key);
       label.prepend(input);
       sections.append(label);
     }
-    form.elements.view.value = existing && existing.sections.length !== familySections.length ? "custom" : "all";
+    form.elements.view.value = existing && (existing.sections.length !== allFamilySections.length || !allFamilySections.every(key => existing.sections.includes(key))) ? "custom" : "all";
     form.elements.record.checked = Boolean(existing?.record);
     form.elements.add.checked = Boolean(existing?.add);
     if (member?.givenExpires) {

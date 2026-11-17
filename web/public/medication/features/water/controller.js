@@ -182,19 +182,22 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
     const entries = [...index.waterOn(day)].reverse()
       .sort((a, b) => b.time.localeCompare(a.time));
     $("water-entries").replaceChildren(...(entries.length ? entries.map(entry => {
-      const row = element("article", "", "entry-row glass-secondary-actions");
+      const row = element("article", "", "entry-row program-water");
       row.dataset.focusScope = "water:" + entry.id;
       row.append(element("span", t("ui.value-ml-value", numbers.format(entry.amount), clockText(entry.time))));
       if (view) {
         if (entry.recordedBy) row.append(element("small", t("ui.recorded-by-value", view.authorName(entry)), "family-stamp"));
         return row;
       }
-      row.append(button(t("ui.edit"), () => openWater(entry)),
-        button(t("ui.delete-entry"), () => {
-          if (confirm(t("ui.delete-this-water-entry"))) void mutateWater(data => {
-            data.water = data.water.filter(item => item.id !== entry.id);
-          }, t("ui.water-entry-deleted"), entry.day);
-        }));
+      const edit = button(t("ui.edit"), () => openWater(entry));
+      const remove = button(t("ui.delete-entry"), () => {
+        if (confirm(t("ui.delete-this-water-entry"))) void mutateWater(data => {
+          data.water = data.water.filter(item => item.id !== entry.id);
+        }, t("ui.water-entry-deleted"), entry.day);
+      });
+      for (const action of [edit, remove]) action.classList.add("glass-secondary-action", "tracker-utility");
+      remove.classList.add("water-entry-remove");
+      row.append(edit, remove);
       return row;
     }) : [empty(t("ui.no-water-logged-for-this-day"))]));
   }

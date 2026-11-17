@@ -24,12 +24,13 @@ self.addEventListener("notificationclick", event => {
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     const { day, kind, routineId, release } = event.notification.data ?? {};
-    const screen = { water: "water", appointment: "appointments", routine: "routines" }[kind];
+    const screen = { water: "water", appointment: "appointments", routine: "routines", sleepBed: "sleep", sleepWake: "sleep", cycle: "cycle" }[kind];
     const routine = kind === "routine" && typeof routineId === "string" &&
       /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(routineId) ? "&routine=" + routineId : "";
+    const openLog = kind === "cycle" ? "&log=1" : "";
     const path = /^[a-f0-9]{40}$/.test(release ?? "") ? `/medication/?release=${release}`
       : /^\d{4}-\d{2}-\d{2}$/.test(day ?? "")
-        ? `/medication/?day=${day}${screen ? `&view=${screen}` : ""}${routine}` : "/pilot/";
+        ? `/medication/?day=${day}${screen ? `&view=${screen}` : ""}${routine}${openLog}` : "/pilot/";
     const existing = windows.find(client => new URL(client.url).pathname === path.split("?")[0]);
     if (existing) {
       if (new URL(existing.url).search !== new URL(path, self.location.origin).search) await existing.navigate(path);

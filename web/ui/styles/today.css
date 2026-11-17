@@ -39,21 +39,39 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
 .medora .story-copy h2 { margin: .35rem 0 .15rem; font-weight: 850; font-size: clamp(1.55rem, 6.5vw, 2.85rem); line-height: 1.18; text-wrap: balance; }
 .medora #story-summary { margin-block: .3rem 0; color: var(--cover-text); font-size: clamp(.75rem, 2.8vw, .95rem); }
 .medora #today-story[data-story-period] {
+  --scene-image: url("/medication/assets/illustrations/today-scenes.webp");
+  --scene-height: 300%;
   --scene-y: 100%;
   --scene-offset: 0px;
-  --scene-fade-start: 27%;
   --scene-shade: color-mix(in srgb, #231e54 48%, var(--accent-cover));
   background: var(--scene-shade);
 }
 .medora #today-story[data-story-period="morning"] {
   --scene-y: 0%;
-  --scene-fade-start: 30%;
-  --scene-shade: color-mix(in srgb, #fff0e4 71%, var(--accent-cover));
+  --scene-shade: color-mix(in srgb, #fff0e4 52%, var(--accent-cover));
+  --cover-text: #402641;
+}
+.medora #today-story:is([data-story-period="noon"], [data-story-period="late-afternoon"], [data-story-period="sleep"]) {
+  --scene-height: 100%;
+  --scene-y: 0%;
+}
+.medora #today-story[data-story-period="noon"] {
+  --scene-image: url("/medication/assets/illustrations/today-noon.webp");
+  --scene-shade: color-mix(in srgb, #e1f2fb 52%, var(--accent-cover));
+  --cover-text: #24223b;
+}
+.medora #today-story[data-story-period="late-afternoon"] {
+  --scene-image: url("/medication/assets/illustrations/today-late-afternoon.webp");
+  --scene-shade: color-mix(in srgb, #f7e6d5 52%, var(--accent-cover));
   --cover-text: #402641;
 }
 .medora #today-story[data-story-period="afternoon"] {
   --scene-y: 50%;
   --scene-shade: color-mix(in srgb, #623953 52%, var(--accent-cover));
+}
+.medora #today-story[data-story-period="sleep"] {
+  --scene-image: url("/medication/assets/illustrations/today-sleep.webp");
+  --scene-shade: color-mix(in srgb, #131638 62%, var(--accent-cover));
 }
 .medora #today-story[data-story-period]::before {
   content: "";
@@ -62,9 +80,9 @@ html[dir="rtl"] .medora .story-art { transform: scaleX(-1); }
   inset: 0;
   background:
     radial-gradient(ellipse 33% 72% at 57% 12%, color-mix(in srgb, var(--accent-glow) 28%, transparent), transparent),
-    linear-gradient(90deg, transparent var(--scene-fade-start), color-mix(in srgb, var(--scene-shade) 26%, transparent) 40%,
+    linear-gradient(90deg, transparent 27%, color-mix(in srgb, var(--scene-shade) 26%, transparent) 40%,
       color-mix(in srgb, var(--scene-shade) 78%, transparent) 52%, var(--scene-shade) 64%),
-    url("/medication/assets/illustrations/today-scenes.webp") left var(--scene-offset) top var(--scene-y) / auto 300% no-repeat;
+    var(--scene-image) left var(--scene-offset) top var(--scene-y) / auto var(--scene-height) no-repeat;
   pointer-events: none;
 }
 html[dir="ltr"] .medora #today-story[data-story-period]::before { transform: scaleX(-1); }
@@ -76,10 +94,7 @@ html[dir="ltr"] .medora #today-story[data-story-period]::before { transform: sca
 @media (max-width: 31rem) {
   .medora #today-story[data-story-period] { --scene-offset: -1.3rem; }
   .medora #today-story[data-story-period="morning"] { --scene-offset: -1.75rem; }
-  .medora #today-story[data-story-period="night"] {
-    --scene-offset: -.55rem;
-    --scene-fade-start: 34%;
-  }
+  .medora #today-story[data-story-period="night"] { --scene-offset: -.55rem; }
 }
 #today-dates { position: relative; z-index: 1; inline-size: var(--today-rail-width); margin: -1.35rem auto 0; }
 #today-dates:empty { display: none; }
@@ -191,7 +206,7 @@ html[dir="ltr"] .medora #today-dates .day-controls {
 .day-week-ghost[data-edge="end"] { inset-inline-start: 100%; }
 .medora #today-dates .day-week [aria-current="date"]:not([aria-pressed="true"]) { box-shadow: inset 0 0 0 1px var(--action); }
 .medora #today-dates .day-week button span { color: var(--muted); font-size: .68rem; }
-.medora :is(.today-water-actions [data-open-water], #today-dates .day-week button[aria-pressed="true"]) {
+.medora #today-dates .day-week button[aria-pressed="true"] {
   border: 1px solid var(--accent-glass-rim);
   color: var(--on-action);
   background: radial-gradient(ellipse 105% 82% at 34% 0%, #fff2, transparent 65%),
@@ -204,38 +219,34 @@ html[dir="ltr"] .medora #today-dates .day-controls {
 .medora #today-dates .day-week button[aria-pressed="true"] span { color: inherit; }
 .medora #today-focus .day-card-actions > .care-record-action,
 .medora :is(#app, .gallery) .compact-card-list .day-card-actions > button.secondary,
-.medora[data-finish="glass"] :is(#today-water .today-water-actions > button, #cycle-log-end, .glass-secondary-action, .glass-secondary-actions > button) {
+.medora[data-finish="glass"] .today-tracker .tracker-actions > button,
+.medora[data-finish="glass"] :is(#cycle-log-end, .glass-secondary-action, .glass-secondary-actions > button) {
   position: relative;
   isolation: isolate;
   box-shadow: none;
 }
-.medora[data-finish="glass"] #today-water .today-water-actions > [data-open-water] {
-  border: 0;
-  background: transparent;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+.medora[data-finish="glass"] .today-tracker .tracker-actions > button:is(:active, [data-pressing]) {
+  box-shadow: none;
 }
 .medora #today-focus .day-card-actions > .care-record-action::before,
 .medora :is(#app, .gallery) .compact-card-list .day-card-actions > button.secondary::before,
-.medora[data-finish="glass"] :is(#today-water .today-water-actions > button, #cycle-log-end, .glass-secondary-action, .glass-secondary-actions > button)::before {
+.medora[data-finish="glass"] .today-tracker .tracker-actions > button::before,
+.medora[data-finish="glass"] :is(#cycle-log-end, .glass-secondary-action, .glass-secondary-actions > button)::before {
   content: "";
   position: absolute;
   z-index: -1;
   inset: .23rem 0;
   border: 1px solid #fff6;
   border-radius: .82rem;
-  background:
+  background: var(--tracker-button-face,
     radial-gradient(ellipse 105% 95% at 70% 0%, #fff4, transparent 78%),
-    linear-gradient(170deg, #fff1 35%, #0001);
+    linear-gradient(170deg, #fff1 35%, #0001));
   box-shadow: var(--pressed-shadow, inset 0 1px 1px #fff5, inset 0 -1px 1px #0001, 0 .14rem .35rem #0002);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   pointer-events: none;
 }
-.medora[data-finish="glass"] #today-water .today-water-actions > [data-open-water]::before {
-  background: var(--filled-button-reflection), var(--accent-glass-fill);
-  border-color: var(--filled-button-rim);
-  box-shadow: var(--pressed-shadow, var(--filled-button-shadow));
+.medora[data-finish="glass"] .today-tracker .tracker-actions > button::before {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }

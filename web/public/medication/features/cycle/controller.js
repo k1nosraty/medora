@@ -23,7 +23,7 @@ export function installCycle({ getState, getFamilyView, getDates, mutate, today,
   logEnd.type = "button";
   logEnd.hidden = true;
   banner.details.append(latest, $("cycle-forecast"), endStatus);
-  banner.addActions($("cycle-add"), logEnd);
+  banner.addActions($("cycle-add"), logEnd, $("cycle-log-symptoms"));
   const dialog = $("cycle-dialog");
   const start = $("cycle-start");
   const end = $("cycle-end");
@@ -47,7 +47,7 @@ export function installCycle({ getState, getFamilyView, getDates, mutate, today,
           delete state.cycleRecords?.[day];
         },
         success: t("ui.cycle-entry-deleted"),
-        scheduleChanged: false
+        scheduleChanged: true
       });
     }
   });
@@ -94,10 +94,14 @@ export function installCycle({ getState, getFamilyView, getDates, mutate, today,
         state.cycleRecords ??= {};
         if (day !== previous && Object.hasOwn(state.cycleRecords, day)) throw new CareInputError(t("ui.a-cycle-is-already-logged-for-that-date"));
         if (previous !== undefined && !Object.hasOwn(state.cycleRecords, previous)) throw new CareInputError(t("ui.this-entry-is-no-longer-available"));
+        if (Object.entries(state.cycleRecords).some(([key, record]) => Number(key) !== previous &&
+            Number(key) <= (last ?? day) && day <= (record.end ?? Number(key)))) {
+          throw new CareInputError(t("ui.cycle-possible-overlap"));
+        }
         const sharedNote = state.cycleRecords[previous]?.sharedNote;
         if (previous !== undefined) delete state.cycleRecords[previous];
         state.cycleRecords[day] = { ...entry, ...(sharedNote && { sharedNote }) };
-      }, t("ui.cycle-saved"))) dialog.close();
+      }, t("ui.cycle-saved"), true)) dialog.close();
       else error.textContent = $("status").textContent;
     } catch (reason) { error.textContent = reason.message; }
     finally { submit.disabled = false; }

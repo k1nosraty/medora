@@ -3,7 +3,7 @@ import { locale, t } from "../../shared/i18n/locale.js";
 import { ageAt } from "../../domain/profile.js";
 
 export const sectionLabels = { profile: "پروفایل", medicines: "داروها", doses: "وضعیت مصرف", visits: "قرارها",
-  routines: "روتین‌ها", water: "آب", cycle: "چرخهٔ قاعدگی" };
+  routines: "روتین‌ها", water: "آب", cycle: "چرخهٔ قاعدگی", sleep: "ui.sleep", cycleForecast: "ui.cycle-forecast-share", cycleSupport: "ui.cycle-support-share" };
 
 export function field(label, name, type, value) {
   const row = element("label", t(label));

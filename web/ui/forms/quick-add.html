@@ -2,9 +2,10 @@
     <div class="sheet-header"><svg aria-hidden="true"><use href="#i-plus"/></svg><h2 id="quick-title">{{msg:ui.what-would-you-like-to-add}}</h2><button type="button" class="icon-button" data-close="quick-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
     <div class="sheet-body quick-items">
       <button type="button" class="secondary quick-item program-medicine" data-quick-kind="medicine" data-open-medication><svg data-surface-art="bottle" class="category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-bottle"/></svg>{{msg:ui.add-medicine}}</button>
-      <button type="button" class="secondary quick-item program-visit" data-quick-kind="visit" data-open-visit><svg data-surface-art="visit" class="category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>{{msg:ui.new-appointment}}</button>
-      <button type="button" class="secondary quick-item program-routine" data-quick-kind="routine" data-open-routine><svg data-surface-art="routine" class="category-art routine-category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>{{msg:ui.new-routine}}</button>
+      <button type="button" class="secondary quick-item program-visit" data-quick-kind="visit" data-open-visit><svg data-surface-art="visit-main" class="category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>{{msg:ui.new-appointment}}</button>
+      <button type="button" class="secondary quick-item program-routine" data-quick-kind="routine" data-open-routine><svg data-surface-art="routine-main" class="category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>{{msg:ui.new-routine}}</button>
       <button type="button" class="secondary quick-item program-water" data-quick-kind="water" data-open-water><svg data-surface-art="water" class="category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="#art-report-water"/></svg>{{msg:ui.log-water}}</button>
     <!-- include forms/cycle-quick.html -->
+      <button type="button" id="quick-sleep" class="secondary quick-item program-sleep" data-quick-kind="sleep" hidden><img class="glass-object category-art" src="/medication/assets/illustrations/sleep.webp" width="256" height="256" alt="">{{msg:ui.sleep-log}}</button>
     </div>
   </dialog>

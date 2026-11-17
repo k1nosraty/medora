@@ -1,0 +1,23 @@
+  <dialog id="sleep-dialog" class="sheet add-sheet" aria-labelledby="sleep-title">
+    <form id="sleep-form" class="sheet-form">
+      <div class="sheet-header program-sleep">
+        <img class="glass-object add-sheet-icon" src="/medication/assets/illustrations/sleep.webp" width="256" height="256" alt="">
+        <h2 id="sleep-title">{{msg:ui.sleep-log}}</h2>
+        <button type="button" class="icon-button" data-close="sleep-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="sheet-body">
+        <div class="sleep-fields">
+          <label>{{msg:ui.start-date}}<input id="sleep-start-day" type="date" required></label>
+          <label>{{msg:ui.sleep-start-time}}<input id="sleep-start-time" type="time" required></label>
+          <label>{{msg:ui.sleep-wake-day}}<input id="sleep-end-day" type="date" required></label>
+          <label>{{msg:ui.sleep-wake-time}}<input id="sleep-end-time" type="time" required></label>
+          <label>{{msg:ui.sleep-kind}}<select id="sleep-kind"><option value="main">{{msg:ui.sleep-main}}</option><option value="nap">{{msg:ui.sleep-nap}}</option></select></label>
+          <label>{{msg:ui.sleep-quality}}<select id="sleep-quality"><option value="">{{msg:ui.not-selected}}</option><option value="good">{{msg:ui.sleep-good}}</option><option value="fair">{{msg:ui.sleep-fair}}</option><option value="poor">{{msg:ui.sleep-poor}}</option></select></label>
+        </div>
+        <label>{{msg:ui.sleep-note}}<textarea id="sleep-note" maxlength="500" rows="2"></textarea></label>
+        <p id="sleep-duration-preview" class="quiet" aria-live="polite"></p>
+        <p id="sleep-error" class="field-error" role="alert"></p>
+        <button class="block-action" type="submit">{{msg:ui.save}}</button>
+      </div>
+    </form>
+  </dialog>

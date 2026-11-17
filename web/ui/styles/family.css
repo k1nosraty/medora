@@ -131,9 +131,6 @@
   font-size: .73rem;
 }
 .medora .family-home svg { inline-size: 1.13rem; block-size: 1.13rem; }
-.medora [data-family-member] .program-grid {
-  grid-template-columns: repeat(var(--family-program-columns, 2), minmax(0, 1fr));
-}
 .family-group-tabs {
   display: flex;
   gap: .28rem;

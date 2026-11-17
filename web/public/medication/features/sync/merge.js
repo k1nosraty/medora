@@ -20,7 +20,7 @@ function indexUnique(rows, keyOf) {
 }
 const byWaterId = (rows = []) => indexUnique(rows, row => row.id);
 const byVersion = (rows = []) => indexUnique(rows, row => JSON.stringify([row.plan.id, row.until]));
-const records = ["visits", "routines", "cycleRecords"];
+const records = ["visits", "routines", "cycleRecords", "cycleDays", "sleepRecords"];
 
 function debits(snapshot) {
   const totals = new Map();
@@ -110,6 +110,21 @@ export function mergeCare(base, local, remote, choose = () => undefined) {
   base ??= {};
   remote ??= {};
   const merged = Object.fromEntries(records.map(key => [key, merge([key], base[key], local[key], remote[key])]));
+  const orderedSleep = Object.entries(merged.sleepRecords).sort((a, b) => a[1].start - b[1].start);
+  const live = [];
+  for (const [id, row] of orderedSleep) {
+    while (live.length && row.start < (live.at(-1)[1].end ?? Infinity)) {
+      const [otherId, other] = live.at(-1);
+      const oursFirst = equal(local.sleepRecords?.[otherId], other);
+      const ours = oursFirst ? other : row, theirs = oursFirst ? row : other;
+      const winner = resolve(["sleepRecords", oursFirst ? otherId : id, "overlap", oursFirst ? id : otherId],
+        undefined, ours, theirs, true);
+      if (winner === other) { delete merged.sleepRecords[id]; break; }
+      delete merged.sleepRecords[otherId];
+      live.pop();
+    }
+    if (Object.hasOwn(merged.sleepRecords, id)) live.push([id, row]);
+  }
   merged.doses = mergeMap(base.doses, local.doses, remote.doses, (before, ours, theirs, id) => {
     const row = resolve(["doses", id], before, ours, theirs);
     const takeRemote = row === theirs;

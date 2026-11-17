@@ -20,6 +20,7 @@
               <li data-family-scope="water"><span class="calendar-dots" aria-hidden="true"><i class="water"></i></span>{{msg:ui.water}}</li>
               <li data-family-scope="appointments"><span class="calendar-dots" aria-hidden="true"><i class="visit"></i></span>{{msg:ui.appointment}}</li>
               <li data-family-scope="routines"><span class="calendar-dots" aria-hidden="true"><i class="routine"></i></span>{{msg:ui.routine}}</li>
+              <li id="calendar-sleep-key" hidden><span class="calendar-dots" aria-hidden="true"><i class="sleep"></i></span>{{msg:ui.sleep}}</li>
               <li id="calendar-cycle-key" hidden><span class="calendar-cycle-dot" aria-hidden="true"></span>{{msg:ui.cycle}}</li>
             </ul>
           </section>
@@ -80,7 +81,7 @@
             </section>
             <section class="feature program-routine report-card" aria-labelledby="report-routine-title">
               <div class="report-hero">
-                <svg data-surface-art="routine" class="report-art category-art routine-category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
+                <svg data-surface-art="routine-main" class="report-art category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
                 <h2 id="report-routine-title">{{msg:ui.routines}}</h2>
                 <div class="report-number" hidden id="report-routine-value"><strong id="report-routine-number"></strong></div>
                 <p id="report-routines" class="report-caption"></p>
@@ -91,13 +92,21 @@
             </section>
             <section class="feature visit report-card program-visit" aria-labelledby="report-visit-title">
               <div class="report-hero">
-                <svg data-surface-art="visit" class="report-art category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>
+                <svg data-surface-art="visit-main" class="report-art category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>
                 <h2 id="report-visit-title">{{msg:ui.visits}}</h2>
                 <div class="report-number" hidden id="report-visit-value"><strong id="report-visit-number"></strong></div>
                 <p id="report-visits" class="report-caption"></p>
               </div>
               <dl class="report-stats" id="report-visit-breakdown" hidden></dl>
               <button type="button" class="report-card-open" data-destination="appointments" aria-labelledby="report-visit-open-label report-visit-title"><span id="report-visit-open-label" class="report-open-label">{{msg:ui.open-details}} <svg aria-hidden="true"><use href="#i-back"/></svg></span></button>
+            </section>
+            <section id="report-sleep-card" class="feature report-card program-sleep" aria-labelledby="report-sleep-title" hidden>
+              <div class="report-hero">
+                <img class="glass-object report-art" src="/medication/assets/illustrations/sleep.webp" width="256" height="256" alt="">
+                <h2 id="report-sleep-title">{{msg:ui.sleep}}</h2>
+                <p id="report-sleep-value" class="report-empty"></p>
+              </div>
+              <button type="button" class="report-card-open" data-destination="sleep" aria-labelledby="report-sleep-open-label report-sleep-title"><span id="report-sleep-open-label" class="report-open-label">{{msg:ui.open-details}} <svg aria-hidden="true"><use href="#i-back"/></svg></span></button>
             </section>
             <section id="report-cycle-card" class="feature report-card program-cycle" aria-labelledby="report-cycle-title" hidden>
               <div class="report-hero">

@@ -1,3 +1,5 @@
+import { cycleFlows, cycleSymptoms } from "./cycle.js";
+import { validSleepRecord, validSleepSettings, validSleepTimeline } from "./sleep.js";
 import { boundedCarePayload, boundedText } from "./care-contract.js";
 import { isRecoveryKeyId, privateFields, privateRows, validPrivateText } from "./private-fields.js";
 import { maxRoutineAmount, maxRoutineSteps } from "./routine-plan.js";
@@ -34,6 +36,15 @@ const settings = {
   gender: value => genders.includes(value),
   personalProfile: validPersonalProfile,
   cycleEnabled: flag,
+  cycleCardSize: value => value === "wide" || value === "compact",
+  cycleLocalOnly: flag,
+  cycleOptions: value => object(value) && flag(value.hideToday) && (value.minute === null || minute(value.minute)) &&
+    Array.isArray(value.routines) && value.routines.length <= 64 && value.routines.every(safeId) && optional(value.since, day),
+  cycleSupport: value => boundedText(value, 160),
+  cycleChecklist: value => Array.isArray(value) && value.length <= 20 && value.every(item => boundedText(item, 400)),
+  sleepEnabled: flag,
+  sleepCardSize: value => value === "wide" || value === "compact",
+  sleepSettings: value => object(value) && validSleepSettings(value),
   calendar: value => ["persian", "gregory"].includes(value),
   waterGoal: value => integer(value, 1, 20000),
   waterReminders: value => object(value) && flag(value.enabled) && clock(value.start) && clock(value.end) &&
@@ -49,6 +60,8 @@ export function portable(state) {
     medicines: state.medicines, doses: state.doses, water: state.water ?? [], visits: state.visits ?? {},
     routines: state.routines ?? {}, routineLogs: state.routineLogs ?? {},
     ...(Object.keys(state.scheduleHistory ?? {}).length ? { scheduleHistory: state.scheduleHistory } : {}),
+    ...(state.sleepRecords !== undefined ? { sleepRecords: state.sleepRecords } : {}),
+    ...(state.cycleDays !== undefined ? { cycleDays: state.cycleDays } : {}),
     ...(state.cycleRecords !== undefined ? { cycleRecords: state.cycleRecords } : {}),
     ...(state.careSchemaVersion !== undefined && { careSchemaVersion: state.careSchemaVersion }),
     ...(state.privacyVersion !== undefined && { privacyVersion: state.privacyVersion, privacyKey: state.privacyKey,
@@ -146,6 +159,11 @@ export function validatePortable(data, validatePhases) {
       optional(row.zone, zone) && optional(row.offsets, offsets => Array.isArray(offsets) &&
         offsets.every(offset => integer(offset, 0, 43200)))) ||
     !record(data.routines, (row, id) => row.id === id && validRoutinePlan(row)) ||
+    !optional(data.sleepRecords, records => record(records, validSleepRecord) && validSleepTimeline(records)) ||
+    !optional(data.cycleDays, records => record(records, (row, id) =>
+      day(Number(id)) && String(Number(id)) === id && cycleFlows.includes(row.flow) && object(row.symptoms) &&
+      Object.entries(row.symptoms).every(([key, value]) => cycleSymptoms.includes(key) && integer(value, 1, 3)) &&
+      optional(row.note, value => boundedText(value, 500)) && optional(row.tags, value => boundedText(value, 180)))) ||
     !optional(data.cycleRecords, records => record(records, (row, id) =>
       day(Number(id)) && String(Number(id)) === id && (row.end === null || (day(row.end) && row.end >= Number(id))) &&
       ["", "light", "medium", "heavy"].includes(row.flow) &&

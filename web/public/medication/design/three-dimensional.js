@@ -3,20 +3,24 @@ const colorAngles = {
   indigo: 237, blue: 211, green: 155, pistachio: 90, slate: 222
 };
 const familyAngles = { medicine: 267, visit: 155, routine: 17 };
-const accentAngles = { blue: 211, green: 153, lilac: 267, coral: 8, berry: 330 };
+const accentAngles = { blue: 211, green: 153, lilac: 267, coral: 8, berry: 330, amber: 38 };
 
-const artworkFolder = finish => finish === "matte" ? "matte-3d" : "optical-glass";
+function artworkPath(id, finish) {
+  if (finish === "matte") {
+    const matteId = id === "visit-main" || id === "routine-main" ? id.slice(0, -5) : id;
+    return "/design/matte-3d/" + matteId + ".webp";
+  }
+  return "/design/optical-glass/" + id + ".webp";
+}
 
 export function glassObject(id, family, { color, accent, className, finish } = {}) {
   const artwork = new Image(256, 256);
   artwork.dataset.art = id;
   if (finish) artwork.dataset.artFinish = finish;
-  const folder = artworkFolder(finish ?? document.body.dataset.finish);
-  artwork.src = "/design/" + folder + "/" + id + ".webp";
+  artwork.src = artworkPath(id, finish ?? document.body.dataset.finish);
   const fallback = { medicine: "bottle", visit: "visit", routine: "routine" }[family];
   if (fallback && fallback !== id) artwork.addEventListener("error", () => {
-    const fallbackUrl = new URL("/design/" + artworkFolder(artwork.dataset.artFinish ?? document.body.dataset.finish) +
-      "/" + fallback + ".webp", location.origin).href;
+    const fallbackUrl = new URL(artworkPath(fallback, artwork.dataset.artFinish ?? document.body.dataset.finish), location.origin).href;
     if (artwork.src !== fallbackUrl) artwork.src = fallbackUrl;
   });
   artwork.alt = "";
@@ -51,6 +55,6 @@ export function controlGlass(id, accent) {
 
 export function refreshArtwork(finish) {
   for (const art of document.querySelectorAll("img[data-art]:not([data-art-finish])")) {
-    art.src = "/design/" + artworkFolder(finish) + "/" + art.dataset.art + ".webp";
+    art.src = artworkPath(art.dataset.art, finish);
   }
 }

@@ -1,0 +1,36 @@
+      <div data-screen="sleep" hidden>
+        <section id="sleep-banner" class="plan-panel-banner program-banner-surface program-sleep" aria-labelledby="sleep-banner-title">
+          <div>
+            <h2 id="sleep-banner-title">{{msg:ui.my-sleep}}</h2>
+            <p id="sleep-banner-status" aria-live="polite" hidden></p>
+            <p id="sleep-banner-detail"></p>
+          </div>
+          <img class="category-art" src="/medication/assets/illustrations/sleep.webp" width="256" height="256" alt="">
+        </section>
+        <div id="sleep-actions" class="sleep-actions">
+          <button id="sleep-start-now" class="block-action" type="button">{{msg:ui.sleep-start-now}}</button>
+          <button id="sleep-wake-now" class="secondary" type="button">{{msg:ui.sleep-wake-now}}</button>
+          <button id="sleep-manual" class="text-button" type="button">{{msg:ui.sleep-manual}}</button>
+        </div>
+        <section class="cycle-panel" aria-labelledby="sleep-trend-title">
+          <div class="cycle-panel-heading">
+            <h2 id="sleep-trend-title">{{msg:ui.sleep-trend}}</h2>
+            <div class="sleep-periods" role="group" aria-label="{{msg:ui.sleep-trend}}">
+              <button class="secondary" id="sleep-week" type="button" aria-pressed="true">{{msg:ui.sleep-week}}</button>
+              <button class="secondary" id="sleep-month" type="button" aria-pressed="false">{{msg:ui.sleep-month}}</button>
+            </div>
+          </div>
+          <div class="cycle-week-heading">
+            <button id="sleep-previous" class="icon-button" data-date-arrow="previous" type="button" aria-label="{{msg:ui.previous}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+            <p id="sleep-range" aria-live="polite"></p>
+            <button id="sleep-next" class="icon-button" data-date-arrow="next" type="button" aria-label="{{msg:ui.next}}"><svg aria-hidden="true"><use href="#i-expand"/></svg></button>
+          </div>
+          <p id="sleep-average"></p>
+          <ol id="sleep-chart" class="sleep-chart" aria-label="{{msg:ui.sleep-trend}}" data-context-list></ol>
+        </section>
+        <section class="cycle-panel" aria-labelledby="sleep-history-title">
+          <h2 id="sleep-history-title">{{msg:ui.sleep-history}}</h2>
+          <p class="quiet" id="sleep-empty">{{msg:ui.sleep-empty}}</p>
+          <div id="sleep-history" data-context-list></div>
+        </section>
+      </div>

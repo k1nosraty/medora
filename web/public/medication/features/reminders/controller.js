@@ -26,7 +26,7 @@ function settingsBadge(text, enabled = false) {
   badge.textContent = text;
   badge.dataset.enabled = String(enabled);
 }
-const kindText = kinds => (kinds ?? []).map(kind => ({ dose: t("ui.medicine"), water: t("ui.water"), appointment: t("ui.appointment"), routine: t("ui.routine") })[kind]).filter(Boolean).join(t("ui.and"));
+const kindText = kinds => (kinds ?? []).map(kind => ({ dose: t("ui.medicine"), water: t("ui.water"), appointment: t("ui.appointment"), routine: t("ui.routine"), sleepBed: t("ui.sleep"), sleepWake: t("ui.sleep"), cycle: t("ui.cycle") })[kind]).filter(Boolean).join(t("ui.and"));
 
 function controls(settings) {
   const enabled = Boolean(settings?.enabled);

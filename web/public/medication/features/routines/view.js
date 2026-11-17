@@ -4,6 +4,7 @@ import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { installChoiceSearch, setPressed } from "../../shared/ui/controls.js";
 import { isoDay, scheduledRoutinesOn, timeText, trackSchedule } from "../../domain/care-index.js";
+import { cycleRoutineOccurs } from "../../domain/cycle.js";
 import { clockMinute } from "../../domain/care-plan.js";
 import { integer as readAmount } from "../../shared/ui/input-values.js";
 import { dayMs } from "../../domain/wall-clock.js";
@@ -285,7 +286,7 @@ export function installRoutines({ getState, getFamilyView = () => null, today, m
       if (JSON.stringify(previous) !== JSON.stringify(recorded)) throw changed();
       const currentPlan = state.routines[entry.id];
       const scheduled = day < currentDay ? scheduledRoutinesOn(state, day).get(entry.id) :
-        routineOccurs(currentPlan, day) ? currentPlan : null;
+        currentPlan && cycleRoutineOccurs(state, currentPlan, day, routineOccurs(currentPlan, day), currentDay) ? currentPlan : null;
       const latest = previous ?? scheduled;
       if (!latest) throw changed();
       const updated = routineLog(latest, result);

@@ -1,0 +1,15 @@
+        <section class="today-tracker program-sleep" id="today-sleep" aria-labelledby="today-sleep-label" hidden>
+          <span class="tracker-art sleep-today-art" aria-hidden="true">
+            <img src="/medication/assets/illustrations/sleep.webp" width="256" height="256" alt="">
+          </span>
+          <div class="tracker-body">
+            <h2 id="today-sleep-label">{{msg:ui.sleep}}</h2>
+            <p id="today-sleep-detail"></p>
+            <div class="tracker-actions">
+              <button type="button" class="tracker-primary" id="today-sleep-start">{{msg:ui.sleep-quick-start}}</button>
+              <button type="button" class="tracker-primary" id="today-sleep-wake" hidden>{{msg:ui.sleep-wake-now}}</button>
+              <button type="button" class="secondary" id="today-sleep-manual">{{msg:ui.sleep-log}}</button>
+              <button type="button" class="secondary" id="today-sleep-history" data-destination="sleep" aria-label="{{msg:ui.sleep-history}}">{{msg:ui.history}}</button>
+            </div>
+          </div>
+        </section>

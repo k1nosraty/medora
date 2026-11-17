@@ -5,6 +5,9 @@ const copy = {
     water: ["وقت نوشیدن آب", "آب بنوشید و مقدارش را ثبت کنید."],
     appointment: ["یادآوری قرار", "برای قرار پیش‌رو آماده شوید.", "برای این قرار آماده شوید"],
     routine: ["وقت روتین", "روتین این نوبت را انجام دهید و پیشرفت را ثبت کنید.", "وقت انجام"],
+    sleepBed: ["وقت خواب", "اگر آمادهٔ خواب هستید، ساعت رفتن به تخت را ثبت کنید."],
+    sleepWake: ["یادآوری ثبت خواب", "اگر بیدار شده‌اید، ساعت بیداری را ثبت کنید."],
+    cycle: ["یادآوری مدورا", "برای بررسی یک یادآوری، مدورا را باز کنید."],
     more: "و موارد دیگر"
   },
   en: {
@@ -13,6 +16,9 @@ const copy = {
     water: ["Time to drink water", "Drink some water and log how much."],
     appointment: ["Appointment reminder", "Get ready for your upcoming appointment.", "Get ready for"],
     routine: ["Routine reminder", "Do your scheduled routine and log your progress.", "Time for"],
+    sleepBed: ["Bedtime reminder", "Log your bedtime when you are ready to sleep."],
+    sleepWake: ["Sleep log reminder", "Log your wake time if you are up."],
+    cycle: ["Medora reminder", "Open Medora to view a reminder."],
     more: "and more"
   }
 };

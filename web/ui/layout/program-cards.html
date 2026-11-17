@@ -5,16 +5,20 @@
               <strong>{{msg:ui.medicine}}</strong><small id="program-medications"></small>
             </button>
             <button type="button" class="program-card program-visit" data-destination="appointments">
-              <svg data-surface-art="visit" class="category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>
+              <svg data-surface-art="visit-main" class="category-art" viewBox="0 0 160 132" aria-hidden="true"><use href="#art-visit-general"/></svg>
               <strong>{{msg:ui.visit-shortcut}}</strong><small id="program-appointments"></small>
             </button>
             <button type="button" class="program-card program-routine" data-destination="routines">
-              <svg data-surface-art="routine" class="category-art routine-category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
+              <svg data-surface-art="routine-main" class="category-art" viewBox="0 0 128 100" aria-hidden="true"><use href="/medication/assets/icons/routines.svg#banner"/></svg>
               <strong>{{msg:ui.routine}}</strong><small id="program-routines"></small>
             </button>
-            <button type="button" id="program-cycle" class="program-card program-cycle" data-destination="cycle" hidden>
-              <span data-surface-art="cycle" class="category-art"></span>
-              <strong>{{msg:ui.cycle}}</strong>
+            <button type="button" id="program-sleep" class="program-card program-sleep" data-destination="sleep" hidden>
+              <img class="glass-object category-art" src="/medication/assets/illustrations/sleep.webp" width="256" height="256" alt="">
+              <strong>{{msg:ui.sleep}}</strong><small id="program-sleep-summary"></small>
+            </button>
+            <button type="button" id="program-cycle-compact" class="program-card program-cycle" data-destination="cycle" hidden>
+              <span data-surface-art="cycle" class="category-art" aria-hidden="true"></span>
+              <strong>{{msg:ui.cycle}}</strong><small id="program-cycle-summary"></small>
             </button>
           </div>
         </section>

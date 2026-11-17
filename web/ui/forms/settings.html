@@ -17,12 +17,16 @@
             <span class="settings-icon"><svg data-surface-art="water" aria-hidden="true"><use href="#i-water"/></svg></span>
             <span>{{msg:ui.water}}<small id="settings-water-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
+          <button type="button" class="settings-row sleep-row" data-settings-panel="sleep-settings">
+            <span class="settings-icon"><img class="glass-object" src="/medication/assets/illustrations/sleep.webp" width="256" height="256" alt=""></span>
+            <span>{{msg:ui.sleep}}<small id="settings-sleep-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
           <button type="button" class="settings-row medicine-row" data-settings-panel="snooze-settings">
             <span class="settings-icon"><svg data-surface-art="bottle" aria-hidden="true"><use href="#i-pill"/></svg></span>
             <span>{{msg:ui.medication-reminder-snooze}}<small id="settings-snooze-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
           <button type="button" class="settings-row visit-row" data-settings-panel="appointment-settings">
-            <span class="settings-icon"><svg data-surface-art="visit" aria-hidden="true"><use href="#i-calendar"/></svg></span>
+            <span class="settings-icon"><svg data-surface-art="visit-main" aria-hidden="true"><use href="#i-calendar"/></svg></span>
             <span>{{msg:ui.appointment-settings}}<small id="settings-appointment-summary"></small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
         </div>
@@ -31,6 +35,10 @@
           <button type="button" class="settings-row" data-settings-panel="profile-settings">
             <span class="settings-icon"><svg data-surface-art="control-user" aria-hidden="true"><use href="#i-user"/></svg></span>
             <span>{{msg:ui.profile}}<small>{{msg:ui.gender-and-cycle-visibility}}</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
+          </button>
+          <button type="button" class="settings-row" data-settings-panel="cycle-settings" id="settings-open-cycle" hidden>
+            <span class="settings-icon"><span data-surface-art="cycle" aria-hidden="true"></span></span>
+            <span>{{msg:ui.cycle-tracking-settings}}<small>{{msg:ui.cycle-share-summary}}</small></span><svg class="settings-chevron" aria-hidden="true"><use href="#i-back"/></svg>
           </button>
           <button type="button" class="settings-row" data-settings-panel="display-settings">
             <span class="settings-icon"><svg data-surface-art="control-sun" aria-hidden="true"><use href="#i-sun"/></svg></span>
@@ -55,6 +63,8 @@
       <!-- include forms/settings/profile.html -->
       <!-- include forms/settings/notification.html -->
       <!-- include forms/settings/water.html -->
+      <!-- include forms/settings/sleep.html -->
+      <!-- include forms/settings/cycle.html -->
       <!-- include forms/settings/snooze.html -->
       <!-- include forms/settings/appointment.html -->
       <!-- include forms/settings/backup.html -->

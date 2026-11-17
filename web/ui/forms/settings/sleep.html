@@ -1,0 +1,20 @@
+      <section id="sleep-settings" class="settings-panel health-settings" hidden>
+        <form id="sleep-settings-form" class="settings-form">
+          <label class="editor-switch settings-switch">{{msg:ui.sleep-enable}}<input id="sleep-enabled" type="checkbox" role="switch"></label>
+          <label>{{msg:ui.today-card-size}}<select id="sleep-card-size"><option value="wide">{{msg:ui.wide-card}}</option><option value="compact">{{msg:ui.compact-card}}</option></select></label>
+          <label>{{msg:ui.sleep-goal}}<input id="sleep-goal" type="number" min="0.5" max="24" step="0.5" inputmode="decimal"></label>
+          <fieldset class="sleep-reminder-settings">
+            <legend>{{msg:ui.reminders}}</legend>
+            <div class="settings-time-grid">
+              <label>{{msg:ui.sleep-reminder-bed}}<input id="sleep-reminder-bed" type="time"></label>
+              <label>{{msg:ui.sleep-reminder-wake}}<input id="sleep-reminder-wake" type="time"></label>
+            </div>
+            <fieldset id="sleep-reminder-days" class="settings-choices">
+              <legend>{{msg:ui.sleep-reminder-days}}</legend>
+              <div id="sleep-weekday-options"></div>
+            </fieldset>
+            <label class="editor-switch settings-switch">{{msg:ui.sleep-pause}}<input id="sleep-reminder-pause" type="checkbox" role="switch"></label>
+          </fieldset>
+          <button type="submit" class="block-action">{{msg:ui.save-changes}}</button>
+        </form>
+      </section>

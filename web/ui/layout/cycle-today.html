@@ -1,0 +1,21 @@
+        <section class="today-tracker program-cycle" id="cycle-today-card" aria-labelledby="cycle-today-label" hidden>
+          <span class="tracker-art cycle-today-art" aria-hidden="true"><span data-surface-art="cycle"></span></span>
+          <div class="tracker-body">
+            <h2 id="cycle-today-label">{{msg:ui.cycle}}</h2>
+            <p id="cycle-today-detail"></p>
+            <div id="cycle-today-actions" class="tracker-actions">
+              <button type="button" class="tracker-primary" id="cycle-today-start">{{msg:ui.cycle-start-now}}</button>
+              <button type="button" class="tracker-primary" id="cycle-today-end" hidden>{{msg:ui.cycle-end-now}}</button>
+              <button type="button" class="secondary" id="cycle-today-symptoms" data-cycle-log>{{msg:ui.cycle-day-log}}</button>
+              <button type="button" class="secondary" id="program-cycle" aria-label="{{msg:ui.cycle-history}}">{{msg:ui.history}}</button>
+            </div>
+          </div>
+          <div id="cycle-follow-up" hidden>
+            <p>{{msg:ui.cycle-follow-question}}</p>
+            <div class="sleep-periods">
+              <button type="button" class="secondary" id="cycle-follow-yes">{{msg:ui.cycle-start-now}}</button>
+              <button type="button" class="secondary" id="cycle-follow-no">{{msg:ui.cycle-follow-no}}</button>
+              <button type="button" class="text-button" id="cycle-follow-later">{{msg:ui.cycle-follow-later}}</button>
+            </div>
+          </div>
+        </section>

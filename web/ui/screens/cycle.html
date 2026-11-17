@@ -3,6 +3,7 @@
           <h2 id="cycle-banner-title">{{msg:ui.next-cycle-start}}</h2>
           <p id="cycle-forecast" aria-live="polite"></p>
           <button id="cycle-add" class="primary-action" type="button">{{msg:ui.log-period-start}}</button>
+          <button id="cycle-log-symptoms" class="secondary" type="button" data-cycle-log>{{msg:ui.cycle-day-log}}</button>
         </section>
         <section id="cycle-calendar" class="cycle-panel" aria-labelledby="cycle-calendar-title" hidden>
           <div class="cycle-panel-heading">
@@ -29,7 +30,8 @@
           <ol id="cycle-bars" class="cycle-bars" aria-live="polite" data-context-list></ol>
         </section>
         <section id="cycle-records" class="cycle-panel cycle-history" aria-labelledby="cycle-history-title" hidden>
-          <h2 id="cycle-history-title">{{msg:ui.cycle-history}}</h2>
+          <h2 id="cycle-history-title" tabindex="-1">{{msg:ui.cycle-history}}</h2>
           <div id="cycle-history" data-context-list></div>
         </section>
+        <!-- include layout/cycle-tracking.html -->
       </div>

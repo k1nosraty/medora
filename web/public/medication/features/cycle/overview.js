@@ -1,5 +1,5 @@
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
-import { cycleForecast } from "../../domain/cycle.js";
+import { cycleEstimate } from "../../domain/cycle.js";
 import { localDigits, t, weekIndex } from "../../shared/i18n/locale.js";
 
 const weekStart = day => day - weekIndex(day);
@@ -117,18 +117,29 @@ export function installCycleOverview({ today, getDates, getFamilyView, openCalen
     const now = today();
     const view = getFamilyView();
     entries = Object.entries(records).map(([day, record]) => ({ ...record, day: Number(day) })).sort((a, b) => b.day - a.day);
-    forecast = cycleForecast(records);
+    forecast = cycleEstimate(records);
     const latest = entries[0];
-    $("cycle-banner-title").textContent = t(latest ? "ui.menstrual-cycle" : "ui.cycle");
+    const hasEstimate = Boolean(forecast && forecast.last >= now);
+    $("cycle-banner-title").textContent = t(hasEstimate ? "ui.next-cycle-start" : "ui.menstrual-cycle");
     $("cycle-add").textContent = t(latest ? "ui.log-period-start" : "ui.cycle-first-start");
-    $("cycle-latest").textContent = latest ? t("ui.cycle-last-start", getDates().formatDay(latest.day)) : "";
-    $("cycle-forecast").textContent = !latest ? t("ui.no-cycles-logged-yet") :
-      !forecast ? t("ui.an-estimate-appears-after-you-log-three-start-dates") :
-      forecast.last < now ? t("ui.log-a-new-start-date-to-update-the-estimate") :
-      t("ui.estimated-value-to-value", getDates().formatDay(forecast.first), getDates().formatDay(forecast.last));
+    const dates = getDates();
+    $("cycle-latest").textContent = latest ? t("ui.cycle-last-start", dates.formatDay(latest.day)) : "";
+    const estimate = $("cycle-forecast");
+    if (hasEstimate) {
+      const first = dates.year(forecast.first) === dates.year(forecast.last) ? dates.shortDate(forecast.first) : dates.formatDay(forecast.first);
+      const last = dates.formatDay(forecast.last);
+      const range = forecast.first === forecast.last ? t("ui.estimated-cycle-date", last) : t("ui.estimated-value-to-value", first, last);
+      estimate.replaceChildren(element("strong", range, "cycle-estimate-range"),
+        element("span", t("ui.cycle-estimate-samples", localDigits(forecast.samples)), "cycle-estimate-context"));
+      if (forecast.uncertain) estimate.append(element("span", t("ui.cycle-estimate-uncertain"), "cycle-estimate-context"));
+    } else {
+      estimate.textContent = t(!latest ? "ui.no-cycles-logged-yet" :
+        !forecast ? "ui.an-estimate-appears-after-you-log-three-start-dates" : "ui.log-a-new-start-date-to-update-the-estimate");
+    }
     const missingEnd = latest?.end == null && Boolean(latest);
     $("cycle-end-status").hidden = !missingEnd;
     $("cycle-log-end").hidden = !missingEnd || Boolean(view);
+    $("cycle-log-symptoms").hidden = Boolean(view);
     $("cycle-calendar").hidden = $("cycle-records").hidden = !latest;
     $("cycle-history").replaceChildren(...entries.map(item => recordCard(item, view)));
     series = {

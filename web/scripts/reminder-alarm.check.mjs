@@ -82,7 +82,9 @@ try {
     pauseUntil: 0, goalDay: day } : { start: waterStart, end: waterStart + 1, interval: 60, repeat: 0,
     pauseUntil: 0, goalDay: null };
   const routineRules = schedule(3).rules;
-  assert.equal((await replace({ ...schedule(3), water: waterPlan, routineRules })).next, due);
+  const sleepRules = [[minute, 127, "sleepBed"]];
+  const cycleTimes = [[due, day]];
+  assert.equal((await replace({ ...schedule(3), water: waterPlan, routineRules, sleepRules, cycleTimes })).next, due);
   console.log("Scheduling, suppression, older revision rejection and authentication passed.");
   await sleep(due-Date.now()+2000);
   let result;
@@ -92,7 +94,7 @@ try {
     await sleep(500);
   }
   assert.equal(result.last?.status, "accepted", JSON.stringify(result));
-  assert.deepEqual(result.last.kinds, minute === 1439 ? ["dose", "routine"] : ["dose", "water", "routine"]);
+  assert.deepEqual(result.last.kinds, minute === 1439 ? ["dose", "cycle", "sleepBed", "routine"] : ["dose", "water", "cycle", "sleepBed", "routine"]);
   assert.ok(result.next > due);
   assert.equal(outbound.length, 1);
   assert.equal(outbound[0].encoding, "aes128gcm");
@@ -111,7 +113,7 @@ try {
   assert.deepEqual(result.last.kinds, ["appointment"]);
   assert.equal(result.next, due + 86_400_000);
   assert.equal((await replace({ revision: 5, enabled: false })).next, null);
-  console.log("Closed-client alarms for medication, water, routine, snooze and appointments sent through encrypted Web Push.");
+  console.log("Closed-client alarms for medication, water, routine, sleep, cycle, snooze and appointments sent through encrypted Web Push.");
 } finally {
   await mf.dispose();
 }

@@ -114,7 +114,7 @@ function replacementPlan(raw, subscription, language) {
 
   let plan = { zone: raw.zone, rules: [] };
   const suspendedKinds = [];
-  for (const [kind, field] of [["dose", "rules"], ["appointment", "appointments"], ["routine", "routineRules"], ["water", "water"]]) {
+  for (const [kind, field] of [["dose", "rules"], ["appointment", "appointments"], ["routine", "routineRules"], ["water", "water"], ["sleep", "sleepRules"], ["cycle", "cycleTimes"]]) {
     const candidate = { ...plan, [field]: raw[field] };
     if (fits(candidate) && validSchedule(candidate)) plan = candidate;
     else suspendedKinds.push(kind);

@@ -1,6 +1,6 @@
 const triggers = {
   medicine: "[data-open-medication]", visit: "[data-open-visit]", routine: "[data-open-routine]",
-  water: "[data-open-water], [data-water-add], #today-water-quick", cycle: "#cycle-add, #quick-cycle"
+  water: "[data-open-water], [data-water-add], #today-water-quick", cycle: "#cycle-add, #quick-cycle", sleep: "#quick-sleep"
 };
 const selector = Object.values(triggers).join(", ");
 

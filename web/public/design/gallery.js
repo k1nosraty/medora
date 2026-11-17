@@ -9,6 +9,7 @@ import { installMedicineEditor } from "../medication/features/medicines/editor.j
 import { installAppointments } from "../medication/features/appointments/editor.js";
 import { installRoutines } from "../medication/features/routines/view.js";
 import { installWater } from "../medication/features/water/controller.js";
+import { sleepImage } from "../medication/features/sleep/presentation.js";
 import { installSettings } from "../medication/features/settings/dialog.js";
 import { installPickers } from "../medication/shared/ui/pickers.js";
 import { calendarFormat } from "../medication/shared/ui/calendar-format.js";
@@ -19,7 +20,6 @@ import { installPanelPreview } from "./panels.js";
 import { appearanceColors, complete, cycleArt, glass, heart, readCatalog } from "./catalog.js";
 
 localizeMarkup({ manifest: false });
-$("program-cycle").remove();
 $("quick-cycle").remove();
 if (language === "en") {
   document.title = "Medora design gallery";
@@ -79,7 +79,7 @@ const families = {
   routine: text("روتین", "Routines"), water: text("آب", "Water"), cycle: text("چرخه", "Cycle"),
   image: text("تصویر", "Illustrations"), control: text("کنترل", "Controls")
 };
-const accentText = id => ({blue:"Blue",green:"Green",lilac:"Lilac",coral:"Coral",berry:"Berry"})[id];
+const accentText = id => ({blue:"Blue",green:"Green",lilac:"Lilac",coral:"Coral",amber:"Amber",berry:"Berry"})[id];
 const themes = ["light", "dark"];
 let selection;
 function options(select, values, previous = select.value) {
@@ -92,6 +92,7 @@ const designCards = [
   ["visit", text("قرارها","Appointments"), () => visitGlass("general")],
   ["routine", text("روتین‌ها","Routines"), () => routineGlass("custom")],
   ["water", text("مصرف آب","Water"), glass],
+  ["sleep", t("ui.sleep"), sleepImage],
   ["cycle", families.cycle, cycleArt]
 ];
 function artSlot(node) {
@@ -199,16 +200,18 @@ function renderPalette() {
 }
 function renderSurfaces() {
   const artByFeature = {
-    medications: () => medicineGlass("bottle"), appointments: () => visitGlass("general"), routines: () => routineGlass("custom")
+    medications: () => medicineGlass("bottle"), appointments: () => visitGlass("general"), routines: () => routineGlass("custom"), sleep: sleepImage
   };
   for (const control of document.querySelectorAll("#today-programs [data-destination]")) {
     control.firstElementChild.replaceWith(artByFeature[control.dataset.destination]());
   }
   renderHero();
-  const quickArt = [medicineGlass("bottle"), visitGlass("general"), routineGlass("custom"), glass()];
-  $("quick-dialog").querySelectorAll("[data-quick-kind]").forEach((control, index) => {
-    control.firstElementChild.replaceWith(quickArt[index]);
-  });
+  const quickArt = { medicine: artByFeature.medications, visit: artByFeature.appointments,
+    routine: artByFeature.routines, water: glass, sleep: sleepImage };
+  for (const control of $("quick-dialog").querySelectorAll("[data-quick-kind]")) {
+    const art = quickArt[control.dataset.quickKind]?.();
+    if (art) control.firstElementChild.replaceWith(art);
+  }
   const cards = designCards.filter(([family]) => family !== "cycle" || cycleEnabled());
   const reports = element("div", "", "report-grid");
   for (const [family,title,draw] of cards) {

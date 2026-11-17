@@ -2,10 +2,11 @@ import { $, button, element } from "../../shared/ui/dom.js";
 import { t } from "../../shared/i18n/locale.js";
 import { profileName } from "../../domain/profile.js";
 import { emptyCareRecords } from "../../domain/family.js";
+import { sleepIsEnabled } from "../../domain/sleep.js";
 import { dayMs, instantForWall, localWall, timezone } from "../../domain/wall-clock.js";
 
 const programScopes = { medications: ["medicines", "doses"], appointments: ["visits"],
-  routines: ["routines"], water: ["water"], cycle: ["cycle"], insights: ["doses", "visits", "routines", "water", "cycle", "medicines"] };
+  routines: ["routines"], water: ["water"], cycle: ["cycle"], sleep: ["sleep"], insights: ["doses", "visits", "routines", "water", "cycle", "medicines", "sleep"] };
 
 const actionScopes = { medicine: "medicines", visit: "visits", routine: "routines", water: "water", cycle: "cycle" };
 
@@ -24,7 +25,8 @@ export function sharedContext(data, group, member, { authorName, record, add, pr
   const name = profileName(records.profile) || member.label;
   return {
     group, member, name, firstName: records.profile?.firstName || member.label, has, canView, canRecord, canAdd,
-    state: { ...emptyCareRecords(), ...records, cycleEnabled: Boolean(records.cycleEnabled || Object.keys(records.cycleRecords ?? {}).length) },
+    state: { ...emptyCareRecords(), ...records, sleepEnabled: has("sleep") && sleepIsEnabled(records),
+      cycleEnabled: Boolean(records.cycleEnabled || Object.keys(records.cycleRecords ?? {}).length) },
     zone, get today() { return today(); }, timeOf, authorName, record, add, profile: has("profile") ? profile : null, synced
   };
 }

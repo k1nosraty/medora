@@ -1,0 +1,22 @@
+  <dialog id="cycle-day-dialog" class="sheet add-sheet" aria-labelledby="cycle-day-title">
+    <form id="cycle-day-form" class="sheet-form">
+      <div class="sheet-header program-cycle">
+        <img class="glass-object add-sheet-icon" data-art="cycle" src="/design/optical-glass/cycle.webp" width="256" height="256" alt="">
+        <h2 id="cycle-day-title">{{msg:ui.cycle-day-log}}</h2>
+        <button type="button" class="icon-button" data-close="cycle-day-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="sheet-body">
+        <label>{{msg:ui.date}}<input id="cycle-day-date" type="date" required></label>
+        <label>{{msg:ui.flow-optional}}<select id="cycle-day-flow">
+          <option value="">{{msg:ui.not-selected}}</option><option value="none">{{msg:ui.cycle-no-flow}}</option><option value="spotting">{{msg:ui.cycle-spotting}}</option>
+          <option value="light">{{msg:ui.cycle-flow-light}}</option><option value="medium">{{msg:ui.cycle-flow-medium}}</option><option value="heavy">{{msg:ui.cycle-flow-heavy}}</option>
+        </select></label>
+        <fieldset><legend>{{msg:ui.cycle-symptoms}}</legend><div id="cycle-symptom-controls" class="cycle-symptom-controls"></div></fieldset>
+        <label>{{msg:ui.cycle-tags}}<input id="cycle-day-tags" type="text" maxlength="180"></label>
+        <label>{{msg:ui.sleep-note}}<textarea id="cycle-day-note" maxlength="500" rows="2"></textarea></label>
+        <p id="cycle-day-error" class="field-error" role="alert"></p>
+        <button class="block-action" type="submit">{{msg:ui.save}}</button>
+        <button id="cycle-day-delete" class="text-button danger-link" type="button" hidden>{{msg:ui.delete}}</button>
+      </div>
+    </form>
+  </dialog>

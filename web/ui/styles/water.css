@@ -2,7 +2,11 @@
   --water: var(--program-fill);
   --water-ink: var(--program-ink);
   --water-accent: var(--category-water-bar);
-  color: var(--water-ink);
+  --tracker-accent: var(--water-accent);
+  --tracker-rim: var(--accent-glass-rim);
+}
+.medora .today-tracker {
+  color: var(--program-ink);
   display: grid;
   grid-template-columns: clamp(3.6rem, 22%, 5.3rem) minmax(0, 1fr);
   gap: .65rem;
@@ -13,22 +17,22 @@
   padding: .45rem;
   border: 1px solid var(--outline);
   border-radius: 1.15rem;
-  background: linear-gradient(125deg, var(--glass-glint), transparent 60%), var(--water);
+  background: linear-gradient(125deg, var(--glass-glint), transparent 60%), var(--program-fill);
 }
-.medora[data-finish="glass"] #today-water {
-  --water-light-side: 8%;
+.medora[data-finish="glass"] .today-tracker {
+  --tracker-light-side: 8%;
   position: relative;
-  border-color: var(--accent-glass-rim);
+  border-color: var(--tracker-rim, var(--outline));
   border-radius: 1.35rem;
   background:
-    radial-gradient(ellipse at var(--water-light-side) 12%, var(--glass-glint), transparent 57%),
-    radial-gradient(ellipse at var(--water-light-side) 94%, color-mix(in srgb, var(--water-accent) 43%, transparent), transparent 66%),
+    radial-gradient(ellipse at var(--tracker-light-side) 12%, var(--glass-glint), transparent 57%),
+    radial-gradient(ellipse at var(--tracker-light-side) 94%, color-mix(in srgb, var(--tracker-accent) 43%, transparent), transparent 66%),
     linear-gradient(170deg, var(--glass-glint), transparent 37%),
-    var(--water);
+    var(--program-fill);
   box-shadow: inset 0 1px 1px var(--glass-glint), 0 .26rem .7rem var(--glass-shadow);
 }
-html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 92%; }
-.medora[data-finish="glass"] #today-water::before {
+html[dir="rtl"] .medora[data-finish="glass"] .today-tracker { --tracker-light-side: 92%; }
+.medora[data-finish="glass"] .today-tracker::before {
   content: "";
   position: absolute;
   inset: .25rem;
@@ -36,11 +40,11 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
   border-radius: 1.1rem;
   pointer-events: none;
 }
-.today-water-art {
+.tracker-art {
   position: relative;
   border-radius: .9rem;
   background: linear-gradient(155deg, var(--glass-glint), transparent 64%),
-    color-mix(in srgb, var(--water-accent) 27%, var(--water));
+    color-mix(in srgb, var(--tracker-accent) 27%, var(--program-fill));
 }
 .medora #today-water .water-glass {
   position: absolute;
@@ -65,7 +69,7 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
 @media (prefers-reduced-motion: reduce) {
   :is(.water-icon-liquid, .water-matte-liquid) { transition: none; }
 }
-.today-water-body { min-inline-size: 0; padding: .16rem .13rem .08rem; }
+.tracker-body { min-inline-size: 0; padding: .16rem .13rem .08rem; }
 .medora #today-water .water-info {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -73,7 +77,7 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
   column-gap: .55rem;
   padding-inline-end: .4rem;
 }
-.medora #today-water-label { margin: 0; color: inherit; font-size: .98rem; }
+.medora .tracker-body h2 { margin: 0; color: inherit; font-size: .98rem; }
 .medora #today-water .amount-line { max-inline-size: 76%; margin: 0; font-size: .78rem; }
 .today-water-target { white-space: nowrap; }
 .today-water-meter {
@@ -104,46 +108,78 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
   font-variant-numeric: tabular-nums;
 }
 .medora #today-water[data-goal-reached] #today-water-percent { background: var(--mint); color: var(--mint-ink); }
-.today-water-actions { display: flex; gap: .28rem; margin-block-start: .35rem; }
-.medora .today-water-actions button {
+.tracker-actions { display: flex; gap: .28rem; margin-block-start: .35rem; }
+.medora .tracker-actions button {
   flex: 1;
   min-inline-size: 0;
   min-block-size: 2.75rem;
   padding: .15rem .25rem;
+  border: 0;
   border-radius: .7rem;
+  background: transparent;
+  color: var(--program-ink);
   font-size: .75rem;
   line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
-.medora .today-water-actions [data-open-water] { flex: 1.32; padding-inline: .13rem; }
-.medora .today-water-actions .secondary {
-  border: 0;
-  background: transparent;
-  color: var(--water-ink);
+.medora .tracker-actions .tracker-primary {
+  --tracker-button-face: var(--filled-button-reflection), var(--program-ink);
+  flex-grow: 1.32;
+  padding-inline: .18rem;
+  color: var(--program-fill);
 }
-.medora[data-finish="matte"] .today-water-actions .secondary:is(:hover, :active) {
-  background: color-mix(in srgb, var(--water-accent) 15%, transparent);
+.medora[data-finish="matte"] .tracker-actions .tracker-primary { background: var(--program-ink); }
+.medora[data-finish="matte"] .tracker-actions .secondary:is(:hover, :active) {
+  background: color-mix(in srgb, var(--tracker-accent) 15%, transparent);
 }
-.today-water-actions small { display: block; font-size: .61rem; font-weight: 500; }
-.medora .today-water-feedback {
+.tracker-actions small { display: block; font-size: .61rem; font-weight: 500; }
+.tracker-feedback-stack {
   position: fixed;
   z-index: 3;
   inset-inline: max(.75rem, env(safe-area-inset-left), env(safe-area-inset-right));
   inset-block-end: calc(4.6rem + max(.45rem, env(safe-area-inset-bottom)));
   max-inline-size: 25rem;
   margin-inline: auto;
+  display: grid;
+  gap: .35rem;
+  pointer-events: none;
+}
+.medora .tracker-feedback {
   display: flex;
   align-items: center;
   gap: .35rem;
   padding: .25rem .6rem;
-  border: 1px solid color-mix(in srgb, var(--water-ink) 22%, var(--water));
+  border: 1px solid color-mix(in srgb, var(--program-ink) 22%, var(--program-fill));
   border-radius: 1rem;
-  background: var(--water);
+  background: var(--program-fill);
+  color: var(--program-ink);
   box-shadow: 0 .3rem 1rem var(--glass-shadow);
   font-size: .85rem;
+  pointer-events: auto;
 }
-.today-water-feedback > span { flex: 1; }
-.medora .today-water-feedback button { min-block-size: 2.75rem; padding: .2rem .5rem; color: inherit; font-size: .8rem; }
-.medora #today-water-dismiss { min-inline-size: 2.75rem; border: 0; background: transparent; }
+.tracker-feedback > span { flex: 1; }
+.medora .tracker-feedback button { min-block-size: 2.75rem; padding: .2rem .5rem; font-size: .8rem; }
+.medora .tracker-feedback .icon-button { min-inline-size: 2.75rem; border: 0; background: transparent; }
+.medora :is(#water-entries, .tracker-feedback) button.tracker-utility {
+  --utility-ink: var(--program-ink);
+  padding-inline: .6rem;
+  border: 0;
+  border-radius: .75rem;
+  background: color-mix(in srgb, var(--utility-ink) 10%, transparent);
+  color: var(--utility-ink);
+  font-size: .8rem;
+}
+.medora #water-entries button.water-entry-remove { --utility-ink: var(--error); }
+.medora[data-finish="glass"] :is(#water-entries, .tracker-feedback) button.tracker-utility {
+  background: transparent;
+  box-shadow: none;
+}
+.medora[data-finish="glass"] :is(#water-entries, .tracker-feedback) button.tracker-utility::before {
+  --tracker-button-face: var(--filled-button-reflection), color-mix(in srgb, var(--utility-ink) 12%, transparent);
+  border-color: var(--filled-button-rim);
+  box-shadow: var(--pressed-shadow, var(--filled-button-shadow));
+}
 .medora #water-dialog .water-amount-field {
   display: grid;
   justify-items: center;
@@ -204,4 +240,3 @@ html[dir="rtl"] .medora[data-finish="glass"] #today-water { --water-light-side: 
   background: var(--surface-fill);
   margin-block-end: .4rem;
 }
-.medora .water-history-entries .entry-row button:last-child { color: var(--error); }

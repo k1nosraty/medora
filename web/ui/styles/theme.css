@@ -27,6 +27,13 @@
   --accent-dark-cover: #5b363a;
   --accent-glow: #ffc2aa;
 }
+.medora[data-accent="amber"], .accent-sample[data-accent-sample="amber"] {
+  --accent-light: #8b540f;
+  --accent-dark: #ffd8a5;
+  --accent-cover: #ad6b20;
+  --accent-dark-cover: #513714;
+  --accent-glow: #ffe0aa;
+}
 .medora[data-accent="berry"], .accent-sample[data-accent-sample="berry"] {
   --accent-light: #832d53;
   --accent-dark: #f7b8d2;

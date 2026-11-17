@@ -4,6 +4,9 @@ import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
 import { mountDayCard } from "../../shared/ui/day-card.js";
 import { glassObject } from "../../design/three-dimensional.js";
 import { cycleIsEnabled } from "../../domain/profile.js";
+import { sleepReport, sleepIsEnabled, sleepDay, sleepMinutes } from "../../domain/sleep.js";
+import { sleepDuration, sleepImage } from "../sleep/presentation.js";
+import { describeCycleDay } from "../cycle/daily.js";
 import { cycleForecast, cycleTotals } from "../../domain/cycle.js";
 
 const numbers = new Intl.NumberFormat(locale);
@@ -12,26 +15,43 @@ const timeMinutes = value => Number(value.slice(0, 2)) * 60 + Number(value.slice
 const number = value => numbers.format(value);
 const sum = values => values.reduce((total, value) => total + value, 0);
 
-function waterCard(entries, total, openHistory, addWater) {
-  const card = element("article", "", "water calendar-water program-water");
-  card.dataset.calendarState = "done";
-  const layout = mountDayCard(card, {
-    kind: "water", label: t("ui.water"), image: glassObject("water", "water"),
-    title: element("h3", t("ui.value-ml", number(total)))
-  });
-  layout.details.append(element("p",
-    entries.length === 1 ? t("ui.1-water-entry") : t("ui.value-water-entries", number(entries.length)), "quiet"));
-  layout.addActions(dayCardOptions(t("ui.water-log-options"), button(t("ui.history"), openHistory)),
-    ...(addWater ? [button(t("ui.log-water"), addWater)] : []));
+function calendarTracker(kind, label, image, title, details, optionsLabel, history, action) {
+  const card = element("article", "", `program-${kind} calendar-tracker`);
+  if (kind === "water") card.classList.add("water", "calendar-water");
+  card.dataset.agendaKey = kind;
+  const layout = mountDayCard(card, { kind, label, image, title: element("h3", title) });
+  for (const line of details) layout.details.append(element("p", line, "quiet"));
+  layout.addActions(dayCardOptions(optionsLabel, button(t("ui.history"), history)), ...(action ? [action] : []));
   return card;
 }
 
 export function renderCalendar(state, index, { day, start, end, today, formatMonth, formatDay, formatNumber, selectDay,
-  renderDose, renderRoutine, visitCard, openWaterHistory, canAddWater = true, addWater }) {
+  renderDose, renderRoutine, visitCard, openWaterHistory, openSleepHistory, openSleep, cycleOpenDay, openCycleHistory, canLogPersonal, canAddWater = true, addWater }) {
   const cycleEnabled = cycleIsEnabled(state);
   const cycleRecords = cycleEnabled ? state.cycleRecords ?? {} : {};
   const periods = Object.entries(cycleRecords).map(([first, record]) => [Number(first), record.end ?? Number(first)]);
   const forecast = cycleEnabled ? cycleForecast(cycleRecords) : null;
+  const daily = cycleEnabled ? state.cycleDays ?? {} : {};
+  const cycleDayMark = date => {
+    const flow = daily[date]?.flow;
+    if (flow === "spotting") return "spotting";
+    if (["light", "medium", "heavy"].includes(flow) || flow !== "none" &&
+        periods.some(([first, last]) => date >= first && date <= last)) return "recorded";
+    if (forecast && date >= Math.max(forecast.first, today) && date <= forecast.last) return "forecast";
+    return null;
+  };
+  const sleepEnabled = sleepIsEnabled(state);
+  const sleepDays = new Map();
+  if (sleepEnabled) for (const row of Object.values(state.sleepRecords ?? {})) {
+    if (row.end === null) continue;
+    const date = sleepDay(row);
+    if (date >= start && date <= end) {
+      const entries = sleepDays.get(date) ?? [];
+      entries.push(row);
+      sleepDays.set(date, entries);
+    }
+  }
+  $("calendar-sleep-key").hidden = !sleepEnabled;
   $("calendar-cycle-key").hidden = !cycleEnabled;
   $("calendar-month").textContent = formatMonth(start);
   renderMonthGrid($("calendar-days"), {
@@ -41,23 +61,50 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
       dots.setAttribute("aria-hidden", "true");
       for (const [exists, kind, label] of [
         [index.waterOn(date).length, "water", t("ui.log-water")], [index.dosesOn(date).length, "medicine", t("ui.medication-dose")],
+        [sleepDays.has(date), "sleep", t("ui.sleep")],
         [index.visitsOn(date).length, "visit", t("ui.medical-appointment")], [index.calendarRoutinesOn(date).length, "routine", t("ui.routine")]
       ]) if (exists) {
         dots.append(element("i", "", kind));
         control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + label);
       }
-      if (periods.some(([first, last]) => date >= first && date <= last)) {
-        control.dataset.cycleStatus = "recorded";
-        control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t("ui.logged-cycle"));
-      } else if (forecast && date >= Math.max(forecast.first, today) && date <= forecast.last) {
-        control.dataset.cycleStatus = "forecast";
-        control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t("ui.estimated-cycle-start"));
-      }
+      const mark = cycleDayMark(date);
+      if (mark) {
+        control.dataset.cycleStatus = mark;
+        const label = { spotting: "ui.cycle-spotting", recorded: "ui.logged-cycle", forecast: "ui.estimated-cycle-start" }[mark];
+        control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t(label));
+      } else if (daily[date]) dots.append(element("i", "", "cycle"));
       control.append(dots);
     }
   });
 
+  const trackers = [];
   const water = index.waterOn(day);
+  if (water.length || canAddWater) {
+    const count = !water.length ? t("ui.no-water-logged-for-this-day") :
+      water.length === 1 ? t("ui.1-water-entry") : t("ui.value-water-entries", number(water.length));
+    trackers.push(calendarTracker("water", t("ui.water"), glassObject("water", "water"),
+      t("ui.value-ml", number(index.waterTotal(day))), [count], t("ui.water-log-options"), openWaterHistory,
+      canAddWater ? button(t("ui.log-water"), addWater) : null));
+  }
+  const sleepEntries = sleepDays.get(day) ?? [];
+  if (sleepEnabled && (sleepEntries.length || canLogPersonal)) {
+    const total = sum(sleepEntries.map(sleepMinutes));
+    const details = sleepEntries.length ? sleepEntries.map(row => {
+      const kind = t(row.kind === "nap" ? "ui.sleep-nap" : "ui.sleep-main");
+      return sleepEntries.length === 1 ? kind : kind + listSeparator + sleepDuration(sleepMinutes(row));
+    }) : [];
+    trackers.push(calendarTracker("sleep", t("ui.sleep"), sleepImage(),
+      sleepEntries.length ? sleepDuration(total) : t("ui.not-logged"), details, t("ui.sleep-history"), () => openSleepHistory(day),
+      canLogPersonal ? button(t("ui.sleep-log"), () => openSleep(day)) : null));
+  }
+  const cycleMark = cycleDayMark(day);
+  if (cycleEnabled && (daily[day] || cycleMark || canLogPersonal)) {
+    const title = t({ forecast: "ui.estimated-cycle-start", recorded: "ui.logged-cycle", spotting: "ui.cycle-spotting" }[cycleMark] ??
+      (daily[day] ? "ui.cycle-recorded-day" : "ui.not-logged"));
+    trackers.push(calendarTracker("cycle", t("ui.cycle"), glassObject("cycle", "cycle"), title,
+      daily[day] ? [describeCycleDay(daily[day]).join(" · ")] : [], t("ui.cycle-record-options"), openCycleHistory,
+      canLogPersonal ? button(t("ui.cycle-day-log"), () => cycleOpenDay(day)) : null));
+  }
   const entries = [
     ...index.dosesOn(day).map(dose => ({
       key: `dose:${dose.medicineId}:${dose.minute}`, minute: dose.minute,
@@ -71,8 +118,6 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
       key: `routine:${entry.id}`, minute: entry.minute ?? Infinity,
       render: () => renderRoutine(entry, day, { dayCard: true, calendar: true, readOnly: day >= today && Boolean(entry.historical) })
     })),
-    ...(water.length ? [{ key: "water", minute: water.reduce((first, entry) => Math.min(first, timeMinutes(entry.time)), Infinity),
-      render: () => waterCard(water, index.waterTotal(day), openWaterHistory, canAddWater ? addWater : null) }] : [])
   ].sort((a, b) => a.minute - b.minute);
   $("calendar-date").textContent = formatDay(day, true);
   $("calendar-agenda-label").textContent = t(day > today ? "برنامهٔ این روز" : "برنامه و سابقهٔ این روز");
@@ -80,12 +125,12 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
   const list = $("calendar-entries");
   const active = list.contains(document.activeElement) ? document.activeElement : null;
   const focusedKey = active?.closest("[data-agenda-key]")?.dataset.agendaKey;
-  const nodes = entries.map(entry => {
+  const nodes = [...trackers, ...entries.map(entry => {
     const card = entry.render();
     card.dataset.agendaKey = entry.key;
-    card.dataset.focusScope = "agenda:" + entry.key;
     return card;
-  });
+  })];
+  for (const card of nodes) card.dataset.focusScope = "agenda:" + card.dataset.agendaKey;
   list.replaceChildren(...(nodes.length ? nodes : [element("p",
     t(day > today ? "برای این روز برنامه‌ای ندارید." : "برای این روز برنامه یا سابقه‌ای ندارید."), "empty")]));
   if (focusedKey) {
@@ -181,9 +226,16 @@ function reportStats(id, stats) {
 }
 
 function renderCycleReport(state, first, last, formatDay) {
+  const sleepEnabled = sleepIsEnabled(state);
+  $("report-sleep-card").hidden = !sleepEnabled;
+  if (sleepEnabled) {
+    const summary = sleepReport(state.sleepRecords, first, last);
+    $("report-sleep-value").textContent = summary.average === null ? t("ui.sleep-empty") :
+      t("ui.sleep-average", sleepDuration(summary.average), number(summary.nights.size));
+  }
   const enabled = cycleIsEnabled(state);
   $("report-cycle-card").hidden = !enabled;
-  const totals = enabled ? cycleTotals(state.cycleRecords, first, last) : null;
+  const totals = enabled ? cycleTotals(state.cycleRecords, first, last, state.cycleDays) : null;
   $("report-cycle-empty").hidden = Boolean(totals?.days);
   $("report-cycle-breakdown").hidden = !totals?.days;
   reportStats("report-cycle-breakdown", totals?.days ? [

@@ -163,7 +163,7 @@ export function installBackupRestore(mutate, validatePhases, { prepareRestore, c
         changeReminderRevision(state);
         if (state.reminders) state.reminders.enabled = false;
         if (web) for (const key of webBackupSettings) delete state[key];
-        if (web) delete state.cycleRecords;
+        if (web) { delete state.cycleRecords; delete state.cycleDays; delete state.sleepRecords; }
         delete state.scheduleHistory;
         Object.assign(state, backup);
         delete state.preventAutoRestore;

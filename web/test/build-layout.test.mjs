@@ -21,8 +21,8 @@ test("compiled pages contain their components and valid local SVG references", a
   }
 });
 
-test("the fifth accent is available only with Cycle enabled", () => {
-  assert.deepEqual(availableAccents().map(accent => accent.id), ["blue", "green", "lilac", "coral"]);
+test("amber is always available and berry requires Cycle", () => {
+  assert.deepEqual(availableAccents().map(accent => accent.id), ["blue", "green", "lilac", "coral", "amber"]);
   assert.equal(availableAccents(true).at(-1).id, "berry");
   assert.equal(accentOf("berry"), "blue");
   assert.equal(accentOf("berry", true), "berry");

@@ -1,0 +1,10 @@
+  <dialog id="cycle-backup-dialog" class="sheet add-sheet" aria-labelledby="cycle-backup-title">
+    <form id="cycle-backup-form" class="sheet-form">
+      <div class="sheet-header"><h2 id="cycle-backup-title"></h2><button type="button" class="icon-button" data-close="cycle-backup-dialog" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <div class="sheet-body">
+        <label>{{msg:ui.cycle-backup-password}}<input type="password" id="cycle-backup-password" minlength="15" maxlength="128" required></label>
+        <p id="cycle-backup-status" role="status"></p>
+        <button type="submit" class="block-action">{{msg:ui.next}}</button>
+      </div>
+    </form>
+  </dialog>

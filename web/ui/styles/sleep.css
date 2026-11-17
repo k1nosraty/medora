@@ -1,0 +1,45 @@
+.medora { --category-sleep-ink: #79501f; --category-sleep-fill: #f0dfc7; --category-sleep-bar: #a36824; }
+.medora[data-theme="dark"] { --category-sleep-ink: #ffdaa7; --category-sleep-fill: #493629; --category-sleep-bar: #db9f54; }
+@media (prefers-color-scheme:dark) {
+  .medora:is([data-theme="system"], :not([data-theme])) { --category-sleep-ink: #ffdaa7; --category-sleep-fill: #493629; --category-sleep-bar: #db9f54; }
+}
+.medora .program-sleep { --program-ink: var(--category-sleep-ink); --program-fill: var(--category-sleep-fill); }
+.medora :is(.program-card.program-sleep, .quick-item.program-sleep, #sleep-dialog .sheet-header) {
+  color: var(--category-sleep-ink);
+  background: linear-gradient(155deg, var(--glass-glint), transparent 65%), var(--category-sleep-fill);
+  border-color: color-mix(in srgb, var(--category-sleep-bar) 25%, var(--outline));
+}
+.medora .settings-row.sleep-row img { width: 2.35rem; height: 2.35rem; }
+.medora #today-sleep {
+  --action: var(--category-sleep-ink);
+  --tracker-accent: var(--category-sleep-bar);
+  --tracker-rim: color-mix(in srgb, var(--category-sleep-bar) 29%, var(--outline));
+}
+.sleep-today-art { display: grid; place-items: center; }
+.sleep-today-art img { inline-size: min(100%, 5rem); block-size: auto; }
+#today-sleep-detail { margin: 0; font-size: .78rem; overflow-wrap: anywhere; }
+.medora [data-screen="sleep"] { inline-size: var(--today-rail-width); margin-inline: auto; display: grid; gap: .65rem; }
+.medora .sleep-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; width: 100%; }
+.medora .sleep-actions > button { min-block-size: 44px; padding-inline: .3rem; font-size: .85rem; }
+.medora #sleep-manual, .medora #sleep-start-now[hidden] + #sleep-wake-now { grid-column: 1 / -1; }
+.medora .sleep-actions .block-action { --action: #81511f; }
+.sleep-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+.sleep-fields label { min-inline-size: 0; }
+.sleep-periods { display: flex; flex-wrap: wrap; gap: .38rem; }
+.sleep-chart { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); list-style: none; padding: 0; gap: .18rem; }
+.sleep-chart li { min-inline-size: 0; }
+.sleep-chart button { display: grid; grid-template-rows: 1fr auto; place-items: end center; width: 100%; height: 6rem; padding: .22rem; border-radius: .7rem; }
+.sleep-chart[data-period="month"] button { height: 3.1rem; }
+.sleep-chart button[aria-pressed="true"] { background: var(--category-sleep-fill); color: var(--category-sleep-ink); }
+.sleep-chart button > span { min-height: 2px; height: var(--sleep-bar); width: min(70%, 1.5rem); border-radius: .4rem; background: var(--category-sleep-bar); }
+.sleep-chart button > span[style*=": 0%"] { background: var(--outline); }
+.sleep-history-row { display: flex; align-items: center; gap: .3rem; border-block-start: 1px solid var(--outline); padding-block: .35rem; }
+.sleep-history-row > div { flex: 1; min-inline-size: 0; overflow-wrap: anywhere; }
+.sleep-history-row p { margin: .14rem 0; }
+@media(max-width: 350px) { .sleep-fields { grid-template-columns: 1fr; } }
+.medora .calendar-dots i.sleep { background: var(--category-sleep-bar); }
+.medora #reports-panel .report-card.program-sleep {
+  background: linear-gradient(155deg, var(--program-fill), color-mix(in srgb, var(--program-fill) 48%, var(--panel)));
+}
+.medora[data-finish="matte"] #app #report-sleep-card .report-hero { background: none; box-shadow: none; }
+.medora .quick-item.program-sleep .category-art { inline-size: 2.6rem; block-size: 2.25rem; }

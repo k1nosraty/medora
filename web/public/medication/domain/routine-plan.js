@@ -1,3 +1,5 @@
+import { cycleRoutineOccurs } from "./cycle.js";
+
 export const maxRoutines = 64;
 export const maxRoutineAmount = 99999;
 export const maxRoutineSteps = 12;
@@ -23,7 +25,7 @@ export function routineEntriesOn(state, day, today, plans = Object.values(state.
   const entries = Object.entries(recorded).map(([id, entry]) => ({ ...entry, id }));
   if (day >= today) {
     for (const routine of plans) {
-      if (!Object.hasOwn(recorded, routine.id) && routineOccurs(routine, day)) entries.push(routine);
+      if (!Object.hasOwn(recorded, routine.id) && cycleRoutineOccurs(state, routine, day, routineOccurs(routine, day), today)) entries.push(routine);
     }
   }
   return entries.sort((a, b) => (a.minute ?? 1440) - (b.minute ?? 1440));

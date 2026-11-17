@@ -1,11 +1,13 @@
 import { showFeedback } from "../../shared/ui/controls.js";
 import { defaultCalendar, language, locale, selectLanguage, t } from "../../shared/i18n/locale.js";
-import { $, fitDialogToViewport } from "../../shared/ui/dom.js";
+import { $, element, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { integer } from "../../shared/ui/input-values.js";
 import { appointmentDefaults, localZone, waterDefaults } from "../../domain/care-plan.js";
 import { installTimeZonePicker, timeZoneCity } from "../../shared/ui/time-zone-picker.js";
 import { accentOf, accentLabel } from "../../styles/theme.js";
 import { canEnableCycle, cycleIsEnabled, finishOf, genders, ageAt, validPersonalProfile } from "../../domain/profile.js";
+import { installCycleSettings } from "../cycle/settings.js";
+import { sleepDefaults, sleepIsEnabled, validSleepSettings } from "../../domain/sleep.js";
 import { familyPlacementOf } from "../../domain/family.js";
 
 const numbers = new Intl.NumberFormat(locale);
@@ -17,12 +19,25 @@ export function installSettings({ getState, mutate, refreshFields }) {
     "profile-settings": [t("ui.profile"), t("ui.personal-information-and-cycle")],
     "display-settings": [t("ui.appearance-and-language"), t("ui.theme-calendar-and-app-language")],
     "notification-settings": [t("ui.notifications-on-this-device"), t("ui.medicine-water-appointment-and-routine-reminders")],
+    "cycle-settings": [t("ui.cycle-tracking-settings"), t("ui.cycle-share-summary")],
+    "sleep-settings": [t("ui.sleep"), t("ui.sleep-settings-subtitle")],
     "water-settings": [t("ui.water"), t("ui.daily-goal-and-reminder-times")],
     "snooze-settings": [t("ui.medication-reminder-snooze"), t("ui.medication-snooze-duration")],
     "appointment-settings": [t("ui.appointment-settings"), t("ui.appointment-settings-description")],
     "backup-settings": [t("ui.backups"), t("ui.create-or-restore-an-encrypted-backup")]
   };
   const settings = $("settings-dialog");
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  const sleepDays = Array.from({ length: 7 }, (_, index) => {
+    const day = (index + (language === "fa" ? 6 : 0)) % 7;
+    const input = element("input");
+    input.type = "checkbox";
+    input.value = String(1 << day);
+    const label = element("label");
+    label.append(input, " " + weekday.format(Date.UTC(2026, 10, 15 + day)));
+    $("sleep-weekday-options").append(label);
+    return input;
+  });
   const settingsLinks = [...settings.querySelectorAll("[data-settings-panel]")];
   const loadedSettings = new Set();
   let settingsSession = 0;
@@ -67,6 +82,8 @@ export function installSettings({ getState, mutate, refreshFields }) {
     showFeedback($("settings-status"), message, state);
   }
   function refreshSettingsHome(data) {
+    $("settings-open-cycle").hidden = !cycleIsEnabled(data);
+    $("settings-sleep-summary").textContent = t(sleepIsEnabled(data) ? "ui.sleep-settings-subtitle" : "ui.sleep-disabled");
     const water = data.waterReminders ?? waterDefaults;
     const waterStatus = !water.enabled ? t("ui.reminders-off") : water.pauseUntil > Date.now() ? t("ui.reminders-paused") : t("ui.reminders-on");
     $("settings-water-summary").textContent = t("ui.goal-value-ml", numbers.format(data.waterGoal ?? 2000)) + " · " + waterStatus;
@@ -111,6 +128,18 @@ export function installSettings({ getState, mutate, refreshFields }) {
       gender.value = genders.includes(data.gender) ? data.gender : "";
       cycle.checked = cycleIsEnabled(data);
       updateCycleControl();
+    }
+    if (panel === "cycle-settings") loadCycle();
+    if (panel === "sleep-settings") {
+      const prefs = data.sleepSettings ?? sleepDefaults;
+      $("sleep-enabled").checked = sleepIsEnabled(data);
+      $("sleep-card-size").value = data.sleepCardSize ?? "wide";
+      $("sleep-goal").value = prefs.goal ? prefs.goal / 60 : "";
+      $("sleep-reminder-bed").value = prefs.bedtime;
+      $("sleep-reminder-wake").value = prefs.wake;
+      $("sleep-reminder-pause").checked = prefs.paused;
+      for (const input of sleepDays) input.checked = Boolean(prefs.mask & Number(input.value));
+      refreshFields($("sleep-settings-form"));
     }
     if (panel === "water-settings") loadWaterSettings(data);
     if (panel === "snooze-settings") {
@@ -297,6 +326,23 @@ export function installSettings({ getState, mutate, refreshFields }) {
         else delete state.clinicTimeZone;
       }, t("ui.appointment-settings-saved"), true);
   });
+  $("sleep-settings-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const enabled = $("sleep-enabled").checked;
+    const cardSize = $("sleep-card-size").value;
+    const mask = sleepDays.reduce((value, input) => value | (input.checked ? Number(input.value) : 0), 0);
+    const settings = { goal: Number($("sleep-goal").value) * 60, mask,
+      bedtime: $("sleep-reminder-bed").value, wake: $("sleep-reminder-wake").value, paused: $("sleep-reminder-pause").checked };
+    if (!validSleepSettings(settings)) {
+      settingsFeedback(t("ui.sleep-check-settings"), "error");
+      return;
+    }
+    await saveSettings(event.submitter, state => {
+      state.sleepEnabled = enabled;
+      state.sleepCardSize = cardSize;
+      state.sleepSettings = settings;
+    }, t("ui.sleep-settings-saved"), true);
+  });
   $("display-form").addEventListener("submit", async event => {
     event.preventDefault();
     const theme = event.currentTarget.elements.theme.value;
@@ -333,8 +379,10 @@ export function installSettings({ getState, mutate, refreshFields }) {
       state.gender = selectedGender;
       state.cycleEnabled = enabled;
       loadedSettings.delete("display-settings");
-    }, t("ui.profile-saved"));
+    }, t("ui.profile-saved"), true);
   });
+
+  const loadCycle = installCycleSettings({ getState, saveSettings, refreshFields, mutate });
 
   function open(notifications) {
     settingsSession += 1;

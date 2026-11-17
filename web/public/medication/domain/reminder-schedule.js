@@ -86,7 +86,17 @@ export function validSchedule(body) {
       !Number.isInteger(water.repeat) || water.repeat < 0 || water.repeat >= water.interval ||
       (water.pauseUntil !== 0 && !validInstant(water.pauseUntil)) ||
       (water.goalDay !== null && !validDay(water.goalDay)))) return null;
+  const sleepRules = body.sleepRules ?? [];
+  const cycleTimes = body.cycleTimes ?? [];
+  if (!Array.isArray(sleepRules) || sleepRules.length > 2 || !sleepRules.every(row =>
+    Array.isArray(row) && row.length === 3 && validMinute(row[0]) && Number.isInteger(row[1]) &&
+    row[1] >= 1 && row[1] <= 127 && ["sleepBed", "sleepWake"].includes(row[2])) ||
+    new Set(sleepRules.map(row => row[2])).size !== sleepRules.length ||
+    !Array.isArray(cycleTimes) || cycleTimes.length > 2 || !cycleTimes.every(row =>
+      Array.isArray(row) && row.length === 2 && validInstant(row[0]) && validDay(row[1]))) return null;
   return {
+    ...(sleepRules.length && { sleepRules }),
+    ...(cycleTimes.length && { cycleTimes: cycleTimes.slice().sort((a, b) => a[0] - b[0]) }),
     zone: body.zone, rules, ...(routineRules.length ? { routineRules } : {}), appointments: appointments.sort((a, b) => a[0] - b[0]),
     water: water && { start: water.start, end: water.end, interval: water.interval, repeat: water.repeat,
       pauseUntil: water.pauseUntil, goalDay: water.goalDay }
@@ -164,12 +174,27 @@ function nextWater(schedule, after) {
   return null;
 }
 
+function nextSleep(schedule, after, minute, mask) {
+  const clock = timezone(schedule.zone);
+  const first = Math.floor(localWall(after, clock) / dayMs);
+  const offsets = new Map();
+  for (let day = first; day <= first + 7; day++) {
+    if (!(mask & (1 << new Date(day * dayMs).getUTCDay()))) continue;
+    const at = instantForWall(day * dayMs + minute * minuteMs, clock, offsets);
+    if (at > after) return { at, day };
+  }
+  return null;
+}
+
 export function nextCareReminder(schedule, after) {
   const appointment = schedule.appointments?.find(([at]) => at > after);
+  const cycle = schedule.cycleTimes?.find(([at]) => at > after);
   const candidates = [
     ["dose", nextMedicationReminder(schedule, after)],
     ["appointment", appointment && { at: appointment[0], day: appointment[1], expires: appointment[2], details: appointment[3] }],
     ["water", nextWater(schedule, after)],
+    ["cycle", cycle && { at: cycle[0], day: cycle[1] }],
+    ...(schedule.sleepRules ?? []).map(([minute, mask, kind]) => [kind, nextSleep(schedule, after, minute, mask)]),
     ["routine", schedule.routineRules?.length && nextMedicationReminder({ zone: schedule.zone, rules: schedule.routineRules }, after)]
   ].filter(([, next]) => next);
   if (!candidates.length) return null;

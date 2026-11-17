@@ -5,6 +5,7 @@ import { accessCare, accessCareSettings } from "../../shared/storage.js";
 import { localZone } from "../../domain/care-plan.js";
 import { careSnapshotFits, careSyncLimit, careVersion, portable, validateCareRecords } from "../../domain/care-records.js";
 import { hasPrivateText } from "../../domain/private-fields.js";
+import { cycleDataFields, cyclePreferenceFields, withoutCycle } from "../../domain/cycle.js";
 import { applyPortable, CareConflict, conflictChoice, equal as same, mergeCare, mergeRestoredCare } from "./merge.js";
 import { generateRecoveryKey, importRecoveryKey, normalizePrivateCare, openPrivateCare, sealPrivateCare } from "./private-care.js";
 import { installTimeZonePicker } from "../../shared/ui/time-zone-picker.js";
@@ -143,24 +144,28 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
       accountOwner = wire.owner;
       if (conflictOwner !== accountOwner) choices.length = 0;
       const choose = value => conflictChoice(value, choices);
-      original = normalizePrivateCare(portable(local));
+      original = normalizePrivateCare(local.cycleLocalOnly ? withoutCycle(portable(local)) : portable(local));
       const remote = { ...wire, records: normalizePrivateCare(await openPrivateCare(wire.records, key)) };
       if (currentGeneration !== authGeneration) return;
       const autoRestore = signedIn && !binding && remote.records && ![
         original.medicines, original.doses, original.visits, original.routines, original.water,
-        original.routineLogs, original.cycleRecords, original.scheduleHistory
+        original.routineLogs, original.cycleRecords, original.cycleDays, original.sleepRecords, original.scheduleHistory
       ].some(records => Object.keys(records ?? {}).length);
       if (!activate && !binding?.enabled && !autoRestore) { message = ""; return; }
       const replace = restore?.mode === "replace";
       const mergeRestore = Boolean(restore) && !replace;
       const restored = normalizePrivateCare(restore?.records);
-      const candidate = replace ? mergeCare(null, restored, null) : mergeRestore ? mergeRestoredCare(restored ?? original, remote.records) :
-        autoRestore ? remote.records : mergeCare(binding?.base, original, remote.records, choose);
+      const privateCycle = local.cycleLocalOnly || restored?.settings?.cycleLocalOnly;
+      const visible = records => privateCycle ? withoutCycle(records) : records;
+      const cloud = visible(remote.records);
+      const candidate = replace ? mergeCare(null, visible(restored), null) : mergeRestore ? mergeRestoredCare(visible(restored ?? original), cloud) :
+        autoRestore ? mergeCare(null, cloud, null) : mergeCare(visible(binding?.base), original, cloud, choose);
       const sameRecords = remote.records && same(candidate, mergeCare(null, remote.records, null));
       if (restore) assertRestoreRevision(restore, remote, Boolean(sameRecords));
       let confirmed = remote;
       let privacyKey = wire.records?.privacyKey;
-      if ((!autoRestore && !sameRecords) || (!privacyKey && key)) {
+      if (((!autoRestore || local.cycleLocalOnly) && !sameRecords) || (!privacyKey && key)) {
+        if (!privateCycle && (await readCare()).cycleLocalOnly) { retry(1000); return; }
         const zone = localZone();
         const protectedRecords = await sealPrivateCare({ ...candidate, careSchemaVersion: 2 }, key,
           Boolean(key && (!privacyKey || wire.records.privacyRotation)));
@@ -197,12 +202,19 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
             (current?.owner && current.owner !== remote.owner) ||
             (!activate && !autoRestore && !current?.enabled) ||
             (current?.revision ?? 0) > confirmed.revision) return;
-        const snapshot = normalizePrivateCare(portable(state));
-        const result = mergeCare(restored ?? original, snapshot, confirmed.records, choose);
+        const deviceOnly = state.cycleLocalOnly || restored?.settings?.cycleLocalOnly;
+        const fullSnapshot = portable(state);
+        const snapshot = normalizePrivateCare(deviceOnly ? withoutCycle(fullSnapshot) : fullSnapshot);
+        const result = mergeCare(deviceOnly ? withoutCycle(restored ?? original) : restored ?? original, snapshot,
+          deviceOnly ? withoutCycle(confirmed.records) : confirmed.records, choose);
         edited = !same(result, mergeCare(null, confirmed.records, null));
         changed = !same(result, mergeCare(null, snapshot, null));
         linkChanged = !current?.enabled || current.sessionValid === false || current.owner !== remote.owner;
         if (changed) {
+          if (deviceOnly) {
+            for (const key of cycleDataFields) result[key] = state[key];
+            for (const key of cyclePreferenceFields) if (Object.hasOwn(state, key)) result.settings[key] = state[key];
+          }
           applyPortable(state, result);
           state.intro = "done";
         }

@@ -1,8 +1,8 @@
-        <section id="today-water" class="water program-water" aria-labelledby="today-water-label">
-          <span class="today-water-art">
+        <section id="today-water" class="today-tracker water program-water" aria-labelledby="today-water-label">
+          <span class="tracker-art today-water-art">
             <!-- include layout/water-glass.html -->
           </span>
-          <div class="today-water-body">
+          <div class="tracker-body">
             <div class="water-info">
               <h2 id="today-water-label">{{msg:ui.water-intake}}</h2>
               <span id="today-water-percent" aria-hidden="true"></span>
@@ -11,15 +11,10 @@
                 <progress class="water-progress" id="today-water-progress" aria-label="{{msg:ui.water-goal-progress}}" max="1" value="0"></progress>
               </div>
             </div>
-            <div class="today-water-actions">
-              <button type="button" data-open-water>{{msg:ui.log-water}}</button>
+            <div class="tracker-actions">
+              <button type="button" class="tracker-primary" data-open-water>{{msg:ui.log-water}}</button>
               <button type="button" class="secondary" id="today-water-quick" aria-label="{{msg:ui.quick-log-250-ml-of-water}}"><bdi>{{msg:ui.250-2}}</bdi> <small>{{msg:ui.ml}}</small></button>
               <button id="open-water-history" type="button" class="secondary" data-destination="water" aria-label="{{msg:ui.water-history}}">{{msg:ui.history}}</button>
-            </div>
-            <div id="today-water-feedback" class="today-water-feedback" hidden>
-              <span id="today-water-message"></span>
-              <button type="button" class="secondary" id="today-water-undo">{{msg:ui.undo-log}}</button>
-              <button type="button" class="icon-button" id="today-water-dismiss" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
             </div>
           </div>
         </section>

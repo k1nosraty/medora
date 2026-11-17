@@ -3,6 +3,7 @@ const accents = [
   { id: "green", label: "سبز" },
   { id: "lilac", label: "یاسی" },
   { id: "coral", label: "مرجانی" },
+  { id: "amber", label: "کهربایی" },
   { id: "berry", label: "اناری", requiresCycle: true }
 ];
 

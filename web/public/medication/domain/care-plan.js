@@ -1,6 +1,10 @@
 import { routineComplete, routineOccurs, validRoutineId } from "./routine-plan.js";
 import { dayMs, timezone, localWall, instantForWall } from "./wall-clock.js";
 
+import { cycleTimeReminder } from "./cycle.js";
+import { cycleIsEnabled } from "./profile.js";
+import { sleepIsEnabled } from "./sleep.js";
+
 export const minuteMs = 60_000;
 export const clockMinute = time => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 export const localZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -82,7 +86,9 @@ export function reminderCareProjection(records, now = Date.now()) {
     .map(([day, logs]) => [day, Object.fromEntries(Object.entries(logs).map(([id, row]) =>
       [id, { mode: "done", done: routineComplete(row) }]))]));
   return {
-    settings: fields(records.settings, ["waterGoal", "waterReminders", "appointmentReminders"]),
+    settings: fields(records.settings, ["waterGoal", "waterReminders", "appointmentReminders", "sleepEnabled",
+      "sleepSettings", "cycleEnabled", "cycleOptions", "cycleLocalOnly", "gender"]),
+    cycleRecords: Object.fromEntries(Object.keys(records.cycleRecords ?? {}).sort((a, b) => Number(b) - Number(a)).slice(0, 4).map(day => [day, {}])),
     medicines: Object.fromEntries(Object.entries(records.medicines ?? {}).map(([id, row]) => [id, {
       ...fields(row, ["id", "name", "unit", "paused", "archived", "dates", "effectiveFrom"]),
       phases: row.phases.map(phase => ({ ...fields(phase, ["start", "end", "interval", "mask"]),
@@ -155,7 +161,7 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
   } : null;
   const todayLogs = state.routineLogs?.[today] ?? {};
   const routineRules = Object.entries(state.routines ?? {})
-    .filter(([, routine]) => routine.reminder && !routine.paused && routine.minute !== null)
+    .filter(([id, routine]) => routine.reminder && !routine.paused && routine.minute !== null && !state.cycleOptions?.routines.includes(id))
     .map(([id, routine]) => ({
       start: routine.start, end: null, interval: routine.interval, mask: routine.mask,
       minutes: [routine.minute],
@@ -167,6 +173,14 @@ export function scheduleForPush(state, zone, today, now = Date.now()) {
       skip: todayLogs[routine.id] && routineOccurs(routine, today) && routineComplete(todayLogs[routine.id])
         ? [[today, routine.minute]] : []
     }));
-  const plan = { zone, rules, ...(routineRules.length ? { routineRules } : {}), appointments: [...appointments.values()], water };
+  const sleep = sleepIsEnabled(state) && !state.sleepSettings?.paused ? state.sleepSettings : null;
+  const sleepRules = sleep ? ["bedtime", "wake"].flatMap(key => sleep[key] ?
+    [[clockMinute(sleep[key]), sleep.mask, key === "bedtime" ? "sleepBed" : "sleepWake"]] : []) : [];
+  const cycleTimes = cycleIsEnabled(state) && !state.cycleLocalOnly ?
+    cycleTimeReminder(state.cycleRecords, state.cycleOptions, today)
+      .map(([day, minute]) => [instantForWall(day * dayMs + minute * minuteMs, displayClock, new Map()), day])
+      .filter(([at]) => Number.isSafeInteger(at) && at > now) : [];
+  const plan = { zone, rules, ...(routineRules.length ? { routineRules } : {}), appointments: [...appointments.values()], water,
+    ...(sleepRules.length && { sleepRules }), ...(cycleTimes.length && { cycleTimes }) };
   return details ? fitReminderDetails(plan) : plan;
 }

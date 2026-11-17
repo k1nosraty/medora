@@ -1,6 +1,11 @@
       <div data-screen="today" class="daily-sheet">
         <!-- include layout/program-cards.html -->
+        <!-- include layout/today-sleep.html -->
+        <!-- include layout/cycle-today.html -->
         <!-- include layout/today-water.html -->
+        <section class="cycle-panel program-cycle" id="cycle-companion-card" hidden>
+          <h2>{{msg:ui.cycle}}</h2><p id="cycle-companion-estimate"></p><p id="cycle-companion-message" dir="auto"></p>
+        </section>
         <div class="daily-main">
           <div class="daily-heading">
             <h2 id="day-title">{{msg:ui.daily-timeline}}</h2>
@@ -40,4 +45,16 @@
             <button id="today-promotion-dismiss" type="button" class="text-button">{{msg:ui.promotion-dismiss}}</button>
           </div>
         </aside>
+        <div class="tracker-feedback-stack">
+          <div id="today-water-feedback" class="tracker-feedback program-water" hidden>
+            <span id="today-water-message"></span>
+            <button type="button" class="secondary glass-secondary-action tracker-utility" id="today-water-undo">{{msg:ui.undo-log}}</button>
+            <button type="button" class="icon-button" id="today-water-dismiss" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+          </div>
+          <div id="today-cycle-feedback" class="tracker-feedback program-cycle" hidden>
+            <span id="today-cycle-message" role="status"></span>
+            <button type="button" class="secondary glass-secondary-action tracker-utility" id="today-cycle-undo">{{msg:ui.undo-log}}</button>
+            <button type="button" class="icon-button" id="today-cycle-dismiss" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+          </div>
+        </div>
       </div>
