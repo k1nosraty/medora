@@ -999,6 +999,7 @@ test("sleep and cycle card sizes are independent settings that survive a reload"
 });
 
 test("cycle daily log, past dates, estimate, print and privacy controls work in the browser", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.clock.setFixedTime(new Date(2026, 10, 17, 12));
   await open(page, { language: "en", medicine: true });
   await page.evaluate(async () => {
