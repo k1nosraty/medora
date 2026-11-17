@@ -72,7 +72,7 @@
   .medora #app [data-two-column] .program-card { grid-template-columns: minmax(0, 1fr) min(35%, 4rem); }
 }
 
-.medora #today-water .today-water-art { display: grid; place-items: center; background: transparent; }
+.medora #today-water .today-water-art { display: grid; place-items: center; }
 .medora .today-state-art .glass-object { inline-size: 100%; block-size: 100%; }
 .medora :is(#water-dialog, #water-settings, #today-water, [data-screen="water"], #settings-dialog[data-panel="water-settings"] > .sheet-header),
 .medora:has(#water-dialog[open], #settings-dialog[open][data-panel="water-settings"]) .value-picker {
@@ -99,9 +99,6 @@
 .medora .settings-row.water-row .settings-icon { background: var(--category-water-fill); }
 .medora .settings-row.medicine-row .settings-icon { background: var(--category-medicine-fill); }
 .medora .settings-row.visit-row .settings-icon { background: var(--program-visit-fill); }
-.medora .settings-accents:has(#settings-berry-choice:not([hidden])) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.medora .settings-accents label { padding-inline: .12rem; }
-.medora .settings-accents label[hidden] { display: none; }
 .medora .settings-panel .profile-cycle-switch { background: var(--stage); }
 .medora .settings-panel .profile-cycle-switch:has(:disabled) { color: var(--muted); }
 .medora #profile-cycle-hint { margin: 0; }

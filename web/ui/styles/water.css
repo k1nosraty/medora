@@ -40,12 +40,7 @@ html[dir="rtl"] .medora[data-finish="glass"] .today-tracker { --tracker-light-si
   border-radius: 1.1rem;
   pointer-events: none;
 }
-.tracker-art {
-  position: relative;
-  border-radius: .9rem;
-  background: linear-gradient(155deg, var(--glass-glint), transparent 64%),
-    color-mix(in srgb, var(--tracker-accent) 27%, var(--program-fill));
-}
+.tracker-art { position: relative; }
 .medora #today-water .water-glass {
   position: absolute;
   inset: 0;

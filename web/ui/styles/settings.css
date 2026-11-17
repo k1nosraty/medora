@@ -140,9 +140,13 @@ html[dir="ltr"] .medora svg.settings-chevron { transform: none; }
 }
 .theme-sample[data-theme-sample="dark"] { background: #283544; }
 .theme-sample[data-theme-sample="dark"]::before { background: #465466; box-shadow: 0 .45rem 0 -.22rem var(--accent-dark); }
-.medora .settings-accents { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.medora .settings-accents { grid-template-columns: minmax(0, 1fr); }
+.settings-accent-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .35rem; }
+.settings-accent-options:has(#settings-berry-choice:not([hidden])) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.medora .settings-accents label { padding-inline: .12rem; overflow-wrap: anywhere; }
+.medora .settings-accents label[hidden] { display: none; }
 .accent-sample {
-  inline-size: 2rem;
+  inline-size: min(100%, 2rem);
   aspect-ratio: 1;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent-light) 50%, var(--accent-dark) 50%);

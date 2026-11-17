@@ -128,7 +128,7 @@ export function installNavigation({ getState, getIndex, getFamilyView, getPerson
       dates = calendarFormat(calendar);
     }
     const previousFinish = document.body.dataset.finish;
-    applyDisplay(preferences);
+    applyDisplay(preferences, { finish: "glass" });
     if (previousFinish !== document.body.dataset.finish) refreshArtwork(document.body.dataset.finish);
     const cycleEnabled = cycleIsEnabled(state);
     const sleepEnabled = sleepIsEnabled(state) && (!view || view.has("sleep"));

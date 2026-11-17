@@ -1,6 +1,5 @@
       <div data-screen="today" class="daily-sheet">
         <!-- include layout/program-cards.html -->
-        <!-- include layout/today-sleep.html -->
         <!-- include layout/cycle-today.html -->
         <!-- include layout/today-water.html -->
         <section class="cycle-panel program-cycle" id="cycle-companion-card" hidden>
@@ -14,6 +13,7 @@
           </div>
           <div id="today-focus" data-context-list hidden></div>
         </div>
+        <!-- include layout/today-sleep.html -->
         <div class="daily-timeline">
           <p id="future-schedule" class="quiet" hidden>{{msg:ui.upcoming-schedule-you-can-log-doses-on-or-after-the-sched}}</p>
           <section class="timeline" aria-labelledby="timeline-title">
@@ -46,11 +46,7 @@
           </div>
         </aside>
         <div class="tracker-feedback-stack">
-          <div id="today-water-feedback" class="tracker-feedback program-water" hidden>
-            <span id="today-water-message"></span>
-            <button type="button" class="secondary glass-secondary-action tracker-utility" id="today-water-undo">{{msg:ui.undo-log}}</button>
-            <button type="button" class="icon-button" id="today-water-dismiss" aria-label="{{msg:ui.close}}"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
-          </div>
+          <!-- include layout/water-feedback.html -->
           <div id="today-cycle-feedback" class="tracker-feedback program-cycle" hidden>
             <span id="today-cycle-message" role="status"></span>
             <button type="button" class="secondary glass-secondary-action tracker-utility" id="today-cycle-undo">{{msg:ui.undo-log}}</button>

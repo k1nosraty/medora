@@ -5,7 +5,7 @@ import { integer } from "../../shared/ui/input-values.js";
 import { appointmentDefaults, localZone, waterDefaults } from "../../domain/care-plan.js";
 import { installTimeZonePicker, timeZoneCity } from "../../shared/ui/time-zone-picker.js";
 import { accentOf, accentLabel } from "../../styles/theme.js";
-import { canEnableCycle, cycleIsEnabled, finishOf, genders, ageAt, validPersonalProfile } from "../../domain/profile.js";
+import { canEnableCycle, cycleIsEnabled, genders, ageAt, validPersonalProfile } from "../../domain/profile.js";
 import { installCycleSettings } from "../cycle/settings.js";
 import { sleepDefaults, sleepIsEnabled, validSleepSettings } from "../../domain/sleep.js";
 import { familyPlacementOf } from "../../domain/family.js";
@@ -94,8 +94,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
       appointment.interval === 60 ? t("ui.every-hour") : t("ui.every-two-hours"))].join(" · ");
     const theme = { system: t("ui.system"), light: t("ui.light"), dark: t("ui.dark") }[data.theme] ?? t("ui.system");
     const calendar = (data.calendar ?? defaultCalendar) === "persian" ? t("ui.solar-hijri") : t("ui.gregorian");
-    const finish = t(finishOf(data.finish) === "glass" ? "شیشه‌ای" : "سه‌بعدی مات");
-    $("settings-display-summary").textContent = [theme, t(accentLabel(accentOf(data.accent, cycleIsEnabled(data)))), calendar, language === "fa" ? "فارسی" : "English", finish].join(" · ");
+    $("settings-display-summary").textContent = [theme, t(accentLabel(accentOf(data.accent, cycleIsEnabled(data)))), calendar, language === "fa" ? "فارسی" : "English"].join(" · ");
   }
   function loadWaterSettings(data) {
     const water = data.waterReminders ?? waterDefaults;
@@ -116,7 +115,6 @@ export function installSettings({ getState, mutate, refreshFields }) {
       $("settings-berry-choice").hidden = !enabled;
       $("settings-berry-choice").querySelector("input").disabled = !enabled;
       $("display-form").elements.accent.value = accentOf(data.accent, enabled);
-      $("settings-finish").value = finishOf(data.finish);
       $("settings-family-placement").value = familyPlacementOf(data.familyPlacement);
       $("app-language").value = language;
     }
@@ -347,7 +345,6 @@ export function installSettings({ getState, mutate, refreshFields }) {
     event.preventDefault();
     const theme = event.currentTarget.elements.theme.value;
     const accent = event.currentTarget.elements.accent.value;
-    const finish = finishOf($("settings-finish").value);
     const familyPlacement = familyPlacementOf($("settings-family-placement").value);
     const selectedCalendar = $("calendar-setting").value;
     const nextLanguage = $("app-language").value;
@@ -356,7 +353,6 @@ export function installSettings({ getState, mutate, refreshFields }) {
         state.theme = theme;
         state.accent = accentOf(accent, cycleIsEnabled(state));
         state.calendar = selectedCalendar;
-        state.finish = finish;
         state.familyPlacement = familyPlacement;
       }, t("ui.display-settings-saved"))) selectLanguage(nextLanguage);
   });

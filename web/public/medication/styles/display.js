@@ -9,10 +9,10 @@ function updateThemeColor() {
   if (themeColor) themeColor.content = dark ? "#151b20" : "#f4f3fa";
 }
 
-export function applyDisplay(state, { cycleEnabled = cycleIsEnabled(state) } = {}) {
+export function applyDisplay(state, { cycleEnabled = cycleIsEnabled(state), finish = finishOf(state.finish) } = {}) {
   document.body.dataset.theme = ["light", "dark"].includes(state.theme) ? state.theme : "system";
   document.body.dataset.accent = accentOf(state.accent, cycleEnabled);
-  document.body.dataset.finish = finishOf(state.finish);
+  document.body.dataset.finish = finish;
   updateThemeColor();
 }
 

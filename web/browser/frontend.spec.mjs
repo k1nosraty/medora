@@ -873,6 +873,39 @@ test.describe("promotion without a service worker", () => {
   });
 });
 
+test("appearance stays glass and fits six accents when the cycle is enabled", async ({ page }) => {
+  await open(page, { language: "en", width: 320 });
+  async function setPreferences(cycleEnabled) {
+    await page.evaluate(async enabled => {
+      const { accessCare } = await import("/medication/shared/storage.js");
+      await accessCare(state => { state.finish = "matte"; state.cycleEnabled = enabled; });
+    }, cycleEnabled);
+    await page.reload();
+  }
+  const accents = page.locator(".settings-accents");
+  for (const enabled of [false, true]) {
+    await setPreferences(enabled);
+    await expect(page.locator("body")).toHaveAttribute("data-finish", "glass");
+    await expect(page.locator("#today-sleep .tracker-art")).toHaveCSS("background-image", "none");
+    if (enabled) await expect(page.locator("#cycle-today-card .tracker-art")).toHaveCSS("background-image", "none");
+    await page.locator(".header-tools [data-destination=settings]").click();
+    await page.locator("[data-settings-panel=display-settings]").click();
+    await expect(page.locator("#settings-finish")).toHaveCount(0);
+    await expect(accents.locator("label:visible")).toHaveCount(enabled ? 6 : 5);
+    const rowSizes = await accents.locator("label:visible").evaluateAll(labels => {
+      const rows = new Map();
+      for (const label of labels) {
+        const y = Math.round(label.getBoundingClientRect().top);
+        rows.set(y, (rows.get(y) ?? 0) + 1);
+      }
+      return [...rows.values()];
+    });
+    expect(rowSizes).toEqual(enabled ? [3, 3] : [5]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+    await page.locator('[data-close="settings-dialog"]').click();
+  }
+});
+
 test("sleep settings expose amber, quick logging survives a restart, and the report separates naps", async ({ page, context }) => {
   await page.clock.setFixedTime(new Date(2026, 10, 16, 23, 40));
   await open(page, { language: "en" });

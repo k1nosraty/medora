@@ -104,11 +104,6 @@
   border-color: var(--preview-rim);
 }
 .design-gallery #settings-dialog .settings-panel > form + form { margin-block-start: .65rem; }
-.design-gallery #settings-dialog .settings-accents:has(#settings-berry-choice:not([hidden])) {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-.design-gallery #settings-dialog .settings-accents label { padding-inline: .12rem; }
-.design-gallery #settings-dialog .settings-accents label[hidden] { display: none; }
 .design-gallery #settings-dialog :is(.settings-panel .settings-switch, #water-pause-card) {
   color: var(--water-ink);
   background: var(--water);

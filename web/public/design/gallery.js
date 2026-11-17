@@ -200,7 +200,8 @@ function renderPalette() {
 }
 function renderSurfaces() {
   const artByFeature = {
-    medications: () => medicineGlass("bottle"), appointments: () => visitGlass("general"), routines: () => routineGlass("custom"), sleep: sleepImage
+    medications: () => medicineGlass("bottle"), appointments: () => visitGlass("general"), routines: () => routineGlass("custom"),
+    sleep: sleepImage, cycle: cycleArt
   };
   for (const control of document.querySelectorAll("#today-programs [data-destination]")) {
     control.firstElementChild.replaceWith(artByFeature[control.dataset.destination]());
