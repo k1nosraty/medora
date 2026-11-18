@@ -28,7 +28,7 @@ function calendarTracker(kind, label, image, title, details, optionsLabel, histo
 }
 
 export function renderCalendar(state, index, { day, start, end, today, formatMonth, formatDay, formatNumber, selectDay,
-  renderDose, renderRoutine, visitCard, openWaterHistory, openSleepHistory, openSleep, cycleOpenDay, openCycleHistory, canLogPersonal, canAddWater = true, addWater }) {
+  renderDose, disposeDoseCards, renderRoutine, visitCard, openWaterHistory, openSleepHistory, openSleep, cycleOpenDay, openCycleHistory, canLogPersonal, canAddWater = true, addWater }) {
   const cycleEnabled = cycleIsEnabled(state);
   const cycleRecords = cycleEnabled ? state.cycleRecords ?? {} : {};
   const periods = Object.entries(cycleRecords).map(([first, record]) => [Number(first), record.end ?? Number(first)]);
@@ -131,6 +131,7 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
     return card;
   })];
   for (const card of nodes) card.dataset.focusScope = "agenda:" + card.dataset.agendaKey;
+  disposeDoseCards?.(list);
   list.replaceChildren(...(nodes.length ? nodes : [element("p",
     t(day > today ? "برای این روز برنامه‌ای ندارید." : "برای این روز برنامه یا سابقه‌ای ندارید."), "empty")]));
   if (focusedKey) {

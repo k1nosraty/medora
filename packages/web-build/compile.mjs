@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 const include =
   /(?:<!-- include ([\w./-]+)(?: (\{[^\n]*\}))? -->|\/\* include ([\w./-]+) \*\/)/g;
 
-async function render(ui, file, parents = [], parameters = {}) {
+async function render(ui, file, parents = [], parameters = {}, overrides = {}) {
   const path = resolve(ui, file);
   if (!path.startsWith(ui) || parents.includes(path))
     throw new Error("Invalid template include: " + file);
-  const source = (await readFile(path, "utf8")).replace(
+  const source = (overrides[file] ?? (await readFile(path, "utf8"))).replace(
     /\{\{param:([a-zA-Z]+)\}\}/g,
     (_, key) => {
       const value = parameters[key];
@@ -27,6 +27,7 @@ async function render(ui, file, parents = [], parameters = {}) {
         html ?? css,
         [...parents, path],
         params ? JSON.parse(params) : {},
+        overrides,
       ),
     ),
   );
@@ -73,6 +74,7 @@ export async function compileWeb({
   esbuild,
   bundleWorkbox,
   plugins = [],
+  htmlOverrides,
   entryPoints = { bootstrap: "bootstrap.js", medora: "app/medora.js" },
 }) {
   const { build, transform } = esbuild;
@@ -122,7 +124,10 @@ export async function compileWeb({
   const assetPath = (prefix) =>
     "/medication/bundles/" +
     [...outputs.keys()].find((name) => name.startsWith(prefix + "-"));
-  const html = translateMarkup(messagesFa, await render(ui, "index.html"))
+  const html = translateMarkup(
+    messagesFa,
+    await render(ui, "index.html", [], {}, htmlOverrides),
+  )
     .replace("/medication/bootstrap.js", assetPath("bootstrap"))
     .replace("/medication/app/medora.js", assetPath("medora"))
     .replace("{{app-style}}", assetPath("style"));

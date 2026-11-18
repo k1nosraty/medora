@@ -1,0 +1,16 @@
+      <div data-screen="medications" hidden>
+        <section class="plan-panel-banner program-banner-surface program-medicine" aria-labelledby="plans-title">
+  <div>
+    <h2 id="plans-title">{{msg:ui.my-medicines}}</h2>
+    <p id="med-day-count" aria-live="polite"></p>
+    <button id="add" type="button" class="secondary plan-panel-add" data-open-medication><svg aria-hidden="true"><use href="#i-plus"/></svg>{{msg:ui.new-medicine}}</button>
+  </div>
+  <svg data-surface-art="bottle" class="category-art " viewBox="0 0 128 100" aria-hidden="true"><use href="#art-bottle"/></svg>
+</section>
+        <div id="medicine-cabinet" data-context-list></div>
+        <section aria-labelledby="med-day-title">
+          <h2 id="med-day-title">{{msg:ui.daily-doses}}</h2>
+          <div data-day-host="medications"></div>
+          <div id="med-day-doses" class="compact-card-list" data-context-list></div>
+        </section>
+      </div>

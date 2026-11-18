@@ -5,6 +5,7 @@ import {
   mkdir,
   mkdtemp,
   readdir,
+  readFile,
   rename,
   rm,
 } from "node:fs/promises";
@@ -52,6 +53,9 @@ const replacedModules = new Set([
   "medication/app/navigation.js",
   "medication/features/account/dialog.js",
   "medication/features/sleep/controller.js",
+  "medication/features/medicines/appearance.js",
+  "medication/features/medicines/editor.js",
+  "medication/features/medicines/view.js",
   "medication/features/promotions/dialog.js",
   "medication/features/support-tickets.js",
   "medication/features/water/entries.js",
@@ -83,6 +87,22 @@ try {
     iconLicenseFile: new URL("../../../branding/LICENSE", import.meta.url),
     esbuild,
     bundleWorkbox,
+    htmlOverrides: {
+      "screens/medications.html": await readFile(
+        join(app, "src/product/medication/screen.html"),
+        "utf8",
+      ),
+      "forms/medicine-editor.html":
+        '<dialog id="medication-dialog" class="sheet add-sheet" aria-labelledby="editor-title"></dialog>',
+      "forms/medicine-appearance.html":
+        '<dialog id="appearance-dialog" class="sheet" aria-labelledby="appearance-title"></dialog>',
+      "forms/medicine-details.html":
+        '<dialog id="medicine-details" class="sheet" aria-labelledby="medicine-details-title"></dialog>',
+      "forms/medicine-phase.html": "",
+      "forms/medicine-slot.html": "",
+      "forms/settings/snooze.html":
+        '<section id="snooze-settings" class="settings-panel" hidden></section>',
+    },
     plugins: [
       {
         name: "medora-react-features",

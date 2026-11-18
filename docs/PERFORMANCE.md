@@ -42,3 +42,27 @@ The startup code now reads IndexedDB and presents React onboarding with a small,
 The immediate-click run exposes the remaining handoff cost. A local trial starting the full locale download in parallel measured 5,003 ms to onboarding and 7,535 ms to the dashboard. A low-priority HTML preload of the dashboard measured 6,048 ms to onboarding and 7,185 ms to the dashboard. The shipped split meets the six-second onboarding target. To reduce the remaining wait, split route-specific medication, family, settings and reports code away from the default dashboard entry and repeat both markers on the same network profile after each slice. Field latency, physical-device install and representative large histories remain open.
 
 Reproduce with `node web/browser/measure.mjs apps/web/dist 3` after a candidate build.
+
+### Medication and dose phase
+
+The canonical onboarding benchmark was repeated on `d95dd82` and the medication candidate using three cold Chromium trials, the same 390 × 844 viewport, 160 ms latency, 200 kB/s down, 75 kB/s up, and blocked service workers. The usable welcome button remained the timing marker.
+
+| Cold startup marker | `d95dd82` | Medication candidate |
+| --- | ---: | ---: |
+| Median usable onboarding | 5,055 ms | 4,989 ms |
+| Median requests at readiness | 21 | 21 |
+| Median bytes transferred at readiness | 879,563 | 867,816 |
+| Static shell count and bytes | 40 / 1,575,475 | 40 / 1,581,968 |
+
+The medication benchmark kept the same network and viewport. It used a ready dashboard with 24 synthetic plans, each with one daily dose, and measured the cabinet render, details open, and one dose saved to IndexedDB. Each median uses three fresh Chromium contexts. These are loopback interaction samples with desktop hardware and mobile dimensions.
+
+| Median measurement | `d95dd82` | Medication candidate |
+| --- | ---: | ---: |
+| Navigation to all 24 plans and doses in the DOM | 23 ms | 25 ms |
+| Navigation through the next animation frame | 48 ms | 35 ms |
+| Details dialog ready / next animation frame | 8 / 26 ms | 9 / 16 ms |
+| Dose transaction and status update / next animation frame | 20 / 27 ms | 10 / 26 ms |
+| Resource requests across those actions | 0 | 0 |
+| All canonical JS chunks, raw / gzip | 841,893 / 240,890 bytes | 860,133 / 245,583 bytes |
+
+Run `node web/browser/measure.mjs apps/web/dist 3` for onboarding and `node web/browser/measure-medication.mjs <baseline-assets> apps/web/dist` for the interaction comparison. Set `MEDORA_CHROMIUM` to the system executable if needed. Physical-device, hosted, and large-history observations remain open.

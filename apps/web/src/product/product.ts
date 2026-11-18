@@ -35,8 +35,17 @@ import {
   initializeReminders,
   syncReminders,
 } from "../../../../web/public/medication/features/reminders/controller.js";
-import { installMedicineEditor } from "../../../../web/public/medication/features/medicines/editor.js";
-import { installMedicineView } from "../../../../web/public/medication/features/medicines/view.js";
+import {
+  installMedication,
+  disposeDoseCards,
+  type RenderDose,
+} from "./medication/Medication";
+import type {
+  FamilyDoseRecord,
+  MedicationCare,
+  MedicineTarget,
+} from "./medication/model";
+import { renderFamilyDoseForm } from "./medication/FamilyDoseForm";
 import { installFamily } from "../../../../web/public/medication/features/family/panel.js";
 import { renderMemberHeader } from "../../../../web/public/medication/features/family/context.js";
 import { installSupport, loadOperations, reportDailyOpen } from "./Operations";
@@ -59,7 +68,8 @@ function $<T extends HTMLElement = HTMLElement>(id: string) {
 }
 
 export type CareState = Omit<Parameters<typeof showIntro>[0], "water"> &
-  Parameters<typeof renderToday>[0] & {
+  Parameters<typeof renderToday>[0] &
+  MedicationCare & {
     water?: WaterEntry[];
     reminders?: { revision?: number; enabled?: boolean };
     familyPlacement?: string;
@@ -85,7 +95,10 @@ export interface FamilyView extends EntryFamilyView {
   state: CareState;
   timeOf(day: number, minute: number): number;
   has(section: string): boolean;
-  canRecord(kind: "water" | "cycle", day?: number): boolean;
+  canRecord(kind: "water" | "cycle" | "medicine", day?: number): boolean;
+  record(
+    action: FamilyDoseRecord | { kind: "water" | "cycle"; day: number },
+  ): void;
   authorName(entry: { recordedBy?: string }): string;
   canView(section: string): boolean;
   synced: boolean;
@@ -290,9 +303,10 @@ const dashboard = installNavigation({
   render,
   mutate,
   requestDeletion,
-  renderDose: (
-    ...args: Parameters<ReturnType<typeof installMedicineView>["renderDose"]>
-  ) => medicines.renderDose(...args),
+  renderDose: (...args: Parameters<RenderDose>) =>
+    medicines.renderDose(...args),
+  disposeDoseCards,
+  closeMedicationContext: () => medicines.closeContext(),
   refreshFields: (container: HTMLElement) => pickers.refresh(container),
   renderRoutine: (
     ...args: Parameters<ReturnType<typeof installRoutines>["card"]>
@@ -309,25 +323,16 @@ const routines = installRoutines({
   formatDay: dashboard.formatDay,
   refreshFields: pickers.refresh,
 });
-const medicines = installMedicineView({
+const medicines = installMedication({
   getState: viewState,
   today: viewToday,
   getFamilyView,
   mutate,
   requestDeletion,
-  openEditor: (
-    medicine: Parameters<ReturnType<typeof installMedicineEditor>>[0],
-  ) => openEditor(medicine, undefined),
-  formatDay: dashboard.formatDay,
-});
-const openEditor = installMedicineEditor({
-  getState,
-  isBusy: () => busy,
-  mutate,
-  removeMedicine: medicines.deleteMedicine,
   pickers,
   formatDay: dashboard.formatDay,
 });
+const { openEditor } = medicines;
 const accountSync = installCareSync({
   transport: accountTransport,
   formatDay: dashboard.formatDay,
@@ -379,13 +384,14 @@ for (const control of document.querySelectorAll("[data-open-account]")) {
   control.addEventListener("click", () => void openAccount());
 }
 const family = installFamily({
+  renderMedicineRecord: renderFamilyDoseForm,
   getState,
   openAccount,
   actionDay: dashboard.actionDay,
   getFamilyView,
   openPlan: (
     kind: "medicine" | "visit" | "routine" | "water" | "cycle",
-    target: WaterTarget & { zone: string },
+    target: WaterTarget & MedicineTarget & { zone: string },
   ) => {
     const open = {
       medicine: openEditor,

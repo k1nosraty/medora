@@ -72,7 +72,14 @@ const groupPreference = "medora-family-active-group";
 const actionArt = { medicine: "bottle", visit: "visit", routine: "routine" };
 const clockFor = zone => new Date(localWall(Date.now(), timezone(zone))).toISOString().slice(11, 16);
 
-export function installFamily({ openAccount, openProfile, getState, actionDay, getFamilyView, setFamilyView, openPlan }) {
+/** @typedef {{title: string, member: string, dose: {amount: number | null, unit: string},
+ * showError: (problem: Error) => void, clearError: () => void,
+ * save: (status: "taken" | "skipped", actual: number | null | undefined) => Promise<void>}} DoseForm */
+/** @type {((host: HTMLElement, options: DoseForm) => () => void) | undefined} */
+const noDoseRenderer = undefined;
+
+export function installFamily({ openAccount, openProfile, getState, actionDay, getFamilyView, setFamilyView, openPlan,
+  renderMedicineRecord = noDoseRenderer }) {
   const dialog = $("family-dialog");
   const content = $("family-content");
   const quick = $("quick-dialog");
@@ -89,6 +96,8 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     activeGroup = actionStorage.getItem(groupPreference);
   } catch {}
   let editorOperation;
+  let releaseDoseForm;
+  const clearDoseForm = () => { releaseDoseForm?.(); releaseDoseForm = undefined; };
   let recovery = false;
   let overviewRequest = 0;
 
@@ -150,6 +159,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     back.hidden = !parent;
     $("family-mark").toggleAttribute("hidden", Boolean(parent));
     $("family-title").textContent = t(title);
+    clearDoseForm();
     content.replaceChildren();
     message();
     if (dialog.open) $("family-title").focus({ preventScroll: true });
@@ -647,6 +657,22 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
     const { kind, day, title, routine } = details;
     const view = getFamilyView();
     openActionSheet(t("ui.record-for-value", member.label));
+    const operation = crypto.randomUUID();
+    if (kind === "medicine" && renderMedicineRecord) {
+      releaseDoseForm = renderMedicineRecord(content, {
+        title, member: member.label, dose: details,
+        showError: error, clearError: () => message(),
+        async save(status, amount) {
+          const current = getFamilyView();
+          if (current?.member.id !== member.id || current.group.id !== group.id ||
+              !current.canRecord(kind, day)) throw new Error("forbidden");
+          await familyRequest("record", { group: group.id, target: member.id, operation, kind, day,
+            id: details.id, minute: details.minute, status, amount, result: true });
+          await saved("ثبت انجام شد.", view);
+        }
+      });
+      return;
+    }
     const form = element("form", "", "family-content");
     form.append(hero(title, member.label, actionArt[kind]),
       element("p", t("ui.your-name-will-be-attached-to-the-entry"), "family-card"));
@@ -673,7 +699,6 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
       }
     }
     form.append(submitButton("ذخیره برای {0}", member.label));
-    const operation = crypto.randomUUID();
     formSubmit(form, async data => {
       const entered = data.get("amount");
       const actual = kind === "medicine" && entered ? quantityFromText(entered) : undefined;
@@ -741,6 +766,7 @@ export function installFamily({ openAccount, openProfile, getState, actionDay, g
   dialog.addEventListener("close", () => {
     generation++;
     if (dialog.open) return;
+    clearDoseForm();
     content.replaceChildren();
     returnTo = null;
   });

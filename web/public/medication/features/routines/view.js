@@ -1,5 +1,5 @@
 import { CareInputError } from "../../shared/ui/care-error.js";
-import { appearanceColors, mountAppearanceColors } from "../medicines/appearance.js";
+import { appearanceColors, mountAppearanceColors } from "../medicines/appearance-options.js";
 import { language, localDigits, t } from "../../shared/i18n/locale.js";
 import { $, button, element, fitDialogToViewport } from "../../shared/ui/dom.js";
 import { installChoiceSearch, setPressed } from "../../shared/ui/controls.js";

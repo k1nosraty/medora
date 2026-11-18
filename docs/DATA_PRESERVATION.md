@@ -4,6 +4,8 @@ The canonical product opens at `/medication/`. It retains the original IndexedDB
 
 Onboarding reads the existing care database before offering the first-run screen. The primary application's normal write transaction records onboarding completion after the dashboard module is available. Sleep edits reuse the same record IDs, wall-clock conversion, overlap rules and write transaction. An unchanged wall time preserves the original offset during an ambiguous clock change. Existing extra fields are carried into an edit. A stale edit or deletion is rejected against the current record.
 
+The React medication editor and dose cards write the same `medora-medication-prototype` stores and the same `medicineId|day|minute` dose keys. A plan edit carries forward top-level, stage and slot extensions for retained rows. Taking, adjusting, skipping or undoing a dose updates its day bucket and stock debit in the same transaction. Deleting a plan retains recorded intake and schedule history under the existing rules. The application uses the existing account base revision and retry logic.
+
 ## Preserve the public origin
 
 Keep the exact frontend scheme, host and port, the service-worker scope and the relative `/api` URLs. Update the upstream behind that origin when the backend moves. This keeps IndexedDB, cache, the installed PWA and the `__Host-` authentication cookie attached to the same site. Opening a different frontend origin creates a separate browser storage namespace. A different public API origin would require a new authentication and CORS design. A raw origin change cannot transfer browser data.
@@ -23,5 +25,7 @@ Keep the same closed-browser push keys and signing versions. A provider migratio
 ## Evidence
 
 The synthetic device matrix covers archive reads from schema versions 1 through 3, unknown fields, an interrupted checkpoint import and upgrade retry. The PostgreSQL handoff fixture keeps the normal product origin and two browser databases while switching the API upstream from Workerd to Node. It reloads offline across a service-worker update, opens a second tab, checks a local-only extension, then compares the server water records with the device by ID and value. An identical replay leaves the record set unchanged.
+
+The React medication browser fixture opens data written in IndexedDB versions 1, 2 and 3. It edits both a plan and an existing dose, checks the original IDs, stock debit, nested extension fields and account metadata, then reloads. It also opens an encrypted Android v1 fixture through the product backup interface. The offline fixture adds, edits and deletes a plan and logs a dose against the cached shell. The local Workerd API commits the queued batch, drops the first acknowledgement, and the browser reconciles the committed revision without duplicating records. The PostgreSQL handoff also carries both synthetic accounts’ newly created plans and logged doses through an offline reload and service-worker update. After an identical replay against Node and a return to Workerd, the plan and dose documents still match the devices under the existing empty-private-value normalization.
 
 Historical state in every active user's device, the full range of private-field and multi-tab conflicts, real-device storage eviction, and the complete hosted server snapshot still need independent reconciliation.

@@ -3,7 +3,7 @@ import { locale, t } from "../../shared/i18n/locale.js";
 import { appointmentDefaults, appointmentOffsets, appointmentReminders, localZone } from "../../domain/care-plan.js";
 import { dayMs, localWall, timezone } from "../../domain/wall-clock.js";
 import { isoDay } from "../../domain/care-index.js";
-import { appearanceColors, mountAppearanceColors } from "../medicines/appearance.js";
+import { appearanceColors, mountAppearanceColors } from "../medicines/appearance-options.js";
 import { $, button, element } from "../../shared/ui/dom.js";
 import { installChoiceSearch, setPressed } from "../../shared/ui/controls.js";
 import { timeZoneCity } from "../../shared/ui/time-zone-picker.js";

@@ -7,13 +7,21 @@ const accentAngles = { blue: 211, green: 153, lilac: 267, coral: 8, berry: 330, 
 
 const isActivityItem = id => /^(?:visit|routine)(?:$|-)/.test(id) && !id.endsWith("-main");
 
-function artworkPath(id, finish, color) {
+export function artworkPath(id, finish, color) {
   if (finish === "matte") {
     const matteId = id === "visit-main" || id === "routine-main" ? id.slice(0, -5) : id;
     return "/design/matte-3d/" + matteId + ".webp";
   }
   const palette = isActivityItem(id) && Object.hasOwn(colorAngles, color) ? "colors/" + color + "/" : "";
   return "/design/optical-glass/" + palette + id + ".webp";
+}
+
+export function artworkFilter(id, family, color, accent = undefined) {
+  const hue = colorAngles[color] ?? accentAngles[accent];
+  if (hue === undefined || isActivityItem(id)) return undefined;
+  const base = familyAngles[family] ?? 211;
+  const saturation = color === "slate" ? .3 : 1;
+  return "hue-rotate(" + (hue - base) + "deg) saturate(" + saturation + ")";
 }
 
 export function glassObject(id, family, { color, accent, className, finish } = {}) {
@@ -32,12 +40,8 @@ export function glassObject(id, family, { color, accent, className, finish } = {
   artwork.loading = "lazy";
   artwork.className = className ? "glass-object " + className : "glass-object";
 
-  const hue = colorAngles[color] ?? accentAngles[accent];
-  if (hue !== undefined && !isActivityItem(id)) {
-    const base = familyAngles[family] ?? 211;
-    const saturation = color === "slate" ? .3 : 1;
-    artwork.style.filter = "hue-rotate(" + (hue - base) + "deg) saturate(" + saturation + ")";
-  }
+  const filter = artworkFilter(id, family, color, accent);
+  if (filter) artwork.style.filter = filter;
   return artwork;
 }
 

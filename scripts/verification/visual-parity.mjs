@@ -24,49 +24,59 @@ let compared = 0;
 const accessibility = [];
 
 // A screenshot alone cannot distinguish an inaccessible control from a working one.
-function visibleLayout(page) {
-  return page.evaluate(() =>
-    [...document.body.querySelectorAll("*")].flatMap((el) => {
-      const rect = el.getBoundingClientRect();
-      if (
-        !rect.width ||
-        !rect.height ||
-        rect.bottom <= 0 ||
-        rect.right <= 0 ||
-        rect.top >= innerHeight ||
-        rect.left >= innerWidth
-      )
-        return [];
-      const style = getComputedStyle(el);
-      if (style.visibility !== "visible") return [];
-      return [
-        [
-          el.localName,
-          el.getAttribute("role"),
-          el.getAttribute("aria-label"),
-          el.getAttribute("title"),
-          el.getAttribute("dir"),
-          rect.x,
-          rect.y,
-          rect.width,
-          rect.height,
-          ...[
-            "color",
-            "background-color",
-            "font-family",
-            "font-size",
-            "font-weight",
-            "line-height",
-            "direction",
-            "border-radius",
-            "box-shadow",
-            "transform",
-            "opacity",
-            "backdrop-filter",
-          ].map((property) => style.getPropertyValue(property)),
-        ],
-      ];
-    }),
+function visibleLayout(page, compareDosePresets) {
+  return page.evaluate(
+    (compareDosePresets) =>
+      [...document.body.querySelectorAll("*")].flatMap((el) => {
+        const rect = el.getBoundingClientRect();
+        if (
+          !rect.width ||
+          !rect.height ||
+          rect.bottom <= 0 ||
+          rect.right <= 0 ||
+          rect.top >= innerHeight ||
+          rect.left >= innerWidth
+        )
+          return [];
+        const style = getComputedStyle(el);
+        if (style.visibility !== "visible") return [];
+        const label = el.getAttribute("aria-label");
+        const presetPrefix = el.textContent + " · ";
+        const comparableLabel =
+          compareDosePresets &&
+          el.matches(".dose-quick-values button[data-dose-value]") &&
+          label?.startsWith(presetPrefix)
+            ? label.slice(presetPrefix.length)
+            : label;
+        return [
+          [
+            el.localName,
+            el.getAttribute("role"),
+            comparableLabel,
+            el.getAttribute("title"),
+            el.getAttribute("dir"),
+            rect.x,
+            rect.y,
+            rect.width,
+            rect.height,
+            ...[
+              "color",
+              "background-color",
+              "font-family",
+              "font-size",
+              "font-weight",
+              "line-height",
+              "direction",
+              "border-radius",
+              "box-shadow",
+              "transform",
+              "opacity",
+              "backdrop-filter",
+            ].map((property) => style.getPropertyValue(property)),
+          ],
+        ];
+      }),
+    compareDosePresets,
   );
 }
 async function serve(dir, port) {
@@ -154,17 +164,43 @@ try {
     );
     assert.ok(left.equals(right), "Original asset changed: " + path);
   }
-  const shell = async (root) =>
-    (await readFile(join(root, "medication/index.html"), "utf8"))
+  const candidateMarkup = await readFile(
+    join(publicCandidate, "medication/index.html"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    candidateMarkup,
+    /<template id="(?:phase|slot)-template"|<form id="(?:editor|snooze-form)"/,
+  );
+  const shell = (markup) =>
+    markup
+      .replace(
+        /^ *(<dialog id="(?:medication-dialog|medicine-details|appearance-dialog)"[^>]*>)[\s\S]*?<\/dialog>/gm,
+        "  $1</dialog>",
+      )
+      .replace(
+        /^ *(<section id="snooze-settings"[^>]*>)[\s\S]*?<\/section>/gm,
+        "  $1</section>",
+      )
+      .replace(
+        /(<div id="medicine-cabinet")[\s\S]*?(?=\s*<section aria-labelledby="med-day-title">)/,
+        "$1></div>",
+      )
+      .replace(
+        /^ *<template id="(?:phase|slot)-template">[\s\S]*?<\/template>\n|^ +\n/gm,
+        "",
+      )
       .replace(
         /(\/medication\/bundles\/(?:bootstrap|medora)-)[A-Z0-9]+\.js/g,
         "$1ENTRY.js",
       )
       .replace(/(<meta name="medora-release" content=")[^"]+"/, '$1REVISION"');
   assert.equal(
-    await shell(publicCandidate),
-    await shell(publicReference),
-    "Full markup of screens, controls and dialogs",
+    shell(candidateMarkup),
+    shell(
+      await readFile(join(publicReference, "medication/index.html"), "utf8"),
+    ),
+    "Markup outside React-owned medication content",
   );
   const origins = await Promise.all([
     serve(join(scratch, "web/public"), 48971),
@@ -205,9 +241,43 @@ try {
         }
         async function compare(name, prepare) {
           let before = await capture(pages[0], prepare);
-          const left = await visibleLayout(pages[0]);
+          const compareDosePresets = name === "medicine-schedule";
+          const left = await visibleLayout(pages[0], compareDosePresets);
           let after = await capture(pages[1], prepare);
-          const right = await visibleLayout(pages[1]);
+          const right = await visibleLayout(pages[1], compareDosePresets);
+          if (compareDosePresets) {
+            assert.ok(
+              await pages[1]
+                .locator(".dose-quick-values button:visible")
+                .evaluateAll(
+                  (buttons) =>
+                    buttons.length > 0 &&
+                    buttons.every((button) =>
+                      button
+                        .getAttribute("aria-label")
+                        ?.startsWith(button.textContent + " · "),
+                    ),
+                ),
+            );
+          }
+          if (JSON.stringify(left) !== JSON.stringify(right)) {
+            const index = Math.min(
+              ...[left, right]
+                .map((items, side) =>
+                  items.findIndex(
+                    (item, i) =>
+                      JSON.stringify(item) !==
+                      JSON.stringify((side ? left : right)[i]),
+                  ),
+                )
+                .filter((i) => i >= 0),
+            );
+            console.error("First layout difference", {
+              index,
+              before: left[index],
+              after: right[index],
+            });
+          }
           assert.ok(
             JSON.stringify(left) === JSON.stringify(right),
             engine.name() +
@@ -269,7 +339,18 @@ try {
               " differs from reference",
           );
           compared++;
-          if (["onboarding", "today", "edit-water"].includes(name)) {
+          if (
+            [
+              "onboarding",
+              "today",
+              "edit-water",
+              "medicine-cabinet",
+              "medicine-details",
+              "medicine-editor",
+              "medicine-schedule",
+              "medicine-appearance",
+            ].includes(name)
+          ) {
             const signatures = await Promise.all(
               pages.map(async (page) => {
                 const audit = await new AxeBuilder({ page })
@@ -378,6 +459,91 @@ try {
             await compare("edit-water");
           }
         }
+        await both(async (page, origin) => {
+          await page.evaluate(async () => {
+            const { accessCare } =
+              await import("/medication/shared/storage.js");
+            const { today } = await import("/medication/shared/ui/dates.js");
+            const day = today();
+            await accessCare((state) => {
+              const id = "visual-medicine";
+              state.medicines[id] = {
+                id,
+                name: "Medication fixture",
+                unit: "tablet",
+                icon: "capsule",
+                color: "green",
+                stock: 15000,
+                threshold: 2000,
+                revision: 1,
+                instructions: "Visual fixture instructions",
+                phases: [
+                  {
+                    start: day - 1,
+                    end: null,
+                    interval: 1,
+                    mask: 127,
+                    slots: [
+                      { minute: 480, amount: 1000 },
+                      { minute: 1080, amount: 500 },
+                    ],
+                  },
+                ],
+              };
+              state.doses[id + "|" + day + "|480"] = {
+                medicineId: id,
+                day,
+                minute: 480,
+                planned: 1000,
+                actual: 1000,
+                status: "taken",
+                debit: 1000,
+              };
+            });
+          });
+          await page.goto(origin + "/medication/?view=medications");
+          await expect(page.locator(".treatment-name")).toBeVisible();
+        });
+        await compare("medicine-cabinet");
+        await both(async (page) => page.locator(".treatment-name").click());
+        await compare("medicine-details");
+        await both(async (page) =>
+          page.locator("#medicine-details-body > button").first().click(),
+        );
+        await compare("medicine-editor");
+        await both(async (page) =>
+          page.locator("#medicine-appearance").click(),
+        );
+        await compare("medicine-appearance");
+        await both(async (page) => {
+          await page.keyboard.press("Escape");
+          await page.locator("#editor-next").click();
+        });
+        await compare("medicine-schedule");
+        await both(async (page) => page.keyboard.press("Escape"));
+        await both(async (page, origin) => {
+          await page.goto(origin + "/medication/");
+          await expect(page.locator("#today-focus .dose-card")).toBeVisible();
+        });
+        await compare("medicine-featured");
+        await both(async (page) => {
+          await page
+            .locator(".header-tools [data-destination=settings]")
+            .click();
+          await page.locator('[data-settings-panel="snooze-settings"]').click();
+          await expect(page.locator("#snooze-form")).toBeVisible();
+        });
+        await compare("medicine-snooze-settings");
+        await both(async (page) => {
+          await page.evaluate(async () => {
+            const { accessCare } =
+              await import("/medication/shared/storage.js");
+            await accessCare((state) => {
+              state.medicines = {};
+              state.doses = {};
+            });
+          });
+        });
         await both(async (page, origin) => {
           await page.evaluate(async () => {
             const { accessCare } =

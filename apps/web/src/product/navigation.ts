@@ -23,7 +23,8 @@ import { refreshArtwork } from "../../../../web/public/medication/design/three-d
 
 import type { createCareIndex } from "../../../../web/public/medication/domain/care-index.js";
 import type { installDeletion } from "./DeleteConfirmation";
-import type { installMedicineView } from "../../../../web/public/medication/features/medicines/view.js";
+import { renderMedicationSnooze } from "./medication/MedicationSnooze";
+import type { RenderDose } from "./medication/Medication";
 import type { installRoutines } from "../../../../web/public/medication/features/routines/view.js";
 import type { CareState, FamilyView } from "./product";
 import { clearFeature } from "./renderer";
@@ -60,7 +61,9 @@ interface Options {
     day?: number,
   ): Promise<boolean>;
   requestDeletion: ReturnType<typeof installDeletion>;
-  renderDose: ReturnType<typeof installMedicineView>["renderDose"];
+  renderDose: RenderDose;
+  disposeDoseCards(list: HTMLElement): void;
+  closeMedicationContext(): void;
   renderRoutine: ReturnType<typeof installRoutines>["card"];
   refreshFields(container: HTMLElement): void;
 }
@@ -76,6 +79,8 @@ export function installNavigation({
   mutate,
   requestDeletion,
   renderDose,
+  disposeDoseCards,
+  closeMedicationContext,
   renderRoutine,
   refreshFields,
 }: Options) {
@@ -100,6 +105,7 @@ export function installNavigation({
     },
   });
   const settings = installSettings({
+    renderSnooze: renderMedicationSnooze,
     getState: getPersonalState,
     mutate,
     refreshFields,
@@ -143,6 +149,7 @@ export function installNavigation({
     getDates: () => dates,
     render,
     renderDose,
+    disposeDoseCards,
     renderRoutine,
     visitCard: appointments.visitCard,
     openWaterHistory: () => show("water"),
@@ -433,16 +440,16 @@ export function installNavigation({
     for (const panel of $("app").querySelectorAll("[data-screen]")) {
       for (const list of panel.querySelectorAll<HTMLElement>(
         "[data-context-list]",
-      ))
+      )) {
+        disposeDoseCards(list);
         clearFeature(list);
+      }
       for (const search of panel.querySelectorAll<HTMLInputElement>(
         'input[type="search"]',
       ))
         search.value = "";
     }
-    $("medicine-details-title").textContent = "";
-    const medicineDetails = $<HTMLDialogElement>("medicine-details");
-    if (medicineDetails.open) medicineDetails.close();
+    closeMedicationContext();
     show("today", false, { mode: "replace" });
   }
   return {

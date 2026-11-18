@@ -66,6 +66,20 @@ The startup and sleep slice passed 102 candidate browser checks in Chromium and 
 
 The local PostgreSQL checks exercised the synthetic Workerd/R2-to-Node/S3 handoff and return after four offline writes from two accounts. The separate legacy rehearsals exercised source reconciliation, refusal to publish an unsupported recovery, and imported-account erasure. No production snapshot was used.
 
+## Medication and dose React verification
+
+The production medication route now uses React for its cabinet, schedule wizard, appearance, history, daily dose controls, snooze preference and delegated dose form. Today and the calendar agenda use the same React dose implementation. The build rejects the three old medication UI controllers in the input graph. The standalone product probe generated the same application HTML, bundles and service worker after omitting those controllers and the seven old medication templates. The probe isolated the separately built design gallery, which still uses the incumbent editor templates.
+
+The workspace suite passed 23 tests with isolated PostgreSQL. The compatibility run passed its JavaScript type check, 44 Node tests, 13 care checks and the closed-client alarm drill. The strict TypeScript check, ESLint, production frontend and Node bundles and both local Worker bundles completed successfully.
+
+On synthetic data, the medication browser tests exercise English LTR and Persian RTL at mobile and desktop widths, keyboard use, Axe, recurrence controls, stock, dose actions, custom snooze duration and navigation. Canonical IndexedDB versions 1, 2 and 3 reopened and retained dose IDs, plan and slot extensions, account metadata and stock after edits. A stale edit did not overwrite a newer revision. The product read the encrypted Android v1 fixture and displayed the restored dose history. The offline test added, edited and deleted plans, logged intake, reloaded without a network, and recovered a Workerd commit after a lost acknowledgement.
+
+The final `pnpm test:product` runs completed with 61 passes in Chromium and 61 in WebKit when run by project. The focused recheck of offline recovery, family writes and concurrent edits completed with six passes across the two engines. The separate incumbent browser command, `npm --prefix web run test:browser`, finished with 80 passes and 42 candidate-only skips.
+
+A focused Chromium visual run matched 28 exact medication screenshots and their visible layouts. Screenshots of WebKit medication dialogs differed in dimmed backdrop pixels by one RGB level. A reference-to-reference control reproduced the same 1,327 differences and the same two pixel digests as the English mobile candidate comparison. The full strict screenshot run and WebKit diagnostics still did not complete cleanly. A dialog-region check also measured 81 editor-header pixels that differed by one RGB level at the English mobile size. Exact pixel thresholds remain in place, and full visual verification remains open. The browser tests identified and fixed the mobile dose menu overlapping the navigation and the quick amount button’s accessible name omitting its visible digit.
+
+The two-account PostgreSQL handoff passed with eight offline writes, including two plans and two dose logs. It retained the plans and doses across the service-worker update, compared them after Node replay and checked them again after transfer back to Workerd. The synthetic fixture also retained its sessions and encrypted object. The [medication benchmark](PERFORMANCE.md#medication-and-dose-phase) measured a 4,989 ms onboarding median and no resource requests during the three measured medication interactions.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

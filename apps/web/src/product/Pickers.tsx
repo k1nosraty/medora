@@ -223,13 +223,9 @@ export function installPickers({ today, selectedDay, dashboard }: Options) {
           if (field.type === "time") {
             openTime(field);
           } else {
-            const max = Number.isInteger(dayNumber(field.max))
-              ? dayNumber(field.max)
-              : Infinity;
+            const max = field.max ? dayNumber(field.max) : Infinity;
             openDate(
-              Number.isInteger(dayNumber(field.value))
-                ? dayNumber(field.value)
-                : today(),
+              field.value ? dayNumber(field.value) : today(),
               max,
               (day) => setValue(field, day === null ? "" : isoDay(day)),
               !field.required,

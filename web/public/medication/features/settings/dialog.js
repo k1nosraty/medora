@@ -14,7 +14,11 @@ const numbers = new Intl.NumberFormat(locale);
 const profileInputs = { firstName: "profile-first-name", lastName: "profile-last-name", birthDate: "profile-birth-date", heightCm: "profile-height", weightKg: "profile-weight" };
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 
-export function installSettings({ getState, mutate, refreshFields }) {
+/** @type {((host: HTMLElement, options: {minutes: number,
+ * save: (control: HTMLButtonElement, minutes: number) => Promise<boolean>, invalid: () => void}) => void) | undefined} */
+const noSnoozeRenderer = undefined;
+
+export function installSettings({ getState, mutate, refreshFields, renderSnooze = noSnoozeRenderer }) {
   const settingsPanels = {
     "profile-settings": [t("ui.profile"), t("ui.personal-information-and-cycle")],
     "display-settings": [t("ui.appearance-and-language"), t("ui.theme-calendar-and-app-language")],
@@ -43,7 +47,7 @@ export function installSettings({ getState, mutate, refreshFields }) {
   let settingsSession = 0;
   let settingsHomeScroll = 0;
   const fitSettings = fitDialogToViewport(settings);
-  const snoozePresets = [...document.querySelectorAll('[name="snooze-preset"]')];
+  const snoozePresets = renderSnooze ? [] : [...document.querySelectorAll('[name="snooze-preset"]')];
   const gender = $("profile-gender");
   const cycle = $("profile-cycle-enabled");
   const saveAppointmentSettings = $("save-appointment-settings");
@@ -142,10 +146,15 @@ export function installSettings({ getState, mutate, refreshFields }) {
     if (panel === "water-settings") loadWaterSettings(data);
     if (panel === "snooze-settings") {
       const minutes = data.medicationSnoozeMinutes ?? 10;
-      const preset = [10, 30, 60].includes(minutes) ? String(minutes) : "custom";
-      snoozePresets.find(control => control.value === preset).checked = true;
-      $("snooze-minutes").value = minutes;
-      $("snooze-custom-row").hidden = preset !== "custom";
+      if (renderSnooze) renderSnooze($(panel), {
+        minutes, save: saveSnooze, invalid: invalidSnooze
+      });
+      else {
+        const preset = [10, 30, 60].includes(minutes) ? String(minutes) : "custom";
+        snoozePresets.find(control => control.value === preset).checked = true;
+        $("snooze-minutes").value = minutes;
+        $("snooze-custom-row").hidden = preset !== "custom";
+      }
     }
     if (panel === "appointment-settings") {
       const appointment = data.appointmentReminders ?? appointmentDefaults;
@@ -288,21 +297,28 @@ export function installSettings({ getState, mutate, refreshFields }) {
     if (saved && !enabled) loadWaterSettings(getState());
     updateWaterPause();
   });
-  for (const control of snoozePresets) control.addEventListener("change", () => {
-    $("snooze-custom-row").hidden = control.value !== "custom";
-  });
-  $("snooze-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const choice = snoozePresets.find(control => control.checked).value;
-    const minutes = integer(choice === "custom" ? $("snooze-minutes").value : choice);
-    if (!(minutes >= 1 && minutes <= 1440)) {
-      settingsFeedback(t("ui.enter-a-snooze-duration-from-1-to-1-440-minutes"), "error");
-      $("snooze-minutes").focus();
-      return;
-    }
-    await saveSettings(event.submitter ?? $("snooze-form").querySelector('[type="submit"]'),
-      state => { state.medicationSnoozeMinutes = minutes; }, t("ui.snooze-duration-saved"));
-  });
+  function saveSnooze(control, minutes) {
+    return saveSettings(control, state => { state.medicationSnoozeMinutes = minutes; }, t("ui.snooze-duration-saved"));
+  }
+  function invalidSnooze() {
+    settingsFeedback(t("ui.enter-a-snooze-duration-from-1-to-1-440-minutes"), "error");
+  }
+  if (!renderSnooze) {
+    for (const control of snoozePresets) control.addEventListener("change", () => {
+      $("snooze-custom-row").hidden = control.value !== "custom";
+    });
+    $("snooze-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const choice = snoozePresets.find(control => control.checked).value;
+      const minutes = integer(choice === "custom" ? $("snooze-minutes").value : choice);
+      if (!(minutes >= 1 && minutes <= 1440)) {
+        invalidSnooze();
+        $("snooze-minutes").focus();
+        return;
+      }
+      await saveSnooze(event.submitter ?? $("snooze-form").querySelector('[type="submit"]'), minutes);
+    });
+  }
   $("appointment-settings-form").addEventListener("submit", async event => {
     event.preventDefault();
     const start = $("appointment-reminders-start").value;

@@ -2,7 +2,7 @@ import * as engine from "../../domain/medication-rules.js";
 import { compilePhases, doseTime } from "../../domain/care-index.js";
 import { dayNumber, localDayNumber } from "../../shared/ui/dates.js";
 
-export function nextPlannedDose(phases, dates = [], notBefore = 0, excluded = () => false) {
+export function nextPlannedDose(phases, dates = [], notBefore = 0, excluded = (_day, _minute) => false) {
   const now = Date.now();
   const earliest = new Date(Math.max(now, notBefore));
   if (earliest.getFullYear() > 9999) return null;

@@ -21,6 +21,7 @@ import { fixtureObjects } from "./fixture-objects.mjs";
 import { saveFixtureBackup } from "./backup-erasure.mjs";
 import { fixtureMailbox } from "./mailbox.mjs";
 import { bundleWorker } from "./bundle-worker.mjs";
+import { normalizePrivateCare } from "../../web/public/medication/features/sync/private-care.js";
 import { withLocalWorker } from "./local-worker.mjs";
 import {
   decryptBackup,
@@ -280,6 +281,14 @@ function readLocal(page, key) {
               resolve(Boolean(settings.result?.settings.accountCare?.enabled));
             else if (key === "extension")
               resolve(settings.result?.settings.fixtureExtension?.value);
+            else if (key === "medication")
+              resolve({
+                medicines: settings.result.settings.medicines,
+                doses: Object.assign(
+                  {},
+                  ...history.result.map((bucket) => bucket.doses),
+                ),
+              });
             else
               resolve(
                 history.result.flatMap(({ water }) =>
@@ -299,12 +308,14 @@ async function household(person, command, status = 200) {
   assert.equal(response.status(), status);
   return response.json();
 }
-async function saved(person) {
+async function saved(person, key = "water") {
   const response = await person.context.request.get(origin + "/api/v2/care", {
     headers: { "X-Medora-Owner": person.owner },
   });
   assert.equal(response.status(), 200);
   const { records } = await response.json();
+  if (key === "medication")
+    return { medicines: records.medicines, doses: records.doses };
   return records.water.map(({ id, amount }) => ({ id, amount }));
 }
 async function add(person, amount) {
@@ -483,6 +494,30 @@ try {
     );
     assert.equal(await readLocal(person.page, "extension"), "preserve");
   }
+  const offlineMedication = [];
+  for (const [index, person] of people.entries()) {
+    const { page } = person;
+    await page.goto(origin + "/medication/?view=medications");
+    await page.locator("#add").click();
+    await page.locator("#name").fill("Offline medicine " + (index + 1));
+    await page.locator("#editor-next").click();
+    await page.locator('[data-dose-value="1000"]:visible').click();
+    await page.locator("#editor-next").click();
+    await page.locator("#editor-next").click();
+    await expect(page.locator("#medication-dialog")).toBeHidden();
+    await page.locator("#med-day-doses .care-record-action").click();
+    await expect(page.locator("#med-day-doses .badge")).toHaveAttribute(
+      "data-status",
+      "taken",
+    );
+    const medication = await readLocal(page, "medication");
+    const [plan] = Object.values(medication.medicines);
+    const [dose] = Object.values(medication.doses);
+    assert.equal(dose.medicineId, plan.id);
+    assert.equal(dose.actual, 1000);
+    offlineMedication.push(medication);
+    await page.goto(origin + "/medication/?view=water");
+  }
   const pendingMail = await people[0].context.request.post(
     origin + "/api/v2/identity/challenges",
     {
@@ -513,7 +548,7 @@ try {
     { code: "55000" },
   );
   upgradeShell = true;
-  for (const person of people) {
+  for (const [index, person] of people.entries()) {
     await person.context.setOffline(false);
     await person.page.evaluate(async () => {
       const registration = await navigator.serviceWorker.ready;
@@ -532,6 +567,10 @@ try {
     await person.page.reload({ waitUntil: "domcontentloaded" });
     await expect(person.page.locator("#water-entries .entry-row")).toHaveCount(
       3,
+    );
+    assert.deepEqual(
+      await readLocal(person.page, "medication"),
+      offlineMedication[index],
     );
     assert.equal(await readLocal(person.page, "extension"), "preserve");
   }
@@ -594,7 +633,7 @@ try {
   upstream = "node";
   await failsValidation(people[0]);
   assert.equal(await writer(), "postgres");
-  for (const person of people) {
+  for (const [index, person] of people.entries()) {
     const queued = await readLocal(person.page, "water");
     const response = person.page.waitForResponse(
       (reply) =>
@@ -610,6 +649,10 @@ try {
     });
     assert.equal(replay.status(), 200);
     assert.deepEqual(await saved(person), queued);
+    assert.deepEqual(
+      await saved(person, "medication"),
+      normalizePrivateCare(offlineMedication[index]),
+    );
     assert.equal(
       (await person.context.request.get(origin + "/api/v2/profile")).status(),
       200,
@@ -654,7 +697,7 @@ try {
   );
   // Roll back the runtime after new Node writes by creating a fresh recovery
   // copy from its authoritative state. The old, retired source remains fenced.
-  const nodeState = await Promise.all(people.map(saved));
+  const nodeState = await Promise.all(people.map((person) => saved(person)));
   returningWorker = workerFor(recoveryDb);
   await returningWorker.ready;
   const reverse = {
@@ -670,7 +713,14 @@ try {
   await commitHandoff(reverse);
   upstream = "recovery";
   assert.equal(await writer(), "postgres");
-  assert.deepEqual(await Promise.all(people.map(saved)), nodeState);
+  assert.deepEqual(
+    await Promise.all(people.map((person) => saved(person))),
+    nodeState,
+  );
+  assert.deepEqual(
+    await Promise.all(people.map((person) => saved(person, "medication"))),
+    offlineMedication.map(normalizePrivateCare),
+  );
   assert.deepEqual(
     (await household(second, view)).policy,
     originalGrant.policy,
@@ -707,7 +757,8 @@ try {
       target: "local Node",
       ...report,
       accounts: 2,
-      offlineWrites: 4,
+      offlineWrites: 8,
+      medicationPlansAndDosesPreserved: true,
       sameOrigin: true,
       sessionsPreserved: true,
       standaloneWranglerVerified: true,

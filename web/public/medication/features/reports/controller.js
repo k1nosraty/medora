@@ -4,7 +4,7 @@ import { weekIndex } from "../../shared/i18n/locale.js";
 import { clearMonthGrid } from "../../shared/ui/month-grid.js";
 import { renderCalendar, renderReports } from "./view.js";
 
-export function installInsights({ root, today, getFamilyView, getDates, render, renderDose, renderRoutine, visitCard,
+export function installInsights({ root, today, getFamilyView, getDates, render, renderDose, disposeDoseCards = (_list) => {}, renderRoutine, visitCard,
   openWater, openWaterHistory, openSleep, openSleepHistory, cycleOpenDay, openCycleHistory }) {
   const get = id => root.querySelector("#" + id);
   let section = "calendar";
@@ -58,7 +58,7 @@ export function installInsights({ root, today, getFamilyView, getDates, render, 
       renderCalendar(state, index, {
         day: selection, start, end: monthStart(start + 32) - 1, today: last, formatDay,
         formatMonth: month, formatNumber: dayNumber, selectDay: choose,
-        renderDose, renderRoutine, visitCard, openWaterHistory, openSleepHistory, openSleep, cycleOpenDay, openCycleHistory,
+        renderDose, disposeDoseCards, renderRoutine, visitCard, openWaterHistory, openSleepHistory, openSleep, cycleOpenDay, openCycleHistory,
         canLogPersonal: !view && selection <= last,
         canAddWater: selection <= last && (!view || view.canRecord("water", selection)), addWater: openWater
       });
@@ -77,7 +77,9 @@ export function installInsights({ root, today, getFamilyView, getDates, render, 
     selection = today();
     clearMonthGrid(get("calendar-days"));
     clearWaterChart();
-    get("calendar-entries").replaceChildren();
+    const agenda = get("calendar-entries");
+    disposeDoseCards(agenda);
+    agenda.replaceChildren();
   }
   return { paint, stop, reset, actionDay: () => section === "calendar" ? selection : today(),
     openCalendar(day) {
