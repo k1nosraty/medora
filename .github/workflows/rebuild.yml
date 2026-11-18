@@ -1,0 +1,50 @@
+name: Verify Medora rebuild
+on:
+  pull_request:
+  push:
+    branches: ['codex/medora-2-full-rebuild']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env:
+          POSTGRES_USER: medora
+          POSTGRES_DB: medora_fixture
+          POSTGRES_PASSWORD: fixture-ci-only
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U medora" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://medora:fixture-ci-only@127.0.0.1:5432/medora_fixture
+      MEDORA_TEST_DATABASE_URL: postgresql://medora:fixture-ci-only@127.0.0.1:5432/medora_fixture
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24.18.0', cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci --prefix web
+      - run: pnpm audit --prod --audit-level=high
+      - run: pnpm typecheck && pnpm lint
+      - run: pnpm db:migrate && pnpm db:migrate
+      - run: pnpm test
+      - run: node scripts/verification/rehearse.mjs
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm test:e2e
+      - run: web/node_modules/.bin/wrangler deploy --config infrastructure/cloudflare/local.json --dry-run --outdir "$RUNNER_TEMP/worker"
+      - name: Exercise standalone storage, Node and reverse proxy
+        run: |
+          config="$RUNNER_TEMP/medora-fixture.env"
+          node scripts/verification/local-env.mjs "$config"
+          docker compose --env-file "$config" -p medora-ci up -d --build --wait
+          set -a
+          . "$config"
+          set +a
+          env -u MEDORA_TEST_DATABASE_URL MEDORA_TEST_COMPOSE_ENV="$config" MEDORA_TEST_COMPOSE_PROJECT=medora-ci node scripts/verification/runtime.mjs http://127.0.0.1:8808

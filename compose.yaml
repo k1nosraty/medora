@@ -1,0 +1,64 @@
+name: medora-rebuild
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_USER: medora
+      POSTGRES_DB: medora
+      POSTGRES_PASSWORD: ${MEDORA_DB_PASSWORD:?Set the isolated database password}
+    volumes: [database:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medora"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  storage:
+    image: versity/versitygw:v1.11.0
+    command: ["--port", ":9000", "posix", "/data"]
+    environment:
+      ROOT_ACCESS_KEY: medora-local
+      ROOT_SECRET_KEY: ${MEDORA_STORAGE_SECRET:?Set the local object storage secret}
+    volumes: [objects:/data]
+  mailpit:
+    image: ghcr.io/axllent/mailpit:v1.33.1
+    ports: ["127.0.0.1:${MEDORA_MAIL_PORT:-8810}:8025"]
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+      target: api
+    environment:
+      MEDORA_CODE_KEY: ${MEDORA_CODE_KEY:?Set the local challenge key}
+      MEDORA_MAIL_KEY: ${MEDORA_MAIL_KEY:?Set the local delivery key}
+      MEDORA_FROM: medora@example.test
+      MEDORA_MAILPIT: http://mailpit:8025
+      PUBLIC_ORIGIN: ${MEDORA_PUBLIC_ORIGIN:-}
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://medora:${MEDORA_DB_PASSWORD}@postgres:5432/medora
+      MEDORA_PASSWORD_KEYS: ${MEDORA_PASSWORD_KEYS:?Set the isolated password key registry}
+      S3_ENDPOINT: http://storage:9000
+      S3_BUCKET: medora-archives
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: medora-local
+      S3_SECRET_ACCESS_KEY: ${MEDORA_STORAGE_SECRET}
+    depends_on:
+      postgres: {condition: service_healthy}
+      storage: {condition: service_started}
+      mailpit: {condition: service_started}
+    restart: on-failure:5
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8802/api/v2/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 4s
+      timeout: 3s
+      retries: 20
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+      target: web
+    ports: ["127.0.0.1:${MEDORA_PORT:-8808}:8080"]
+    depends_on:
+      api: {condition: service_healthy}
+volumes:
+  database:
+  objects:

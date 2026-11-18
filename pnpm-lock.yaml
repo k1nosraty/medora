@@ -21,6 +21,9 @@ importers:
       '@playwright/test':
         specifier: 1.64.1
         version: 1.64.1
+      '@tanstack/react-query':
+        specifier: ^5.108.0
+        version: 5.108.0(@types/react@19.3.0)(react@19.3.1)
       '@testing-library/react':
         specifier: ^16
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -45,6 +48,15 @@ importers:
       jsdom:
         specifier: ^27
         version: 27.4.0
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+      react-router-dom:
+        specifier: ^7.18.5
+        version: 7.18.5(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -58,8 +70,8 @@ importers:
   apps/api:
     dependencies:
       '@hono/node-server':
-        specifier: ^1
-        version: 1.19.19(hono@4.13.19)
+        specifier: ^2.1.9
+        version: 2.1.9(hono@4.13.19)
       '@medora/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -397,11 +409,11 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@hono/node-server@1.19.19':
-    resolution: {integrity: sha512-Fy9R7PACOzHU9LDpfnuzVyuVYevKQRcEG2mZhmfc+DRdmayEd3RVfa2XOt2IgGcPNgA77Yk63KBszepcMFK5Ng==}
-    engines: {node: '>=18.14.1'}
+  '@hono/node-server@2.1.9':
+    resolution: {integrity: sha512-Sk4NQd3GFY0WZWCzndwFMPwJhtD0y9qjsQ+pjID0/03nK9pxyBCUoUHCho8QYBLBVhi0ssL8UkNPHqbgSOFPIQ==}
+    engines: {node: '>=20'}
     peerDependencies:
-      hono: ^4
+      hono: ^4 || ^5.0.0-0
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1893,7 +1905,7 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@hono/node-server@1.19.19(hono@4.13.19)':
+  '@hono/node-server@2.1.9(hono@4.13.19)':
     dependencies:
       hono: 4.13.19
 

@@ -3,16 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/node.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.mjs",
+    "build": "esbuild src/node.ts --bundle --platform=node --format=esm --external:pg --external:hono --external:@hono/node-server --external:drizzle-orm --external:aws4fetch --outfile=dist/server.mjs",
     "start": "node dist/server.mjs"
   },
   "dependencies": {
-    "hono": "^4",
-    "@hono/node-server": "^1",
-    "pg": "^8",
-    "drizzle-orm": "^0.45",
+    "@hono/node-server": "^2.1.9",
     "@medora/contracts": "workspace:*",
-    "aws4fetch": "^1.0.20"
+    "aws4fetch": "^1.0.20",
+    "drizzle-orm": "^0.45",
+    "hono": "^4",
+    "pg": "^8"
   },
   "devDependencies": {
     "esbuild": "0.28.2"
