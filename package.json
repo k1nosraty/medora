@@ -1,0 +1,36 @@
+{
+  "name": "medora",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"tests/**/*.{ts,tsx}\" --max-warnings=0",
+    "test": "vitest run",
+    "build": "pnpm --filter @medora/web build && pnpm --filter @medora/api build",
+    "test:e2e": "playwright test",
+    "db:migrate": "node scripts/migration/apply.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@playwright/test": "1.64.1",
+    "@axe-core/playwright": "^4",
+    "@eslint/js": "^9",
+    "eslint": "^9",
+    "typescript-eslint": "^8",
+    "typescript": "5.9.3",
+    "vitest": "^4",
+    "fake-indexeddb": "^6",
+    "@testing-library/react": "^16",
+    "jsdom": "^27",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/pg": "^8"
+  },
+  "dependencies": {
+    "pg": "^8"
+  }
+}

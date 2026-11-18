@@ -14,6 +14,15 @@ function blankDay(day) {
   return { day, doses: {}, water: [], routines: {} };
 }
 
+function hasHistoryOrExtensions(bucket) {
+  return bucket.water.length || Object.keys(bucket.doses).length || Object.keys(bucket.routines ?? {}).length ||
+    Object.keys(bucket).some(key => !["day", "doses", "water", "routines"].includes(key));
+}
+
+function historyKey(bucket) {
+  return JSON.stringify([bucket.doses, bucket.water, bucket.routines ?? {}]);
+}
+
 function historyDays(state) {
   const days = new Map();
   function bucket(day) {
@@ -143,10 +152,10 @@ async function transact(change, { snapshot, day, settingsOnly } = {}) {
             const scoped = { ...settings, doses, water, routineLogs: { [day]: routines } };
             change(scoped);
             nextDays = new Map(days);
-            const updated = { day, doses: scoped.doses, water: scoped.water, routines: scoped.routineLogs[day] ?? {} };
-            if (JSON.stringify(updated) !== JSON.stringify({ ...bucket, routines: bucket.routines ?? {} })) {
+            const updated = { ...bucket, doses: scoped.doses, water: scoped.water, routines: scoped.routineLogs[day] ?? {} };
+            if (historyKey(updated) !== historyKey(bucket)) {
               changed = true;
-              if (updated.water.length || Object.keys(updated.doses).length || Object.keys(updated.routines).length) {
+              if (hasHistoryOrExtensions(updated)) {
                 nextDays.set(day, updated);
                 history.put(updated);
               } else {
@@ -158,12 +167,16 @@ async function transact(change, { snapshot, day, settingsOnly } = {}) {
             result = changed ? assemble(nextSettings, nextDays) :
               matching ? { ...nextSettings, doses: snapshot.doses, water: snapshot.water, routineLogs: snapshot.routineLogs } : assemble(nextSettings, nextDays);
           } else {
-            const before = new Map([...days].map(([key, bucket]) => [key, JSON.stringify({ ...bucket, routines: bucket.routines ?? {} })]));
+            const before = new Map([...days].map(([key, bucket]) => [key, historyKey(bucket)]));
             result = assemble(settings, days);
             change(result);
             nextDays = historyDays(result);
+            for (const [key, previous] of days) {
+              const updated = { ...previous, ...(nextDays.get(key) ?? blankDay(key)) };
+              if (hasHistoryOrExtensions(updated)) nextDays.set(key, updated);
+            }
             for (const [key, bucket] of nextDays) {
-              if (before.get(key) === JSON.stringify(bucket)) continue;
+              if (before.get(key) === historyKey(bucket)) continue;
               history.put(bucket);
               changed = true;
             }
@@ -175,7 +188,7 @@ async function transact(change, { snapshot, day, settingsOnly } = {}) {
           }
           const nextSettings = metadata(result);
           const nextRevision = revision + Number(changed);
-          care.put({ settings: nextSettings, revision: nextRevision }, "state");
+          care.put({ ...stored, settings: nextSettings, revision: nextRevision }, "state");
           snapshots.set(result, { revision: nextRevision, days: nextDays, settingsKey: JSON.stringify(nextSettings) });
         }
 
