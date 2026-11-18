@@ -1,3 +1,5 @@
+import { renderWaterChart } from "./water-chart.js";
+import { renderStats } from "./stats.js";
 import { renderMonthGrid } from "../../shared/ui/month-grid.js";
 import { listSeparator, locale, t } from "../../shared/i18n/locale.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
@@ -56,24 +58,22 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
   $("calendar-month").textContent = formatMonth(start);
   renderMonthGrid($("calendar-days"), {
     start, end, selected: day, today, formatDay, formatNumber, onSelect: selectDay,
-    decorate(control, date) {
-      const dots = element("span", "", "calendar-dots");
-      dots.setAttribute("aria-hidden", "true");
+    describe(date) {
+      const dots = [], captions = [];
       for (const [exists, kind, label] of [
         [index.waterOn(date).length, "water", t("ui.log-water")], [index.dosesOn(date).length, "medicine", t("ui.medication-dose")],
         [sleepDays.has(date), "sleep", t("ui.sleep")],
         [index.visitsOn(date).length, "visit", t("ui.medical-appointment")], [index.calendarRoutinesOn(date).length, "routine", t("ui.routine")]
       ]) if (exists) {
-        dots.append(element("i", "", kind));
-        control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + label);
+        dots.push(kind);
+        captions.push(label);
       }
-      const mark = cycleDayMark(date);
-      if (mark) {
-        control.dataset.cycleStatus = mark;
-        const label = { spotting: "ui.cycle-spotting", recorded: "ui.logged-cycle", forecast: "ui.estimated-cycle-start" }[mark];
-        control.setAttribute("aria-label", control.getAttribute("aria-label") + listSeparator + t(label));
-      } else if (daily[date]) dots.append(element("i", "", "cycle"));
-      control.append(dots);
+      const cycle = cycleDayMark(date);
+      if (cycle) {
+        const label = { spotting: "ui.cycle-spotting", recorded: "ui.logged-cycle", forecast: "ui.estimated-cycle-start" }[cycle];
+        captions.push(t(label));
+      } else if (daily[date]) dots.push("cycle");
+      return { dots, cycle: cycle ?? undefined, caption: captions.length ? listSeparator + captions.join(listSeparator) : "" };
     }
   });
 
@@ -140,91 +140,6 @@ export function renderCalendar(state, index, { day, start, end, today, formatMon
   }
 }
 
-function reportChart(range, first, goal, groupByMonth, formatShortDate, formatDay, monthStart) {
-  const last = first + range.length - 1;
-  const bars = [];
-  for (let start = first; start <= last;) {
-    let end = start;
-    if (groupByMonth) {
-      const month = monthStart(start);
-      end = Math.min(last, monthStart(month + 32) - 1);
-    }
-    const amounts = range.slice(start - first, end - first + 1).filter(Boolean);
-    bars.push({ start, end, count: amounts.length, value: amounts.length ? sum(amounts) / amounts.length : 0 });
-    start = end + 1;
-  }
-
-  const chart = $("report-chart");
-  const direction = document.documentElement.dir;
-  $("report-water-trend").dir = direction;
-  const dateLabel = (bar, long = false) => {
-    const format = long ? formatDay : formatShortDate;
-    return bar.start === bar.end ? format(bar.start) : t("ui.from-value-to-value", format(bar.start), format(bar.end));
-  };
-  const valueLabel = bar => bar.count ? t("ui.value-ml", number(Math.round(bar.value))) : t("ui.not-logged");
-  const key = JSON.stringify([goal, groupByMonth, direction, bars.map(bar => [dateLabel(bar, true), bar.value, bar.count])]);
-  if (chart.dataset.chartKey === key) return;
-  chart.dataset.chartKey = key;
-  const max = Math.max(goal, ...bars.map(bar => bar.value));
-  chart.style.setProperty("--goal", `${goal / max * 100}%`);
-  const selection = $("report-chart-selection");
-  const picker = $("report-chart-pick");
-  const previous = $("report-chart-previous");
-  const next = $("report-chart-next");
-  const initial = bars.findLastIndex(bar => bar.count);
-  let selected = initial;
-  const controls = bars.map((bar, i) => {
-    const control = button("", () => select(i));
-    control.setAttribute("aria-label", t("ui.value-value", dateLabel(bar, true), valueLabel(bar)));
-    control.style.setProperty("--bar", `${bar.value / max * 100}%`);
-    control.style.setProperty("--days", bar.end - bar.start + 1);
-    control.dataset.logged = String(Boolean(bar.count));
-    control.addEventListener("keydown", event => {
-      const rtl = direction === "rtl";
-      const target = { ArrowLeft: i + (rtl ? 1 : -1), ArrowRight: i + (rtl ? -1 : 1),
-        Home: 0, End: bars.length - 1 }[event.key];
-      if (target === undefined) return;
-      event.preventDefault();
-      if (controls[target]) {
-        select(target);
-        controls[target].focus();
-      }
-    });
-    return control;
-  });
-  function select(index) {
-    selected = index;
-    controls.forEach((control, i) => {
-      control.setAttribute("aria-pressed", String(i === selected));
-      control.tabIndex = i === selected ? 0 : -1;
-    });
-    const bar = bars[selected];
-    picker.selectedIndex = index;
-    selection.replaceChildren(element("span", dateLabel(bar)),
-      element("strong", valueLabel(bar)),
-      ...(bar.end > bar.start && bar.count ? [element("small", t("ui.average-across-value-logged-days", number(bar.count)))] : []));
-    previous.setAttribute("aria-disabled", String(selected === 0));
-    next.setAttribute("aria-disabled", String(selected === bars.length - 1));
-  }
-  previous.onclick = () => { if (selected > 0) select(selected - 1); };
-  next.onclick = () => { if (selected < bars.length - 1) select(selected + 1); };
-  picker.replaceChildren(...bars.map(bar => new Option(t("ui.value-value", dateLabel(bar), valueLabel(bar)))));
-  picker.onchange = () => select(picker.selectedIndex);
-  chart.replaceChildren(...controls);
-  $("report-chart-dates").replaceChildren(element("span", formatShortDate(first)), element("span", formatShortDate(last)));
-  select(initial);
-}
-
-function reportStats(id, stats) {
-  const list = $(id);
-  list.replaceChildren(...stats.map(([label, value, tone]) => {
-    const tile = element("div");
-    if (tone) tile.dataset.tone = tone;
-    tile.append(element("dt", t(label)), element("dd", value));
-    return tile;
-  }));
-}
-
 function renderCycleReport(state, first, last, formatDay) {
   const sleepEnabled = sleepIsEnabled(state);
   $("report-sleep-card").hidden = !sleepEnabled;
@@ -238,7 +153,7 @@ function renderCycleReport(state, first, last, formatDay) {
   const totals = enabled ? cycleTotals(state.cycleRecords, first, last, state.cycleDays) : null;
   $("report-cycle-empty").hidden = Boolean(totals?.days);
   $("report-cycle-breakdown").hidden = !totals?.days;
-  reportStats("report-cycle-breakdown", totals?.days ? [
+  renderStats($("report-cycle-breakdown"), totals?.days ? [
     ["شروع‌های ثبت‌شده", number(totals.starts)],
     ["روزهای ثبت‌شدهٔ پریود", number(totals.days)],
     ...(totals.latestStart === null ? [] : [["آخرین شروع در این بازه", formatDay(totals.latestStart)]])
@@ -257,7 +172,7 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
     $("report-water-trend").hidden = !waterDays;
   $("report-water-empty").hidden = Boolean(waterDays);
   if (waterDays) {
-    reportStats("report-water-coverage", [
+    renderStats($("report-water-coverage"), [
       ["کل آب (میلی‌لیتر)", number(totalWater)],
       ["روزهای دارای ثبت", t("ui.value-of-value", number(waterDays), number(range.length))],
       ["روزهای رسیدن به هدف", number(range.filter(amount => amount >= goal).length), "done"]
@@ -275,7 +190,7 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
     ? t("ui.value-of-value-doses-taken", number(taken), number(doses))
     : t("ui.no-doses-are-due-or-logged-in-this-period");
   $("report-dose-breakdown").hidden = !hasDoses;
-  if (hasDoses) reportStats("report-dose-breakdown", [
+  if (hasDoses) renderStats($("report-dose-breakdown"), [
     ["مصرف‌شده", number(taken), "done"],
     ["مصرف‌نشده", number(skipped), "partial"],
     ["بدون ثبت", number(unrecorded)]
@@ -293,7 +208,7 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
     ? t("ui.value-of-value-routine-occurrences-completed", number(routines.completed), number(routineCount))
     : t("ui.no-routines-are-due-or-logged-in-this-period");
   $("report-routine-breakdown").hidden = !hasRoutines;
-  if (hasRoutines) reportStats("report-routine-breakdown", [
+  if (hasRoutines) renderStats($("report-routine-breakdown"), [
     ["انجام‌شده", number(routines.completed), "done"],
     ["نیمه‌تمام", number(routines.partial), "partial"],
     ["بدون ثبت", number(routines.unrecorded)]
@@ -305,11 +220,11 @@ export function renderReports({ first, last, period }, goal, index, formatShortD
   $("report-visit-value").hidden = !hasVisits;
   $("report-visits").textContent = t(hasVisits ? "قرار با حضور ثبت‌شده" : "در این بازه قراری ندارید.");
   $("report-visit-breakdown").hidden = !hasVisits;
-  if (hasVisits) reportStats("report-visit-breakdown", [
+  if (hasVisits) renderStats($("report-visit-breakdown"), [
     ["بدون ثبت حضور", number(visits.unrecorded)],
     ["پیش رو", number(visits.upcoming)],
     ["لغوشده", number(visits.cancelled), "partial"]
   ]);
 
-  if (waterDays) reportChart(range, first, goal, period === "year", formatShortDate, formatDay, monthStart);
+  if (waterDays) renderWaterChart(range, first, goal, period === "year", formatShortDate, formatDay, monthStart);
 }

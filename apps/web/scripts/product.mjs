@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import {
   cp,
   lstat,
@@ -11,6 +12,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve, join, relative } from "node:path";
 import { buildWeb } from "../../../web/scripts/build-web.mjs";
 
+const { build } = createRequire(
+  new URL("../../../web/package.json", import.meta.url),
+)("esbuild");
 const app = fileURLToPath(new URL("../", import.meta.url));
 const source = resolve(app, "../../web/public");
 const output = resolve(app, "dist");
@@ -18,6 +22,11 @@ const staging = await mkdtemp(join(app, ".product-"));
 const components = new Map([
   ["medication/app/onboarding.js", "Onboarding.tsx"],
   ["medication/app/week-strip.js", "DayWeek.tsx"],
+  ["medication/shared/ui/month-grid.js", "MonthGrid.tsx"],
+  ["medication/features/reports/stats.js", "ReportStats.tsx"],
+  ["medication/features/reports/water-chart.js", "WaterChart.tsx"],
+  ["medication/features/sleep/history.js", "SleepHistory.tsx"],
+  ["medication/features/support-tickets.js", "SupportTickets.tsx"],
   ["medication/shared/account-transport.js", "accountTransport.ts"],
   ["medication/features/water/entries.js", "WaterEntries.tsx"],
 ]);
@@ -58,6 +67,15 @@ try {
       },
     },
   ]);
+  await build({
+    entryPoints: [join(app, "src/product/accountTransport.ts")],
+    bundle: true,
+    minify: true,
+    format: "esm",
+    platform: "browser",
+    target: "es2022",
+    outfile: join(staging, "medication/shared/account-transport.js"),
+  });
   await mkdir(output, { recursive: true });
   for (const name of await readdir(output)) {
     if (name !== "journal")

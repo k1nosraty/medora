@@ -10,8 +10,12 @@ export function paintFeature(
   host: HTMLElement,
   view: ReactNode,
   firstPaint: () => void,
+  beforeReact?: () => void,
 ) {
-  if (render) return render(host, view);
+  if (render) {
+    beforeReact?.();
+    return render(host, view);
+  }
   firstPaint();
   loading ??= import("./renderer")
     .then((module) => {
@@ -20,4 +24,9 @@ export function paintFeature(
     .catch(() => {
       loading = undefined;
     });
+}
+
+export function clearFeature(host: HTMLElement) {
+  if (render) render(host, null);
+  else host.replaceChildren();
 }

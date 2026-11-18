@@ -75,6 +75,7 @@ async function auth(route: string, options: RequestInit, mode: Writer) {
       return request("identity/challenges", {
         email: data.email,
         purpose: route === "reset-code" ? "reset" : "register",
+        language: data.language,
       });
     case "confirm-email":
       return request("identity/confirm-email", {
@@ -211,6 +212,16 @@ export async function accountTransport(
   }
   if (mode.writer === "legacy") return fetch(path, options);
   if (mode.writer === "frozen") return unavailable();
+  if (
+    path === "/api/config" ||
+    path.startsWith("/api/reminders") ||
+    path === "/api/support" ||
+    path === "/api/operations" ||
+    path === "/api/operations/activity" ||
+    /^\/api\/admin\/accounts(?:[?]|$)/.test(path) ||
+    /^\/api\/(?:admin\/)?(?:promotion|operations)(?:[/?]|$)/.test(path)
+  )
+    return fetch(endpoint(path.slice(5)), options);
   if (path.startsWith("/api/auth/"))
     return auth(path.slice("/api/auth/".length), options, mode);
   if (path.startsWith("/api/family")) {
@@ -227,5 +238,6 @@ export async function accountTransport(
       { ...options, headers },
     );
   }
-  return care(path, options);
+  if (path.startsWith("/api/account/care")) return care(path, options);
+  return unavailable();
 }

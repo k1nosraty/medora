@@ -1,3 +1,4 @@
+import {accountTransport} from "../../shared/account-transport.js";
 import { $ } from "../../shared/ui/dom.js";
 import { presentPromotion } from "./presentation.js";
 
@@ -64,7 +65,7 @@ export function installPromotion(loadOperations) {
       if (!await allowed || !eligible()) return;
       if (!pending || Date.now() >= pending.expires) {
         lastAttempt = Date.now();
-        const response = await fetch("/api/promotion", {
+        const response = await accountTransport("/api/promotion", {
           credentials: "omit", cache: "no-store", signal: AbortSignal.timeout(10_000)
         });
         if (!response.ok) throw new Error("promotion_unavailable");
@@ -114,7 +115,7 @@ export function installPromotion(loadOperations) {
       finish();
       return;
     }
-    const count = event => void fetch("/api/promotion/events", {
+    const count = event => void accountTransport("/api/promotion/events", {
       method: "POST", credentials: "omit", keepalive: true,
       headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: promotion.id, event })
     }).catch(() => {});

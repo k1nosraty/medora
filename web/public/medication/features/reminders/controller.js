@@ -1,3 +1,4 @@
+import { accountTransport } from "../../shared/account-transport.js";
 import { defaultCalendar, language, locale, t } from "../../shared/i18n/locale.js";
 import { accessCare, accessCareSettings } from "../../shared/storage.js";
 import { scheduleForPush, localZone } from "../../domain/care-plan.js";
@@ -50,7 +51,7 @@ function serialize(action) {
 async function request(path, method, token, body) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   if (body) headers["Content-Type"] = "application/json";
-  const response = await fetch(path, { method, headers, body: body && JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(12_000) });
+  const response = await accountTransport(path, { method, headers, body: body && JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(12_000) });
   if (!response.ok) {
     const { error } = await response.json().catch(() => ({}));
     throw new Error(error || "server");
@@ -238,7 +239,7 @@ export async function initializeReminders() {
     return status(t("ui.web-notifications-are-unavailable-in-this-browser"));
   }
   try {
-    const [root, config] = await Promise.all([navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }), fetch("/api/config")]);
+    const [root, config] = await Promise.all([navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }), accountTransport("/api/config")]);
     if (!config.ok) throw new Error("config");
     const { publicKey: key } = await config.json();
     publicKey = Uint8Array.from(atob(key.replaceAll("-", "+").replaceAll("_", "/")), char => char.charCodeAt(0));

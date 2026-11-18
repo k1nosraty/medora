@@ -1,5 +1,7 @@
+import { clearWaterChart } from "./water-chart.js";
 import { setPressed } from "../../shared/ui/controls.js";
 import { weekIndex } from "../../shared/i18n/locale.js";
+import { clearMonthGrid } from "../../shared/ui/month-grid.js";
 import { renderCalendar, renderReports } from "./view.js";
 
 export function installInsights({ root, today, getFamilyView, getDates, render, renderDose, renderRoutine, visitCard,
@@ -73,10 +75,9 @@ export function installInsights({ root, today, getFamilyView, getDates, render, 
 
   function reset() {
     selection = today();
-    for (const id of ["calendar-days", "calendar-entries", "report-chart", "report-chart-dates", "report-chart-pick"]) get(id).replaceChildren();
-    delete get("report-chart").dataset.chartKey;
-    get("report-chart-pick").onchange = null;
-    for (const id of ["report-chart-previous", "report-chart-next"]) get(id).onclick = null;
+    clearMonthGrid(get("calendar-days"));
+    clearWaterChart();
+    get("calendar-entries").replaceChildren();
   }
   return { paint, stop, reset, actionDay: () => section === "calendar" ? selection : today(),
     openCalendar(day) {

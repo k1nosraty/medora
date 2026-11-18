@@ -1,10 +1,11 @@
+import {renderSleepChart,renderSleepHistory} from "./history.js";
 import { equalCareValues } from "../../domain/care-contract.js";
 import { localZone } from "../../domain/care-plan.js";
 import { isoDay } from "../../domain/care-index.js";
 import { sleepConflicts, sleepDay, sleepInstant, sleepIsEnabled, sleepMinutes, sleepReport, sleepWall, validSleepRecord } from "../../domain/sleep.js";
 import { localDigits, locale, t, weekIndex } from "../../shared/i18n/locale.js";
 import { CareInputError } from "../../shared/ui/care-error.js";
-import { $, button, element } from "../../shared/ui/dom.js";
+import { $ } from "../../shared/ui/dom.js";
 import { setPressed } from "../../shared/ui/controls.js";
 import { sleepDuration } from "./presentation.js";
 
@@ -196,49 +197,35 @@ export function installSleep({ getState, getFamilyView, getDates, mutate, today,
     if (state.sleepSettings?.goal) metrics.push(t("ui.sleep-goal-value", sleepDuration(state.sleepSettings.goal)));
     $("sleep-average").textContent = metrics.join(" · ") || t("ui.sleep-empty");
     const scale = Math.max(600, ...nights.values());
-    chart.replaceChildren(...Array.from({ length: last - first + 1 }, (_, index) => {
-      const day = first + index;
-      const minutes = nights.get(day);
-      const item = element("li");
-      const select = button(dates.dayNumber(day), () => {
-        chartDay = chartDay === day ? undefined : day;
-        render();
-      });
-      select.dataset.focusKey = "sleep-chart-" + day;
-      select.setAttribute("aria-label", dates.formatDay(day, true) + " · " +
-        (minutes === undefined ? t("ui.sleep-no-record") : sleepDuration(minutes)));
-      select.setAttribute("aria-pressed", String(day === chartDay));
-      const bar = element("span");
-      bar.setAttribute("aria-hidden", "true");
-      bar.style.setProperty("--sleep-bar", (minutes ?? 0) / scale * 100 + "%");
-      select.prepend(bar);
-      item.append(select);
-      return item;
-    }));
+    const cells=Array.from({ length: last - first + 1 },(_,index)=>{
+      const day=first+index,minutes=nights.get(day);
+      return {day,number:dates.dayNumber(day),selected:day===chartDay,size:(minutes??0)/scale*100+"%",
+        label:dates.formatDay(day,true)+" · "+(minutes===undefined ? t("ui.sleep-no-record") : sleepDuration(minutes)),
+        choose() {
+          chartDay=chartDay===day ? undefined : day;
+          render();
+        }
+      };
+    });
+    renderSleepChart(chart,cells);
     const entries = Object.entries(rows).sort((a, b) => (b[1].end ?? b[1].start) - (a[1].end ?? a[1].start))
       .filter(([, row]) => chartDay === undefined ? row.end === null || sleepDay(row) >= first && sleepDay(row) <= last : sleepDay(row) === chartDay);
     $("sleep-empty").hidden = Boolean(entries.length);
-    $("sleep-history").replaceChildren(...entries.map(([id, row]) => {
-      const article = element("article", "", "sleep-history-row");
-      const title = row.end === null ? t("ui.sleep-in-progress") : t(row.kind === "main" ? "ui.sleep-main" : "ui.sleep-nap") +
-        " · " + sleepDuration(sleepMinutes(row));
-      const detail = element("div");
-      detail.append(element("strong", title), element("p", dates.formatDay(sleepDay(row), true) + " · " +
-        (row.end === null ? timeOf(row.start, row.zone) : t("ui.sleep-times", timeOf(row.start, row.zone), timeOf(row.end, row.zone))), "quiet"));
-      if (row.quality) detail.append(element("p", t(`ui.sleep-${row.quality}`), "quiet"));
-      if (row.note) detail.append(element("p", row.note, "quiet"));
-      article.append(detail);
-      if (!getFamilyView()) {
-        const edit = button(t("ui.edit"), () => open(id));
-        const remove = button(t("ui.delete"), () => requestDeletion({
-          title: t("ui.sleep-delete"), message: dates.formatDay(sleepDay(row)), success: t("ui.sleep-deleted"),
-          change: next => { delete next.sleepRecords?.[id]; }
-        }));
-        edit.className = remove.className = "text-button";
-        article.append(edit, remove);
-      }
-      return article;
-    }));
+    const personal=!getFamilyView();
+    renderSleepHistory($("sleep-history"),entries.map(([id,row])=>({
+      id,title:row.end===null ? t("ui.sleep-in-progress") : t(row.kind==="main" ? "ui.sleep-main" : "ui.sleep-nap")+
+        " · "+sleepDuration(sleepMinutes(row)),
+      when:dates.formatDay(sleepDay(row),true)+" · "+
+        (row.end===null ? timeOf(row.start,row.zone) : t("ui.sleep-times",timeOf(row.start,row.zone),timeOf(row.end,row.zone))),
+      quality:row.quality ? t(`ui.sleep-${row.quality}`) : "",note:row.note??"",
+      actions:personal ? {
+        editLabel:t("ui.edit"),removeLabel:t("ui.delete"),edit:()=>open(id),
+        remove:()=>requestDeletion({
+          title:t("ui.sleep-delete"),message:dates.formatDay(sleepDay(row)),success:t("ui.sleep-deleted"),
+          change:next=>{delete next.sleepRecords?.[id];}
+        })
+      } : null
+    })));
   }
   return { open, draw, paintToday, focusDay(day) {
     selection = chartDay = day;

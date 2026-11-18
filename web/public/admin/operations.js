@@ -1,3 +1,4 @@
+import {accountTransport} from "/medication/shared/account-transport.js";
 import { $, element } from "/medication/shared/ui/dom.js";
 import { t, locale } from "/medication/shared/i18n/locale.js";
 
@@ -32,7 +33,7 @@ function audience(name, value) {
 }
 for (const name of audienceNames) $(name + "-audience").addEventListener("change", () => audience(name));
 async function api(path, body) {
-  const response = await fetch("/api/admin/operations" + path, body ? {
+  const response = await accountTransport("/api/admin/operations" + path, body ? {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   } : {});
   if (!response.ok) throw new Error(String(response.status));

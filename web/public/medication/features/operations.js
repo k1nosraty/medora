@@ -1,9 +1,11 @@
-import { $, element } from "../shared/ui/dom.js";
+import { accountTransport } from "../shared/account-transport.js";
+import { renderTickets } from "./support-tickets.js";
+import { $ } from "../shared/ui/dom.js";
 import { t } from "../shared/i18n/locale.js";
 
 export async function loadOperations() {
   try {
-    const response = await fetch("/api/operations", { credentials: "omit", signal: AbortSignal.timeout(3000) });
+    const response = await accountTransport("/api/operations", { credentials: "omit", signal: AbortSignal.timeout(3000) });
     if (!response.ok) return true;
     const { flags, notice } = await response.json();
     const bucket = Number(localStorage.getItem("medora-rollout") ?? -1);
@@ -29,10 +31,10 @@ export function installSupport() {
   const form = $("support-form");
   const show = async () => {
     status.textContent = "";
-    history.replaceChildren();
+    renderTickets(history,[]);
     $("support-sign-in").hidden = true;
     try {
-      const response = await fetch("/api/support", { cache: "no-store" });
+      const response = await accountTransport("/api/support", { cache: "no-store" });
       if (response.status === 401) {
         $("support-sign-in").hidden = false;
         status.textContent = t("ui.sign-in-to-report-an-issue");
@@ -40,12 +42,7 @@ export function installSupport() {
       }
       if (!response.ok) throw new Error();
       const { tickets } = await response.json();
-      for (const ticket of tickets) {
-        const row = element("article", "", "support-ticket");
-        row.append(element("strong", t(ticket.status === "closed" ? "بسته‌شده" : "در حال پیگیری")),
-          element("p", ticket.message), ...(ticket.reply ? [element("p", ticket.reply)] : []));
-        history.append(row);
-      }
+      renderTickets(history,tickets);
     } catch {
       status.textContent = t("ui.support-is-unavailable");
     }
@@ -71,7 +68,7 @@ export function installSupport() {
         body.diagnostics = { version, platform: /iPhone|iPad/.test(agent) ? "iOS" : /Android/.test(agent) ? "Android" : "Other",
           permission: globalThis.Notification?.permission ?? "unavailable" };
       }
-      const response = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const response = await accountTransport("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (response.status === 401) {
         $("support-sign-in").hidden = false;
         status.textContent = t("ui.sign-in-to-report-an-issue");
@@ -96,7 +93,7 @@ export async function reportDailyOpen() {
     day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran", dateStyle: "short" }).format(new Date());
     if (localStorage.getItem(key) === day) return;
     localStorage.setItem(key, day);
-    const response = await fetch("/api/operations/activity", { method: "POST", credentials: "omit", keepalive: true });
+    const response = await accountTransport("/api/operations/activity", { method: "POST", credentials: "omit", keepalive: true });
     if (!response.ok) throw new Error();
   } catch {
     try {

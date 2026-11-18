@@ -336,6 +336,20 @@ try {
             await expect(page.locator("#screen-title")).toBeVisible();
           });
           await compare(screen);
+          if (screen === "insights") {
+            await both(async (page) => {
+              await page.locator('[data-insight="reports"]').click();
+              await page.locator('[data-report-range="year"]').click();
+              const chart = page.locator("#report-chart");
+              await expect(chart.locator('button[tabindex="0"]')).toBeVisible();
+              await chart.locator('button[tabindex="0"]').press("Home");
+              await expect(chart.locator("button").first()).toHaveAttribute(
+                "aria-pressed",
+                "true",
+              );
+            });
+            await compare("water-report");
+          }
           if (screen === "water") {
             await both(async (page) => {
               await page.locator("#water-entries button").first().click();

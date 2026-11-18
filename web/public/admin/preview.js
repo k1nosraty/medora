@@ -1,3 +1,4 @@
+import {accountTransport} from "/medication/shared/account-transport.js";
 import { $ } from "/medication/shared/ui/dom.js";
 import { localizeMarkup, t } from "/medication/shared/i18n/locale.js";
 import { presentPromotion } from "/medication/features/promotions/presentation.js";
@@ -13,7 +14,7 @@ async function show() {
   const replay = $("preview-replay");
   replay.disabled = true;
   try {
-    const response = await fetch("/api/admin/promotion/preview", { cache: "no-store" });
+    const response = await accountTransport("/api/admin/promotion/preview", { cache: "no-store" });
     $("preview-login").hidden = response.status !== 401;
     if (!response.ok) {
       status.textContent = t(response.status === 401 ? "برای پیش‌نمایش، روی همین دستگاه وارد حساب مدیر شوید." : "پیش‌نمایش در دسترس نیست.");

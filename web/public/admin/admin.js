@@ -1,3 +1,4 @@
+import {accountTransport} from "/medication/shared/account-transport.js";
 import { loadOperations, loadTickets } from "./operations.js";
 import { $, button, element } from "/medication/shared/ui/dom.js";
 import { installConfirmation, setPressed, showFeedback } from "/medication/shared/ui/controls.js";
@@ -127,7 +128,7 @@ $("promotion-campaign").addEventListener("change", event => {
   showPromotion(campaigns.find(row => row.id === event.target.value));
 });
 async function request(path, method = "GET", body) {
-  const response = await fetch(path, {
+  const response = await accountTransport(path, {
     method,
     ...(body instanceof File ? { headers: { "X-Medora-Filename": encodeURIComponent(body.name.slice(0, 100)) }, body } : body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
   });
@@ -453,7 +454,7 @@ $("promotion-library").addEventListener("toggle", event => {
 
 
 {
-  const access = await fetch("/api/admin/operations/access").then(response => response.ok ? response.json() : null).catch(() => null);
+  const access = await accountTransport("/api/admin/operations/access").then(response => response.ok ? response.json() : null).catch(() => null);
   if (access?.role === "support") {
     panel.hidden = false;
     tabs.filter(item => item.dataset.adminTab !== "tickets").forEach(item => { item.hidden = true; });
