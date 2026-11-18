@@ -5,7 +5,7 @@ test("Persian shell, English water form, offline editing and reload", async ({
   context,
 }) => {
   await page.setViewportSize({ width: 360, height: 760 });
-  await page.goto("/");
+  await page.goto("/journal/");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(
     page.getByRole("heading", { name: "امروز", exact: true }),
@@ -51,7 +51,7 @@ test("encrypted export and restore with a new browser profile", async ({
   browser,
   baseURL,
 }) => {
-  await page.goto("/");
+  await page.goto("/journal/");
   await page.getByRole("button", { name: "English" }).click();
   await page.getByRole("link", { name: "Log water" }).click();
   await page.getByRole("button", { name: "Log water" }).click();
@@ -69,7 +69,7 @@ test("encrypted export and restore with a new browser profile", async ({
   const other = await browser.newContext();
   const dest = await other.newPage();
   try {
-    await dest.goto(baseURL + "/");
+    await dest.goto(baseURL + "/journal/");
     await dest.getByRole("button", { name: "English" }).click();
     await dest
       .getByRole("navigation")

@@ -1,3 +1,4 @@
+import { careDelta } from "../../domain/care-delta.js";
 import { assertRestoreRevision, isCloudRevision, restoreTarget } from "../../domain/restore-intent.js";
 import { $ } from "../../shared/ui/dom.js";
 import { t } from "../../shared/i18n/locale.js";
@@ -172,9 +173,19 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
         validateCareRecords(protectedRecords);
         if (currentGeneration !== authGeneration) return;
         if (!careSnapshotFits(remote.owner, remote.revision, protectedRecords, zone)) throw new Error("care_too_large");
+        const envelope = { owner: remote.owner, revision: remote.revision, zone };
+        let body = JSON.stringify({ ...envelope, records: protectedRecords });
+        let incremental = false;
+        if (response.headers?.get("X-Medora-Care-Delta") === "1" && wire.records) {
+          const changes = careDelta(wire.records, protectedRecords);
+          if (changes) {
+            const delta = JSON.stringify({ ...envelope, changes });
+            if (delta.length < body.length) { body = delta; incremental = true; }
+          }
+        }
         const uploaded = await transport(path, {
           method: "PUT", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ owner: remote.owner, revision: remote.revision, records: protectedRecords, zone }),
+          body,
           signal: AbortSignal.timeout(12_000)
         });
         if (uploaded.status === 409) {
@@ -184,7 +195,8 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
           return;
         }
         if (!uploaded.ok) throw syncError(uploaded);
-        const saved = await uploaded.json();
+        const receipt = await uploaded.json();
+        const saved = incremental && receipt.applied === true ? { ...receipt, records: protectedRecords } : receipt;
         if (!isCloudRevision(saved) || saved.owner !== remote.owner || saved.revision !== remote.revision + 1) {
           throw new Error("invalid_sync");
         }

@@ -18,7 +18,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "pnpm --filter @medora/web exec vite preview --host 127.0.0.1 --port 48820 --strictPort",
+      "pnpm --filter @medora/web exec vite preview --outDir dist --host 127.0.0.1 --port 48820 --strictPort",
     url: "http://127.0.0.1:48820",
     timeout: 20000,
   },

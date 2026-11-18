@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite"
+    "build": "vite build --outDir dist/journal && node scripts/product.mjs",
+    "dev": "pnpm run build && vite preview --host 127.0.0.1",
+    "dev:journal": "vite"
   },
   "dependencies": {
     "react": "^19",

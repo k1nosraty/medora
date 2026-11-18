@@ -1,3 +1,4 @@
+import { accountTransport } from "../shared/account-transport.js";
 import { showFeedback } from "../shared/ui/controls.js";
 import { CareInputError } from "../shared/ui/care-error.js";
 import { installEntryActions } from "./entry-actions.js";
@@ -190,6 +191,7 @@ const openEditor = installMedicineEditor({
   getState, isBusy: () => busy, mutate, removeMedicine: medicines.deleteMedicine, pickers, formatDay: dashboard.formatDay
 });
 const accountSync = installCareSync({
+  transport: accountTransport,
   formatDay: dashboard.formatDay,
   reload: async changed => {
     await reload();
@@ -201,6 +203,7 @@ const accountSync = installCareSync({
   remindersChanged: changeReminderRevision
 });
 const openAccount = installAccount({
+  transport: accountTransport,
   onSignIn: () => { void accountSync.refresh(); accountSync.signedIn(); void family.refreshGroup(); },
   onSignOut: () => {
     void accountSync.signedOut();

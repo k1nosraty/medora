@@ -5,7 +5,7 @@ import { resolve, sep, extname } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 
-const root = resolve("apps/web/dist");
+const root = resolve("apps/web/dist/journal");
 const bundled = await readFile(resolve(root, "sw.js"), "utf8");
 const types = {
   ".js": "application/javascript",

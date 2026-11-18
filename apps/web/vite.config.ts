@@ -4,9 +4,22 @@ import { createHash } from "node:crypto";
 const asset = (p: string) => readFileSync(new URL(p, import.meta.url));
 export default defineConfig({
   base: "./",
+  preview:
+    process.env.MEDORA_LOCAL_GATEWAY === "1"
+      ? { proxy: { "/api/": "http://127.0.0.1:8808" } }
+      : {},
   plugins: [
     {
       name: "medora-offline",
+      configurePreviewServer(server) {
+        server.middlewares.use((request, response, next) => {
+          const url = new URL(request.url ?? "/", "http://localhost");
+          if (url.pathname !== "/") return next();
+          response
+            .writeHead(302, { Location: "/medication/" + url.search })
+            .end();
+        });
+      },
       generateBundle(_, bundle) {
         const art: Record<string, string> = {
           "art/logo.svg": "../../branding/logo.svg",

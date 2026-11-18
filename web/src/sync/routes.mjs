@@ -1,10 +1,11 @@
+import { applyCareDelta } from "../../public/medication/domain/care-delta.js";
 import { isRecoveryKeyId } from "../../public/medication/domain/private-fields.js";
 import { careSession } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
 import { careSyncLimit, careVersion, portable, validateCareRecords } from "../../public/medication/domain/care-records.js";
 import { timezone } from "../../public/medication/domain/wall-clock.js";
 
-const privateHeaders = { "Cache-Control": "private, no-store" };
+const privateHeaders = { "Cache-Control": "private, no-store", "X-Medora-Care-Delta": "1" };
 const reply = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { ...privateHeaders, ...headers } });
 
 export async function handleCareSync(request, env, url) {
@@ -39,9 +40,18 @@ export async function handleCareSync(request, env, url) {
   const scope = typeof data?.owner === "string" && /^([a-f0-9]{64})(?:\.([a-f0-9]{32}))?$/.exec(data.owner);
   if (!scope || scope[1] !== owner || !Number.isSafeInteger(data.revision) || data.revision < 0) return reply({ error: "invalid_sync" }, 400);
   if (data.rotationProof !== undefined && !isRecoveryKeyId(data.rotationProof)) return reply({ error: "invalid_sync" }, 400);
+  const incremental = Object.hasOwn(data, "changes");
   let records;
   try {
-    records = portable(validateCareRecords(data.records));
+    if (incremental) {
+      if (data.rotationProof !== undefined || Object.hasOwn(data, "records")) return reply({ error: "invalid_sync" }, 400);
+      const base = await client.readCareForSession(token, owner);
+      if (!base) return reply({ error: "sign_in" }, 401);
+      if (base.epoch !== (scope[2] ?? "") || base.revision !== data.revision || !base.records)
+        return reply({ error: "conflict" }, 409);
+      records = applyCareDelta(base.records, data.changes);
+      validateCareRecords(records);
+    } else records = portable(validateCareRecords(data.records));
   } catch {
     return reply({ error: "invalid_sync" }, 400);
   }
@@ -53,5 +63,5 @@ export async function handleCareSync(request, env, url) {
   if (saved?.signedOut) return reply({ error: "sign_in" }, 401);
   if (saved?.privacyKey) return reply({ error: "private_key" }, 422);
   if (saved?.tooLarge) return reply({ error: "care_too_large" }, 413);
-  return saved ? reply({ owner: data.owner, ...saved }) : reply({ error: "conflict" }, 409);
+  return saved ? reply(incremental ? { owner: data.owner, revision: saved.revision, applied: true } : { owner: data.owner, ...saved }) : reply({ error: "conflict" }, 409);
 }

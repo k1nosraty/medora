@@ -5,14 +5,14 @@ test("bilingual care, account and backup routes support keyboard focus and large
 }) => {
   await page.setViewportSize({ width: 320, height: 780 });
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("/journal/");
   await page.addStyleTag({ content: ":root { font-size: 125%; }" });
   for (const [route, label] of [
     ["/plans/medicines", "برنامه‌های مراقبت"],
     ["/account", "حساب"],
     ["/archive", "داده‌های این دستگاه"],
   ]) {
-    await page.goto("/#" + route);
+    await page.goto("/journal/#" + route);
     await expect(
       page.getByRole("heading", { name: label!, exact: true }).first(),
     ).toBeVisible();

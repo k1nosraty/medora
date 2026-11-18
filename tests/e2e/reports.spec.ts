@@ -3,7 +3,7 @@ test("the date-range report includes local water and remains readable at 320 pix
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 700 });
-  await page.goto("/");
+  await page.goto("/journal/");
   await page.getByRole("button", { name: "English" }).click();
   await page.getByRole("link", { name: "Log water" }).click();
   await page.getByRole("button", { name: "Log water" }).click();

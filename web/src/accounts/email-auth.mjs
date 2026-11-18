@@ -1,3 +1,5 @@
+import { preserveCareExtensions } from "../../public/medication/domain/care-delta.js";
+import { legacyWritesFenced } from "../http/write-fence.mjs";
 import { equalCareValues } from "../../public/medication/domain/care-contract.js";
 import { rotationContents } from "../../public/medication/domain/private-fields.js";
 import { codeKey, identityKey, passwordKey, passwordVersion, sessionKey, validAuthKeys } from "./keys.mjs";
@@ -246,6 +248,7 @@ async function signedIn(env, email, username, id, token) {
 export class EmailAccount extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
+    if (legacyWritesFenced(env)) return;
     this.sql = ctx.storage.sql;
     this.sql.exec(`
       CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, sent INTEGER NOT NULL);
@@ -570,6 +573,7 @@ export class EmailAccount extends DurableObject {
       const current = await storage.get("care-sync") ?? { revision: 0 };
       if (current.revision !== revision) return null;
       const currentRecords = current.records;
+      records = preserveCareExtensions(currentRecords, records);
       if (rotationProof !== undefined) {
         if (!currentRecords?.privacyRotation || !records.privacyRotation || records.privacyKey === currentRecords.privacyKey ||
             records.privacyRotation === currentRecords.privacyRotation ||

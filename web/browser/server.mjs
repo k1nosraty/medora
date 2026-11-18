@@ -23,6 +23,7 @@ createServer(async (request, response) => {
   const url = new URL(request.url, "http://localhost");
   const { pathname } = url;
   const cookie = request.headers.cookie ?? "";
+  if (pathname === "/api/v2/product-writer") { json(response, { writer: "legacy" }); return; }
   if (pathname === "/__browser-test/actions") { json(response, actions); return; }
   const familyMode = /test-family-policy=(read|write|revoked)/.exec(cookie)?.[1];
   if (pathname === "/api/family" && familyMode) {

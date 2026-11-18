@@ -27,7 +27,7 @@ const screens = {
   loading: [null, "حساب مدورا", ""]
 };
 
-export function installAccount({ onSignIn = () => {}, onSignOut = () => {}, onShortcut = () => {} } = {}) {
+export function installAccount({ transport = fetch, onSignIn = () => {}, onSignOut = () => {}, onShortcut = () => {} } = {}) {
   const dialog = $("account-dialog");
   const fit = fitDialogToViewport(dialog);
   const controls = [...dialog.querySelectorAll('button:not([data-close]):not([data-reveal-password])')];
@@ -73,7 +73,7 @@ export function installAccount({ onSignIn = () => {}, onSignOut = () => {}, onSh
     controls.forEach(control => { control.disabled = true; });
     status("در حال ارتباط…");
     try {
-      const response = await fetch(`/api/auth/${route}`, body ? {
+      const response = await transport(`/api/auth/${route}`, body ? {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 test("care plans retain logged medicine doses and clinic appointments after reload", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/journal/");
   await page.getByRole("button", { name: "English" }).click();
   await page.getByRole("link", { name: "Care plans" }).click();
   await page.getByText("Add an entry", { exact: true }).click();
@@ -24,7 +24,7 @@ test("care plans retain logged medicine doses and clinic appointments after relo
 test("the daily schedule follows appointment attendance and cancellation", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/journal/");
   await page.getByRole("button", { name: "English" }).click();
   await page.getByRole("link", { name: "Care plans" }).click();
   await page.getByRole("link", { name: "Appointments", exact: true }).click();

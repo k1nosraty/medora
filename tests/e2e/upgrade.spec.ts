@@ -5,7 +5,7 @@ for (const version of [1, 2, 3])
       version +
       " can be copied and edited without changing the original",
     async ({ page }) => {
-      await page.goto("/");
+      await page.goto("/journal/");
       await page.evaluate(async (version) => {
         const request = indexedDB.open("medora-medication-prototype", version);
         request.onupgradeneeded = () => {

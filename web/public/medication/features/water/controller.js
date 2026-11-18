@@ -1,6 +1,7 @@
 import { CareInputError } from "../../shared/ui/care-error.js";
 import { localDigits, locale, t } from "../../shared/i18n/locale.js";
-import { $, button, element } from "../../shared/ui/dom.js";
+import { renderEntries } from "./entries.js";
+import { $ } from "../../shared/ui/dom.js";
 import { dayMs } from "../../domain/wall-clock.js";
 import { isoDay } from "../../domain/care-index.js";
 import { waterGoalReached } from "../../domain/care-plan.js";
@@ -9,7 +10,6 @@ import { integer, localClock } from "../../shared/ui/input-values.js";
 
 const numbers = new Intl.NumberFormat(locale);
 const percent = new Intl.NumberFormat(locale, { style: "percent" });
-function empty(text) { return element("p", text, "empty"); }
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 
 export function installWater({ getState, selectedDay, today, actionDay, getFamilyView = () => null, mutate, refreshFields, formatDay, formatShortDate }) {
@@ -196,25 +196,15 @@ export function installWater({ getState, selectedDay, today, actionDay, getFamil
     fillGlass("water-summary", progress);
     const entries = [...index.waterOn(day)].reverse()
       .sort((a, b) => b.time.localeCompare(a.time));
-    $("water-entries").replaceChildren(...(entries.length ? entries.map(entry => {
-      const row = element("article", "", "entry-row program-water");
-      row.dataset.focusScope = "water:" + entry.id;
-      row.append(element("span", t("ui.value-ml-value", numbers.format(entry.amount), clockText(entry.time))));
-      if (view) {
-        if (entry.recordedBy) row.append(element("small", t("ui.recorded-by-value", view.authorName(entry)), "family-stamp"));
-        return row;
-      }
-      const edit = button(t("ui.edit"), () => openWater(entry));
-      const remove = button(t("ui.delete-entry"), () => {
+    renderEntries($("water-entries"), {
+      entries, view, label: entry => t("ui.value-ml-value", numbers.format(entry.amount), clockText(entry.time)),
+      edit: entry => openWater(entry),
+      remove: entry => {
         if (confirm(t("ui.delete-this-water-entry"))) void mutateWater(data => {
           data.water = data.water.filter(item => item.id !== entry.id);
         }, t("ui.water-entry-deleted"), entry.day);
-      });
-      for (const action of [edit, remove]) action.classList.add("glass-secondary-action", "tracker-utility");
-      remove.classList.add("water-entry-remove");
-      row.append(edit, remove);
-      return row;
-    }) : [empty(t("ui.no-water-logged-for-this-day"))]));
+      }
+    });
   }
 
   return { openWater, addWater, quickAddWater, renderTodayWater, renderWater };

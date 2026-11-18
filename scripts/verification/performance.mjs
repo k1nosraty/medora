@@ -2,7 +2,7 @@ import { chromium } from "@playwright/test";
 import { stat, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
-const url = new URL(process.argv[2]);
+const url = new URL("/journal/", process.argv[2]);
 if (!["localhost", "127.0.0.1"].includes(url.hostname))
   throw Error("Loopback preview required");
 const browser = await chromium.launch({
@@ -114,7 +114,7 @@ try {
     });
     await context.close();
   }
-  const assets = "apps/web/dist/assets";
+  const assets = "apps/web/dist/journal/assets";
   const js = (await readdir(assets)).find((n) => /^index-.*\.js$/.test(n));
   const contents = await readFile(join(assets, js));
   console.log(

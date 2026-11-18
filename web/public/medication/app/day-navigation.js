@@ -1,5 +1,5 @@
 import { shortWeek, t, weekIndex } from "../shared/i18n/locale.js";
-import { button, element } from "../shared/ui/dom.js";
+import { renderWeek } from "./week-strip.js";
 import { isoDay as iso } from "../domain/care-index.js";
 
 export function installDayNavigation({ root, getDates, render, selectedDay, today, onDayChange }) {
@@ -46,19 +46,6 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
     chooseDay(today(), "day-week");
   });
 
-  function dateButton(day, selected, choose) {
-    const dates = getDates();
-    const number = dates.dayNumber(day);
-    const weekday = shortWeek[weekIndex(day)];
-    const control = button(number + " ", () => choose(day));
-    control.append(element("span", weekday));
-    control.setAttribute("aria-label", number + " " + weekday + ", " + dates.formatDay(day, true));
-    control.dataset.focusKey = `day-${day}`;
-    control.setAttribute("aria-pressed", String(day === selected));
-    if (day === today()) control.setAttribute("aria-current", "date");
-    return control;
-  }
-
   function activate(destination, mode, waterDay) {
     if (destination === "water" && mode === "push") selectedDates.set("water", Math.min(waterDay, today()));
     const host = root.querySelector(`[data-day-host="${destination}"]`);
@@ -83,10 +70,16 @@ export function installDayNavigation({ root, getDates, render, selectedDay, toda
     $("next-day").disabled = screen === "water" && day >= today();
     if (screen !== "today") return;
     weekSlide?.cancel();
-    dayWeek.replaceChildren(...Array.from({ length: 7 }, (_, offset) => {
-      const date = day - 3 + offset;
-      return dateButton(date, day, selected => chooseDay(selected, "day-week"));
-    }));
+    dayWeek.querySelector(".day-week-ghost")?.remove();
+    const current = today();
+    const days = Array.from({ length: 7 }, (_, offset) => {
+      const value = day - 3 + offset;
+      const number = dates.dayNumber(value);
+      const weekday = shortWeek[weekIndex(value)];
+      return { value, number, weekday, label: number + " " + weekday + ", " + dates.formatDay(value,true),
+        selected: value === day, today: value === current };
+    });
+    renderWeek(dayWeek,days,selected => chooseDay(selected,"day-week"));
   }
 
   return { activate, chooseDay, paint, reset: () => {
