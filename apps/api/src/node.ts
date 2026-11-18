@@ -1,3 +1,7 @@
+import { adminAccounts } from "./admin-accounts";
+import { promotionService } from "./promotions";
+import { operationService } from "./operations";
+import { reminderService } from "./reminders";
 import { writerConnectionOptions } from "./writer-settings";
 import { householdService } from "./household";
 import { careService } from "./care";
@@ -44,6 +48,31 @@ const runner = identity
     )
   : undefined;
 runner?.unref();
+const operations = operationService(pool, store, process.env);
+const operationsRunner = setInterval(
+  () =>
+    void operations
+      .maintenance()
+      .catch(() => console.warn("operations_maintenance_deferred")),
+  60_000,
+);
+operationsRunner.unref();
+const reminders = reminderService(pool, store, process.env, operations);
+let ticking = false;
+const reminderRunner =
+  reminders &&
+  setInterval(async () => {
+    if (ticking) return;
+    ticking = true;
+    try {
+      await reminders.tick();
+    } catch {
+      console.warn("reminder_delivery_deferred");
+    } finally {
+      ticking = false;
+    }
+  }, 5000);
+reminderRunner?.unref();
 const app = createApp(
   store,
   verifier(passwordKeys(process.env.MEDORA_PASSWORD_KEYS)),
@@ -54,6 +83,13 @@ const app = createApp(
   careService(pool),
   householdService(pool),
   mail?.invite,
+  process.env.MEDORA_LEGACY_WRITES_FENCED === "true"
+    ? process.env.EMAIL_SESSION_KEY
+    : undefined,
+  reminders,
+  operations,
+  promotionService(pool, store, operations, process.env),
+  adminAccounts(pool, operations, process.env.EMAIL_SESSION_KEY),
 );
 const server = serve({
   fetch: app.fetch,

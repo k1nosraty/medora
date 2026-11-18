@@ -1,3 +1,10 @@
+import type { adminAccounts } from "./admin-accounts";
+import { smallJson } from "../../../web/src/http/validation.mjs";
+import type { promotionService } from "./promotions";
+import { authenticatedOperations, publicOperations } from "./operations-routes";
+import type { operationService } from "./operations";
+import type { reminderService } from "./reminders";
+import { legacyCookie, legacySession } from "./legacy-session";
 import type { householdService } from "./household";
 import { householdRoutes, type InviteDelivery } from "./household-routes";
 import { careRoutes } from "./care-routes";
@@ -29,6 +36,11 @@ export function createApp(
   care?: CareService,
   household?: ReturnType<typeof householdService>,
   inviteDelivery?: InviteDelivery,
+  legacySessionKey?: string,
+  reminders?: ReturnType<typeof reminderService>,
+  operations?: ReturnType<typeof operationService>,
+  promotions?: ReturnType<typeof promotionService>,
+  accounts?: ReturnType<typeof adminAccounts>,
 ) {
   const app = new Hono<{ Variables: { owner: string } }>();
   app.use("*", secureHeaders());
@@ -114,12 +126,58 @@ export function createApp(
     );
     app.route("/api/v2/identity", identityRoutes(identity));
   }
-  app.use("/api/v2/*", async (c, next) => {
+  if (operations) app.route("/api/v2", publicOperations(operations));
+  async function requestOwner(c: Parameters<typeof getCookie>[0]) {
     const raw = getCookie(c, cookie);
     const owner =
       raw && /^[a-f0-9]{64}$/.test(raw)
         ? await store.session(await digest(raw))
         : undefined;
+    if (owner || raw) return owner;
+    const previous = await legacySession(
+      getCookie(c, legacyCookie),
+      legacySessionKey,
+    );
+    if (
+      previous &&
+      (await store.legacySession(previous.owner, previous.digest))
+    )
+      return previous.owner;
+  }
+  app.get("/api/v2/config", async (c) =>
+    reminders && (await store.productWriter()) === "postgres"
+      ? c.json({ publicKey: reminders.publicKey })
+      : c.json({ error: "unconfigured" }, 503),
+  );
+  app.on(
+    ["GET", "PUT", "POST"],
+    ["/api/v2/reminders", "/api/v2/reminders/enroll", "/api/v2/reminders/test"],
+    async (c) =>
+      reminders && (await store.productWriter()) === "postgres"
+        ? reminders.route(c.req.raw, () => requestOwner(c), publicOrigin)
+        : c.json({ error: "unavailable" }, 503),
+  );
+  if (promotions)
+    app.on(
+      ["GET", "HEAD", "POST", "PUT", "DELETE"],
+      [
+        "/api/v2/promotion",
+        "/api/v2/promotion/*",
+        "/api/v2/admin/promotion",
+        "/api/v2/admin/promotion/*",
+      ],
+      async (c) =>
+        promotions.route(
+          c.req.raw,
+          async () => {
+            const owner = await requestOwner(c);
+            return owner ? (await store.profile(owner))?.email : undefined;
+          },
+          publicOrigin,
+        ),
+    );
+  app.use("/api/v2/*", async (c, next) => {
+    const owner = await requestOwner(c);
     if (!owner) return c.json({ error: "session" }, 401);
     if (
       (c.req.path === "/api/v2/household" ||
@@ -151,9 +209,75 @@ export function createApp(
     c.set("owner", owner);
     await next();
   });
-  app.get("/api/v2/profile", async (c) =>
-    c.json((await store.profile(c.get("owner"))) ?? null),
-  );
+  if (operations)
+    app.route(
+      "/api/v2",
+      authenticatedOperations(
+        operations,
+        async (owner) => (await store.profile(owner))?.email,
+        { push: Boolean(reminders), email: Boolean(identity) },
+      ),
+    );
+  app.get("/api/v2/profile", async (c) => {
+    const profile = await store.profile(c.get("owner"));
+    return c.json(
+      profile
+        ? {
+            ...profile,
+            ...(operations?.role(profile.email) === "admin"
+              ? { admin: true }
+              : {}),
+          }
+        : null,
+    );
+  });
+  if (accounts && operations) {
+    const path = "/api/v2/admin/accounts";
+    app.use(path, async (c, next) => {
+      const account = await store.profile(c.get("owner"));
+      if (!account || operations.role(account.email) !== "admin")
+        return c.json({ error: "forbidden" }, 403);
+      await next();
+    });
+    const usernamePattern = /^[a-z0-9_]{3,32}$/;
+    app.get(path, async (c) => {
+      const after = c.req.query("after") ?? "",
+        query = (c.req.query("q") ?? "").trim().toLowerCase();
+      return (after && !usernamePattern.test(after)) || query.length > 254
+        ? c.json({ error: "bad_request" }, 400)
+        : c.json(await accounts.list(after, query));
+    });
+    app.patch(path, async (c) => {
+      const body = (await smallJson(c.req.raw)) as {
+        username?: unknown;
+        tag?: unknown;
+      } | null;
+      if (
+        typeof body?.username !== "string" ||
+        !usernamePattern.test(body.username) ||
+        typeof body.tag !== "string" ||
+        !/^[a-f0-9]{64}$/.test(body.tag)
+      )
+        return c.json({ error: "bad_request" }, 400);
+      const raw = getCookie(c, cookie);
+      const previous = raw
+        ? undefined
+        : await legacySession(getCookie(c, legacyCookie), legacySessionKey);
+      const session = raw
+        ? { digest: await digest(raw), legacy: false }
+        : previous && { digest: previous.digest, legacy: true };
+      if (!session) return c.json({ error: "reauthenticate" }, 403);
+      const result = await accounts.revoke(
+        c.get("owner"),
+        session,
+        body.username,
+        body.tag,
+      );
+      return result
+        ? c.json({ error: result }, result === "reauthenticate" ? 403 : 409)
+        : c.json({});
+    });
+  }
   if (household)
     app.route(
       "/api/v2/household",
@@ -162,8 +286,19 @@ export function createApp(
   if (care) app.route("/api/v2/care", careRoutes(care));
   app.get("/api/v2/session", (c) => c.json({ owner: c.get("owner") }));
   app.delete("/api/v2/session", async (c) => {
-    await store.endSession(await digest(getCookie(c, cookie)!));
+    const raw = getCookie(c, cookie);
+    const previous = await legacySession(
+      getCookie(c, legacyCookie),
+      legacySessionKey,
+    );
+    const owner = c.get("owner");
+    await store.endSessions(
+      owner,
+      raw && (await digest(raw)),
+      previous?.owner === owner ? previous.digest : undefined,
+    );
     deleteCookie(c, cookie, { path: "/", secure: true });
+    if (previous) deleteCookie(c, legacyCookie, { path: "/", secure: true });
     return c.body(null, 204);
   });
   app.get("/api/v2/changes", async (c) => {

@@ -8,7 +8,10 @@ export async function fixtureMailbox() {
     const parts = [];
     for await (const part of req) parts.push(part);
     const message = JSON.parse(Buffer.concat(parts));
-    const code = message.Text.match(/\b(\d{6})\b/)?.[1];
+    const text = message.Text.replace(/[۰-۹]/g, (digit) =>
+      String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)),
+    );
+    const code = text.match(/\b(\d{6})\b/)?.[1];
     if (code) codes.set(message.To[0].Email, code);
     res.writeHead(200, { "Content-Type": "application/json" }).end("{}");
   });

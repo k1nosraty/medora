@@ -1,3 +1,7 @@
+import { promotionReplay } from "./promotion-image.mjs";
+import { operationsReplay } from "./operations-image.mjs";
+import { reminderReplay } from "./reverse-reminders.mjs";
+import { identityReplay } from "./reverse-identity.mjs";
 import { householdReplay } from "./reverse-households.mjs";
 import { isDeepStrictEqual } from "node:util";
 import { createHmac, randomUUID } from "node:crypto";
@@ -23,7 +27,15 @@ const { build } = require("esbuild");
 
 // Workerd writes the serialized value and alarm through its own storage API.
 // The temporary worker has no network-facing RPC or delivery integration.
-async function recoveryWorker(root, namespace, families) {
+async function recoveryWorker(
+  root,
+  namespace,
+  families,
+  credentials,
+  reminders,
+  operations,
+  promotions,
+) {
   const { outputFiles } = await build({
     entryPoints: [new URL("./reverse-object.mjs", import.meta.url).pathname],
     bundle: true,
@@ -45,6 +57,26 @@ async function recoveryWorker(root, namespace, families) {
           className: "Recovery",
           useSQLite: true,
           unsafeUniqueKey: namespace,
+        },
+        CREDENTIALS: {
+          className: "CredentialRecovery",
+          useSQLite: true,
+          unsafeUniqueKey: credentials,
+        },
+        PROMOTIONS: {
+          className: "PromotionRecovery",
+          useSQLite: true,
+          unsafeUniqueKey: promotions,
+        },
+        REMINDERS: {
+          className: "ReminderRecovery",
+          useSQLite: true,
+          unsafeUniqueKey: reminders,
+        },
+        OPERATIONS: {
+          className: "OperationsRecovery",
+          useSQLite: true,
+          unsafeUniqueKey: operations,
         },
         FAMILY: {
           className: "HouseholdRecovery",
@@ -70,17 +102,27 @@ export async function reverseCare(client, archive, key, output) {
   );
   if (gate.rows[0]?.phase !== "frozen")
     throw Error("Both writers must be fenced before recovery");
-  if (
-    (await client.query("SELECT 1 FROM medora.rollback_exceptions LIMIT 1"))
-      .rowCount
-  )
-    throw Error("A committed change requires a different reverse projection");
+  const reminders = await reminderReplay(client, manifest, key);
+  const campaign = await promotionReplay(client, manifest, key);
+  const operational = await operationsReplay(client, manifest, key);
+  const identity = await identityReplay(client, manifest.snapshot);
   const { rows: owners } = await client.query(
-    `SELECT a.id, a.cursor, c.seed_cursor, p.source_revision FROM medora.accounts a
-    JOIN medora.cutover_accounts c ON c.owner=a.id JOIN medora.legacy_people p ON a.id=p.owner AND p.snapshot=$1`,
+    `SELECT a.id,a.cursor,coalesce(c.seed_cursor,0) AS seed_cursor,coalesce(p.source_revision,0) AS source_revision,
+      r.owner IS NOT NULL AS registered FROM medora.accounts a
+    LEFT JOIN medora.cutover_accounts c ON c.owner=a.id LEFT JOIN medora.legacy_people p ON a.id=p.owner AND p.snapshot=$1
+    LEFT JOIN medora.account_registrations r ON r.owner=a.id
+    WHERE a.sync_generation=2 AND (r.owner IS NOT NULL OR (c.owner IS NOT NULL AND p.owner IS NOT NULL))`,
     [manifest.snapshot],
   );
-  if (owners.length !== Object.keys(manifest.identities[ns[0]]).length)
+  const {
+    rows: [count],
+  } = await client.query("SELECT count(*)::int n FROM medora.accounts");
+  if (
+    owners.length !== identity.size ||
+    owners.length !== count.n ||
+    owners.filter((owner) => !owner.registered).length !==
+      Object.keys(manifest.identities[ns[0]]).length
+  )
     throw Error("Reverse owner census mismatch");
   // Reserve a NEW directory exclusively. Only the final rename publishes a bootable do/ tree.
   let fresh = true;
@@ -130,8 +172,69 @@ export async function reverseCare(client, archive, key, output) {
     );
     if (familyNs.length !== 1) throw Error("Ambiguous household namespace");
     const group = await householdReplay(client, manifest.snapshot);
-    const worker = await recoveryWorker(scratch, ns[0], familyNs[0]);
+    const credNs = Object.keys(manifest.inventory).filter((k) =>
+      k.endsWith("-Credentials"),
+    );
+    if (credNs.length !== 1) throw Error("Ambiguous credentials namespace");
+    const opsNs = Object.keys(manifest.inventory).filter((k) =>
+      k.endsWith("-Operations"),
+    );
+    if (opsNs.length !== 1) throw Error("Ambiguous operations namespace");
+    const worker = await recoveryWorker(
+      scratch,
+      ns[0],
+      familyNs[0],
+      credNs[0],
+      reminders.namespace,
+      opsNs[0],
+      campaign.entry.namespace,
+    );
     try {
+      const promoNs = await worker.getDurableObjectNamespace("PROMOTIONS");
+      const promo = promoNs.idFromName("home");
+      if (promo.toString() + ".sqlite" !== campaign.entry.object)
+        throw Error("Campaign object identity mismatch");
+      for (const event of campaign.events)
+        await promoNs.get(promo).replay(event);
+      const deviceNs = await worker.getDurableObjectNamespace("REMINDERS");
+      const ops = await worker.getDurableObjectNamespace("OPERATIONS");
+      const opsId = ops.idFromName("operations");
+      if (
+        manifest.identities[opsNs[0]][opsId.toString() + ".sqlite"] !==
+        "operations"
+      )
+        throw Error("Operations namespace identity mismatch");
+      await ops.get(opsId).replay(operational);
+      await ops
+        .get(opsId)
+        .restoreReminderIds(
+          reminders.edited
+            .filter(({ after }) => after.values.state)
+            .map(({ after }) => after.id),
+        );
+      const links = new Map();
+      for (const { before, after } of reminders.edited) {
+        const id = deviceNs.idFromName(after.id);
+        if (before && before.object !== id.toString())
+          throw Error("Reminder namespace identity mismatch");
+        await deviceNs.get(id).replay(before ?? null, after);
+        const scope = after.values.state?.link?.owner;
+        if (scope) {
+          const owner = scope.split(".")[0];
+          if (!identity.has(owner)) throw Error("Unmapped reminder account");
+          const ids = links.get(owner) ?? [];
+          ids.push(after.id);
+          links.set(owner, ids);
+        }
+      }
+      const credentials = await worker.getDurableObjectNamespace("CREDENTIALS");
+      const credId = credentials.idFromName("medora-credentials-v1");
+      if (
+        manifest.identities[credNs[0]][credId.toString() + ".sqlite"] !==
+        "medora-credentials-v1"
+      )
+        throw Error("Credential namespace identity mismatch");
+      await credentials.get(credId).replay([...identity.values()]);
       const families = await worker.getDurableObjectNamespace("FAMILY");
       const familyId = families.idFromName("care-groups");
       if (
@@ -143,7 +246,10 @@ export async function reverseCare(client, archive, key, output) {
       const binding = await worker.getDurableObjectNamespace("ACCOUNT");
       for (const owner of owners) {
         const id = binding.idFromName(owner.id);
-        if (manifest.identities[ns[0]][id.toString() + ".sqlite"] !== owner.id)
+        if (
+          !owner.registered &&
+          manifest.identities[ns[0]][id.toString() + ".sqlite"] !== owner.id
+        )
           throw Error("Account identity mismatch");
         const { rows } = await client.query(
           `SELECT cursor, kind, record_id AS id, base_revision, body, operation, care_operation
@@ -226,17 +332,18 @@ export async function reverseCare(client, archive, key, output) {
           if (!receiptIds.has(row.care_operation ?? row.operation))
             throw Error("Unlinked care change");
         }
-        await binding
-          .get(id)
-          .restore(
-            owner.id,
-            Number(owner.source_revision),
-            seeds,
-            log.rows,
-            live,
-            randomUUID(),
-            group.receipts.get(owner.id) ?? [],
-          );
+        const account = binding.get(id);
+        await account.restoreSessions(identity.get(owner.id));
+        await account.restoreReminderIds(links.get(owner.id) ?? []);
+        await account.restore(
+          owner.id,
+          Number(owner.source_revision),
+          seeds,
+          log.rows,
+          live,
+          randomUUID(),
+          group.receipts.get(owner.id) ?? [],
+        );
         replayed += log.rowCount;
       }
     } finally {
@@ -244,7 +351,11 @@ export async function reverseCare(client, archive, key, output) {
     }
     await rename(join(scratch, "do"), join(output, "do"));
     await rm(marker);
-    return { owners: owners.length, replayed };
+    return {
+      owners: owners.length,
+      replayed,
+      reminderDevices: reminders.edited.length,
+    };
   } finally {
     await rm(scratch, { recursive: true, force: true });
   }

@@ -129,14 +129,35 @@ export function repository(pool: Pool) {
       );
       return result.rows.length === 1;
     },
-    async endSession(digest: string) {
-      await db.execute(sql`DELETE FROM medora.sessions WHERE digest=${digest}`);
-    },
     async session(digest: string) {
       const result = await db.execute<{ owner: string }>(
         sql`SELECT owner FROM medora.sessions JOIN medora.accounts ON id=owner WHERE sync_generation=2 AND digest=${digest} AND expires_at>${Date.now()}`,
       );
       return result.rows[0]?.owner;
+    },
+    async legacySession(owner: string, digest: string) {
+      const result =
+        await db.execute(sql`SELECT 1 FROM medora.legacy_session_access l
+        JOIN medora.accounts a ON a.id=l.owner CROSS JOIN medora.writer_transition t
+        WHERE t.phase IN ('rehearsal','frozen') AND a.sync_generation=2 AND l.owner=${owner} AND l.digest=${digest}
+        AND l.expires_at>${Date.now()}`);
+      return !!result.rows.length;
+    },
+    async endSessions(
+      owner: string,
+      currentDigest: string | undefined,
+      legacyDigest: string | undefined,
+    ) {
+      await db.transaction(async (tx) => {
+        if (currentDigest)
+          await tx.execute(
+            sql`DELETE FROM medora.sessions WHERE owner=${owner} AND digest=${currentDigest}`,
+          );
+        if (legacyDigest)
+          await tx.execute(
+            sql`DELETE FROM medora.legacy_session_access WHERE owner=${owner} AND digest=${legacyDigest}`,
+          );
+      });
     },
     async pull(owner: string, after: number) {
       const result =

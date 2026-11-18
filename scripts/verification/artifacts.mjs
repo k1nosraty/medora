@@ -63,11 +63,18 @@ if (
   !reconciled.reconciled ||
   !reconciled.legacyWriterFenced ||
   !reconciled.postWriteRollback?.replayed ||
+  reconciled.postWriteRollback.reminderDevices < 2 ||
+  !reconciled.passwordResetReplayed ||
+  !reconciled.registrationReplayed ||
+  !reconciled.legacySessionContinuity ||
+  !reconciled.operationsReplayed ||
+  !reconciled.campaignMediaReplayed ||
   refused.reconciled !== false ||
   !refused.unsupportedMutation?.recoveryPublicationBlocked ||
+  !refused.unsupportedMutation?.pendingPasswordReset ||
   !visual.identicalDocumentMarkup ||
-  visual.identicalViewportCaptures !== 40 ||
-  visual.identicalVisibleLayouts !== 40 ||
+  visual.identicalViewportCaptures !== 44 ||
+  visual.identicalVisibleLayouts !== 44 ||
   visual.accessibility?.length !== 12 ||
   performance.trials?.length !== 3
 )

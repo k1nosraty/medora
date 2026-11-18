@@ -10,7 +10,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { passwordProof } from "../../web/src/accounts/auth-crypto.mjs";
 const require = createRequire(
   new URL("../../web/package.json", import.meta.url),
@@ -75,10 +75,20 @@ const mf = new Miniflare(
     compatibilityDate: "2026-10-29",
     compatibilityFlags: ["nodejs_compat"],
     resourcePersistencePath: resolve(output),
-    durableObjects: Object.fromEntries(
-      classes.map((c) => [c, { className: c, useSQLite: true }]),
-    ),
-    bindings: { MEDORA_LEGACY_WRITES_FENCED: String(fenced) },
+    durableObjects: {
+      ...Object.fromEntries(
+        classes.map((c) => [c, { className: c, useSQLite: true }]),
+      ),
+      CREDENTIALS: {
+        className: "Credentials",
+        useSQLite: true,
+        unsafeUniqueKey: "fixture-Credentials",
+      },
+    },
+    bindings: {
+      MEDORA_LEGACY_WRITES_FENCED: String(fenced),
+      EMAIL_AUTH_SECRET: "a".repeat(64),
+    },
     outboundService: () => {
       throw Error("Fixture network disabled");
     },
@@ -185,8 +195,26 @@ if (verification) {
     );
     same(
       creds.rows.map((r) => r.email_id),
-      e.people.map((p) => p.id),
+      [
+        ...e.people.map((p) => p.id),
+        ...(e.registration ? [e.registration.owner] : []),
+      ],
     );
+    if (e.registration) {
+      const { owner, username, password, water } = e.registration;
+      const ns = await mf.getDurableObjectNamespace("EmailAccount"),
+        account = ns.getByName(owner);
+      const { token } = await account.login(
+        username,
+        owner,
+        password,
+        "fixture",
+      );
+      assert.ok(token);
+      const saved = await account.readCareForSession(token, owner);
+      assert.equal(saved.revision, 1);
+      same(saved.records.water, [water]);
+    }
     for (const person of e.people) {
       const care = await read(
         "EmailAccount",
@@ -198,6 +226,34 @@ if (verification) {
         revision: person.revision ?? 7,
         records: person.records,
       });
+      const reset = e.passwordReset && person === e.people[0];
+      let token = person.token;
+      if (reset) {
+        assert.equal(care.rows.length, 0);
+        const ns = await mf.getDurableObjectNamespace("EmailAccount"),
+          stub = ns.getByName(person.id);
+        assert.equal(await stub.session(token), null);
+        assert.equal(
+          (
+            await stub.login(
+              person.credential[0],
+              person.id,
+              "synthetic fixture password",
+              "fixture",
+            )
+          ).error,
+          "credentials",
+        );
+        token = (
+          await stub.login(
+            person.credential[0],
+            person.id,
+            e.passwordReset,
+            "fixture",
+          )
+        ).token;
+        assert.ok(token);
+      } else same(care.rows[0].hash, person.digest);
       if (person.revision && !fenced) {
         const ns = await mf.getDurableObjectNamespace("EmailAccount"),
           stub = ns.get(ns.idFromName(person.id));
@@ -209,13 +265,13 @@ if (verification) {
             7,
             person.records,
             "",
-            person.token,
+            token,
             null,
             person.id,
           ),
           null,
         );
-        const readback = await stub.readCareForSession(person.token, person.id);
+        const readback = await stub.readCareForSession(token, person.id);
         same(readback.records, person.records);
         const pending = await read(
           "EmailAccount",
@@ -228,13 +284,12 @@ if (verification) {
           person.revision,
           person.records,
           "",
-          person.token,
+          token,
           null,
           person.id,
         );
         assert.equal(accepted.revision, person.revision + 1);
       }
-      same(care.rows[0].hash, person.digest);
       const extra = await read(
         "EmailAccount",
         person.id,
@@ -293,14 +348,85 @@ if (verification) {
     same(
       (await read("MedicationReminders", e.device, "state", null)).value
         .revision,
-      2,
+      e.postReminders ? 3 : 2,
     );
+    if (e.postReminders) {
+      const { id, revision } = e.postReminders;
+      const reminder = await read("MedicationReminders", id, "state", null);
+      assert.equal(reminder.value.revision, revision);
+      assert.equal(reminder.value.link.owner, e.people[0].id);
+      const revoked = await read(
+        "MedicationReminders",
+        e.device,
+        "state",
+        null,
+      );
+      assert.equal(revoked.value.revoked, true);
+      assert.ok(
+        (await read("Operations", "operations", "reminder:" + id, null)).value,
+      );
+      assert.ok(
+        (
+          await read("EmailAccount", e.people[0].id, "reminder-devices", null)
+        ).value.includes(id),
+      );
+    }
     same(
       (await read("Operations", "operations", "reminder:" + e.device, null))
         .value,
       true,
     );
-    same((await read("Promotions", "home", "campaigns", null)).value, []);
+    if (e.postTicket) {
+      const { rows: tickets } = await read(
+        "Operations",
+        "operations",
+        null,
+        "SELECT id,reply,status FROM tickets",
+      );
+      const ticket = tickets.find((row) => row.id === e.postTicket.id);
+      assert.equal(ticket.reply, e.postTicket.reply);
+      assert.equal(ticket.status, "closed");
+      const { rows: audit } = await read(
+        "Operations",
+        "operations",
+        null,
+        "SELECT action FROM audit WHERE action='ticket_updated'",
+      );
+      assert.ok(audit.length);
+      const notice = await read("Operations", "operations", "config", null);
+      assert.equal(notice.value.notice.title, "Fixture notice");
+      assert.ok(
+        (
+          await read(
+            "Operations",
+            "operations",
+            null,
+            "SELECT action FROM audit WHERE action='sessions_revoked'",
+          )
+        ).rows.length,
+      );
+    }
+    if (e.postCampaign) {
+      const ns = await mf.getDurableObjectNamespace("Promotions"),
+        store = ns.getByName("home");
+      const { current } = await store.current();
+      const campaign = e.postCampaign;
+      assert.equal(current.id, campaign.id);
+      assert.equal(current.creativeId, campaign.creativeId);
+      const asset = await store.mediaMeta(campaign.mediaId);
+      const bytes = await store.mediaBytes(campaign.mediaId, 0, asset.size - 1);
+      assert.equal(
+        createHash("sha256").update(bytes).digest("hex"),
+        campaign.hash,
+      );
+      assert.equal(
+        (await store.dashboard(campaign.id)).promotion.stats.impression,
+        1,
+      );
+      assert.equal((await store.preview()).mediaId, campaign.mediaId);
+    } else
+      same((await read("Promotions", "home", "campaigns", null)).value, []);
+
     same((await read("PushPilot", "medora-push-pilot", "pilot", null)).value, {
       recent: [],
     });

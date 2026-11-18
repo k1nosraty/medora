@@ -18,6 +18,7 @@ export interface Mail {
   email: string;
   code: string;
   purpose: "register" | "reset";
+  language?: "fa" | "en" | undefined;
 }
 export type Delivery = (mail: Mail, id: string) => Promise<void>;
 async function transaction<T>(pool: Pool, work: (c: PoolClient) => Promise<T>) {
@@ -57,7 +58,11 @@ export function identityService(
     if (!/^[a-f0-9]{64}$/i.test(k)) throw Error("Invalid identity key");
   const key = mailKey(settings.mailKey);
   return {
-    async begin(email: string, purpose: Mail["purpose"]) {
+    async begin(
+      email: string,
+      purpose: Mail["purpose"],
+      language?: Mail["language"],
+    ) {
       if (
         !(await store.loginBudget("service")) ||
         !(await store.loginBudget(hmac(codeKey, "email:" + email)))
@@ -70,7 +75,9 @@ export function identityService(
       const cipher = await crypto.subtle.encrypt(
         { name: "AES-GCM", iv, additionalData: aad },
         await key,
-        new TextEncoder().encode(JSON.stringify({ email, purpose, code })),
+        new TextEncoder().encode(
+          JSON.stringify({ email, purpose, code, language }),
+        ),
       );
       await transaction(pool, async (c) => {
         await c.query(
@@ -147,6 +154,9 @@ export function identityService(
         );
         if (row.purpose === "register") {
           if (!username) return false;
+          await c.query(
+            "SELECT set_config('medora.account_registration','true',true)",
+          );
           const created = await c.query(
             "INSERT INTO medora.accounts(id,email,username,password_salt,password_proof,password_key,created_at,sync_generation) VALUES($1,$2,$3,$4,$5,$6,$7,2) ON CONFLICT DO NOTHING RETURNING id",
             [
@@ -159,16 +169,29 @@ export function identityService(
               Date.now(),
             ],
           );
-          if (!created.rowCount) throw new Conflict("account_unavailable");
+          if (!created.rowCount) {
+            const existing = await c.query(
+              "SELECT 1 FROM medora.accounts WHERE email=$1",
+              [row.email],
+            );
+            throw new Conflict(
+              existing.rowCount ? "already_registered" : "username_taken",
+            );
+          }
         } else {
+          await c.query(
+            "SELECT set_config('medora.password_reset','true',true)",
+          );
           const changed = await c.query(
             "UPDATE medora.accounts SET password_salt=$1,password_proof=$2,password_key=$3 WHERE email=$4 AND sync_generation=2 RETURNING id",
             [salt, hash.toString("hex"), passwordKeyId, row.email],
           );
           if (!changed.rowCount) return false;
-          await c.query("DELETE FROM medora.sessions WHERE owner=$1", [
-            changed.rows[0].id,
-          ]);
+          for (const table of ["sessions", "legacy_session_access"]) {
+            await c.query("DELETE FROM medora." + table + " WHERE owner=$1", [
+              changed.rows[0].id,
+            ]);
+          }
         }
         await c.query(
           "DELETE FROM medora.challenges WHERE email=$1 AND purpose=$2",
@@ -191,28 +214,37 @@ export function identityService(
         [lease],
       );
       for (const job of pending.rows) {
-        const decrypted = await crypto.subtle.decrypt(
-          {
-            name: "AES-GCM",
-            iv: Uint8Array.from(job.nonce as Buffer),
-            additionalData: new TextEncoder().encode(job.challenge),
-          },
-          await key,
-          Uint8Array.from(job.ciphertext as Buffer),
-        );
-        const bytes = new Uint8Array(decrypted);
-        try {
-          await deliver(
-            JSON.parse(new TextDecoder().decode(bytes)),
-            job.challenge,
-          );
-          await pool.query(
-            "UPDATE medora.mail_outbox SET sent_at=now(),ciphertext=''::bytea WHERE challenge=$1 AND lease=$2",
+        await transaction(pool, async (c) => {
+          await c.query("SELECT medora.lock_writer()");
+          const active = await c.query(
+            `SELECT 1 FROM medora.mail_outbox q JOIN medora.challenges c ON c.id=q.challenge
+          WHERE q.challenge=$1 AND q.lease=$2 AND q.sent_at IS NULL AND c.expires_at>now() FOR UPDATE OF q`,
             [job.challenge, lease],
           );
-        } finally {
-          bytes.fill(0);
-        }
+          if (!active.rowCount) return;
+          const decrypted = await crypto.subtle.decrypt(
+            {
+              name: "AES-GCM",
+              iv: Uint8Array.from(job.nonce as Buffer),
+              additionalData: new TextEncoder().encode(job.challenge),
+            },
+            await key,
+            Uint8Array.from(job.ciphertext as Buffer),
+          );
+          const bytes = new Uint8Array(decrypted);
+          try {
+            await deliver(
+              JSON.parse(new TextDecoder().decode(bytes)),
+              job.challenge,
+            );
+            await c.query(
+              "UPDATE medora.mail_outbox SET sent_at=now(),ciphertext=''::bytea WHERE challenge=$1 AND lease=$2",
+              [job.challenge, lease],
+            );
+          } finally {
+            bytes.fill(0);
+          }
+        });
       }
     },
   };

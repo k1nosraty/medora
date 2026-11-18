@@ -22,13 +22,22 @@ await writeFile(key, randomBytes(32).toString("hex"), { mode: 0o600 });
 const env = { ...process.env, DATABASE_URL: url, MEDORA_ARCHIVE_KEY_FILE: key };
 function run(args) {
   const result = spawnSync(process.execPath, args, { env, encoding: "utf8" });
-  if (result.status !== 0)
+  if (result.status !== 0) {
+    const frames = (result.stderr ?? "")
+      .split("\n")
+      .filter((line) =>
+        /^\s*at .*scripts\/(?:verification|migration)\//.test(line),
+      )
+      .slice(0, 3);
     throw Error(
       "Fixture rehearsal command failed: " +
         args[0] +
         " " +
-        (args[1] ?? "").split("/").at(-1),
+        (args[1] ?? "").split("/").at(-1) +
+        "\n" +
+        frames.join("\n"),
     );
+  }
   return result.stdout.trim();
 }
 try {
@@ -124,7 +133,14 @@ try {
       legacyWriterFenced: true,
       ...(unmapped
         ? { unsupportedMutation: postWriteRollback }
-        : { postWriteRollback }),
+        : {
+            postWriteRollback,
+            passwordResetReplayed: true,
+            registrationReplayed: true,
+            legacySessionContinuity: true,
+            operationsReplayed: true,
+            campaignMediaReplayed: true,
+          }),
       sourceProjectionReconciled: true,
       reconciled: !unmapped,
     }),

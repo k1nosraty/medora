@@ -18,7 +18,11 @@ export function identityRoutes(service: IdentityService) {
       await c.req.json().catch(() => null),
     );
     if (!parsed.success) return c.json({ error: "invalid" }, 400);
-    const id = await service.begin(parsed.data.email, parsed.data.purpose);
+    const id = await service.begin(
+      parsed.data.email,
+      parsed.data.purpose,
+      parsed.data.language,
+    );
     return id
       ? c.json({ challenge: id }, 202)
       : c.json({ error: "rate_limit" }, 429);

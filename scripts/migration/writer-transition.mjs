@@ -1,3 +1,6 @@
+import { activatePromotions } from "./promotion-image.mjs";
+import { activateOperations } from "./operations-image.mjs";
+import { reminderImages } from "./reminder-images.mjs";
 import { activateHouseholds } from "./activate-households.mjs";
 import { projectArchive } from "./project.mjs";
 import { DatabaseSync } from "node:sqlite";
@@ -57,6 +60,17 @@ export async function beginFixtureTransition(client, archive, key) {
       "families",
       "challenges",
       "sessions",
+      "legacy_session_access",
+      "password_resets",
+      "account_registrations",
+      "reminder_devices",
+      "reminder_history",
+      "operations_history",
+      "promotion_history",
+      "promotion_values",
+      "operations_tickets",
+      "operations_audit",
+      "operations_counters",
       "backups",
       "login_attempts",
       "cutover_accounts",
@@ -86,6 +100,19 @@ export async function beginFixtureTransition(client, archive, key) {
     );
     await client.query(`INSERT INTO medora.changes(owner,kind,record_id,cursor,body,operation,base_revision)
       SELECT owner,kind,id,revision,body,gen_random_uuid(),0 FROM medora.records`);
+    await client.query(
+      `INSERT INTO medora.legacy_session_access(owner,digest,expires_at)
+      SELECT owner,digest,expires_at FROM medora.legacy_sessions WHERE snapshot=$1`,
+      [snapshot],
+    );
+    const reminders = await reminderImages(client, manifest, key);
+    for (const { id, values, wake } of reminders.devices.values())
+      await client.query(
+        "INSERT INTO medora.reminder_devices(id,values,wake) VALUES($1,$2,$3)",
+        [id, JSON.stringify(values), wake],
+      );
+    await activateOperations(client, manifest, key);
+    await activatePromotions(client, manifest, key);
     await activateHouseholds(client, snapshot);
     for (const entry of manifest.entries.filter(
       (e) =>

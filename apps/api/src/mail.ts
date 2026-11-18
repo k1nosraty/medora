@@ -1,3 +1,4 @@
+import { codeMessage } from "../../../web/src/accounts/code-message.mjs";
 import { invitationMessage } from "../../../web/src/family/invitation-message.mjs";
 import type { Delivery, IdentitySettings } from "./identity";
 import { passwordKeys } from "./settings";
@@ -70,13 +71,15 @@ export function mailConfiguration(env: MailEnv) {
     await response.body?.cancel();
     if (!response.ok) throw Error("mail_provider_unavailable");
   }
-  const deliver: Delivery = (mail, job) =>
-    send(
-      mail.email,
-      "Medora",
-      "کد تأیید مدورا\n" + mail.code + "\nMedora verification code",
-      job,
-    );
+  const deliver: Delivery = (mail, job) => {
+    const copy = mail.language
+      ? codeMessage(mail.code, mail.purpose === "reset", mail.language)
+      : {
+          subject: "Medora",
+          text: "کد تأیید مدورا\n" + mail.code + "\nMedora verification code",
+        };
+    return send(mail.email, copy.subject, copy.text, job);
+  };
   async function invite(
     email: string,
     link: URL,

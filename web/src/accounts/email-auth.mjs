@@ -1,3 +1,5 @@
+import {codeMessage} from "./code-message.mjs";
+import {initializeEmailAccount} from "./schema.mjs";
 import { preserveCareExtensions } from "../../public/medication/domain/care-delta.js";
 import { legacyWritesFenced } from "../http/write-fence.mjs";
 import { equalCareValues } from "../../public/medication/domain/care-contract.js";
@@ -250,19 +252,7 @@ export class EmailAccount extends DurableObject {
     super(ctx, env);
     if (legacyWritesFenced(env)) return;
     this.sql = ctx.storage.sql;
-    this.sql.exec(`
-      CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, sent INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS challenge (id TEXT PRIMARY KEY, proof TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
-      CREATE TABLE IF NOT EXISTS reset_challenge (id TEXT PRIMARY KEY, proof TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0);
-      CREATE TABLE IF NOT EXISTS pending_password_reset
-        (id TEXT PRIMARY KEY REFERENCES reset_challenge(id) ON DELETE CASCADE, salt TEXT NOT NULL, proof TEXT NOT NULL, version TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS password_sources (source TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS password_attempts (id INTEGER PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
-      CREATE TABLE IF NOT EXISTS account_reset (id INTEGER PRIMARY KEY, epoch TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS family_operations (operation TEXT PRIMARY KEY, expires INTEGER NOT NULL);
-      CREATE INDEX IF NOT EXISTS family_operations_expiry ON family_operations(expires);
-    `);
+    initializeEmailAccount(this.sql);
   }
 
   async start(email, language, id = crypto.randomUUID(), reset = false) {
@@ -283,20 +273,13 @@ export class EmailAccount extends DurableObject {
     });
     await this.scheduleCleanup();
     try {
-      const localized = code.replace(/\d/g, digit => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         signal: AbortSignal.timeout(10_000),
         headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": id },
         body: JSON.stringify({
           from: this.env.EMAIL_FROM, to: [email],
-          subject: reset ? language === "en" ? "Reset your Medora password" : "بازیابی رمز مدورا" :
-            language === "en" ? "Verify your email for Medora" : "تأیید ایمیل برای مدورا",
-          text: reset ? (language === "en"
-            ? `Your Medora password reset code is ${code}.\nIt expires in 10 minutes. If you didn't request a password reset, ignore this email.`
-            : `کد بازیابی رمز مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر درخواست بازیابی نداده‌اید، این پیام را نادیده بگیرید.`) : language === "en"
-            ? `Your Medora email verification code is ${code}.\nIt expires in 10 minutes. If you didn't request a code, you can ignore this email.`
-            : `کد تأیید ایمیل شما در مدورا: ${localized}\nاین کد تا ۱۰ دقیقه اعتبار دارد. اگر شما درخواست کد نداده‌اید، این پیام را نادیده بگیرید.`
+          ...codeMessage(code,reset,language)
         })
       });
       const metric = response.ok ? "email:accepted" : "email:failed";

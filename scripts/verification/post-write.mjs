@@ -1,3 +1,8 @@
+import { verifyRegistration } from "./registration-cutover.mjs";
+import { verifyCampaignWrites } from "./promotion-cutover.mjs";
+import { verifyOperationalWrites } from "./operations-cutover.mjs";
+import { fixturePush, verifyReminderWrites } from "./reminder-cutover.mjs";
+import { hmac } from "../../web/src/accounts/auth-crypto.mjs";
 import { withLocalWorker } from "./local-worker.mjs";
 import { fixtureMailbox } from "./mailbox.mjs";
 import { readdir, lstat } from "node:fs/promises";
@@ -45,7 +50,9 @@ export async function verifyPostWrite({
   const { port } = socket.address();
   await new Promise((resolve) => socket.close(resolve));
   const origin = "http://127.0.0.1:" + port;
-  const mailbox = unmapped ? await fixtureMailbox() : undefined;
+  const mailbox = await fixtureMailbox();
+  const push = fixturePush();
+  const legacyKey = randomBytes(32).toString("hex");
   const api = spawn(process.execPath, ["apps/api/dist/server.mjs"], {
     stdio: "ignore",
     env: {
@@ -53,12 +60,15 @@ export async function verifyPostWrite({
       DATABASE_URL: url,
       HOST: "127.0.0.1",
       MEDORA_LEGACY_WRITES_FENCED: "true",
-      ...(mailbox && {
+      EMAIL_SESSION_KEY: legacyKey,
+      ADMIN_EMAIL: expected.people[1].credential[2],
+      ...push,
+      ...{
         MEDORA_MAILPIT: mailbox.origin,
         MEDORA_CODE_KEY: randomBytes(32).toString("hex"),
         MEDORA_MAIL_KEY: randomBytes(32).toString("hex"),
         MEDORA_FROM: "fixture@example.test",
-      }),
+      },
       PORT: String(port),
       MEDORA_PASSWORD_KEYS: JSON.stringify({ legacy: "a".repeat(64) }),
     },
@@ -90,41 +100,36 @@ export async function verifyPostWrite({
     });
     assert.equal(login.status, 200);
     headers.Cookie = login.headers.get("set-cookie").split(";")[0];
-    if (mailbox) {
-      // A real reset commits a new proof, invalidates sessions and consumes the
-      // challenge. The persisted exception must prevent restoring the old proof.
+    const signed = person.id + "." + person.token;
+    const originalCookie =
+      "__Host-medora_session=" +
+      signed +
+      "." +
+      (await hmac(legacyKey, "session-v1", signed));
+    const sessionWith = (cookie) =>
+      fetch(origin + "/api/v2/session", { headers: { Cookie: cookie } });
+    assert.equal((await sessionWith(originalCookie)).status, 200);
+    assert.equal((await sessionWith(originalCookie.slice(0, -1))).status, 401);
+    async function requestReset() {
       const email = person.credential[2];
       const challenge = await send("identity/challenges", {
         email,
         purpose: "reset",
       });
       assert.equal(challenge.status, 202);
-      const id = (await challenge.json()).challenge;
+      const { challenge: id } = await challenge.json();
       const until = Date.now() + 20000;
       while (!mailbox.codes.has(email) && Date.now() < until) await delay(100);
       const code = mailbox.codes.get(email);
       assert.ok(code);
-      const reset = await send("identity/verify", {
-        challenge: id,
-        code,
-        password: randomBytes(24).toString("hex"),
-      });
-      assert.equal(reset.status, 200);
-      assert.equal(
-        (await fetch(origin + "/api/v2/session", { headers })).status,
-        401,
-      );
+      return { challenge: id, code };
+    }
+    if (unmapped) {
+      await requestReset();
       await freezeWriter(client, snapshot);
       const inspector = new Client({ connectionString: url });
       await inspector.connect();
       try {
-        const { rows } = await inspector.query(
-          "SELECT relation_name FROM medora.rollback_exceptions ORDER BY relation_name",
-        );
-        assert.deepEqual(
-          rows.map((row) => row.relation_name),
-          ["accounts", "challenges", "mail_outbox"],
-        );
         await assert.rejects(
           reverseCare(inspector, archive, key, restored),
           /different reverse projection/,
@@ -133,11 +138,7 @@ export async function verifyPostWrite({
       } finally {
         await inspector.end();
       }
-      return {
-        passwordResetCommitted: true,
-        sessionRevoked: true,
-        recoveryPublicationBlocked: true,
-      };
+      return { pendingPasswordReset: true, recoveryPublicationBlocked: true };
     }
     const { rows: seeds } = await client.query(
       "SELECT id,revision FROM medora.records WHERE owner=$1 AND id IN ('w-0','w-1') ORDER BY id",
@@ -382,6 +383,64 @@ export async function verifyPostWrite({
       /different reverse projection/,
     );
     await client.query("ROLLBACK");
+    const admin = await verifyOperationalWrites(origin, headers, expected);
+    await verifyCampaignWrites(origin, expected, headers);
+    await verifyReminderWrites(
+      origin,
+      expected,
+      headers,
+      person.revision,
+      push,
+      url,
+      client,
+    );
+    const password = randomBytes(24).toString("hex");
+    assert.equal(
+      (await send("identity/verify", { ...(await requestReset()), password }))
+        .status,
+      200,
+    );
+    assert.equal((await sessionWith(originalCookie)).status, 401);
+    assert.equal((await sessionWith(headers.Cookie)).status, 401);
+    assert.equal(
+      (
+        await send("session", {
+          username: "fixture0",
+          password: "synthetic fixture password",
+        })
+      ).status,
+      401,
+    );
+    const newSession = await send("session", {
+      username: "fixture0",
+      password,
+    });
+    assert.equal(newSession.status, 200);
+    headers.Cookie = newSession.headers.get("set-cookie").split(";")[0];
+    const updatedList = await fetch(
+      origin + "/api/v2/admin/accounts?q=fixture0",
+      { headers: admin.actor },
+    );
+    const {
+      users: [updatedUser],
+    } = await updatedList.json();
+    const revoke = (body) =>
+      fetch(origin + "/api/v2/admin/accounts", {
+        method: "PATCH",
+        headers: admin.actor,
+        body: JSON.stringify(body),
+      });
+    assert.equal((await revoke(admin.target)).status, 409);
+    assert.equal(
+      (await revoke({ ...admin.target, tag: updatedUser.tag })).status,
+      200,
+    );
+    assert.equal((await sessionWith(headers.Cookie)).status, 401);
+    const relogin = await send("session", { username: "fixture0", password });
+    assert.equal(relogin.status, 200);
+    headers.Cookie = relogin.headers.get("set-cookie").split(";")[0];
+    expected.passwordReset = password;
+    expected.registration = await verifyRegistration(origin, mailbox);
     // Hold the shared guard as an in-flight writer would. The freeze cannot finish early.
     const draining = new Client(fencedConnection);
     await draining.connect();
@@ -461,8 +520,9 @@ export async function verifyPostWrite({
     await assert.rejects(lstat(join(interrupted, "do")), { code: "ENOENT" });
     const result = await reverseCare(client, archive, key, restored);
     assert.deepEqual(result, {
-      owners: 2,
-      replayed: person.revision + second.revision - 14,
+      owners: 3,
+      replayed: person.revision + second.revision - 14 + 1,
+      reminderDevices: 2,
     });
     await assert.rejects(reverseCare(client, archive, key, restored), {
       code: "EEXIST",

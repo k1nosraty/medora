@@ -45,6 +45,7 @@ export const identityBegin = z
   .object({
     email: accountEmail,
     purpose: z.enum(["register", "reset"]),
+    language: z.enum(["fa", "en"]).optional(),
   })
   .strict();
 export const identityFinish = z
