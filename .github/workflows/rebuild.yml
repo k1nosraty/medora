@@ -52,6 +52,28 @@ jobs:
           MEDORA_TEST_DATABASE_URL="${MEDORA_TEST_DATABASE_URL%/*}/medora_unmapped" node scripts/verification/rehearse.mjs --unmapped > dist/recovery-refusal.json
           createdb medora_erase_imported
           MEDORA_TEST_DATABASE_URL="${MEDORA_TEST_DATABASE_URL%/*}/medora_erase_imported" node scripts/verification/rehearse.mjs --erase-imported > dist/imported-account-erasure.json
+      - name: Rehearse PostgreSQL and R2 migration with offline browsers
+        run: |
+          export PGHOST=127.0.0.1 PGUSER=medora PGPASSWORD=fixture-ci-only
+          export TMPDIR="$RUNNER_TEMP"
+          export MEDORA_PG_BIN="$RUNNER_TEMP/medora-pg-tools"
+          mkdir -p "$MEDORA_PG_BIN" dist
+          for tool in pg_dump pg_restore; do
+            cat > "$MEDORA_PG_BIN/$tool" <<'SH'
+          #!/bin/sh
+          root="$(cd "$(dirname "$0")/.." && pwd)"
+          exec docker run --rm --pull never --network host --user "$(id -u):$(id -g)" \
+            --env PGHOST --env PGPORT --env PGUSER --env PGPASSWORD --env PGDATABASE --env PGCONNECT_TIMEOUT \
+            --mount "type=bind,src=$root,dst=$root" postgres:17.11-alpine "$(basename "$0")" "$@"
+          SH
+            chmod +x "$MEDORA_PG_BIN/$tool"
+          done
+          for slot in SOURCE TARGET ABORTED RECOVERY; do
+            name="medora_handoff_${slot,,}"
+            createdb "$name"
+            export "MEDORA_HANDOFF_$slot=${MEDORA_TEST_DATABASE_URL%/*}/$name"
+          done
+          node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
       - run: npm --prefix web run typecheck && npm --prefix web test && npm --prefix web run test:care && npm --prefix web run test:alarms
       - run: npm --prefix web run test:browser
       - run: MEDORA_PUBLIC_DIR="$PWD/apps/web/dist" npm --prefix web exec -- playwright test --config "$PWD/web/playwright.config.mjs"
@@ -59,7 +81,7 @@ jobs:
       - run: node web/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
       - run: pnpm test:e2e
       - run: node scripts/verification/pwa-update.mjs
-      - run: web/node_modules/.bin/wrangler deploy --config infrastructure/cloudflare/local.json --dry-run --outdir "$PWD/dist/worker"
+      - run: node scripts/verification/bundle-worker.mjs infrastructure/cloudflare/candidate.mjs dist/worker/candidate.js
       - name: Exercise standalone storage, Node and reverse proxy
         run: |
           config="$RUNNER_TEMP/medora-fixture.env"
@@ -75,7 +97,7 @@ jobs:
       - name: Identify and package verified candidate
         run: |
           node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
-          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/imported-account-erasure.json dist/visual-parity.json dist/performance-product.json
+          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/imported-account-erasure.json dist/postgres-handoff.json dist/visual-parity.json dist/performance-product.json
       - uses: actions/upload-artifact@v4
         with:
           name: medora-candidate

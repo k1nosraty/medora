@@ -22,7 +22,7 @@ async function inventory(root, base = root) {
 }
 const worker = process.argv[2];
 if (!worker || !(await stat(worker)).isDirectory())
-  throw Error("Supply the dry-run Worker output directory");
+  throw Error("Supply the local Worker output directory");
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 if (git("status", "--porcelain"))
   throw Error("Commit candidate changes before recording artifact hashes");
@@ -43,6 +43,7 @@ const evidenceFiles = [
   "reconciliation.json",
   "recovery-refusal.json",
   "imported-account-erasure.json",
+  "postgres-handoff.json",
   "visual-parity.json",
   "performance-product.json",
 ];
@@ -56,9 +57,8 @@ const evidence = await Promise.all(
     };
   }),
 );
-const [reconciled, refused, erased, visual, performance] = evidence.map(
-  (entry) => entry.report,
-);
+const [reconciled, refused, erased, handoff, visual, performance] =
+  evidence.map((entry) => entry.report);
 if (
   reconciled.source !== "synthetic Workerd" ||
   !reconciled.reconciled ||
@@ -78,13 +78,25 @@ if (
   !reconciled.legacySessionContinuity ||
   !reconciled.operationsReplayed ||
   !reconciled.campaignMediaReplayed ||
+  handoff.accounts !== 2 ||
+  handoff.offlineWrites !== 4 ||
+  handoff.objects !== 1 ||
+  !handoff.sessionsPreserved ||
+  !handoff.grantPreserved ||
+  !handoff.outboxResumed ||
+  !handoff.updatedServiceWorker ||
+  !handoff.reversedAfterWrites ||
+  !handoff.abortedCopyRecovered ||
+  !handoff.concurrentWriterDrained ||
+  !handoff.standaloneWranglerVerified ||
+  !handoff.backupDecrypted ||
   refused.reconciled !== false ||
   !refused.unsupportedMutation?.recoveryPublicationBlocked ||
   !refused.unsupportedMutation?.pendingPasswordReset ||
   !visual.identicalDocumentMarkup ||
-  visual.identicalViewportCaptures !== 52 ||
-  visual.identicalVisibleLayouts !== 52 ||
-  visual.accessibility?.length !== 12 ||
+  visual.identicalViewportCaptures !== 104 ||
+  visual.identicalVisibleLayouts !== 104 ||
+  visual.accessibility?.length !== 24 ||
   performance.trials?.length !== 3
 )
   throw Error("Incomplete candidate fixture evidence");

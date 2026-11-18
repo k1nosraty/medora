@@ -91,7 +91,7 @@ async function serve(dir, port) {
   }
   throw Error("Fixture server unavailable");
 }
-async function capture(page) {
+async function capture(page, prepare) {
   await page.bringToFront();
   await page.waitForLoadState("networkidle");
   await page.evaluate(async () => {
@@ -108,6 +108,15 @@ async function capture(page) {
       requestAnimationFrame(() => requestAnimationFrame(resolve)),
     );
   });
+  if (prepare) {
+    await prepare(page);
+    await page.evaluate(async () => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      );
+    });
+  }
   const shot = () => page.screenshot({ animations: "disabled", caret: "hide" });
   let before = await shot();
   for (let n = 0; n < 12; n++) {
@@ -162,18 +171,22 @@ try {
     serve(resolve("apps/web/dist"), 48972),
   ]);
   for (const engine of [chromium, webkit]) {
-    const browser = await engine.launch(
+    const options =
       engine === chromium && process.env.MEDORA_CHROMIUM
         ? { executablePath: process.env.MEDORA_CHROMIUM }
-        : {},
-    );
-    browsers.push(browser);
+        : {};
+    // Separate browser processes keep both web views foregrounded during
+    // keyboard focus and screenshot capture.
+    const pair = await Promise.all(origins.map(() => engine.launch(options)));
+    browsers.push(...pair);
     for (const [lang, theme, width, height] of [
       ["fa", "light", 390, 844],
+      ["fa", "dark", 1280, 850],
+      ["en", "light", 390, 844],
       ["en", "dark", 1280, 850],
     ]) {
       const contexts = await Promise.all(
-        origins.map(() =>
+        pair.map((browser) =>
           browser.newContext({
             viewport: { width, height },
             timezoneId: "Asia/Tehran",
@@ -190,10 +203,11 @@ try {
         async function both(fn) {
           await Promise.all(pages.map((page, i) => fn(page, origins[i])));
         }
-        async function compare(name) {
-          let before = await capture(pages[0]),
-            after = await capture(pages[1]);
-          const [left, right] = await Promise.all(pages.map(visibleLayout));
+        async function compare(name, prepare) {
+          let before = await capture(pages[0], prepare);
+          const left = await visibleLayout(pages[0]);
+          let after = await capture(pages[1], prepare);
+          const right = await visibleLayout(pages[1]);
           assert.ok(
             JSON.stringify(left) === JSON.stringify(right),
             engine.name() +
@@ -215,9 +229,9 @@ try {
                   document.body.style.removeProperty("visibility");
                   await new Promise(requestAnimationFrame);
                 });
-              before = await capture(pages[0]);
+              before = await capture(pages[0], prepare);
               paints.push(before);
-              after = await capture(pages[1]);
+              after = await capture(pages[1], prepare);
               const exact = paints.find((referencePaint) =>
                 referencePaint.equals(after),
               );
@@ -234,6 +248,8 @@ try {
               engine.name() +
               "-" +
               lang +
+              "-" +
+              width +
               "-" +
               name;
             await Promise.all([
@@ -348,7 +364,11 @@ try {
                 "true",
               );
             });
-            await compare("water-report");
+            await compare("water-report", async (page) => {
+              const first = page.locator("#report-chart button").first();
+              await first.press("Home");
+              await expect(first).toBeFocused();
+            });
           }
           if (screen === "water") {
             await both(async (page) => {
@@ -401,7 +421,14 @@ try {
           await expect(dots.last()).toBeFocused();
           await expect(dots.last()).toHaveAttribute("aria-pressed", "true");
         });
-        await compare("today-grouped");
+        await compare("today-grouped", async (page) => {
+          const last = page
+            .locator("#day-focus-navigation .day-focus-dot")
+            .last();
+          await last.press("End");
+          await expect(last).toBeFocused();
+          await expect(last).toHaveAttribute("aria-pressed", "true");
+        });
         await both(async (page) => {
           await page.locator("#program-cycle").click();
           const bars = page.locator("#cycle-bars button");

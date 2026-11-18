@@ -24,3 +24,11 @@ To add a feature, put pure rules in packages/domain, validated API inputs in pac
 The portable operations service stores support tickets, rollout settings, counters and audit rows in PostgreSQL. Both runtimes share campaign rules and the original HTTP range semantics. PostgreSQL holds campaign metadata and media chunks under a transaction lock. The reminder scheduler shares the native state machine, locks each due device and checks its linked care revision before composing or sending. The source writer fence and the PostgreSQL freeze remain separate.
 
 A valid legacy cookie can authenticate to the candidate when its signed owner and live digest match the imported ledger. Sign-out and password reset revoke both ledgers where applicable. Reverse recovery checks the original credential and session baseline before applying registered accounts, new proofs and revocations. It preserves the frozen target for mutations outside the verified mapping.
+
+## Portable PostgreSQL installations
+
+Node and Workerd call `createRuntime` in `apps/api/src/runtime.ts`, which composes the same handlers, policy services and job runner. Node owns the HTTP listener, connection lifecycle and timer. The portable Worker owns asset delivery, Hyperdrive and R2 bindings, request lifetime and cron dispatch. The portable mode uses no dedicated Cloudflare persistence for users beyond the replaceable R2 adapter. Workbox routes static requests within the existing service-worker scopes and cache lifecycle. API requests bypass these caches.
+
+Migration 020 introduces a PostgreSQL installation state independent of the legacy writer transition. The database guard holds a shared lock for writes and coordinated external side effects. A migration can drain that lock, restore the frozen database into a separate target, verify it and explicitly select one destination. The original Durable Object recovery mechanisms remain in place. This work does not change the default compatibility preview or certify a legacy production cutover.
+
+See [device preservation](DATA_PRESERVATION.md), [Cloudflare architecture](CLOUDFLARE_DEPLOYMENT.md), [VPS](VPS_DEPLOYMENT.md) and [handoff](MIGRATION.md#move-an-established-postgresql-installation-between-runtimes).

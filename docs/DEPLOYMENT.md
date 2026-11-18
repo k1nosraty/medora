@@ -14,22 +14,24 @@ npm ci --prefix web
 pnpm typecheck && pnpm lint
 pnpm build
 mkdir -p dist
-web/node_modules/.bin/wrangler deploy --dry-run --config infrastructure/cloudflare/local.json --outdir "$PWD/dist/worker"
+node scripts/verification/bundle-worker.mjs infrastructure/cloudflare/candidate.mjs dist/worker/candidate.js
 # Supply a separate fresh loopback fixture database for each drill.
 MEDORA_TEST_DATABASE_URL="$MAPPED_FIXTURE_URL" node scripts/verification/rehearse.mjs > dist/reconciliation.json
 MEDORA_TEST_DATABASE_URL="$UNMAPPED_FIXTURE_URL" node scripts/verification/rehearse.mjs --unmapped > dist/recovery-refusal.json
 MEDORA_TEST_DATABASE_URL="$ERASURE_FIXTURE_URL" node scripts/verification/rehearse.mjs --erase-imported > dist/imported-account-erasure.json
+# Use the four fresh database variables from the handoff guide.
+node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
 node scripts/verification/visual-parity.mjs > dist/visual-parity.json
 node web/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
 node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
 ```
 
-The static app is in apps/web/dist, the portable Node server is apps/api/dist/server.mjs and the dry-run Worker bundle is in dist/worker. The local Worker configuration has no production routes and declares seven separate local Durable Object bindings.
+The static app is in apps/web/dist, the portable Node server is apps/api/dist/server.mjs and the local Worker bundle is in dist/worker. The local Worker configuration has no production routes and declares seven separate local Durable Object bindings.
 
 ## Isolated database and migration
 
 1. Establish a private, authorized frozen copy, its independent object census, identity mapping and source time. Confirm completeness for all seven namespaces, including accountless devices, unknown data and pending operations. Save the current Worker version, code, configuration references, object inventories and encrypted backups for recovery. Preserve each device's original origin, IndexedDB, active tab and push registration.
-2. Set DATABASE_URL to the isolated PostgreSQL target and MEDORA_ARCHIVE_KEY_FILE to a private key file outside the checkout. Apply `pnpm db:migrate` twice. Both runs must verify all migration checksums. In order the migrations are 001_care, 002_archives, 003_legacy_projection, 004_identity, 005_families, 006_writer_transition, 007_care_documents, 008_transition_state, 009_household_policies, 010_invitation_history, 011_require_source_fence, 012_identity_recovery, 013_portable_reminders, 014_portable_operations, 015_portable_promotions, 016_registration_recovery, 017_backup_recovery, 018_account_deletion and 019_release_notifications.
+2. Set DATABASE_URL to the isolated PostgreSQL target and MEDORA_ARCHIVE_KEY_FILE to a private key file outside the checkout. Apply `pnpm db:migrate` twice. Both runs must verify all migration checksums. In order the migrations are 001_care, 002_archives, 003_legacy_projection, 004_identity, 005_families, 006_writer_transition, 007_care_documents, 008_transition_state, 009_household_policies, 010_invitation_history, 011_require_source_fence, 012_identity_recovery, 013_portable_reminders, 014_portable_operations, 015_portable_promotions, 016_registration_recovery, 017_backup_recovery, 018_account_deletion, 019_release_notifications and 020_infrastructure_handoff.
 3. Run the following against the frozen **copy**. Export writes a fresh archive. The importer authenticates parts and checkpoints each object. The verifier independently reads the target. The final restore command creates a new private directory and refuses an existing destination.
 
 ```sh
@@ -78,7 +80,7 @@ Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, schedul
 | MEDORA_RELEASE | Version eligible for the release notice. Supply the deployed 40-character commit identifier for a separately approved rollout |
 | ADMIN_EMAIL, SUPPORT_EMAILS, PROMOTION_MEDIA_HOSTS | Explicit administrator, support and approved external media host configuration |
 | ASSETS | Vite distribution, static CSP and revisioned service worker |
-| HYPERDRIVE | Isolated PostgreSQL connection with the nineteen migrations applied |
+| HYPERDRIVE | Isolated PostgreSQL connection with the twenty migrations applied |
 | BACKUPS | Private staging R2 bucket containing encrypted account backups |
 | MEDORA_PASSWORD_KEYS, MEDORA_CURRENT_PASSWORD_KEY | Versioned pepper registry and current key name |
 | MEDORA_CODE_KEY, MEDORA_MAIL_KEY | Independent challenge HMAC and outbox encryption keys |
@@ -87,7 +89,7 @@ Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, schedul
 | Node-only DATABASE_URL, S3_ENDPOINT, S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY | PostgreSQL and S3 adapters for VPS |
 | Compose-only MEDORA_DB_PASSWORD, MEDORA_STORAGE_SECRET, MEDORA_MAILPIT | Development database, storage and mail sink |
 
-Render with `node infrastructure/cloudflare/staging.mjs`. Validate with `web/node_modules/.bin/wrangler deploy --dry-run --config infrastructure/cloudflare/.staging.generated.json`. Hosted execution requires separate owner approval and verified dedicated resource and secret references. The generated configuration targets medora-v2-staging on workers.dev and a one-minute cron for delivery retries. Test registration, verification mail, revocation, sync, backup, service worker upgrade, security headers and recovery on its actual HTTPS origin. Record the hosted Worker version, binding identities, checksums and aggregate results.
+Render with `node infrastructure/cloudflare/staging.mjs`. Validate the local runtime with the loopback Workerd tests. Hosted execution requires separate owner approval and verified dedicated resource and secret references. The generated configuration targets medora-v2-staging on workers.dev and a one-minute cron for delivery retries. Test registration, verification mail, revocation, sync, backup, service worker upgrade, security headers and recovery on its actual HTTPS origin. Record the hosted Worker version, binding identities, checksums and aggregate results.
 
 ## Rollback and abort criteria
 

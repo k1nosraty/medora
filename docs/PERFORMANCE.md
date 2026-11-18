@@ -27,8 +27,8 @@ Use a fresh web build, start Vite preview and run `node scripts/verification/per
 
 ## Canonical product
 
-The same throttled Chromium script and onboarding marker ran three cold trials on /medication/. The median was 5,998 ms with 1,132,026 transferred bytes. The original baseline was 5,995 ms and 1,097,905 bytes. A preliminary candidate that loaded React DOM before showing the welcome screen measured 7,122 ms. The candidate now attaches working controls to the delivered markup immediately and loads the renderer separately. The measured 3 ms difference from the original is within the spread of these trials.
+The same throttled Chromium script and onboarding marker ran three cold trials on /medication/. The median was 5,991 ms with 1,132,481 transferred bytes. The original baseline was 5,995 ms and 1,097,905 bytes. A preliminary candidate that loaded React DOM before showing the welcome screen measured 7,122 ms. The candidate now attaches working controls to the delivered markup immediately and loads the renderer separately. The measured 4 ms difference from the original is within the spread of these trials.
 
-The candidate offline shell has 37 entries totaling 1,560,355 bytes. The release reference had 35 entries totaling 1,316,425 bytes. The additional renderer still costs storage and transfer on first installation. Field input latency, physical-device install and large-history rendering for all eight product screens remain open.
+The candidate offline shell has 37 entries totaling 1,560,810 bytes. The release reference had 35 entries totaling 1,316,425 bytes. The additional renderer still costs storage and transfer on first installation. Field input latency, physical-device install and large-history rendering for all eight product screens remain open.
 
 Reproduce with `node web/browser/measure.mjs apps/web/dist 3` after a candidate build.

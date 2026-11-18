@@ -1,0 +1,11 @@
+# Future VPS deployment
+
+This guide describes a future approved installation. The local rehearsal runs the Node adapter on loopback after an isolated copy from Workerd. No VPS was provisioned.
+
+1. Use the same frontend build and public HTTPS origin. Keep static assets on the VPS or a CDN with identical paths. The reverse proxy routes `/api/v2/*` to the Node process, provides the correct public origin, and fences the legacy public write paths. The existing Compose Caddyfile includes a compatibility service for incumbent rehearsals. It is optional infrastructure for an independently configured PostgreSQL-only VPS.
+2. Run the existing Node artifact from `apps/api/dist/server.mjs`. Supply the direct or appropriately pooled PostgreSQL runtime connection and a dedicated S3-compatible bucket. Supply the S3 endpoint, bucket, region and scoped credentials through the environment or secret manager. Retain the stored application keys, including versioned password proofs, mail proof/ciphertext keys and push signing keys. Database and bucket credentials can differ.
+3. Use independent control and runtime database roles. The runtime requires access to application tables and sequences, read access to transition state and execution of the verified guard. Keep schema changes and transition updates with the operator. Provision roles and grants separately because the transfer omits ownership and ACLs. Run the migration tool over a direct connection to the same PostgreSQL major version.
+4. Restore a frozen, verified transfer into a fresh dedicated database and bucket. Confirm ingress TLS, allowlisted origin, and current SQL and S3 endpoint identities before authorizing traffic. Ensure that Node's timer is the active scheduler after handoff. The old source remains retained and write-fenced.
+5. Validate account sessions, both directions of family permissions, interrupted uploads, job metrics, two-user end-to-end reconciliation and the installed client on the intended HTTPS origin. See [migration](MIGRATION.md) and [rollback](ROLLBACK.md).
+
+If the VPS can use the same independent PostgreSQL and object storage initially, the backend can switch runtimes without copying those stores. The eventual storage move still needs a freeze, verified copy and a single active writer.
