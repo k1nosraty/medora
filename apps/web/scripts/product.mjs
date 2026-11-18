@@ -21,6 +21,13 @@ const output = resolve(app, "dist");
 const staging = await mkdtemp(join(app, ".product-"));
 const components = new Map([
   ["medication/app/onboarding.js", "Onboarding.tsx"],
+  ["medication/app/routes.js", "routes.ts"],
+  ["medication/app/day-navigation.js", "dayNavigation.ts"],
+  ["medication/app/entry-actions.js", "entryActions.ts"],
+  ["medication/app/update.js", "updates.ts"],
+  ["medication/features/today/view.js", "Today.tsx"],
+  ["medication/features/cycle/overview.js", "CycleOverview.tsx"],
+  ["medication/features/sync/conflict-view.js", "SyncConflicts.tsx"],
   ["medication/app/week-strip.js", "DayWeek.tsx"],
   ["medication/shared/ui/month-grid.js", "MonthGrid.tsx"],
   ["medication/features/reports/stats.js", "ReportStats.tsx"],
