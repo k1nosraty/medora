@@ -44,6 +44,25 @@ it.skipIf(!process.env.MEDORA_TEST_DATABASE_URL)(
       expect(await family.water(c, group, a, 10)).toBe(null);
       expect(await family.grant(a, group, b, false)).toBe(true);
       expect(await family.water(b, group, a, 10)).toBe(null);
+
+      // The water-only journal control must preserve the full product's grants.
+      await pool.query(
+        "INSERT INTO medora.water_grants(family,owner,viewer,sections,can_record) VALUES($1,$2,$3,ARRAY['medicines'],true)",
+        [group, a, b],
+      );
+      expect(await family.grant(a, group, b, true)).toBe(false);
+      expect(await family.water(b, group, a, 10)).toBe(null);
+      await pool.query(
+        "UPDATE medora.water_grants SET can_record=false WHERE family=$1",
+        [group],
+      );
+      expect(await family.grant(a, group, b, true)).toBe(true);
+      expect(await family.grant(a, group, b, false)).toBe(true);
+      const grants = await pool.query(
+        "SELECT sections FROM medora.water_grants WHERE family=$1",
+        [group],
+      );
+      expect(grants.rows).toEqual([{ sections: ["medicines"] }]);
     } finally {
       await pool.end();
     }

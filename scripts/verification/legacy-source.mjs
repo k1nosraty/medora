@@ -4,6 +4,8 @@ import {
   sealPrivateCare,
 } from "../../web/public/medication/features/sync/private-care.js";
 // Generates a stopped, synthetic local Workerd copy and an independent inventory.
+import assert from "node:assert/strict";
+import { sessionHash } from "../../web/src/accounts/auth-crypto.mjs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
@@ -18,6 +20,7 @@ const { build } = require("esbuild"),
 const output = process.argv[2];
 if (!output) throw new Error("Supply a fresh private fixture directory");
 const verification = process.argv[3];
+const fenced = process.argv[4] === "fenced";
 if (!verification) await mkdir(output, { mode: 0o700 });
 const root = fileURLToPath(new URL("../../web/", import.meta.url));
 const classes = [
@@ -33,6 +36,7 @@ const methods = `async fixture(values,tables){
   for(const [k,v] of Object.entries(values))await this.ctx.storage.put(k,v);
   for(const [statement,parameters] of tables)this.ctx.storage.sql.exec(statement,...parameters);
 }
+async fixtureAlarm(){await this.alarm(); return this.ctx.storage.getAlarm();}
 async fixtureRead(key,query){return {value:key?await this.ctx.storage.get(key):null,rows:query?this.ctx.storage.sql.exec(query).toArray():[]};}
 `;
 const { outputFiles } = await build({
@@ -46,7 +50,15 @@ const { outputFiles } = await build({
             "export class " + c + " extends base." + c + " {" + methods + "}",
         )
         .join("\n") +
-      "\nexport default { fetch(){return new Response(null,{status:404});} };",
+      `
+export default {...base.default, async fetch(request,env,ctx) {
+        if (new URL(request.url).pathname !== "/fixture-fence") return base.default.fetch(request,env,ctx);
+        const [kind,name,method] = await request.json();
+        const args=Array.isArray(method) ? method.slice(1) : [];
+        const operation=Array.isArray(method) ? method[0] : method;
+        try { await env[kind].getByName(name)[operation](...args); return Response.json({blocked:false}); }
+        catch(error) { return Response.json({blocked:error.message.includes("legacy_writer_fenced")}); }
+      }};`,
   },
   bundle: true,
   platform: "browser",
@@ -66,6 +78,7 @@ const mf = new Miniflare(
     durableObjects: Object.fromEntries(
       classes.map((c) => [c, { className: c, useSQLite: true }]),
     ),
+    bindings: { MEDORA_LEGACY_WRITES_FENCED: String(fenced) },
     outboundService: () => {
       throw Error("Fixture network disabled");
     },
@@ -90,12 +103,78 @@ async function seed(c, name, values, sql = []) {
 if (verification) {
   try {
     const e = JSON.parse(await readFile(verification, "utf8"));
+    if (fenced) {
+      for (const [path, method] of [
+        ["account/care", "PUT"],
+        ["family", "POST"],
+        ["migration/restore", "POST"],
+        ["migration/parts/restore", "POST"],
+        ["auth/session", "GET"],
+        ["operations/release", "GET"],
+        ["reminders", "PUT"],
+      ]) {
+        const result = await mf.dispatchFetch(
+          "http://fixture.test/api/" + path,
+          { method },
+        );
+        assert.equal(result.status, 503);
+        assert.equal((await result.json()).error, "legacy_writer_fenced");
+      }
+      const worker = await mf.getWorker();
+      await worker.scheduled({
+        scheduledTime: Date.now(),
+        cron: "*/5 * * * *",
+      });
+      for (const [kind, name, rpc] of [
+        [
+          "EmailAccount",
+          e.people[0].id,
+          [
+            "saveCareSnapshot",
+            7,
+            e.people[0].records,
+            "",
+            e.people[0].token,
+            null,
+            e.people[0].id,
+          ],
+        ],
+        ["Credentials", "medora-credentials-v1", "restoreAccount"],
+        ["Families", "care-groups", "pruneAudit"],
+        ["MedicationReminders", e.device, "replaceAccountPlan"],
+        ["Operations", "operations", "publishRelease"],
+        ["Promotions", "home", "campaigns"],
+        ["PushPilot", "medora-push-pilot", "start"],
+      ]) {
+        const ns = await mf.getDurableObjectNamespace(kind),
+          stub = ns.get(ns.idFromName(name));
+        const check = await mf.dispatchFetch(
+          "http://fixture.test/fixture-fence",
+          { method: "POST", body: JSON.stringify([kind, name, rpc]) },
+        );
+        assert.equal(
+          (await check.json()).blocked,
+          true,
+          "Fence failed for " + kind,
+        );
+        if (
+          [
+            "EmailAccount",
+            "MedicationReminders",
+            "Operations",
+            "PushPilot",
+          ].includes(kind)
+        )
+          assert.ok((await stub.fixtureAlarm()) > Date.now());
+      }
+    }
     const read = async (c, name, key, statement) => {
       const ns = await mf.getDurableObjectNamespace(c);
       return ns.get(ns.idFromName(name)).fixtureRead(key, statement);
     };
+    const { isDeepStrictEqual } = await import("node:util");
     const same = (left, right) => {
-      if (JSON.stringify(left) !== JSON.stringify(right))
+      if (!isDeepStrictEqual(left, right))
         throw Error("Restored runtime value mismatch");
     };
     const creds = await read(
@@ -115,7 +194,46 @@ if (verification) {
         "care-sync",
         "SELECT hash FROM sessions",
       );
-      same(care.value, { revision: 7, records: person.records });
+      same(care.value, {
+        revision: person.revision ?? 7,
+        records: person.records,
+      });
+      if (person.revision && !fenced) {
+        const ns = await mf.getDurableObjectNamespace("EmailAccount"),
+          stub = ns.get(ns.idFromName(person.id));
+        const { care: current } = await stub.exportCare();
+        assert.equal(current.revision, person.revision);
+        // A queued legacy snapshot with the pre-switch revision must lose the CAS.
+        assert.equal(
+          await stub.saveCareSnapshot(
+            7,
+            person.records,
+            "",
+            person.token,
+            null,
+            person.id,
+          ),
+          null,
+        );
+        const readback = await stub.readCareForSession(person.token, person.id);
+        same(readback.records, person.records);
+        const pending = await read(
+          "EmailAccount",
+          person.id,
+          "reminder-update",
+          null,
+        );
+        assert.equal(pending.value.owner, person.id);
+        const accepted = await stub.saveCareSnapshot(
+          person.revision,
+          person.records,
+          "",
+          person.token,
+          null,
+          person.id,
+        );
+        assert.equal(accepted.revision, person.revision + 1);
+      }
       same(care.rows[0].hash, person.digest);
       const extra = await read(
         "EmailAccount",
@@ -124,6 +242,42 @@ if (verification) {
         null,
       );
       same(Array.from(extra.value.bytes), [0, 255]);
+    }
+    if (e.postFamily) {
+      const { rows: grants } = await read(
+        "Families",
+        "care-groups",
+        null,
+        "SELECT * FROM family_grants",
+      );
+      assert.equal(grants.length, 0);
+      const { rows: invites } = await read(
+        "Families",
+        "care-groups",
+        null,
+        "SELECT id FROM family_invites WHERE status='pending'",
+      );
+      same(
+        invites.map((r) => r.id),
+        [e.postFamily.pending],
+      );
+      const { rows: operations } = await read(
+        "EmailAccount",
+        e.people[0].id,
+        null,
+        "SELECT operation FROM family_operations",
+      );
+      assert.ok(operations.some((row) => row.operation === e.postFamily.key));
+      const { rows: audits } = await read(
+        "Families",
+        "care-groups",
+        null,
+        "SELECT action FROM family_audit",
+      );
+      assert.equal(
+        audits.filter((row) => row.action === "record:water").length,
+        1,
+      );
     }
     same(
       (
@@ -197,7 +351,9 @@ try {
       time: "08:30",
       amount: 250,
     }));
-    const digest = randomBytes(32).toString("hex");
+    const token = randomBytes(32).toString("hex");
+    const digest = await sessionHash(token);
+    if (!i) water[0].futureField = "preserve";
     const records = {
       medicines: {},
       doses: {},
@@ -229,6 +385,7 @@ try {
       id: person,
       records: snapshot,
       digest,
+      token,
       credential: credentials.at(-1)[1],
       member: families.at(-1)[1],
     });

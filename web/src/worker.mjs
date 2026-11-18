@@ -1,3 +1,4 @@
+import { legacyWritesFenced, fencedObject } from "./http/write-fence.mjs";
 import { handleMigration } from "./operations/migration.mjs";
 import { handleBackupParts } from "./operations/backup-parts.mjs";
 import { familyStore, handleFamily } from "./family/routes.mjs";
@@ -12,12 +13,18 @@ import { operations } from "./operations/audit.mjs";
 import { handleOperations } from "./operations/routes.mjs";
 import { handlePromotions } from "./promotions/routes.mjs";
 
-export { Families } from "./family/routes.mjs";
-export { MedicationReminders } from "./reminders/medication-reminders.mjs";
-export { EmailAccount } from "./accounts/email-auth.mjs";
-export { Credentials } from "./accounts/credentials.mjs";
-export { Operations } from "./operations/routes.mjs";
-export { Promotions } from "./promotions/routes.mjs";
+import { Families as FamiliesStore } from "./family/routes.mjs";
+export class Families extends fencedObject(FamiliesStore) {}
+import { MedicationReminders as MedicationRemindersStore } from "./reminders/medication-reminders.mjs";
+export class MedicationReminders extends fencedObject(MedicationRemindersStore) {}
+import { EmailAccount as EmailAccountStore } from "./accounts/email-auth.mjs";
+export class EmailAccount extends fencedObject(EmailAccountStore) {}
+import { Credentials as CredentialsStore } from "./accounts/credentials.mjs";
+export class Credentials extends fencedObject(CredentialsStore) {}
+import { Operations as OperationsStore } from "./operations/routes.mjs";
+export class Operations extends fencedObject(OperationsStore) {}
+import { Promotions as PromotionsStore } from "./promotions/routes.mjs";
+export class Promotions extends fencedObject(PromotionsStore) {}
 
 const hour = 3_600_000;
 const expiry = 180_000;
@@ -29,6 +36,7 @@ function reply(data, status = 200) {
 
 export default {
   async scheduled(_event, env) {
+    if (legacyWritesFenced(env)) return;
     if (env.MEDORA_MAINTENANCE !== "true") {
       await Promise.all([familyStore(env)?.pruneAudit(), operations(env)?.pruneTickets()]);
     }
@@ -50,6 +58,9 @@ export default {
 async function routeRequest(request, env, ctx) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+  if (legacyWritesFenced(env)) return Response.json({ error: "legacy_writer_fenced" }, {
+    status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "60" }
+  });
   if (["backup", "verify", "restore", "keys"].some(action => url.pathname === "/api/migration/parts/" + action)) {
     return handleBackupParts(request, env, url);
   }
@@ -112,7 +123,7 @@ async function routeRequest(request, env, ctx) {
   return result.error ? reply(result, result.error === "rate_limit" ? 429 : 409) : reply(result, 202);
 }
 
-export class PushPilot extends DurableObject {
+class PilotStore extends DurableObject {
   async start(subscription, delaySeconds) {
     const now = Date.now();
     const storage = this.ctx.storage;
@@ -190,3 +201,5 @@ export class PushPilot extends DurableObject {
 function vapidIdentity(vapid) {
   return { publicKey: vapid.publicKey, subject: vapid.subject };
 }
+
+export class PushPilot extends fencedObject(PilotStore) {}

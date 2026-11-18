@@ -1,3 +1,4 @@
+import { legacyWritesFenced } from "../http/write-fence.mjs";
 import { exportResponse } from "./export.mjs";
 import { emptyHash } from "./backup-parts-format.mjs";
 import { DurableObject } from "cloudflare:workers";
@@ -107,6 +108,7 @@ export async function handleOperations(request, env, url, ctx) {
 export class Operations extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
+    if (legacyWritesFenced(env)) return;
     this.sql = ctx.storage.sql;
     this.sql.exec(`CREATE TABLE IF NOT EXISTS counters (day INTEGER, metric TEXT, count INTEGER, PRIMARY KEY(day, metric));
       CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, actor TEXT, action TEXT);

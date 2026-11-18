@@ -1,4 +1,6 @@
 import {
+  careCommit,
+  householdCommand,
   change,
   operation,
   toJsonSchema,
@@ -30,6 +32,42 @@ export const contract = {
     },
   },
   paths: {
+    "/api/v2/household": {
+      get: {
+        security: session,
+        parameters: [ownerHeader],
+        responses: { "200": response("Household memberships and invitations") },
+      },
+      post: {
+        security: session,
+        parameters: [ownerHeader],
+        requestBody: jsonBody(toJsonSchema(householdCommand)),
+        responses: {
+          "200": response("Household action"),
+          "403": response("Outside grant"),
+        },
+      },
+    },
+    "/api/v2/care": {
+      get: {
+        security: session,
+        parameters: [ownerHeader],
+        responses: {
+          "200": response("Account care document"),
+          "304": response("Unchanged"),
+        },
+      },
+      post: {
+        security: session,
+        parameters: [ownerHeader],
+        requestBody: jsonBody(toJsonSchema(careCommit)),
+        responses: {
+          "200": response("Committed or replayed"),
+          "400": response("Invalid care change"),
+          "409": response("Stale revision or operation reused"),
+        },
+      },
+    },
     "/api/v2/health": {
       get: {
         responses: {

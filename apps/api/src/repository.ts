@@ -24,8 +24,32 @@ function fromRow(row: ChangeRow): Change {
 export function repository(pool: Pool) {
   const db = drizzle(pool);
   return {
+    async productWriter() {
+      const { rows } = await db.execute<{ phase: string }>(
+        sql`SELECT phase FROM medora.writer_transition WHERE singleton`,
+      );
+      return rows[0]?.phase === "open"
+        ? "legacy"
+        : rows[0]?.phase === "rehearsal"
+          ? "postgres"
+          : "frozen";
+    },
+    async profile(owner: string) {
+      const { rows } = await db.execute<{
+        email: string;
+        username: string;
+        scope: string;
+      }>(sql`
+        SELECT email,username,CASE WHEN coalesce(p.epoch,'')='' THEN a.id ELSE a.id||'.'||p.epoch END AS scope
+        FROM medora.accounts a CROSS JOIN medora.writer_transition t
+        LEFT JOIN medora.legacy_people p ON t.snapshot=p.snapshot AND p.owner=${owner}
+        WHERE a.id=${owner} AND a.sync_generation=2`);
+      return rows[0];
+    },
     async ready() {
-      await db.execute(sql`SELECT cursor FROM medora.accounts LIMIT 0`);
+      await db.execute(
+        sql`SELECT a.cursor,s.revision,t.phase FROM medora.accounts a LEFT JOIN medora.care_state s ON a.id=s.owner CROSS JOIN medora.writer_transition t LIMIT 0`,
+      );
     },
     async reserveBackup(owner: string, id: string, bytes: number) {
       await db.transaction(async (tx) => {

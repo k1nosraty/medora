@@ -1,3 +1,4 @@
+import { verifyPostWrite } from "./post-write.mjs";
 import { verifyFixture } from "./verify-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -5,6 +6,9 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+const unmapped = process.argv[2] === "--unmapped";
+if (process.argv.length !== (unmapped ? 3 : 2))
+  throw Error("Unknown rehearsal mode");
 const url = process.env.MEDORA_TEST_DATABASE_URL;
 if (!url || !["localhost", "127.0.0.1"].includes(new URL(url).hostname))
   throw Error(
@@ -78,6 +82,35 @@ try {
     manifest.snapshot,
     JSON.parse(await readFile(join(source, "expectations.json"), "utf8")),
   );
+  const expectationFile = join(source, "expectations.json");
+  const expected = JSON.parse(await readFile(expectationFile, "utf8"));
+  // Exercise the source fence on a restored copy, leaving the baseline immutable.
+  const probeFencedSource = () =>
+    run([
+      "scripts/verification/legacy-source.mjs",
+      legacyRestore,
+      expectationFile,
+      "fenced",
+    ]);
+  probeFencedSource();
+  const restored = join(dir, "postwrite");
+  const postWriteRollback = await verifyPostWrite({
+    url,
+    archive,
+    key: Buffer.from(await readFile(key, "utf8"), "hex"),
+    keyFile: key,
+    restored,
+    probeFencedSource,
+    snapshot: manifest.snapshot,
+    expected,
+    unmapped,
+  });
+  if (!unmapped) {
+    const postFile = join(dir, "postwrite-expectations.json");
+    await writeFile(postFile, JSON.stringify(expected), { mode: 0o600 });
+    for (const root of [restored, restored + "-retry"])
+      run(["scripts/verification/legacy-source.mjs", root, postFile]);
+  }
   console.log(
     JSON.stringify({
       source: "synthetic Workerd",
@@ -88,6 +121,10 @@ try {
       privateFieldsDecrypted: true,
       restoredLegacyRuntime: true,
       replay: true,
+      legacyWriterFenced: true,
+      ...(unmapped
+        ? { unsupportedMutation: postWriteRollback }
+        : { postWriteRollback }),
       reconciled: true,
     }),
   );

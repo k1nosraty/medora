@@ -1,3 +1,5 @@
+import { invitationMessage } from "./invitation-message.mjs";
+import { legacyWritesFenced } from "../http/write-fence.mjs";
 import { familyPageSize, familyTables, familyTableNames, validFamilyRows } from "./archive.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { careSession, normalizeEmail } from "../accounts/email-auth.mjs";
@@ -66,9 +68,7 @@ export async function handleFamily(request, env, url) {
             method: "POST", signal: AbortSignal.timeout(8000),
             headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
             body: JSON.stringify({ from: env.EMAIL_FROM, to: [email],
-              subject: english ? "Medora care group invitation" : "دعوت به گروه مراقبت در مدورا",
-              text: english ? `Open this link to review the invitation: ${link}\nIf you do not have an account, sign up with this email address.` :
-                `برای بررسی دعوت، این پیوند را باز کنید: ${link}\nاگر حساب مدورا ندارید، با همین ایمیل ثبت‌نام کنید.` })
+              ...invitationMessage(link, english) })
           });
           result.delivered = sent.ok;
           await sent.body?.cancel();
@@ -96,6 +96,7 @@ export async function handleFamily(request, env, url) {
 export class Families extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
+    if (legacyWritesFenced(env)) return;
     if (ctx.id.name?.startsWith("group:")) return;
     this.sql = ctx.storage.sql;
     this.sql.exec(`

@@ -32,6 +32,7 @@ try {
       "project",
       "verify-projection",
       "restore-copy",
+      "restore-after-writes",
     ].includes(action) &&
     process.env.DATABASE_URL
   ) {
@@ -42,11 +43,23 @@ try {
     try {
       console.log(
         JSON.stringify(
-          await (action === "restore-copy"
-            ? restoreCopy(client, dir, key, census)
-            : action.includes("project")
-              ? projectArchive(client, dir, key, action === "verify-projection")
-              : importObjects(client, dir, key, action === "verify")),
+          await (action === "restore-after-writes"
+            ? (await import("./reverse-care.mjs")).reverseCare(
+                client,
+                dir,
+                key,
+                census,
+              )
+            : action === "restore-copy"
+              ? restoreCopy(client, dir, key, census)
+              : action.includes("project")
+                ? projectArchive(
+                    client,
+                    dir,
+                    key,
+                    action === "verify-projection",
+                  )
+                : importObjects(client, dir, key, action === "verify")),
         ),
       );
     } finally {

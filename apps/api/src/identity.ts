@@ -92,6 +92,22 @@ export function identityService(
       });
       return id;
     },
+    async confirmRegistration(id: string, email: string, code: string) {
+      return transaction(pool, async (c) => {
+        const grant = randomBytes(32).toString("hex");
+        const changed = await c.query(
+          `UPDATE medora.challenges SET proof=$4,expires_at=now()+interval '10 minutes'
+          WHERE id=$1 AND email=$2 AND purpose='register' AND proof=$3 AND attempts<5 AND expires_at>now() RETURNING id`,
+          [id, email, proof(codeKey, id, code), proof(codeKey, id, grant)],
+        );
+        if (changed.rowCount) return grant;
+        await c.query(
+          "UPDATE medora.challenges SET attempts=attempts+1 WHERE id=$1 AND purpose='register' AND attempts<5",
+          [id],
+        );
+        return null;
+      });
+    },
     async finish(
       id: string,
       code: string,

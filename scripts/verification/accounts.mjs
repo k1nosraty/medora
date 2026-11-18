@@ -45,7 +45,7 @@ async function codeFor(email, previous) {
   throw Error("Fixture delivery timed out");
 }
 async function accountPage(page) {
-  await page.goto(origin.href);
+  await page.goto(new URL("/journal/", origin).href);
   await page.getByRole("button", { name: "English" }).click();
   await page.getByRole("link", { name: "Account", exact: true }).click();
 }
@@ -114,6 +114,55 @@ try {
   await expect(p.getByRole("button", { name: /^Edit / })).toBeVisible({
     timeout,
   });
+  const profile = await (
+    await p.request.get(new URL("/api/v2/profile", origin).href)
+  ).json();
+  const household = (body) =>
+    p.request.post(new URL("/api/v2/household", origin).href, {
+      data: body,
+      headers: {
+        Origin: origin.origin,
+        "X-Medora-Owner": profile.scope.split(".")[0],
+      },
+    });
+  const disposable = await household({
+    action: "create",
+    name: "Mail fixture",
+  });
+  assert.equal(disposable.status(), 200);
+  const { group } = await disposable.json(),
+    recipient = fresh() + "@example.test";
+  const invitation = await household({
+    action: "invite",
+    group,
+    email: recipient,
+    language: "en",
+  });
+  assert.equal(invitation.status(), 200);
+  const sent = await invitation.json();
+  assert.equal(sent.delivered, true);
+  const messages = await (
+    await fetch(new URL("/api/v1/messages?limit=100", inbox))
+  ).json();
+  const delivered = messages.messages.find((m) =>
+    m.To.some((to) => to.Address === recipient),
+  );
+  assert.ok(delivered);
+  const letter = await (
+    await fetch(
+      new URL("/api/v1/message/" + encodeURIComponent(delivered.ID), inbox),
+    )
+  ).json();
+  assert.equal(letter.Subject, "Medora care group invitation");
+  assert.ok(
+    letter.Text.includes(
+      new URL("/medication/#family-invite=" + sent.invite, origin).href,
+    ),
+  );
+  assert.equal(
+    (await household({ action: "delete-group", group })).status(),
+    200,
+  );
   await family(p);
   await p.getByLabel("Group name").fill("Fixture household");
   await p.getByRole("button", { name: "Create group" }).click();

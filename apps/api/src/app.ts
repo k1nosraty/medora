@@ -1,3 +1,7 @@
+import type { householdService } from "./household";
+import { householdRoutes, type InviteDelivery } from "./household-routes";
+import { careRoutes } from "./care-routes";
+import type { CareService } from "./care";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
@@ -22,6 +26,9 @@ export function createApp(
   publicOrigin?: string,
   identity?: IdentityService,
   family?: FamilyService,
+  care?: CareService,
+  household?: ReturnType<typeof householdService>,
+  inviteDelivery?: InviteDelivery,
 ) {
   const app = new Hono<{ Variables: { owner: string } }>();
   app.use("*", secureHeaders());
@@ -49,14 +56,28 @@ export function createApp(
     }),
   );
   app.onError((error, c) =>
-    error instanceof Conflict
-      ? c.json({ error: error.message }, 409)
-      : c.json({ error: "unavailable" }, 503),
+    [error, error.cause].some(
+      (e) =>
+        typeof e === "object" &&
+        e !== null &&
+        "code" in e &&
+        e.code === "22001",
+    )
+      ? c.json({ error: "care_too_large" }, 413)
+      : error instanceof Conflict
+        ? c.json({ error: error.message }, 409)
+        : c.json({ error: "unavailable" }, 503),
   );
   app.get("/api/v2/health", async (c) => {
     await store.ready();
     return c.json({ status: "ok" });
   });
+  app.get("/api/v2/product-writer", async (c) =>
+    c.json({
+      writer: await store.productWriter(),
+      registrationAvailable: Boolean(identity),
+    }),
+  );
   app.get("/api/v2/openapi.json", (c) => c.json(contract));
   app.post("/api/v2/session", async (c) => {
     if (c.req.header("Content-Type")?.split(";")[0] !== "application/json")
@@ -101,7 +122,9 @@ export function createApp(
         : undefined;
     if (!owner) return c.json({ error: "session" }, 401);
     if (
-      (c.req.path === "/api/v2/changes" ||
+      (c.req.path === "/api/v2/household" ||
+        c.req.path === "/api/v2/care" ||
+        c.req.path === "/api/v2/changes" ||
         c.req.path === "/api/v2/families" ||
         c.req.path.startsWith("/api/v2/backups")) &&
       c.req.header("X-Medora-Owner") !== owner
@@ -109,9 +132,13 @@ export function createApp(
       return c.json({ error: "account_changed" }, 409);
     if (
       c.req.method === "POST" &&
-      ["/api/v2/changes", "/api/v2/backups", "/api/v2/families"].includes(
-        c.req.path,
-      )
+      [
+        "/api/v2/household",
+        "/api/v2/care",
+        "/api/v2/changes",
+        "/api/v2/backups",
+        "/api/v2/families",
+      ].includes(c.req.path)
     ) {
       const limit = c.req.path === "/api/v2/changes" ? 1000 : 100;
       if (
@@ -124,6 +151,15 @@ export function createApp(
     c.set("owner", owner);
     await next();
   });
+  app.get("/api/v2/profile", async (c) =>
+    c.json((await store.profile(c.get("owner"))) ?? null),
+  );
+  if (household)
+    app.route(
+      "/api/v2/household",
+      householdRoutes(household, inviteDelivery, publicOrigin),
+    );
+  if (care) app.route("/api/v2/care", careRoutes(care));
   app.get("/api/v2/session", (c) => c.json({ owner: c.get("owner") }));
   app.delete("/api/v2/session", async (c) => {
     await store.endSession(await digest(getCookie(c, cookie)!));

@@ -1,3 +1,5 @@
+import { householdService } from "./household";
+import { careService } from "./care";
 import { familyService } from "./family";
 import { Pool } from "pg";
 import { createApp } from "./app";
@@ -56,6 +58,9 @@ export default {
           ? identityService(pool, store, mail.settings, mail.deliver)
           : undefined,
         familyService(pool),
+        careService(pool),
+        householdService(pool),
+        mail?.invite,
       ).fetch(request);
     } finally {
       ctx.waitUntil(pool.end());

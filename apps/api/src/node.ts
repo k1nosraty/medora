@@ -1,3 +1,5 @@
+import { householdService } from "./household";
+import { careService } from "./care";
 import { familyService } from "./family";
 import { serve } from "@hono/node-server";
 import { Pool } from "pg";
@@ -44,6 +46,9 @@ const app = createApp(
   process.env.PUBLIC_ORIGIN || undefined,
   identity,
   familyService(pool),
+  careService(pool),
+  householdService(pool),
+  mail?.invite,
 );
 const server = serve({
   fetch: app.fetch,

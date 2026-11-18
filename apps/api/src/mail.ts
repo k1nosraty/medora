@@ -1,3 +1,4 @@
+import { invitationMessage } from "../../../web/src/family/invitation-message.mjs";
 import type { Delivery, IdentitySettings } from "./identity";
 import { passwordKeys } from "./settings";
 export interface MailEnv {
@@ -27,8 +28,12 @@ export function mailConfiguration(env: MailEnv) {
     passwordKeyId: id,
     mailKey: env.MEDORA_MAIL_KEY,
   };
-  const deliver: Delivery = async (mail, job) => {
-    const text = "کد تأیید مدورا\n" + mail.code + "\nMedora verification code";
+  async function send(
+    email: string,
+    subject: string,
+    text: string,
+    job: string,
+  ) {
     const local = env.MEDORA_MAILPIT;
     const response = await fetch(
       local ? new URL("/api/v1/send", local) : "https://api.resend.com/emails",
@@ -49,20 +54,37 @@ export function mailConfiguration(env: MailEnv) {
           local
             ? {
                 From: { Email: env.MEDORA_FROM },
-                To: [{ Email: mail.email }],
-                Subject: "Medora",
+                To: [{ Email: email }],
+                Subject: subject,
                 Text: text,
               }
             : {
                 from: env.MEDORA_FROM,
-                to: [mail.email],
-                subject: "Medora",
+                to: [email],
+                subject,
                 text,
               },
         ),
       },
     );
+    await response.body?.cancel();
     if (!response.ok) throw Error("mail_provider_unavailable");
-  };
-  return { settings, deliver };
+  }
+  const deliver: Delivery = (mail, job) =>
+    send(
+      mail.email,
+      "Medora",
+      "کد تأیید مدورا\n" + mail.code + "\nMedora verification code",
+      job,
+    );
+  async function invite(
+    email: string,
+    link: URL,
+    english: boolean,
+    job: string,
+  ) {
+    const { subject, text } = invitationMessage(link, english);
+    await send(email, subject, text, job);
+  }
+  return { settings, deliver, invite };
 }

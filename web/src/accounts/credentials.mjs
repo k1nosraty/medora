@@ -1,8 +1,10 @@
+import { legacyWritesFenced } from "../http/write-fence.mjs";
 import { DurableObject } from "cloudflare:workers";
 
 export class Credentials extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
+    if (legacyWritesFenced(env)) return;
     this.sql = ctx.storage.sql;
     this.sql.exec(`CREATE TABLE IF NOT EXISTS credentials_v1 (
       username TEXT PRIMARY KEY, email_id TEXT NOT NULL UNIQUE, email TEXT NOT NULL,
