@@ -34,13 +34,14 @@ jobs:
       - run: pnpm typecheck && pnpm lint
       - run: pnpm db:migrate && pnpm db:migrate
       - run: pnpm test
-      - run: node scripts/verification/rehearse.mjs
+      - run: mkdir -p dist && node scripts/verification/rehearse.mjs > dist/reconciliation.json
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium webkit
       - run: npm --prefix web run typecheck && npm --prefix web test && npm --prefix web run test:care && npm --prefix web run test:alarms
       - run: npm --prefix web run test:browser
       - run: pnpm test:e2e
-      - run: web/node_modules/.bin/wrangler deploy --config infrastructure/cloudflare/local.json --dry-run --outdir "$RUNNER_TEMP/worker"
+      - run: node scripts/verification/pwa-update.mjs
+      - run: web/node_modules/.bin/wrangler deploy --config infrastructure/cloudflare/local.json --dry-run --outdir "$PWD/dist/worker"
       - name: Exercise standalone storage, Node and reverse proxy
         run: |
           config="$RUNNER_TEMP/medora-fixture.env"
@@ -51,4 +52,14 @@ jobs:
           set +a
           env -u MEDORA_TEST_DATABASE_URL MEDORA_TEST_COMPOSE_ENV="$config" MEDORA_TEST_COMPOSE_PROJECT=medora-ci node scripts/verification/runtime.mjs http://127.0.0.1:8808
           node scripts/verification/accounts.mjs http://127.0.0.1:8808 http://127.0.0.1:8810
+          node scripts/verification/worker.mjs http://127.0.0.1:8810
           bash scripts/verification/restore-compose.sh "$config" medora-ci "$RUNNER_TEMP/medora-restore"
+      - name: Identify and package verified candidate
+        run: |
+          node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
+          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: medora-candidate
+          path: ${{ runner.temp }}/medora-candidate.tar.gz
+          if-no-files-found: error

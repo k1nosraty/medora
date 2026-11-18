@@ -334,3 +334,14 @@ input[type="checkbox"] {
   min-height: 0;
   accent-color: var(--brand);
 }
+.plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+.panel li,
+li:has(.plan-actions) {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}

@@ -16,3 +16,5 @@ Before cutover, verify registration, password reset and revocation across both s
 - Family access tests cover invitation recipients, separate households, grant direction and withdrawal. Browser tests used two isolated accounts, a real local email inbox and a password reset that invalidated the first session.
 - The Node Hono adapter was upgraded after the dependency audit identified an advisory. The final production dependency audit was clean at verification time. Static responses carry a self-only script policy, anti-framing and content-type headers.
 - Outstanding security gates include imported session epoch/pepper continuity, all care-field sharing, privacy rotation, delegated mutations, reminder credentials, administrative access, hosted bindings and the old/new writer boundary. Production telemetry and the complete historical backup corpus were unavailable.
+
+The scheduled mail adapter uses manual redirect handling and treats redirect responses as delivery failures. This works in both exercised runtimes and keeps delivery credentials on the configured provider.

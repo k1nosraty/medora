@@ -1,7 +1,10 @@
 const prefix = "medora-v2-shell-" + self.registration.scope + "-";
 const version = prefix + "__VERSION__";
 const files = "__FILES__";
-const urls = files.map((file) => new URL(file, self.registration.scope).href);
+const shell = new URL("./", self.registration.scope).href;
+const urls = files.map((file) =>
+  file === "index.html" ? shell : new URL(file, self.registration.scope).href,
+);
 self.addEventListener("install", (e) =>
   e.waitUntil(caches.open(version).then((cache) => cache.addAll(urls))),
 );
@@ -25,10 +28,7 @@ self.addEventListener("fetch", (e) => {
       caches
         .open(version)
         .then(
-          async (c) =>
-            (await c.match(
-              new URL("index.html", self.registration.scope).href,
-            )) ?? fetch(r),
+          async (c) => (await c.match(shell, { ignoreVary: true })) ?? fetch(r),
         ),
     );
   } else if (urls.includes(r.url))

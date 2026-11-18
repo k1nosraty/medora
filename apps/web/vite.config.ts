@@ -60,7 +60,9 @@ export default defineConfig({
           hash.update(name);
           hash.update(bytes);
         }
-        const sw = asset("./sw.template.js")
+        const template = asset("./sw.template.js");
+        hash.update(template);
+        const sw = template
           .toString()
           .replace('"__VERSION__"', JSON.stringify(hash.digest("hex")))
           .replace('"__FILES__"', JSON.stringify([...files.keys()]));

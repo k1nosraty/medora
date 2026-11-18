@@ -17,6 +17,20 @@ export default function Today() {
     queryKey: ["entries", owner, day],
     queryFn: () => journal.entries(owner, day),
   });
+  const schedule = useQuery({
+    queryKey: ["plans", owner, "agenda", day],
+    queryFn: async () => {
+      const profile = await journal.profile(owner);
+      if (!Object.keys(profile.settings).length) return [];
+      const { agenda } = await import("../../../../packages/domain/src/care");
+      return agenda(
+        profile.settings,
+        day,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        day,
+      );
+    },
+  });
   return (
     <>
       <section className="cover">
@@ -48,6 +62,23 @@ export default function Today() {
         </div>
         <img src="./art/water.webp" alt="" width="106" height="106" />
       </section>
+      {schedule.isError && <p role="alert">{t.error}</p>}
+      {Boolean(schedule.data?.length) && (
+        <section className="panel">
+          <h2>{t.agenda}</h2>
+          <ul>
+            {schedule.data?.map((item) => (
+              <li key={item.kind + item.id}>
+                <bdi>{item.time}</bdi>
+                <Link to={"/plans/" + item.kind} dir="auto">
+                  {item.label}
+                </Link>
+                <small>{t[item.kind]}</small>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <Link className="archive-link" to="/plans/medicines">
         <CalendarDays />
         {t.plans}

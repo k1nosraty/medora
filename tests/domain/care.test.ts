@@ -48,3 +48,64 @@ it("preserves cycle extensions, rejects overlapping sleep and keeps routine hist
     done: true,
   });
 });
+
+import {
+  agenda,
+  addStock,
+  changeVisit,
+  setPaused,
+  visitDay,
+} from "../../packages/domain/src/care";
+it("maintains schedule history, clinic-local time and attendance metadata", () => {
+  const day = 20000,
+    now = day * 86400000 + 3600000;
+  const state: Record<string, unknown> = {
+    medicines: {
+      m: {
+        id: "m",
+        name: "Fixture",
+        unit: "tablet",
+        stock: 1000,
+        phases: [
+          {
+            start: day,
+            end: null,
+            interval: 1,
+            mask: 127,
+            slots: [{ minute: 720, amount: 1000 }],
+          },
+        ],
+        paused: false,
+        revision: 1,
+      },
+    },
+    visits: {
+      v: {
+        id: "v",
+        name: "Clinic",
+        day,
+        time: "00:30",
+        zone: "Asia/Tehran",
+        extension: 5,
+      },
+    },
+  };
+  const visit = (state.visits as Record<string, Record<string, unknown>>).v!;
+  expect(visitDay(visit, "UTC")).toBe(day - 1);
+  expect(
+    agenda(state, day - 1, "UTC", day).some(
+      (x) => x.id === "v" && x.time === "21:00",
+    ),
+  ).toBe(true);
+  addStock(state, "m", "1.5");
+  expect((state.medicines as Record<string, { stock: number }>).m!.stock).toBe(
+    2500,
+  );
+  setPaused(state, "medicines", "m", true, now);
+  expect(state.scheduleHistory).toBeTruthy();
+  changeVisit(state, "v", "attend", day - 1, "UTC", now);
+  expect(visit.resolvedAt).toBe(now);
+  changeVisit(state, "v", "cancel", day, "UTC", now);
+  expect(visit.completed).toBeUndefined();
+  expect(visit.extension).toBe(5);
+});

@@ -21,6 +21,10 @@ const fresh = () => randomBytes(12).toString("hex");
 async function codeFor(email, previous) {
   const until = Date.now() + timeout;
   while (Date.now() < until) {
+    if (process.env.MEDORA_WORKER_FIXTURE_CRON === "1") {
+      const tick = await fetch(new URL("/__scheduled", origin));
+      assert.equal(tick.status, 200, "Local scheduled delivery");
+    }
     const response = await fetch(new URL("/api/v1/messages?limit=100", inbox));
     const items = (await response.json()).messages;
     const latest = items.find(

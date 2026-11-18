@@ -26,8 +26,22 @@ if (!worker || !(await stat(worker)).isDirectory())
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 if (git("status", "--porcelain"))
   throw Error("Commit candidate changes before recording artifact hashes");
+for (const entry of [
+  "apps/web/dist/index.html",
+  "apps/web/dist/sw.js",
+  "apps/web/dist/manifest.webmanifest",
+  "apps/api/dist/server.mjs",
+  join(worker, "worker.js"),
+]) {
+  const info = await stat(entry);
+  if (!info.isFile() || info.size === 0)
+    throw Error("Missing required artifact: " + entry);
+}
 const manifest = {
-  branch: git("branch", "--show-current"),
+  branch:
+    git("branch", "--show-current") ||
+    process.env.GITHUB_HEAD_REF ||
+    process.env.GITHUB_REF_NAME,
   commit: git("rev-parse", "HEAD"),
   web: await inventory("apps/web/dist"),
   api: await inventory("apps/api/dist"),

@@ -1,7 +1,14 @@
+import { visitInstant } from "../../../web/public/medication/domain/care-plan.js";
+import {
+  localWall,
+  timezone,
+  dayMs,
+} from "../../../web/public/medication/domain/wall-clock.js";
 import * as engine from "../../../web/public/medication/domain/medication-rules.js";
 import {
   compilePhases,
   createCareIndex,
+  trackSchedule,
   doseId,
   doseTime,
 } from "../../../web/public/medication/domain/care-index.js";
@@ -37,6 +44,8 @@ export interface PlanInput {
   unit: string;
   quantity: string;
   stock: string;
+  sleepKind?: string;
+  quality?: string;
 }
 const minuteText = (m: number) =>
   [Math.floor(m / 60), m % 60].map((x) => String(x).padStart(2, "0")).join(":");
@@ -133,11 +142,11 @@ export function addPlan(
       break;
     case "sleepRecords":
       row = {
-        kind: "main",
+        kind: k.sleepKind ?? "main",
         start: k.start,
         end: k.end,
         zone: k.zone,
-        quality: "",
+        quality: k.quality ?? "",
         note: k.name,
       };
       if (
@@ -241,4 +250,110 @@ export function completeRoutine(state: Fields, id: string, day: number) {
   if (!log) throw Error("routine_unavailable");
   const logs = collection(state, "routineLogs");
   state.routineLogs = { ...logs, [day]: { ...logs[day], [id]: log } };
+}
+
+export function setPaused(
+  state: Fields,
+  kind: "medicines" | "routines",
+  id: string,
+  pause: boolean,
+  now: number,
+) {
+  const rows = collection(state, kind),
+    old = rows[id];
+  if (!old) throw Error("missing_plan");
+  if (Boolean(old.paused) === pause) return;
+  const next = {
+    ...old,
+    paused: pause,
+    revision: Number(old.revision ?? 0) + 1,
+  };
+  trackSchedule(state, kind, old, next, now);
+  rows[id] = next;
+}
+export function addStock(state: Fields, id: string, amount: string) {
+  const row = collection(state, "medicines")[id],
+    size = engine.quantityFromText(amount);
+  if (!row || typeof row.stock !== "number" || !size || size <= 0)
+    throw Error("invalid_quantity");
+  row.stock = engine.updateStock(row.stock, 0, 0, size);
+}
+export function visitDay(row: Fields, zone: string) {
+  return Math.floor(
+    localWall(visitInstant(row, zone, new Map()), timezone(zone)) / dayMs,
+  );
+}
+export function changeVisit(
+  state: Fields,
+  id: string,
+  action: "cancel" | "restore" | "attend" | "unattend",
+  today: number,
+  zone: string,
+  now: number,
+) {
+  const row = collection(state, "visits")[id];
+  if (!row) throw Error("missing_visit");
+  if (action === "attend" || action === "unattend") {
+    if (row.cancelled || visitDay(row, zone) > today)
+      throw Error("invalid_visit");
+    row.completed = action === "attend";
+    if (row.completed) row.resolvedAt ??= now;
+    else delete row.resolvedAt;
+  } else {
+    row.cancelled = action === "cancel";
+    if (row.cancelled) {
+      delete row.completed;
+      delete row.resolvedAt;
+    }
+  }
+}
+export function agenda(
+  state: Fields,
+  day: number,
+  zone: string,
+  today: number,
+) {
+  const medicines = collection(state, "medicines");
+  const index = createCareIndex(
+    { ...state, medicines, doses: collection(state, "doses") },
+    engine,
+    zone,
+    today,
+  );
+  type Item = {
+    id: string;
+    kind: "medicines" | "visits" | "routines";
+    label: string;
+    time: string;
+  };
+  const items: Item[] = [];
+  for (const d of index.dosesOn(day))
+    items.push({
+      id: String(d.medicineId) + "-" + d.minute,
+      kind: "medicines",
+      label: String(
+        d.historyPlan?.name ?? medicines[d.medicineId]?.name ?? d.medicineId,
+      ),
+      time: minuteText(d.minute),
+    });
+  for (const v of index.visitsOn(day))
+    if (!v.visit.cancelled)
+      items.push({
+        id: v.visit.id,
+        kind: "visits",
+        label: v.visit.name,
+        time: v.time,
+      });
+  for (const r of index.routinesOn(day))
+    items.push({
+      id: r.id,
+      kind: "routines",
+      label: r.name,
+      time: r.minute == null ? "" : minuteText(r.minute),
+    });
+  return items.sort(
+    (a, b) =>
+      (a.time || "24:00").localeCompare(b.time || "24:00") ||
+      a.id.localeCompare(b.id),
+  );
 }

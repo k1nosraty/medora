@@ -12,7 +12,7 @@ npm ci --prefix web
 pnpm typecheck && pnpm lint
 pnpm build
 mkdir -p dist
-web/node_modules/.bin/wrangler deploy --dry-run --config infrastructure/cloudflare/local.json --outdir dist/worker
+web/node_modules/.bin/wrangler deploy --dry-run --config infrastructure/cloudflare/local.json --outdir "$PWD/dist/worker"
 node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
 ```
 
@@ -59,7 +59,7 @@ The stack serves the frontend and API through Caddy on port 8808 and Mailpit on 
 
 ## Cloudflare staging
 
-The verified paths are a local Workerd runtime with a PostgreSQL-backed Hyperdrive simulator and R2, and a Wrangler dry-run bundle with static assets. Repository and environment discovery found no identified isolated remote PostgreSQL/Hyperdrive configuration or complete authorized source snapshot. A hosted staging deployment requires positive confirmation of the database, bucket, account and key registry boundaries.
+Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, scheduled mail to Mailpit, two-account browser sharing, offline reconnection and password reset. The dry-run bundle includes frontend assets. Reproduce against an isolated loopback database by setting MEDORA_TEST_DATABASE_URL and running node scripts/verification/worker.mjs http://127.0.0.1:8810. Repository and environment discovery found no identified isolated remote PostgreSQL/Hyperdrive configuration or complete authorized source snapshot. A hosted staging deployment requires positive confirmation of the database, bucket, account and key registry boundaries.
 
 | Binding or setting | Purpose |
 | --- | --- |
@@ -84,3 +84,19 @@ Render with `node infrastructure/cloudflare/staging.mjs`. Validate with `web/nod
 - Abort on any census or digest mismatch, missing or ambiguous identity, unauthorized target, duplicate primary key, nonempty reconciliation difference, changed migration checksum, missing production capability, unreadable backup, stale writer, incomplete rollback exercise or hosted smoke failure. Keep original and target evidence for investigation.
 
 A future production release still requires feature parity, complete authorized source reconciliation, proven hosted staging, client-generation fencing, tested post-write rollback and explicit deployment approval. The current release branch and production data were untouched.
+
+## Verification record for this candidate
+
+| Check | Observed result |
+| --- | --- |
+| Strict TypeScript, ESLint with zero-warning limit, Vite and Node production builds | Passed |
+| Rebuild Vitest on isolated PostgreSQL | 19/19 across 12 files. Four domain, one component, four integration, seven migration and three security tests |
+| Rebuild Playwright | 18/18 across Chromium and WebKit, including six real historical IndexedDB upgrade cases |
+| Incumbent regression suite | 41/41 Node, 13/13 care checks, seven alarm categories and 80/80 browser cases |
+| Local Workerd with R2 and Hyperdrive | Authenticated incremental sync, encrypted backup round trip, static security headers, registration, scheduled fixture email, family sharing/revocation, offline reconnect and password reset passed |
+| Node, Caddy, PostgreSQL, S3 and Mailpit | Same browser account workflow and runtime round trip passed. A separate restore matched 25 inventory lines and three encrypted objects |
+| Service worker update | Incomplete install left old version usable offline. Retry activated after old client closed and the journal survived |
+| Dependency audit | Rebuild production dependencies and incumbent npm audit reported zero known advisories during verification |
+| Deployment infrastructure | Wrangler local-config dry run passed. Hosted staging, complete authorized snapshot and production cutover remain open |
+
+The reconciliation report and file inventory accompany the local candidate archive. CI is configured to repeat these checks. The branch has not been pushed, so hosted CI has no result for this candidate.

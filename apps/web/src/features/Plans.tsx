@@ -14,6 +14,7 @@ import {
 import { journal } from "../storage/journal";
 import { useApp } from "../context";
 import { civilDay, displayDay, clockTime } from "../i18n";
+import { PlanActions } from "./PlanActions";
 const zone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 const iso = (d: number) => new Date(d * 86400000).toISOString().slice(0, 10);
 const clock = (m: number) =>
@@ -176,6 +177,8 @@ export default function Plans() {
               unit: str("unit"),
               quantity: str("quantity"),
               stock: str("stock"),
+              sleepKind: str("sleepKind") || "main",
+              quality: str("quality"),
             };
             mutation.mutate(
               (s) => addPlan(s, input, crypto.randomUUID(), Date.now(), today),
@@ -229,6 +232,24 @@ export default function Plans() {
           )}
           {kind === "sleepRecords" && (
             <>
+              <label>
+                {t.sleepKind}
+                <select name="sleepKind">
+                  <option value="main">{t.mainSleep}</option>
+                  <option value="nap">{t.nap}</option>
+                </select>
+              </label>
+              <label>
+                {t.quality}
+                <select name="quality">
+                  <option value="">{t.unrated}</option>
+                  {(["good", "fair", "poor"] as const).map((k) => (
+                    <option value={k} key={k}>
+                      {t[k]}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label>
                 {t.start}
                 <input type="datetime-local" name="start" required />
@@ -285,19 +306,32 @@ export default function Plans() {
                     (row.flow as string)}
                 </span>
               )}
-              {kind === "routines" && row.mode === "done" && day <= today && (
-                <button
-                  disabled={
-                    mutation.isPending ||
-                    Boolean(collection(state, "routineLogs")[String(day)]?.[id])
-                  }
-                  onClick={() =>
-                    mutation.mutate((s) => completeRoutine(s, id, day))
-                  }
-                >
-                  {t.complete}
-                </button>
-              )}
+              <PlanActions
+                kind={kind}
+                row={row}
+                id={id}
+                today={today}
+                pending={mutation.isPending}
+                change={(fn) => mutation.mutate(fn)}
+              />
+              {kind === "routines" &&
+                !row.paused &&
+                row.mode === "done" &&
+                day <= today && (
+                  <button
+                    disabled={
+                      mutation.isPending ||
+                      Boolean(
+                        collection(state, "routineLogs")[String(day)]?.[id],
+                      )
+                    }
+                    onClick={() =>
+                      mutation.mutate((s) => completeRoutine(s, id, day))
+                    }
+                  >
+                    {t.complete}
+                  </button>
+                )}
             </li>
           ))}
         </ul>

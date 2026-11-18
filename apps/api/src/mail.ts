@@ -34,7 +34,7 @@ export function mailConfiguration(env: MailEnv) {
       local ? new URL("/api/v1/send", local) : "https://api.resend.com/emails",
       {
         method: "POST",
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(10000),
         headers: {
           "Content-Type": "application/json",

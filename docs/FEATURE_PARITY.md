@@ -26,12 +26,12 @@ Feature paths in this table are relative to public/medication when prefixed with
 
 | Workflow | Rebuilt behavior exercised | Remaining parity work |
 | --- | --- | --- |
-| Today and calendar | Persian daily view, water total, active journal, program and account navigation | Onboarding, combined timeline, month navigation and deep links |
-| Medicines | Daily schedule, fractional quantities, stock debit, taken/skipped, persistent dose history | Full phase editor, individual-date schedules, pause/archive, snooze, historical plan edits and push |
-| Appointments | Creation with clinic timezone, local persistence, period counts and backup restoration | Edit/cancel, offsets, contacts, private notes and push |
+| Today and calendar | Persian daily view, timezone-adjusted medicine/appointment/routine schedule, water total and program navigation | Onboarding, month navigation and notification deep links |
+| Medicines | Daily schedule, fractional quantities, stock debit/refill, pause/resume with dated history, taken/skipped | Full phase editor, individual-date schedules, archive, snooze, historical plan edits and push |
+| Appointments | Creation with clinic timezone, attendance/undo, cancellation/reinstatement, period counts and backup restoration | Rescheduling, offsets, contacts, private notes and push |
 | Water | Date selection, create/edit/delete, paginated history, daily totals, offline queue and conflict choice | Goals, undo, reminder pause and parity of family quick actions |
-| Routines | Daily completion plans and logs | Quantity/step editing, historical plan changes, flexible schedules |
-| Sleep | Interval validation, overlap rejection, notes and backup | Naps and quick actions, reminders, sleep summaries |
+| Routines | Daily completion plans, pause/resume and logs | Quantity/step editing, historical plan changes, flexible schedules |
+| Sleep | Main sleep and naps, quality, interval validation, overlap rejection, notes and backup | Quick actions, reminders, sleep summaries |
 | Cycle | Daily flow, notes, local-only preference, isolated cycle file export/import, cloud backup filtering | Cycle record editing, estimates, symptom trends, companion/print views |
 | Reports | 7/30/90-day local report of water, recorded doses and appointments | Calendar-aligned periods and complete program/adherence metrics |
 | Accounts and settings | Register, verify, sign in, reset, revoke sessions, language and calendar choice | Profile changes, deletion lifecycle, legacy session and identity cutover |
@@ -40,6 +40,6 @@ Feature paths in this table are relative to public/medication when prefixed with
 | Backups | Encrypted device/Android/web/cycle restore in a separate profile, enrolled-account backup download and hash verification | Complete historical corpus, operational backup promotion and full source reconciliation |
 | Notifications | Legacy alarm suite remains green for seven categories | Rebuilt enrollment, closed-client delivery and retry lifecycle |
 | Support, promotions, operations | Original source retained and byte images archived in fixture | Rebuilt support, campaign, media, administrative and release workflows |
-| Pilot, gallery and installation | Rebuilt bilingual shell, offline asset caching and reload | Pilot operations, gallery parity, platform install and cross-version update rehearsal |
+| Pilot, gallery and installation | Rebuilt bilingual shell, offline asset caching and reload | Pilot operations, gallery parity, native platform install and transition from the production service worker |
 
 Generation 1 stores and sessions stay authoritative until write fencing, rollback and semantic reconciliation pass. Imported accounts cannot sign into the v2 writer merely by existing in a staging table.
