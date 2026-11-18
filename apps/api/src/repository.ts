@@ -24,16 +24,20 @@ function fromRow(row: ChangeRow): Change {
 export function repository(pool: Pool) {
   const db = drizzle(pool);
   return {
-    async productWriter() {
-      const { rows } = await db.execute<{ phase: string }>(
-        sql`SELECT CASE WHEN phase='rehearsal' AND current_setting('medora.source_fenced',true) IS DISTINCT FROM 'true'
-          THEN 'frozen' ELSE phase END AS phase FROM medora.writer_transition WHERE singleton`,
+    async productWriter(): Promise<"legacy" | "postgres" | "frozen"> {
+      const { rows } = await db.execute<{
+        writer: "legacy" | "postgres" | "frozen";
+      }>(
+        sql`SELECT CASE
+          WHEN h.phase IN ('frozen','retired') OR t.phase='frozen' THEN 'frozen'
+          WHEN t.phase='rehearsal' THEN CASE WHEN current_setting('medora.source_fenced',true)='true'
+            THEN 'postgres' ELSE 'frozen' END
+          WHEN h.phase='active' THEN 'postgres'
+          ELSE 'legacy' END AS writer
+          FROM medora.writer_transition t CROSS JOIN medora.infrastructure_handoff h
+          WHERE t.singleton AND h.singleton`,
       );
-      return rows[0]?.phase === "open"
-        ? "legacy"
-        : rows[0]?.phase === "rehearsal"
-          ? "postgres"
-          : "frozen";
+      return rows[0]?.writer ?? "frozen";
     },
     async profile(owner: string) {
       const { rows } = await db.execute<{
@@ -49,7 +53,7 @@ export function repository(pool: Pool) {
     },
     async ready() {
       await db.execute(
-        sql`SELECT a.cursor,s.revision,t.phase FROM medora.accounts a LEFT JOIN medora.care_state s ON a.id=s.owner CROSS JOIN medora.writer_transition t LIMIT 0`,
+        sql`SELECT a.cursor,s.revision,t.phase FROM medora.accounts a LEFT JOIN medora.care_state s ON a.id=s.owner CROSS JOIN medora.writer_transition t CROSS JOIN medora.infrastructure_handoff h LIMIT 0`,
       );
     },
     async reserveBackup(owner: string, id: string, bytes: number) {

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "build": "pnpm --filter @medora/web build && pnpm --filter @medora/api build",
     "test:e2e": "playwright test",
+    "test:handoff": "node scripts/verification/postgres-handoff.mjs",
     "db:migrate": "node scripts/migration/apply.mjs"
   },
   "devDependencies": {

@@ -1,24 +1,8 @@
-import { releaseNotifications } from "./release-notifications";
-import { removeBackupObjects } from "./account-deletion";
-import { administrativeExport } from "./admin-export";
-import { adminAccounts } from "./admin-accounts";
-import { promotionService } from "./promotions";
-import { operationService } from "./operations";
-import { reminderService } from "./reminders";
-import { writerConnectionOptions } from "./writer-settings";
-import { householdService } from "./household";
-import { careService } from "./care";
-import { familyService } from "./family";
 import { serve } from "@hono/node-server";
 import { Pool } from "pg";
-import { createApp } from "./app";
-import { verifier } from "./password";
-import { repository } from "./repository";
-import { passwordKeys } from "./settings";
-
-import { identityService } from "./identity";
-import { mailConfiguration } from "./mail";
 import { s3Storage } from "./objects";
+import { createRuntime } from "./runtime";
+import { writerConnectionOptions } from "./writer-settings";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 const pool = new Pool({
@@ -36,78 +20,26 @@ const storage = process.env.S3_ENDPOINT
     )
   : undefined;
 await storage?.initialize();
-const store = repository(pool),
-  mail = mailConfiguration(process.env);
-const identity = mail
-  ? identityService(pool, store, mail.settings, mail.deliver)
-  : undefined;
-const runner = identity
-  ? setInterval(
-      () =>
-        void identity
-          .drain()
-          .catch(() => console.warn("mail_delivery_deferred")),
-      5000,
-    )
-  : undefined;
-runner?.unref();
-const operations = operationService(pool, store, process.env);
-const release = releaseNotifications(pool, store, operations, process.env);
-let sweeping = false;
-const operationsRunner = setInterval(async () => {
-  if (sweeping) return;
-  sweeping = true;
+const { app, tick } = createRuntime(pool, process.env, storage);
+let running = false;
+const runner = setInterval(async () => {
+  if (running) return;
+  running = true;
   try {
-    await operations.maintenance();
-    if (storage && (await store.productWriter()) !== "frozen")
-      await removeBackupObjects(pool, storage);
-    await release?.tick();
+    await tick();
   } catch {
-    console.warn("operations_maintenance_deferred");
+    console.warn("background_job_deferred");
   } finally {
-    sweeping = false;
+    running = false;
   }
 }, 5000);
-operationsRunner.unref();
-const reminders = reminderService(pool, store, process.env, operations);
-let ticking = false;
-const reminderRunner =
-  reminders &&
-  setInterval(async () => {
-    if (ticking) return;
-    ticking = true;
-    try {
-      await reminders.tick();
-    } catch {
-      console.warn("reminder_delivery_deferred");
-    } finally {
-      ticking = false;
-    }
-  }, 5000);
-reminderRunner?.unref();
-const app = createApp(
-  store,
-  verifier(passwordKeys(process.env.MEDORA_PASSWORD_KEYS)),
-  storage,
-  process.env.PUBLIC_ORIGIN || undefined,
-  identity,
-  familyService(pool),
-  careService(pool),
-  householdService(pool),
-  mail?.invite,
-  process.env.MEDORA_LEGACY_WRITES_FENCED === "true"
-    ? process.env.EMAIL_SESSION_KEY
-    : undefined,
-  reminders,
-  operations,
-  promotionService(pool, store, operations, process.env),
-  adminAccounts(pool, operations, process.env.EMAIL_SESSION_KEY, storage),
-  administrativeExport(pool, operations),
-  release,
-);
+runner.unref();
 const server = serve({
   fetch: app.fetch,
   hostname: process.env.HOST ?? "127.0.0.1",
   port: Number(process.env.PORT ?? 8802),
 });
-process.on("SIGTERM", () => server.close(() => void pool.end()));
+process.on("SIGTERM", () => {
+  clearInterval(runner);
+  server.close(() => void pool.end());
+});

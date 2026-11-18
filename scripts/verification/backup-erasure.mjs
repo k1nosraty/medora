@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
-export async function saveFixtureBackup(origin, headers, owner) {
-  const data = randomBytes(192);
-  data.write("MEDORAW\x01", 0, "binary");
+export async function saveFixtureBackup(origin, headers, owner, ciphertext) {
+  const data = ciphertext ? Buffer.from(ciphertext) : randomBytes(192);
+  if (!ciphertext) data.write("MEDORAW\x01", 0, "binary");
   const digest = createHash("sha256").update(data).digest("hex");
   const requestHeaders = {
     ...headers,

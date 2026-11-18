@@ -4,7 +4,13 @@ import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-export async function withLocalWorker(database, port, bindings, verify) {
+export async function withLocalWorker(
+  database,
+  port,
+  bindings,
+  verify,
+  { config = "infrastructure/cloudflare/local.json" } = {},
+) {
   const db = new URL(database);
   if (
     !["127.0.0.1", "localhost"].includes(db.hostname) ||
@@ -38,7 +44,7 @@ export async function withLocalWorker(database, port, bindings, verify) {
       "dev",
       "--local",
       "--config",
-      "infrastructure/cloudflare/local.json",
+      config,
       "--env-file",
       workerEnv,
       "--persist-to",

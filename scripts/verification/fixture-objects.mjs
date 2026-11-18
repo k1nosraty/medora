@@ -5,10 +5,28 @@ export async function fixtureObjects() {
   const objects = new Map();
   let deferDeletes = false;
   const server = createServer(async (req, res) => {
-    const path = new URL(req.url, "http://127.0.0.1").pathname;
+    const { pathname: path, searchParams } = new URL(
+      req.url,
+      "http://127.0.0.1",
+    );
     if (!path.startsWith("/medora-test/") && path !== "/medora-test")
       return res.writeHead(404).end();
-    if (path === "/medora-test") return res.writeHead(200).end();
+    if (path === "/medora-test") {
+      if (searchParams.get("list-type") !== "2")
+        return res.writeHead(200).end();
+      const keys = [...objects.keys()].map((key) =>
+        encodeURIComponent(key.slice(path.length + 1)),
+      );
+      return res
+        .writeHead(200, { "Content-Type": "application/xml" })
+        .end(
+          "<ListBucketResult><IsTruncated>false</IsTruncated>" +
+            keys
+              .map((key) => "<Contents><Key>" + key + "</Key></Contents>")
+              .join("") +
+            "</ListBucketResult>",
+        );
+    }
     switch (req.method) {
       case "PUT": {
         const chunks = [];

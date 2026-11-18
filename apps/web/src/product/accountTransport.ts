@@ -115,11 +115,26 @@ async function auth(route: string, options: RequestInit, mode: Writer) {
   });
   return result.ok ? session() : result;
 }
+async function operationId(payload: object) {
+  const bytes = new Uint8Array(
+    await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(JSON.stringify(payload)),
+    ),
+  ).slice(0, 16);
+  bytes[6] = (bytes[6]! & 15) | 128;
+  bytes[8] = (bytes[8]! & 63) | 128;
+  const hex = Array.from(bytes, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 async function care(path: string, opts: RequestInit) {
   const who = await fetch(endpoint("profile"), {
     cache: "no-store",
     ...(opts.signal && { signal: opts.signal }),
   });
+  if (who.status === 503) selection = undefined;
   if (!who.ok) return who;
   const profile: Profile = await who.json();
   const scope = profile.scope,
@@ -145,6 +160,7 @@ async function care(path: string, opts: RequestInit) {
         status: 304,
         headers: { ...responseHeaders, ETag: known },
       });
+    if (state.status === 503) selection = undefined;
     if (!state.ok) return state;
     const current = await state.json();
     if (current.owner !== owner) return json({ error: "conflict" }, 409);
@@ -169,6 +185,7 @@ async function care(path: string, opts: RequestInit) {
       cache: "no-store",
       ...signal,
     });
+    if (state.status === 503) selection = undefined;
     if (!state.ok) return state;
     const current = await state.json();
     if (current.owner !== owner || current.revision !== input.revision)
@@ -176,17 +193,18 @@ async function care(path: string, opts: RequestInit) {
     changes = careDelta(current.records, input.records);
     if (!changes) return json({ error: "invalid_sync" }, 400);
   }
+  const change = {
+    baseRevision: input.revision,
+    changes,
+    ...(input.zone && { zone: input.zone }),
+    ...(input.rotationProof && { rotationProof: input.rotationProof }),
+  };
   const result = await request(
     "care",
-    {
-      operation: crypto.randomUUID(),
-      baseRevision: input.revision,
-      changes,
-      ...(input.zone && { zone: input.zone }),
-      ...(input.rotationProof && { rotationProof: input.rotationProof }),
-    },
+    { ...change, operation: await operationId({ scope, ...change }) },
     { ...opts, headers },
   );
+  if (result.status === 503) selection = undefined;
   if (!result.ok) return result;
   const receipt = await result.json();
   return json({
@@ -219,7 +237,10 @@ export async function accountTransport(
     return unavailable();
   }
   if (mode.writer === "legacy") return fetch(path, options);
-  if (mode.writer === "frozen") return unavailable();
+  if (mode.writer === "frozen") {
+    selection = undefined;
+    return unavailable();
+  }
   if (
     path === "/api/config" ||
     path.startsWith("/api/reminders") ||
