@@ -2,6 +2,8 @@
 
 **NOT READY · Production NOT DEPLOYED.** The release branch is `deploy`. The local candidate is on `codex/medora-2-full-rebuild`, based on `5ee5e47cafe7644b5dd15ae7408e909c755ee211`. Pushing the release branch publishes the incumbent Worker and queues a public release notification.
 
+The owner requires separate explicit approval for every push or deployment, including staging and preview. This hold applies to subsequent work. All verification in this revision is local.
+
 ## Candidate identity and verification
 
 Build from a clean candidate checkout with Node 24.18.0, pnpm 10.32.1 and the pinned Wrangler installed under web/. The generated release-manifest.json identifies the exact Git commit and branch and records the size and SHA-256 of every web, API and Worker output. These files are reproducible verification inputs for this candidate. Freeze a new manifest when code, bindings or build inputs change.
@@ -13,15 +15,20 @@ pnpm typecheck && pnpm lint
 pnpm build
 mkdir -p dist
 web/node_modules/.bin/wrangler deploy --dry-run --config infrastructure/cloudflare/local.json --outdir "$PWD/dist/worker"
+# Supply separate fresh fixture databases for the two migration drills.
+MEDORA_TEST_DATABASE_URL="$MAPPED_FIXTURE_URL" node scripts/verification/rehearse.mjs > dist/reconciliation.json
+MEDORA_TEST_DATABASE_URL="$UNMAPPED_FIXTURE_URL" node scripts/verification/rehearse.mjs --unmapped > dist/recovery-refusal.json
+node scripts/verification/visual-parity.mjs > dist/visual-parity.json
+node web/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
 node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
 ```
 
-The static app is in apps/web/dist, the portable Node server is apps/api/dist/server.mjs and the dry-run Worker bundle is in dist/worker. The local Worker configuration has no production routes or Durable Object bindings.
+The static app is in apps/web/dist, the portable Node server is apps/api/dist/server.mjs and the dry-run Worker bundle is in dist/worker. The local Worker configuration has no production routes and declares seven separate local Durable Object bindings.
 
 ## Isolated database and migration
 
 1. Establish a private, authorized frozen copy, its independent object census, identity mapping and source time. Confirm completeness for all seven namespaces, including accountless devices, unknown data and pending operations. Save the current Worker version, code, configuration references, object inventories and encrypted backups for recovery. Preserve each device's original origin, IndexedDB, active tab and push registration.
-2. Set DATABASE_URL to the isolated PostgreSQL target and MEDORA_ARCHIVE_KEY_FILE to a private key file outside the checkout. Apply `pnpm db:migrate` twice. Both runs must verify all migration checksums. In order the migrations are 001_care, 002_archives, 003_legacy_projection, 004_identity and 005_families.
+2. Set DATABASE_URL to the isolated PostgreSQL target and MEDORA_ARCHIVE_KEY_FILE to a private key file outside the checkout. Apply `pnpm db:migrate` twice. Both runs must verify all migration checksums. In order the migrations are 001_care, 002_archives, 003_legacy_projection, 004_identity, 005_families, 006_writer_transition, 007_care_documents, 008_transition_state, 009_household_policies, 010_invitation_history and 011_require_source_fence.
 3. Run the following against the frozen **copy**. Export writes a fresh archive. The importer authenticates parts and checkpoints each object. The verifier independently reads the target. The final restore command creates a new private directory and refuses an existing destination.
 
 ```sh
@@ -63,8 +70,10 @@ Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, schedul
 
 | Binding or setting | Purpose |
 | --- | --- |
+| MEDORA_LEGACY_WRITES_FENCED | Explicit source writer freeze during a coordinated rehearsal |
+| PILOT, REMINDERS, EMAIL_ACCOUNTS, CREDENTIALS, PROMOTIONS, OPERATIONS, FAMILIES | Dedicated compatibility namespaces with their own SQLite migration, service keys and rate-limit bindings |
 | ASSETS | Vite distribution, static CSP and revisioned service worker |
-| HYPERDRIVE | Isolated PostgreSQL connection with the five migrations applied |
+| HYPERDRIVE | Isolated PostgreSQL connection with the eleven migrations applied |
 | BACKUPS | Private staging R2 bucket containing encrypted account backups |
 | MEDORA_PASSWORD_KEYS, MEDORA_CURRENT_PASSWORD_KEY | Versioned pepper registry and current key name |
 | MEDORA_CODE_KEY, MEDORA_MAIL_KEY | Independent challenge HMAC and outbox encryption keys |
@@ -73,30 +82,18 @@ Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, schedul
 | Node-only DATABASE_URL, S3_ENDPOINT, S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY | PostgreSQL and S3 adapters for VPS |
 | Compose-only MEDORA_DB_PASSWORD, MEDORA_STORAGE_SECRET, MEDORA_MAILPIT | Development database, storage and mail sink |
 
-Render with `node infrastructure/cloudflare/staging.mjs`. Validate with `web/node_modules/.bin/wrangler deploy --dry-run --config infrastructure/cloudflare/.staging.generated.json`. When isolated resources and secret references have been verified, the staging deployment command is the same invocation without `--dry-run`. The generated configuration targets medora-v2-staging on workers.dev and a one-minute cron for delivery retries. Test registration, verification mail, revocation, sync, backup, service worker upgrade, security headers and recovery on its actual HTTPS origin. Record the hosted Worker version, binding identities, checksums and aggregate results.
+Render with `node infrastructure/cloudflare/staging.mjs`. Validate with `web/node_modules/.bin/wrangler deploy --dry-run --config infrastructure/cloudflare/.staging.generated.json`. Hosted execution requires separate owner approval and verified dedicated resource and secret references. The generated configuration targets medora-v2-staging on workers.dev and a one-minute cron for delivery retries. Test registration, verification mail, revocation, sync, backup, service worker upgrade, security headers and recovery on its actual HTTPS origin. Record the hosted Worker version, binding identities, checksums and aggregate results.
 
 ## Rollback and abort criteria
 
 - Before opening writes, retain the incumbent version ID, a consistent SQL dump, a verified object copy, all required secret version references, original namespace images and the authenticated source manifest. Preserve staged resources separately.
 - For a hosted staging code rollback to a previously verified version, use `web/node_modules/.bin/wrangler rollback "$PREVIOUS_STAGE_VERSION" --config infrastructure/cloudflare/.staging.generated.json`. A code rollback alone cannot transfer records between databases.
 - For the local pre-write recovery drill, stop the candidate services with the scoped Compose stop command above. Restore the frozen namespace copies into a fresh location with restore-copy. Reject a destination containing .incomplete. Exercise the incumbent against the restored copy and compare its source census. The Compose recovery script verifies a separate return to the rebuilt database and object store.
-- After accepting new writes, retain both stores and freeze both writers. Reconcile the new durable journal, local pending edits, account changes and family policies before selecting an authoritative generation. Reverse transfer and replay of all post-cutover writes is an open gate. Returning traffic to the older writer before that reconciliation risks lost updates.
+- After accepting new writes, retain both stores and freeze both writers. Reconcile the new durable journal, local pending edits, account changes and family policies before selecting an authoritative generation. Care and household mutations have a tested fixture reverse path. Unsupported changes block recovery, including writes to identity, challenges, the mail outbox or backup catalog. Returning traffic to the older writer before that reconciliation risks lost updates.
 - Abort on any census or digest mismatch, missing or ambiguous identity, unauthorized target, duplicate primary key, nonempty reconciliation difference, changed migration checksum, missing production capability, unreadable backup, stale writer, incomplete rollback exercise or hosted smoke failure. Keep original and target evidence for investigation.
 
 A future production release still requires feature parity, complete authorized source reconciliation, proven hosted staging, client-generation fencing, tested post-write rollback and explicit deployment approval. The current release branch and production data were untouched.
 
 ## Verification record for this candidate
 
-| Check | Observed result |
-| --- | --- |
-| Strict TypeScript, ESLint with zero-warning limit, Vite and Node production builds | Passed |
-| Rebuild Vitest on isolated PostgreSQL | 19/19 across 12 files. Four domain, one component, four integration, seven migration and three security tests |
-| Rebuild Playwright | 18/18 across Chromium and WebKit, including six real historical IndexedDB upgrade cases |
-| Incumbent regression suite | 41/41 Node, 13/13 care checks, seven alarm categories and 80/80 browser cases |
-| Local Workerd with R2 and Hyperdrive | Authenticated incremental sync, encrypted backup round trip, static security headers, registration, scheduled fixture email, family sharing/revocation, offline reconnect and password reset passed |
-| Node, Caddy, PostgreSQL, S3 and Mailpit | Same browser account workflow and runtime round trip passed. A separate restore matched 25 inventory lines and three encrypted objects |
-| Service worker update | Incomplete install left old version usable offline. Retry activated after old client closed and the journal survived |
-| Dependency audit | Rebuild production dependencies and incumbent npm audit reported zero known advisories during verification |
-| Deployment infrastructure | Wrangler local-config dry run passed. Hosted staging, complete authorized snapshot and production cutover remain open |
-
-The reconciliation report and file inventory accompany the local candidate archive. CI is configured to repeat these checks. The branch has not been pushed, so hosted CI has no result for this candidate.
+[Rebuild verification](REBUILD_VERIFICATION.md) records tests against the candidate artifact and the exact boundary of the local data rehearsal. The archive and accompanying release manifest identify the candidate commit. No hosted CI run, staging rollout or production deployment occurred.

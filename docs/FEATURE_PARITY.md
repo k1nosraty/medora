@@ -1,6 +1,6 @@
 # Feature parity ledger
 
-The release branch is the behavioral reference. Verified legacy workflows cannot count as rebuilt workflows. The following inventory traces each product surface to its original implementation.
+The release branch is the behavioral reference. The default candidate entry is /medication/. The separate /journal/ route retains the earlier device migration and incremental journal workflows. The following inventory traces each product surface to its original implementation.
 
 | Capability | Source under web/ | Essential behavior to retain |
 | --- | --- | --- |
@@ -24,22 +24,15 @@ Feature paths in this table are relative to public/medication when prefixed with
 
 ## Candidate coverage
 
-| Workflow | Rebuilt behavior exercised | Remaining parity work |
+| Surface | Delivery at the normal product entry | Generation 2 evidence and open work |
 | --- | --- | --- |
-| Today and calendar | Persian daily view, timezone-adjusted medicine/appointment/routine schedule, water total and program navigation | Onboarding, month navigation and notification deep links |
-| Medicines | Daily schedule, fractional quantities, stock debit/refill, pause/resume with dated history, taken/skipped | Full phase editor, individual-date schedules, archive, snooze, historical plan edits and push |
-| Appointments | Creation with clinic timezone, attendance/undo, cancellation/reinstatement, period counts and backup restoration | Rescheduling, offsets, contacts, private notes and push |
-| Water | Date selection, create/edit/delete, paginated history, daily totals, offline queue and conflict choice | Goals, undo, reminder pause and parity of family quick actions |
-| Routines | Daily completion plans, pause/resume and logs | Quantity/step editing, historical plan changes, flexible schedules |
-| Sleep | Main sleep and naps, quality, interval validation, overlap rejection, notes and backup | Quick actions, reminders, sleep summaries |
-| Cycle | Daily flow, notes, local-only preference, isolated cycle file export/import, cloud backup filtering | Cycle record editing, estimates, symptom trends, companion/print views |
-| Reports | 7/30/90-day local report of water, recorded doses and appointments | Calendar-aligned periods and complete program/adherence metrics |
-| Accounts and settings | Register, verify, sign in, reset, revoke sessions, language and calendar choice | Profile changes, deletion lifecycle, legacy session and identity cutover |
-| Family | Groups, invitations and acceptance, directional water grant, totals and revocation | Scoped delegated writing, additional program grants, expiry/membership management, migration into live policies |
-| Cloud sync | Replay-safe owner-scoped incremental water, conflict detection, tombstones and reconnect | Other care collections, private-field key continuity, pending legacy operations and writer-generation transition |
-| Backups | Encrypted device/Android/web/cycle restore in a separate profile, enrolled-account backup download and hash verification | Complete historical corpus, operational backup promotion and full source reconciliation |
-| Notifications | Legacy alarm suite remains green for seven categories | Rebuilt enrollment, closed-client delivery and retry lifecycle |
-| Support, promotions, operations | Original source retained and byte images archived in fixture | Rebuilt support, campaign, media, administrative and release workflows |
-| Pilot, gallery and installation | Rebuilt bilingual shell, offline asset caching and reload | Pilot operations, gallery parity, native platform install and transition from the production service worker |
+| Onboarding, Today and navigation | Original route, screen hierarchy, calendar, program cards, focus and notification deep links. React implements onboarding and the interactive week strip | Browser regression and direct release comparisons in both engines. Additional controllers still use the original JS |
+| Medicines, appointments and routines | Original editors, appearance, stock, schedules, historical plans, attendance, quantity and steps | Exercised in browser regression and a mixed-program PostgreSQL commit. Closed-device reminders still depend on the native service |
+| Water | Quick log, date controls, history, edits, delete, undo, goals and reminder pause. React implements history rows | Owner-checked document patches and per-entry feed reconcile together. A signed-in browser restored a source account and added water. Offline replay, idempotence, stale writes and scoped family writes exercised |
+| Sleep, cycle and insights | Complete original screens, settings, privacy controls, print, backup and reports | Portable care commits include these domains and preserve unknown fields. The fixture reopens encrypted appointment and cycle fields. Complete historical variant coverage remains open |
+| Account and cloud sync | Public account dialog and original conflict/recovery UX | Writer negotiation, signup, email confirmation, login, password reset, restore, owner scope, revisions and privacy proof. Session continuity, account lifecycle and reverse identity transfer remain open |
+| Household | Original family panel, context, group management, invitations, scoped actions | PostgreSQL persists directional sections, expiry, member identifiers and replay receipts. Invitation, Mailpit delivery, accept, change, delegate, replay, revoke, delete and post-write recovery exercised. Full historical policy census is outstanding |
+| Backups and installation | Original backup readers, cycle exports, service worker, cache strategy, install artwork, pilot and design gallery | Isolated browser upgrades, private archives, encrypted object round trips and interrupted updates exercised. Historical corpus, real provider/device and installed-origin upgrade sign-off are outstanding |
+| Support, promotions, notifications and administration | Combined Worker routes these surfaces to the original native services. Compose provides a separate local compatibility runtime | The legacy writer fence stops these services too. Portable PostgreSQL processing, recovery of new operational writes, verified release notifications and physical-device delivery are open |
 
-Generation 1 stores and sessions stay authoritative until write fencing, rollback and semantic reconciliation pass. Imported accounts cannot sign into the v2 writer merely by existing in a staging table.
+The compatibility runtime and the PostgreSQL rehearsal are separate operating modes. A test of an original UI workflow in compatibility mode establishes visual or behavioral continuity at that entry. It does not establish a portable implementation of its server-side operation. See [verification evidence](REBUILD_VERIFICATION.md).

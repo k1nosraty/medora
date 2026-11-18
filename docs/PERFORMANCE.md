@@ -6,7 +6,7 @@ Reproduce with `cd web && npm run build && node browser/measure.mjs`. For system
 
 Baseline functional browser suite passed all 80 cases across Chromium and WebKit in 2.2 minutes.
 
-## Candidate measurements
+## Separate device journal measurements
 
 Three cold Chromium trials used a 390 × 844 viewport, 160ms artificial latency, 200kB/s download, 75kB/s upload and a blocked service worker. Each trial used a fresh browser profile. The shell was served from a Vite build preview on loopback. Each timing below is the median of the three trials.
 
@@ -24,3 +24,11 @@ Three cold Chromium trials used a 390 × 844 viewport, 160ms artificial latency,
 The large-history test renders 40 entries per page and verifies forward paging. The initial and large-list measurements use different cache conditions. INP at the population level needs field observations. The legacy timing ends at onboarding, while the rebuilt marker is Today. The available features differ between the two builds.
 
 Use a fresh web build, start Vite preview and run `node scripts/verification/performance.mjs http://127.0.0.1:48821`. Set MEDORA_CHROMIUM when using a system Chrome executable. For this fixture the working budgets are a 2.5s cold LCP, CLS below 0.1, a 500ms water transition and 160KiB initial JS gzip. Re-evaluate with identical features, a slower physical device and the approved hosted origin before release.
+
+## Canonical product
+
+The same throttled Chromium script and onboarding marker ran three cold trials on /medication/. The median was 5,997 ms with 1,107,978 transferred bytes. The slowest run was 6,009 ms. The original baseline was 5,995 ms and 1,097,905 bytes. A preliminary candidate that loaded React DOM before showing the welcome screen measured 7,122 ms. The candidate now attaches working controls to the delivered markup immediately and loads the renderer separately. The measured 2 ms difference from the original is within the spread of these trials.
+
+The candidate offline shell has 36 entries totaling 1,548,967 bytes. The release reference had 35 entries totaling 1,316,425 bytes. The additional renderer still costs storage and transfer on first installation. Field input latency, physical-device install and large-history rendering for all eight product screens remain open.
+
+Reproduce with `node web/browser/measure.mjs apps/web/dist 3` after a candidate build.
