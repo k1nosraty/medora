@@ -58,6 +58,14 @@ All three legacy migration scenarios ran against fresh synthetic PostgreSQL data
 
 All three Docker targets built using a private local cache of the same locked npm packages after the direct container download stalled. A separate localhost stack passed frontend and API smoke checks, account and offline replay checks, and an independent restore that matched 58 SQL inventory lines, the compatibility volume and one encrypted object read through S3. These results use synthetic data.
 
+## Startup, sleep and frontend build verification
+
+The candidate built with its own pnpm dependencies in a checkout that omitted the incumbent npm package and build scripts. The same checkout retained `web/ui` and `web/public`. The negative probe without `web/` failed at a translation import. The [frontend ledger](FRONTEND_PORT.md) identifies the templates, assets, controllers and compatibility paths that remain.
+
+The startup and sleep slice passed 102 candidate browser checks in Chromium and WebKit. The exact visual comparison matched 104 reference captures. Keyboard checks opened onboarding and the nested Persian date picker, then checked Escape focus restoration. The sleep workflow exercised form validation, offline quick wake, a stored wake draft, extra record fields and a rejected stale edit. The [performance record](PERFORMANCE.md#canonical-product) records both the restored onboarding target and the separate cold dashboard handoff cost.
+
+The local PostgreSQL checks exercised the synthetic Workerd/R2-to-Node/S3 handoff and return after four offline writes from two accounts. The separate legacy rehearsals exercised source reconciliation, refusal to publish an unsupported recovery, and imported-account erasure. No production snapshot was used.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

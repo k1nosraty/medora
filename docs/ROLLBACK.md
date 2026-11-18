@@ -1,5 +1,9 @@
 # Rollback
 
+## Frontend-only changes
+
+An approved rollback of the frontend assets must preserve the public origin, `/medication/` service-worker scope and existing IndexedDB namespace. Use the verified previous asset set as a unit so its scripts, styles and cache manifest agree. Rehearse interrupted updates and offline operations locally before considering a release rollback. The onboarding and sleep React changes use the existing schema and write contracts.
+
 ## PostgreSQL and object storage handoff
 
 **Before commit.** Keep the source and target fenced during verification. For an interrupted copy or failed reconciliation, use `abort` with the original source and private transfer directory. This reopens only the source for that transfer ID. The partial target remains fenced. Retain it for diagnosis and use a new database, bucket and transfer directory for a clean retry. The tool does not delete either installation.

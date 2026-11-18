@@ -1,4 +1,4 @@
-import { createRequire } from "node:module";
+import * as esbuild from "esbuild";
 import {
   cp,
   lstat,
@@ -10,15 +10,23 @@ import {
 } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve, join, relative } from "node:path";
-import { buildWeb } from "../../../web/scripts/build-web.mjs";
+import { compileWeb } from "../../../packages/web-build/compile.mjs";
+import { bundleWorkbox } from "./workbox.mjs";
+import fa from "../../../web/public/medication/shared/i18n/messages-fa.js";
+import en from "../../../web/public/medication/shared/i18n/messages-en.js";
 
-const { build } = createRequire(
-  new URL("../../../web/package.json", import.meta.url),
-)("esbuild");
 const app = fileURLToPath(new URL("../", import.meta.url));
 const source = resolve(app, "../../web/public");
 const output = resolve(app, "dist");
 const staging = await mkdtemp(join(app, ".product-"));
+const onboardingCopy = (messages) => ({
+  title: messages["ui.medora"],
+  subtitle: messages["ui.your-health-every-day"],
+  description: messages["ui.reminders-for-medicines-water-and-appointments"],
+  start: messages["ui.get-started"],
+  privacy: messages["ui.your-records-stay-on-this-device"],
+  error: messages["ui.could-not-save-try-again"],
+});
 const components = new Map([
   ["medication/app/onboarding.js", "Onboarding.tsx"],
   ["medication/app/routes.js", "routes.ts"],
@@ -43,6 +51,7 @@ const replacedModules = new Set([
   "medication/app/medora.js",
   "medication/app/navigation.js",
   "medication/features/account/dialog.js",
+  "medication/features/sleep/controller.js",
   "medication/features/promotions/dialog.js",
   "medication/features/support-tickets.js",
   "medication/features/water/entries.js",
@@ -66,13 +75,23 @@ try {
       );
     },
   });
-  await buildWeb(
-    pathToFileURL(staging + "/"),
-    [
+  await compileWeb({
+    ui: resolve(app, "../../web/ui"),
+    sourcePublic: pathToFileURL(source + "/"),
+    publicDir: pathToFileURL(staging + "/"),
+    messagesFa: fa,
+    iconLicenseFile: new URL("../../../branding/LICENSE", import.meta.url),
+    esbuild,
+    bundleWorkbox,
+    plugins: [
       {
         name: "medora-react-features",
         setup(build) {
           build.initialOptions.metafile = true;
+          build.initialOptions.define.MEDORA_WELCOME_COPY = JSON.stringify({
+            fa: onboardingCopy(fa),
+            en: onboardingCopy(en),
+          });
           build.onResolve({ filter: /^\.{1,2}\// }, (args) => {
             // Unported controllers import the corresponding candidate components.
             if (relative(source, args.resolveDir).startsWith("..")) return;
@@ -101,12 +120,12 @@ try {
         },
       },
     ],
-    {
+    entryPoints: {
       bootstrap: join(app, "src/product/bootstrap.ts"),
-      medora: join(app, "src/product/product.ts"),
+      medora: join(app, "src/product/startup.ts"),
     },
-  );
-  await build({
+  });
+  await esbuild.build({
     entryPoints: [join(app, "src/product/accountTransport.ts")],
     bundle: true,
     minify: true,

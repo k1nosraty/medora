@@ -8,16 +8,18 @@
     "dev:journal": "vite"
   },
   "dependencies": {
-    "react": "^19",
-    "react-dom": "^19",
-    "react-router-dom": "^7",
+    "@medora/contracts": "workspace:*",
     "@tanstack/react-query": "^5",
-    "react-hook-form": "^7",
     "dexie": "^4",
     "lucide-react": "^0.577.0",
-    "@medora/contracts": "workspace:*"
+    "react": "^19",
+    "react-dom": "^19",
+    "react-hook-form": "^7",
+    "react-router-dom": "^7"
   },
   "devDependencies": {
-    "vite": "^8"
+    "esbuild": "0.28.2",
+    "vite": "^8",
+    "workbox-routing": "7.3.0"
   }
 }

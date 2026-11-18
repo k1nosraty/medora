@@ -5,6 +5,42 @@ import { decryptBackup } from "../public/medication/shared/crypto/backup.js";
 test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
 test.use({ serviceWorkers: "block" });
 
+test("onboarding stays interactive while the dashboard bundle is delayed", async ({
+  page,
+}) => {
+  let unblock;
+  const gate = new Promise((resolve) => {
+    unblock = resolve;
+  });
+  let dashboardRequested = false;
+  await page.route("**/medication/bundles/chunk-*.js", async (route) => {
+    const response = await route.fetch();
+    if ((await response.text()).includes("family-notice")) {
+      dashboardRequested = true;
+      await gate;
+    }
+    await route.fulfill({ response });
+  });
+
+  try {
+    await page.goto("/medication/", { waitUntil: "commit" });
+    const start = page.locator("#welcome-start");
+    await expect(start).toBeEnabled();
+    await expect.poll(() => dashboardRequested).toBe(true);
+    await start.click();
+    await expect(start).toBeDisabled();
+    const intro = await page.evaluate(async () => {
+      const { accessCare } = await import("/medication/shared/storage.js");
+      return (await accessCare()).intro;
+    });
+    expect(intro).not.toBe("done");
+  } finally {
+    unblock();
+  }
+  await expect(page.locator("#welcome-screen")).toBeHidden();
+  await expect(page.locator("#screen-title")).toBeFocused();
+});
+
 async function open(page, language, view, viewport) {
   await page.setViewportSize(viewport);
   await page.goto("/medication/");
@@ -23,6 +59,63 @@ async function open(page, language, view, viewport) {
     language === "fa" ? "rtl" : "ltr",
   );
 }
+
+test("sleep saves and edits a nap without dropping extra fields or overwriting a concurrent edit", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date(2026, 10, 18, 13, 30));
+  await open(page, "en", "sleep", { width: 390, height: 844 });
+  await page.locator("#sleep-manual").click();
+  const form = page.locator("#sleep-form");
+  async function chooseTime(part, hours, minutes) {
+    await form.locator(`[data-for="sleep-${part}-time"]`).click();
+    await page.locator("#keyboard-hour").fill(hours);
+    await page.locator("#keyboard-minute").fill(minutes);
+    await page.locator("#picker-time-confirm").click();
+  }
+  await chooseTime("start", "10", "00");
+  await chooseTime("end", "10", "15");
+  await expect(form.locator("#sleep-duration-preview")).toHaveText("15 min");
+  await form.locator("#sleep-kind").selectOption("nap");
+  await form.locator("#sleep-note").fill("Original nap");
+  await form.locator("button[type=submit]").click();
+  await expect(form).toBeHidden();
+  const row = page
+    .locator("#sleep-history article")
+    .filter({ hasText: "Original nap" });
+  await expect(row).toContainText("Nap");
+  const update = (fields) =>
+    page.evaluate(async (values) => {
+      const { accessCare } = await import("/medication/shared/storage.js");
+      await accessCare((state) =>
+        Object.assign(Object.values(state.sleepRecords)[0], values),
+      );
+    }, fields);
+  await update({ fixtureExtension: { retained: true } });
+  await page.reload();
+  await row.getByRole("button", { name: "Edit" }).click();
+  await form.locator("#sleep-note").fill("Edited nap");
+  await form.locator("button[type=submit]").click();
+  const edited = page
+    .locator("#sleep-history article")
+    .filter({ hasText: "Edited nap" });
+  await expect(edited).toBeVisible();
+  await edited.getByRole("button", { name: "Edit" }).click();
+  await update({ note: "Saved by another view" });
+  await form.locator("#sleep-note").fill("Stale edit");
+  await form.locator("button[type=submit]").click();
+  await expect(form.locator("#sleep-error")).not.toBeEmpty();
+  await expect(form).toBeVisible();
+  const saved = await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    return Object.values((await accessCare()).sleepRecords)[0];
+  });
+  expect(saved).toMatchObject({
+    kind: "nap",
+    note: "Saved by another view",
+    fixtureExtension: { retained: true },
+  });
+});
 
 test("water validates localized amounts and saves through the date and time controls", async ({
   page,
@@ -47,7 +140,10 @@ test("water validates localized amounts and saves through the date and time cont
   await expect(page.locator("#time-picker")).toBeVisible();
   await page.locator("#keyboard-hour").fill("۳۰");
   await page.locator("#picker-time-confirm").click();
-  await expect(page.locator("#keyboard-hour")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#keyboard-hour")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
   await expect(page.locator("#keyboard-hour")).toBeFocused();
   await page.locator("#keyboard-hour").fill("۹");
   await page.locator("#keyboard-minute").fill("۰۵");

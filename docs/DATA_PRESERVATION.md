@@ -2,6 +2,8 @@
 
 The canonical product opens at `/medication/`. It retains the original IndexedDB database with its versioned care metadata and day buckets. The React/Dexie journal at `/journal/` has an independent database and operation queue. It can capture older device databases and validate the copied records before selecting the copy. Opening the journal does not move the canonical product to Dexie.
 
+Onboarding reads the existing care database before offering the first-run screen. The primary application's normal write transaction records onboarding completion after the dashboard module is available. Sleep edits reuse the same record IDs, wall-clock conversion, overlap rules and write transaction. An unchanged wall time preserves the original offset during an ambiguous clock change. Existing extra fields are carried into an edit. A stale edit or deletion is rejected against the current record.
+
 ## Preserve the public origin
 
 Keep the exact frontend scheme, host and port, the service-worker scope and the relative `/api` URLs. Update the upstream behind that origin when the backend moves. This keeps IndexedDB, cache, the installed PWA and the `__Host-` authentication cookie attached to the same site. Opening a different frontend origin creates a separate browser storage namespace. A different public API origin would require a new authentication and CORS design. A raw origin change cannot transfer browser data.

@@ -64,7 +64,7 @@ if (release && /^[a-f0-9]{40}$/.test(release)) {
 }
 
 try {
-  await import("./product");
+  await import("./startup");
 } catch {
   let english = document.documentElement.lang === "en";
   try {

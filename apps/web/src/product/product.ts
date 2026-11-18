@@ -46,9 +46,11 @@ import { installTodayStory } from "../../../../web/public/medication/features/to
 import { installBackupRestore } from "../../../../web/public/medication/features/backups/dialog.js";
 import { installNavigation } from "./navigation";
 import { refreshApp } from "./updates";
-import { showIntro } from "./Onboarding";
+import { finishIntro, hasStarted, showIntro } from "./Onboarding";
+import { initialCare } from "./initialCare";
 import { installSurfaceArt } from "../../../../web/public/medication/design/surfaces.js";
 import { showStorageRecovery } from "./StorageRecovery";
+import type { SleepRecord, WakeDraft } from "./SleepForm";
 import type { WaterEntry } from "./WaterEntries";
 import type { WaterTarget } from "./WaterLogForm";
 
@@ -64,7 +66,9 @@ export type CareState = Omit<Parameters<typeof showIntro>[0], "water"> &
     sleepCardSize?: string;
     cycleCardSize?: string;
     cycleOptions?: { hideToday?: boolean; minute?: number };
-    sleepSettings?: { bedtime?: string; wake?: string };
+    sleepSettings?: { bedtime?: string; wake?: string; goal?: number };
+    sleepRecords?: Record<string, SleepRecord>;
+    sleepDraftWake?: WakeDraft;
     cycleLocalOnly?: boolean;
     cycleCompanionEstimate?: { first: number; last: number };
     cycleCompanionMessage?: string;
@@ -87,7 +91,7 @@ export interface FamilyView extends EntryFamilyView {
   synced: boolean;
 }
 
-localizeMarkup();
+localizeMarkup({ keep: $("welcome-screen") });
 installSurfaceArt();
 installTodayStory($("today-story"));
 installSupport();
@@ -249,6 +253,7 @@ const nextLanguage = language === "fa" ? "en" : "fa";
 for (const control of document.querySelectorAll<HTMLElement>(
   "[data-language-switch]",
 )) {
+  if (control.closest("#welcome-screen")) continue;
   control.lang = nextLanguage;
   const caption = control.querySelector("span");
   const name = language === "fa" ? "Switch to English" : "تغییر زبان به فارسی";
@@ -473,7 +478,11 @@ installBackupRestore(
 );
 
 try {
-  const restored: CareState = await accessCare();
+  const initial = await initialCare;
+  if ("error" in initial) throw initial.error;
+  const restored: CareState = hasStarted(initial.state)
+    ? initial.state
+    : await accessCare();
   care = restored;
   accountSync.schedule(0);
   const day = params.get("day");
@@ -532,6 +541,9 @@ try {
   void family.refreshGroup();
   void initializeReminders();
 } catch (error) {
+  $("welcome-screen").hidden = true;
+  $("care-main").hidden = false;
+  $("boot-status").hidden = false;
   $("boot-status").textContent = t(
     storageMessage(
       error,
@@ -539,4 +551,9 @@ try {
     ),
   );
   showStorageRecovery($("boot-recovery"));
+}
+
+export function finishOnboarding() {
+  if (!care) return false;
+  return hasStarted(care) || finishIntro(mutate);
 }

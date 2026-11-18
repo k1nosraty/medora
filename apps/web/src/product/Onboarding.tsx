@@ -1,10 +1,31 @@
-import {
-  language,
-  selectLanguage,
-  t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
-
+import { useState } from "react";
 import { paintFeature } from "./renderer";
+
+type Locale = "fa" | "en";
+declare const MEDORA_WELCOME_COPY: Record<
+  Locale,
+  Record<
+    "title" | "subtitle" | "description" | "start" | "privacy" | "error",
+    string
+  >
+>;
+
+function preferredLanguage(): Locale {
+  try {
+    return localStorage.getItem("medora-language") === "en" ? "en" : "fa";
+  } catch {
+    return "fa";
+  }
+}
+
+function switchLanguage(next: Locale) {
+  try {
+    localStorage.setItem("medora-language", next);
+  } catch {
+    return;
+  }
+  location.reload();
+}
 
 type IntroState = {
   intro?: string;
@@ -24,8 +45,29 @@ type Save = (
   message: string,
 ) => Promise<boolean>;
 
-function Welcome({ start }: { start: () => void }) {
+function Welcome({
+  language,
+  start,
+}: {
+  language: Locale;
+  start: () => Promise<boolean>;
+}) {
   const persian = language === "fa";
+  const text = MEDORA_WELCOME_COPY[language];
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  async function advance() {
+    if (pending) return;
+    setPending(true);
+    setFailed(false);
+    try {
+      setFailed(!(await start()));
+    } catch {
+      setFailed(true);
+    } finally {
+      setPending(false);
+    }
+  }
   return (
     <>
       <svg className="intro-landscape" aria-hidden="true">
@@ -44,7 +86,7 @@ function Welcome({ start }: { start: () => void }) {
             data-language-switch=""
             lang={persian ? "en" : "fa"}
             aria-label={persian ? "Switch to English" : "تغییر زبان به فارسی"}
-            onClick={() => selectLanguage(persian ? "en" : "fa")}
+            onClick={() => switchLanguage(persian ? "en" : "fa")}
           >
             {persian ? "English" : "فارسی"}
           </button>
@@ -56,31 +98,26 @@ function Welcome({ start }: { start: () => void }) {
           width="560"
           height="350"
         />
-        <h1>{t("ui.medora")}</h1>
-        <h2>{t("ui.your-health-every-day")}</h2>
-        <p>{t("ui.reminders-for-medicines-water-and-appointments")}</p>
+        <h1>{text.title}</h1>
+        <h2>{text.subtitle}</h2>
+        <p>{text.description}</p>
         <button
           type="button"
           id="welcome-start"
           className="block-action"
-          onClick={start}
+          disabled={pending}
+          onClick={() => void advance()}
         >
-          {t("ui.get-started")}
+          {text.start}
         </button>
-        <p className="quiet">{t("ui.your-records-stay-on-this-device")}</p>
+        {failed && <p role="alert">{text.error}</p>}
+        <p className="quiet">{text.privacy}</p>
       </div>
     </>
   );
 }
 
-export function showIntro(care: IntroState, save: Save) {
-  const welcome = document.getElementById("welcome-screen")!;
-  function show(done: boolean) {
-    document.querySelector<HTMLElement>(".app-bar")!.hidden = !done;
-    document.getElementById("care-main")!.hidden = !done;
-    document.getElementById("app")!.hidden = !done;
-    welcome.hidden = done;
-  }
+export function hasStarted(care: IntroState) {
   const existing = [
     care.medicines,
     care.doses,
@@ -88,7 +125,7 @@ export function showIntro(care: IntroState, save: Save) {
     care.routines,
     care.routineLogs,
   ].some((records) => Object.keys(records ?? {}).length > 0);
-  const done = Boolean(
+  return Boolean(
     care.intro === "done" ||
     existing ||
     care.water?.length ||
@@ -97,17 +134,42 @@ export function showIntro(care: IntroState, save: Save) {
     care.calendar ||
     care.waterGoal,
   );
-  show(done);
-  if (done) return;
-  const start = async () => {
-    if (
-      await save((state) => {
-        state.intro = "done";
-      }, "")
-    ) {
-      show(true);
-      document.getElementById("screen-title")!.focus();
-    }
-  };
-  paintFeature(welcome, <Welcome start={() => void start()} />);
+}
+
+function show(done: boolean) {
+  document.querySelector<HTMLElement>(".app-bar")!.hidden = !done;
+  document.getElementById("care-main")!.hidden = !done;
+  document.getElementById("app")!.hidden = !done;
+  document.getElementById("welcome-screen")!.hidden = done;
+}
+
+export function showWelcome(start: () => Promise<boolean>) {
+  const language = preferredLanguage();
+  document.documentElement.lang = language;
+  document.documentElement.dir = language === "en" ? "ltr" : "rtl";
+  const manifest = document.querySelector<HTMLLinkElement>(
+    'link[rel="manifest"]',
+  );
+  if (manifest && language === "en") manifest.href = "/manifest.en.webmanifest";
+  paintFeature(
+    document.getElementById("welcome-screen")!,
+    <Welcome start={start} language={language} />,
+  );
+  show(false);
+}
+
+export function showIntro(care: IntroState, save: Save) {
+  if (hasStarted(care)) show(true);
+  else showWelcome(() => finishIntro(save));
+}
+
+export async function finishIntro(save: Save) {
+  const saved = await save((state) => {
+    state.intro = "done";
+  }, "");
+  if (saved) {
+    show(true);
+    document.getElementById("screen-title")!.focus();
+  }
+  return saved;
 }

@@ -16,7 +16,7 @@ import { isoDay as iso } from "../../../../web/public/medication/domain/care-ind
 import { cycleIsEnabled } from "../../../../web/public/medication/domain/profile.js";
 import { familyPlacementOf } from "../../../../web/public/medication/domain/family.js";
 import { sleepIsEnabled } from "../../../../web/public/medication/domain/sleep.js";
-import { installSleep } from "../../../../web/public/medication/features/sleep/controller.js";
+import { installSleep } from "./sleepController";
 import { installDailyCycle } from "../../../../web/public/medication/features/cycle/daily.js";
 import { installCycle } from "../../../../web/public/medication/features/cycle/controller.js";
 import { refreshArtwork } from "../../../../web/public/medication/design/three-dimensional.js";

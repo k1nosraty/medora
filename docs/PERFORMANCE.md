@@ -27,8 +27,18 @@ Use a fresh web build, start Vite preview and run `node scripts/verification/per
 
 ## Canonical product
 
-The same throttled Chromium script and onboarding marker ran three cold trials on /medication/. The median was 5,991 ms with 1,132,481 transferred bytes. The original baseline was 5,995 ms and 1,097,905 bytes. A preliminary candidate that loaded React DOM before showing the welcome screen measured 7,122 ms. The candidate now attaches working controls to the delivered markup immediately and loads the renderer separately. The measured 4 ms difference from the original is within the spread of these trials.
+Three cold Chromium trials per build used the unchanged `/medication/` welcome-button marker, 390 × 844 viewport, 160 ms latency, 200 kB/s down and 75 kB/s up. Service workers were blocked for both builds. The earlier six-second result used the same definition.
 
-The candidate offline shell has 37 entries totaling 1,560,810 bytes. The release reference had 35 entries totaling 1,316,425 bytes. The additional renderer still costs storage and transfer on first installation. Field input latency, physical-device install and large-history rendering for all eight product screens remain open.
+| Measurement | Starting commit `58883c8` | Candidate |
+| --- | ---: | ---: |
+| Median to usable onboarding | 7,078 ms | 4,993 ms |
+| Median requests at the marker | 24 | 21 |
+| Median bytes at the marker | 1,331,510 | 879,563 |
+| Static offline shell files and bytes | 37 / 1,568,732 | 40 / 1,575,475 |
+| Median to focused dashboard when clicking immediately in a separate run | 7,056 ms | 7,499 ms |
+
+The startup code now reads IndexedDB and presents React onboarding with a small, build-generated bilingual dictionary. The first visit defers the large dashboard graph and full translations until the controls paint or the user starts the workflow. The largest single JavaScript response on the onboarding path dropped from 386,121 to 223,374 transferred bytes. The same CSS, font, and installed cache policy remain in use. The delay test holds the dashboard bundle and verifies an enabled welcome button, an in-progress state, and a single transition to the focused dashboard after the bundle is released.
+
+The immediate-click run exposes the remaining handoff cost. A local trial starting the full locale download in parallel measured 5,003 ms to onboarding and 7,535 ms to the dashboard. A low-priority HTML preload of the dashboard measured 6,048 ms to onboarding and 7,185 ms to the dashboard. The shipped split meets the six-second onboarding target. To reduce the remaining wait, split route-specific medication, family, settings and reports code away from the default dashboard entry and repeat both markers on the same network profile after each slice. Field latency, physical-device install and representative large histories remain open.
 
 Reproduce with `node web/browser/measure.mjs apps/web/dist 3` after a candidate build.

@@ -34,7 +34,8 @@ export function selectLanguage(next) {
   }
 }
 
-export function localizeMarkup({ manifest: updateManifest = true } = {}) {
+/** @param {{manifest?: boolean, keep?: Element | null}} [options] */
+export function localizeMarkup({ manifest: updateManifest = true, keep = null } = {}) {
   document.documentElement.lang = language;
   document.documentElement.dir = language === "en" ? "ltr" : "rtl";
   if (language === "fa") return;
@@ -42,6 +43,7 @@ export function localizeMarkup({ manifest: updateManifest = true } = {}) {
   if (manifest && updateManifest) manifest.href = "/manifest.en.webmanifest";
   const attributes = ["aria-label", "placeholder", "title", "alt", "value", "label"];
   function translate(node) {
+    if (node === keep) return;
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.data.trim();
       const key = node.previousSibling?.nodeType === Node.COMMENT_NODE && node.previousSibling.data.startsWith("msg:")

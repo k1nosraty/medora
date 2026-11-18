@@ -17,6 +17,8 @@
 !packages/domain/**
 !packages/contracts/
 !packages/contracts/**
+!packages/web-build/
+!packages/web-build/**
 !web/
 !web/package*.json
 !web/ui/
@@ -31,6 +33,7 @@
 !web/scripts/fixture-service.mjs
 !apps/web/scripts/
 !apps/web/scripts/product.mjs
+!apps/web/scripts/workbox.mjs
 !branding/
 !branding/logo.svg
 !branding/LICENSE

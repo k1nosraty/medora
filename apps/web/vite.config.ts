@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { bundleWorkbox } from "../../web/scripts/workbox.mjs";
+import { bundleWorkbox } from "./scripts/workbox.mjs";
 const asset = (p: string) => readFileSync(new URL(p, import.meta.url));
 export default defineConfig({
   base: "./",
