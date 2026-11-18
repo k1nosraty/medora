@@ -19,3 +19,5 @@
 The namespace list is in the tagged migrations in `web/wrangler.jsonc`. Data outside the listed stores or fields requires inspection. Absence from an application export does not demonstrate absence from storage.
 
 The target adds writer_transition, cutover_accounts, rollback_exceptions, care_state, the care commit history, family_operations and household_changes. These contain sensitive documents, relationship identifiers or digests. Keep them under the same isolation and retention controls as the corresponding source records. The recovery fixture independently compares the archive, PostgreSQL projections and reopened native state. No complete authorized source was available.
+
+The portable rehearsal also inventories legacy session access, completed registration and reset receipts, reminder state and wake times, ticket and operations records, and campaign metadata and binary chunks. Reverse recovery reconciles each against the authenticated native image and frozen target journal. Recovery keeps verification secrets and provider configurations outside the artifact.

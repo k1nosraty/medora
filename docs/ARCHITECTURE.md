@@ -19,3 +19,8 @@ Portable domain rules for doses, routines, appointments, sleep, and cycle reuse 
 Verification codes have bounded attempts and expiry. PostgreSQL commits the challenge and encrypted mail job together. A Node interval or Worker cron leases jobs to a mail adapter. Mailpit provides local delivery. Hosted deliveries use the configured provider. Docker runs PostgreSQL, the Node service, S3, a mail sink and Caddy. Static Worker hosting uses the same app build.
 
 To add a feature, put pure rules in packages/domain, validated API inputs in packages/contracts, durable data handling in a migration and service, and views under apps/web/src/features. Include a workflow test for retries, ownership or offline changes when those behaviors apply.
+
+
+The portable operations service stores support tickets, rollout settings, counters and audit rows in PostgreSQL. Both runtimes share campaign rules and the original HTTP range semantics. PostgreSQL holds campaign metadata and media chunks under a transaction lock. The reminder scheduler shares the native state machine, locks each due device and checks its linked care revision before composing or sending. The source writer fence and the PostgreSQL freeze remain separate.
+
+A valid legacy cookie can authenticate to the candidate when its signed owner and live digest match the imported ledger. Sign-out and password reset revoke both ledgers where applicable. Reverse recovery checks the original credential and session baseline before applying registered accounts, new proofs and revocations. It preserves the frozen target for mutations outside the verified mapping.

@@ -28,7 +28,7 @@ The static app is in apps/web/dist, the portable Node server is apps/api/dist/se
 ## Isolated database and migration
 
 1. Establish a private, authorized frozen copy, its independent object census, identity mapping and source time. Confirm completeness for all seven namespaces, including accountless devices, unknown data and pending operations. Save the current Worker version, code, configuration references, object inventories and encrypted backups for recovery. Preserve each device's original origin, IndexedDB, active tab and push registration.
-2. Set DATABASE_URL to the isolated PostgreSQL target and MEDORA_ARCHIVE_KEY_FILE to a private key file outside the checkout. Apply `pnpm db:migrate` twice. Both runs must verify all migration checksums. In order the migrations are 001_care, 002_archives, 003_legacy_projection, 004_identity, 005_families, 006_writer_transition, 007_care_documents, 008_transition_state, 009_household_policies, 010_invitation_history and 011_require_source_fence.
+2. Set DATABASE_URL to the isolated PostgreSQL target and MEDORA_ARCHIVE_KEY_FILE to a private key file outside the checkout. Apply `pnpm db:migrate` twice. Both runs must verify all migration checksums. In order the migrations are 001_care, 002_archives, 003_legacy_projection, 004_identity, 005_families, 006_writer_transition, 007_care_documents, 008_transition_state, 009_household_policies, 010_invitation_history, 011_require_source_fence, 012_identity_recovery, 013_portable_reminders, 014_portable_operations, 015_portable_promotions and 016_registration_recovery.
 3. Run the following against the frozen **copy**. Export writes a fresh archive. The importer authenticates parts and checkpoints each object. The verifier independently reads the target. The final restore command creates a new private directory and refuses an existing destination.
 
 ```sh
@@ -72,8 +72,11 @@ Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, schedul
 | --- | --- |
 | MEDORA_LEGACY_WRITES_FENCED | Explicit source writer freeze during a coordinated rehearsal |
 | PILOT, REMINDERS, EMAIL_ACCOUNTS, CREDENTIALS, PROMOTIONS, OPERATIONS, FAMILIES | Dedicated compatibility namespaces with their own SQLite migration, service keys and rate-limit bindings |
+| EMAIL_SESSION_KEY | The authorized legacy signing-key reference for session continuity and admin confirmation tags |
+| REMINDER_SIGNING_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT | Dedicated reminder enrollment and delivery keys. Rehearsals use independent synthetic keys and pause delivery |
+| ADMIN_EMAIL, SUPPORT_EMAILS, PROMOTION_MEDIA_HOSTS | Explicit administrator, support and approved external media host configuration |
 | ASSETS | Vite distribution, static CSP and revisioned service worker |
-| HYPERDRIVE | Isolated PostgreSQL connection with the eleven migrations applied |
+| HYPERDRIVE | Isolated PostgreSQL connection with the sixteen migrations applied |
 | BACKUPS | Private staging R2 bucket containing encrypted account backups |
 | MEDORA_PASSWORD_KEYS, MEDORA_CURRENT_PASSWORD_KEY | Versioned pepper registry and current key name |
 | MEDORA_CODE_KEY, MEDORA_MAIL_KEY | Independent challenge HMAC and outbox encryption keys |
@@ -89,7 +92,7 @@ Render with `node infrastructure/cloudflare/staging.mjs`. Validate with `web/nod
 - Before opening writes, retain the incumbent version ID, a consistent SQL dump, a verified object copy, all required secret version references, original namespace images and the authenticated source manifest. Preserve staged resources separately.
 - For a hosted staging code rollback to a previously verified version, use `web/node_modules/.bin/wrangler rollback "$PREVIOUS_STAGE_VERSION" --config infrastructure/cloudflare/.staging.generated.json`. A code rollback alone cannot transfer records between databases.
 - For the local pre-write recovery drill, stop the candidate services with the scoped Compose stop command above. Restore the frozen namespace copies into a fresh location with restore-copy. Reject a destination containing .incomplete. Exercise the incumbent against the restored copy and compare its source census. The Compose recovery script verifies a separate return to the rebuilt database and object store.
-- After accepting new writes, retain both stores and freeze both writers. Reconcile the new durable journal, local pending edits, account changes and family policies before selecting an authoritative generation. Care and household mutations have a tested fixture reverse path. Unsupported changes block recovery, including writes to identity, challenges, the mail outbox or backup catalog. Returning traffic to the older writer before that reconciliation risks lost updates.
+- After accepting new writes, retain both stores and freeze both writers. Reconcile the new durable journal, local pending edits, account changes and family policies before selecting an authoritative generation. Care, household, completed registration and password reset, reminders, support, operational settings and promotions have a tested fixture reverse path. Pending challenges, backup catalog writes and other unsupported mutations block publication. Returning traffic to the older writer before that reconciliation risks lost updates.
 - Abort on any census or digest mismatch, missing or ambiguous identity, unauthorized target, duplicate primary key, nonempty reconciliation difference, changed migration checksum, missing production capability, unreadable backup, stale writer, incomplete rollback exercise or hosted smoke failure. Keep original and target evidence for investigation.
 
 A future production release still requires feature parity, complete authorized source reconciliation, proven hosted staging, client-generation fencing, tested post-write rollback and explicit deployment approval. The current release branch and production data were untouched.
