@@ -24,7 +24,7 @@ export function unseal(master,snapshot,entry,archive) {
 const sort = list => [...list].sort();
 export function classes() { return ["Credentials","EmailAccount","Families","MedicationReminders","Operations","Promotions","PushPilot"]; }
 
-export async function exportObjects(source,census,output,master) {
+export async function exportObjects(source,census,output,master,identities) {
   // The caller supplies a stopped, consistent copy and a separately established inventory.
   if (!census || !Object.keys(census).length) throw new Error("Independent namespace census required");
   const dirs=await readdir(source,{withFileTypes:true});
@@ -62,7 +62,12 @@ export async function exportObjects(source,census,output,master) {
         entries.push(entry);await rm(path);
       }
     }
-    const manifest={version:1,snapshot,inventory:census,entries};
+    if(identities)for(const [ns,files] of Object.entries(census)){
+      const expected=files.filter(f=>f!=="metadata.sqlite");
+      const found=Object.entries(identities[ns]??{});
+      if(JSON.stringify(sort(expected))!==JSON.stringify(sort(found.map(([k])=>k))) || new Set(found.map(([,v])=>v)).size!==expected.length || found.some(([,v])=>typeof v!=="string"||!v))throw Error("Identity census mismatch");
+    }
+    const manifest={version:1,snapshot,inventory:census,entries,...(identities&&{identities})};
     await writeFile(join(output,"manifest.json"),JSON.stringify({manifest,tag:tag(master,manifest).toString("hex")}),{mode:0o600,flag:"wx"});
     return manifest;
   } finally { await rm(scratch,{recursive:true,force:true}); }

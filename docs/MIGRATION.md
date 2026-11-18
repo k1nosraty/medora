@@ -28,3 +28,16 @@ Set MEDORA_ARCHIVE_KEY_FILE for all three object commands and DATABASE_URL for t
 Synthetic server rehearsal used seven namespaces, fourteen SQLite files and twenty-eight rows, including a relationship, blob and large timestamp in an unfamiliar table. Truncating the last archive part interrupted an import. Restoring that part, rerunning twice and independently verifying the target succeeded. Deliberate corruption of target ciphertext failed verification. Device fixtures checked v1 capture, binary and pending fields, a 301-row interrupted import, repeated import and detection of altered target values.
 
 Repository discovery found the committed Android compatibility fixture and local Wrangler development state. Both Medora worktrees, the available environment variable names, Documents and Downloads yielded no identified complete authorized production snapshot. The empty and metadata-only local namespaces cannot certify hosted coverage. Full authorized source reconciliation remains open.
+
+## Relational rehearsal
+
+A second rehearsal starts the actual legacy classes in Workerd, populates synthetic records and stops the process. Its census is derived from object IDs allocated during setup. The exporter authenticates a separately supplied mapping of opaque SQLite filenames to logical object names. Pass the identity JSON path after NEW_ARCHIVE to enable semantic projection. Do not infer an account owner from a filename.
+
+```sh
+node scripts/migration/objects.mjs project "$NEW_ARCHIVE"
+node scripts/migration/objects.mjs verify-projection "$NEW_ARCHIVE"
+```
+
+Physical verification of this fixture covered 15 SQLite images in seven namespaces and 25 physical table rows. The care snapshots stored in KV expanded into 1,603 care/settings rows. PostgreSQL comparison verified two credential records, two people, two legacy session digests/expiries, one family, two memberships, one directional grant, one device and two account-device references. Import ran twice. The verifier uses typed temporary tables and compares both directions with EXCEPT ALL, in addition to the encrypted image checks. Ordinary unknown fields, inactive tables and unprojected jobs remain in the physical archive. The projections are staged, and generation 1 accounts remain fenced from v2 sign-in.
+
+Run scripts/verification/rehearse.mjs against a fresh synthetic PostgreSQL database. A new fixture gets new account IDs. Import into a database containing conflicting usernames aborts the transaction. Private media, audit history, challenge/delivery state, invitations, alarm scheduling, and encrypted client envelopes still require application-level cutover and behavioral checks. Hosted acquisition and full authorized reconciliation remain open.
