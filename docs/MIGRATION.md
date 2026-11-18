@@ -27,7 +27,9 @@ Set MEDORA_ARCHIVE_KEY_FILE for all three object commands and DATABASE_URL for t
 
 Synthetic server rehearsal used seven namespaces, fourteen SQLite files and twenty-eight rows, including a relationship, blob and large timestamp in an unfamiliar table. Truncating the last archive part interrupted an import. Restoring that part, rerunning twice and independently verifying the target succeeded. Deliberate corruption of target ciphertext failed verification. Device fixtures checked v1 capture, binary and pending fields, a 301-row interrupted import, repeated import and detection of altered target values.
 
-Repository discovery found the committed Android compatibility fixture and local Wrangler development state. Both Medora worktrees, the available environment variable names, Documents and Downloads yielded no identified complete authorized production snapshot. The empty and metadata-only local namespaces cannot certify hosted coverage. Full authorized source reconciliation remains open.
+Repository discovery found the committed Android compatibility fixture and local Wrangler development state. Both Medora worktrees, the available environment variable names, Documents and Downloads yielded no identified complete authorized production snapshot. The empty and metadata-only local namespaces cannot certify hosted coverage.
+
+Full authorized source reconciliation remains open.
 
 ## Relational rehearsal
 
@@ -54,13 +56,23 @@ Chromium and WebKit each opened actual IndexedDB versions 1, 2 and 3. The tests 
 
 ## Writer transition and recovery after committed writes
 
-1. Exercise only a fresh loopback PostgreSQL fixture and a stopped, independent namespace copy. Apply all sixteen migrations. Start the generation 1 runtime with MEDORA_LEGACY_WRITES_FENCED=true and verify ingress, RPC, cron and pending alarms. A previously deployed unfenced Worker must be drained before any actual writer transition.
+1. Exercise only a fresh loopback PostgreSQL fixture and a stopped, independent namespace copy. Apply all nineteen migrations. Start the generation 1 runtime with MEDORA_LEGACY_WRITES_FENCED=true and verify ingress, RPC, cron and pending alarms. A previously deployed unfenced Worker must be drained before any actual writer transition.
 2. The rehearsal verifies the authenticated source manifest and complete fixture owner set, activates projected care, household, identity, reminder and operations state, and moves the writer from open to rehearsal. Browser and API writes use the ordinary product routes. An older SQL connection without the explicit source-fence setting loses write permission as soon as rehearsal begins. The SQL freeze waits for transactions holding the shared writer lock.
 3. Leave both writers fenced while reconstructing to a fresh private directory. The fixture command is `node scripts/migration/objects.mjs restore-after-writes "$NEW_ARCHIVE" "$NEW_RECOVERY_ROOT"`. It authenticates the archive, replays acknowledged care, household, credential, reminder, operations and campaign writes in order, checks final values, receipts and revisions, and publishes the verified do/ tree by rename. It rejects a used destination, ambiguous identity, divergent base, or unmapped write. Retry an interrupted run in its original private directory using the same immutable archive and key.
 4. Boot the original runtime against the recovered copy. Check scopes, ciphertext, delegated operation receipts, pending reminder work, denied stale revisions and accepted current revisions. Keep the original frozen copy and target database until an authorized recovery decision.
 
-The tests use synthetic accounts and private fixture keys. Completed registrations and resets map to the original credential index. Recovery validates the source session census and removes revoked source sessions. The generation 2 session cookie is separate. Accounts created during the rehearsal can sign into the original runtime after recovery. Outstanding verification codes and encrypted outbox work retain their generation 2 format, so recovery refuses a snapshot with an unexpired challenge. Journal backup catalog writes and other unsupported mutations also block publication.
+The tests use synthetic accounts and private fixture keys. Completed registrations and resets map to the original credential index. Recovery validates the source session census and removes revoked source sessions. The generation 2 session cookie is separate. Accounts created during the rehearsal can sign into the original runtime after recovery. Outstanding verification codes and encrypted outbox work retain their generation 2 format, so recovery refuses a snapshot with an unexpired challenge. Pending backup reservations, unsuccessful account object cleanup and unsupported mutations also block publication.
 
 Recovery checks reminder tasks and wake times against the authenticated SQLite images and PostgreSQL journal. The recovered namespace includes newly registered devices and their operations and account references. Operational configuration, support tickets, metrics and audit changes replay into the original tables. Campaign media are replayed as binary chunks with their metadata. The native fixture reads the complete recovered media back and compares its SHA-256.
+
+The reverse path reconciles the rebuilt backup catalog from the empty cutover baseline and checks the size and SHA-256 of every retained encrypted object. For the source object read, use its dedicated, authorized S3-compatible credentials. Recovery places an authenticated catalog and its encrypted objects in the private recovery copy. The incumbent has no matching server-side backup catalog. To reconstruct that catalog in a separate rebuilt installation, provision the reconciled owner IDs, set the separate target database and bucket bindings, retain the archive key reference and run:
+
+```sh
+node scripts/migration/objects.mjs restore-backup-catalog "$RECOVERED_DO_ROOT"
+```
+
+The restore checks authentication, owner IDs, metadata and object bytes before committing the catalog. Repeating it verifies existing catalog entries. The fixture exercised an independent PostgreSQL target and object store with a second readback.
+
+An administrator deletion revokes live credentials, diminishes the reverse owner census, detaches linked reminders and clears the archived account's usable state from the recovered native copy. A valid recovery image will not reactivate the removed owner. Retain the original sealed migration snapshot under the authorized backup retention policy.
 
 Full authorized source reconciliation, existing key continuity, release notification delivery and historical storage variants remain open.

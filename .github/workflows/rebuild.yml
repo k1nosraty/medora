@@ -50,6 +50,8 @@ jobs:
           node scripts/verification/rehearse.mjs > dist/reconciliation.json
           createdb medora_unmapped
           MEDORA_TEST_DATABASE_URL="${MEDORA_TEST_DATABASE_URL%/*}/medora_unmapped" node scripts/verification/rehearse.mjs --unmapped > dist/recovery-refusal.json
+          createdb medora_erase_imported
+          MEDORA_TEST_DATABASE_URL="${MEDORA_TEST_DATABASE_URL%/*}/medora_erase_imported" node scripts/verification/rehearse.mjs --erase-imported > dist/imported-account-erasure.json
       - run: npm --prefix web run typecheck && npm --prefix web test && npm --prefix web run test:care && npm --prefix web run test:alarms
       - run: npm --prefix web run test:browser
       - run: MEDORA_PUBLIC_DIR="$PWD/apps/web/dist" npm --prefix web exec -- playwright test --config "$PWD/web/playwright.config.mjs"
@@ -73,7 +75,7 @@ jobs:
       - name: Identify and package verified candidate
         run: |
           node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
-          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/visual-parity.json dist/performance-product.json
+          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/imported-account-erasure.json dist/visual-parity.json dist/performance-product.json
       - uses: actions/upload-artifact@v4
         with:
           name: medora-candidate

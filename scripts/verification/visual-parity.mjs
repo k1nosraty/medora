@@ -358,6 +358,63 @@ try {
             await compare("edit-water");
           }
         }
+        await both(async (page, origin) => {
+          await page.evaluate(async () => {
+            const { accessCare } =
+              await import("/medication/shared/storage.js");
+            const { today } = await import("/medication/shared/ui/dates.js");
+            const day = today();
+            await accessCare((state) => {
+              state.routines = Object.fromEntries(
+                ["First", "Second"].map((name, index) => [
+                  name,
+                  {
+                    id: name,
+                    name,
+                    category: "walking",
+                    minute: 480,
+                    mode: "done",
+                    start: day,
+                    mask: 127,
+                    interval: 1,
+                    revision: 1,
+                    color: index ? "blue" : "green",
+                  },
+                ]),
+              );
+              state.cycleRecords = Object.fromEntries(
+                [60, 31, 2].map((offset, index) => [
+                  day - offset,
+                  {
+                    end: day - offset + index,
+                    flow: "light",
+                    note: "Fixture note",
+                  },
+                ]),
+              );
+            });
+          });
+          await page.goto(origin + "/medication/");
+          const dots = page.locator("#day-focus-navigation .day-focus-dot");
+          await expect(dots).toHaveCount(2);
+          await dots.first().press("End");
+          await expect(dots.last()).toBeFocused();
+          await expect(dots.last()).toHaveAttribute("aria-pressed", "true");
+        });
+        await compare("today-grouped");
+        await both(async (page) => {
+          await page.locator("#program-cycle").click();
+          const bars = page.locator("#cycle-bars button");
+          await expect(bars).toHaveCount(2);
+          await page.locator('[data-cycle-metric="duration"]').click();
+          await expect(bars).toHaveCount(3);
+          await bars.last().click();
+          const record = page.locator(".cycle-record").first();
+          await expect(record).toBeFocused();
+          await record.locator(".cycle-record-note summary").click();
+          await expect(record.locator(".cycle-record-note p")).toBeVisible();
+        });
+        await compare("cycle-populated");
       } finally {
         await Promise.all(contexts.map((c) => c.close()));
       }

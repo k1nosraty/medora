@@ -42,6 +42,7 @@ for (const entry of [
 const evidenceFiles = [
   "reconciliation.json",
   "recovery-refusal.json",
+  "imported-account-erasure.json",
   "visual-parity.json",
   "performance-product.json",
 ];
@@ -55,7 +56,7 @@ const evidence = await Promise.all(
     };
   }),
 );
-const [reconciled, refused, visual, performance] = evidence.map(
+const [reconciled, refused, erased, visual, performance] = evidence.map(
   (entry) => entry.report,
 );
 if (
@@ -64,6 +65,14 @@ if (
   !reconciled.legacyWriterFenced ||
   !reconciled.postWriteRollback?.replayed ||
   reconciled.postWriteRollback.reminderDevices < 2 ||
+  reconciled.postWriteRollback.backupObjects !== 1 ||
+  reconciled.postWriteRollback.deletedAccounts !== 1 ||
+  !reconciled.operationsExportVerified ||
+  !reconciled.corruptBackupPublicationBlocked ||
+  !reconciled.releaseNotificationReplayed ||
+  erased.importedAccountErasure?.deletedAccounts !== 1 ||
+  !erased.importedAccountErasure?.legacySessionRevoked ||
+  !erased.importedAccountErasure?.delayedObjectCleanupRetried ||
   !reconciled.passwordResetReplayed ||
   !reconciled.registrationReplayed ||
   !reconciled.legacySessionContinuity ||
@@ -73,8 +82,8 @@ if (
   !refused.unsupportedMutation?.recoveryPublicationBlocked ||
   !refused.unsupportedMutation?.pendingPasswordReset ||
   !visual.identicalDocumentMarkup ||
-  visual.identicalViewportCaptures !== 44 ||
-  visual.identicalVisibleLayouts !== 44 ||
+  visual.identicalViewportCaptures !== 52 ||
+  visual.identicalVisibleLayouts !== 52 ||
   visual.accessibility?.length !== 12 ||
   performance.trials?.length !== 3
 )
