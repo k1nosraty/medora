@@ -21,3 +21,25 @@ The release branch is the behavioral reference. Verified legacy workflows cannot
 | Pilot, design gallery and install | public/pilot, public/design, ui/gallery, ui/pwa | Diagnostic push, previews, offline install/update and artwork |
 
 Feature paths in this table are relative to public/medication when prefixed with features/, app/, shared/ or domain/. No rebuilt parity sign-off has been issued.
+
+## Candidate coverage
+
+| Workflow | Rebuilt behavior exercised | Remaining parity work |
+| --- | --- | --- |
+| Today and calendar | Persian daily view, water total, active journal, program and account navigation | Onboarding, combined timeline, month navigation and deep links |
+| Medicines | Daily schedule, fractional quantities, stock debit, taken/skipped, persistent dose history | Full phase editor, individual-date schedules, pause/archive, snooze, historical plan edits and push |
+| Appointments | Creation with clinic timezone, local persistence, period counts and backup restoration | Edit/cancel, offsets, contacts, private notes and push |
+| Water | Date selection, create/edit/delete, paginated history, daily totals, offline queue and conflict choice | Goals, undo, reminder pause and parity of family quick actions |
+| Routines | Daily completion plans and logs | Quantity/step editing, historical plan changes, flexible schedules |
+| Sleep | Interval validation, overlap rejection, notes and backup | Naps and quick actions, reminders, sleep summaries |
+| Cycle | Daily flow, notes, local-only preference, isolated cycle file export/import, cloud backup filtering | Cycle record editing, estimates, symptom trends, companion/print views |
+| Reports | 7/30/90-day local report of water, recorded doses and appointments | Calendar-aligned periods and complete program/adherence metrics |
+| Accounts and settings | Register, verify, sign in, reset, revoke sessions, language and calendar choice | Profile changes, deletion lifecycle, legacy session and identity cutover |
+| Family | Groups, invitations and acceptance, directional water grant, totals and revocation | Scoped delegated writing, additional program grants, expiry/membership management, migration into live policies |
+| Cloud sync | Replay-safe owner-scoped incremental water, conflict detection, tombstones and reconnect | Other care collections, private-field key continuity, pending legacy operations and writer-generation transition |
+| Backups | Encrypted device/Android/web/cycle restore in a separate profile, enrolled-account backup download and hash verification | Complete historical corpus, operational backup promotion and full source reconciliation |
+| Notifications | Legacy alarm suite remains green for seven categories | Rebuilt enrollment, closed-client delivery and retry lifecycle |
+| Support, promotions, operations | Original source retained and byte images archived in fixture | Rebuilt support, campaign, media, administrative and release workflows |
+| Pilot, gallery and installation | Rebuilt bilingual shell, offline asset caching and reload | Pilot operations, gallery parity, platform install and cross-version update rehearsal |
+
+Generation 1 stores and sessions stay authoritative until write fencing, rollback and semantic reconciliation pass. Imported accounts cannot sign into the v2 writer merely by existing in a staging table.

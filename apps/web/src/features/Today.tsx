@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Droplets, Archive, CalendarDays, UserRound } from "lucide-react";
+import {
+  ChartColumn,
+  Droplets,
+  Archive,
+  CalendarDays,
+  UserRound,
+} from "lucide-react";
 import { civilDay, displayDay } from "../i18n";
 import { journal } from "../storage/journal";
 import { useApp } from "../context";
@@ -52,6 +58,10 @@ export default function Today() {
           {t.family}
         </Link>
       )}
+      <Link className="archive-link" to="/reports">
+        <ChartColumn />
+        {t.reports}
+      </Link>
       <Link className="archive-link" to="/archive">
         <Archive />
         {t.archive}

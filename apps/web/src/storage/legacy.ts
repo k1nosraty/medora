@@ -102,7 +102,10 @@ export function captureLegacy(preferences: Storage): Promise<Image> {
 }
 
 // Tag every supported value so missing keys, dates, binary and strings cannot collide.
-async function encoded(v: unknown, seen: Set<object>): Promise<unknown> {
+async function encoded(
+  v: unknown,
+  seen: Map<object, number>,
+): Promise<unknown> {
   if (v === null) return ["null"];
   if (typeof v !== "object") {
     if (
@@ -111,8 +114,30 @@ async function encoded(v: unknown, seen: Set<object>): Promise<unknown> {
       throw new Error("unsupported_value");
     return [typeof v, Object.is(v, -0) ? "-0" : String(v)];
   }
-  if (seen.has(v)) throw new Error("shared_or_cyclic_value");
-  seen.add(v);
+  if (seen.has(v)) return ["ref", seen.get(v)];
+  seen.set(v, seen.size);
+  if (v instanceof Map) {
+    const items = [];
+    for (const [key, value] of v)
+      items.push([await encoded(key, seen), await encoded(value, seen)]);
+    return ["map", items];
+  }
+  if (v instanceof Set) {
+    const items = [];
+    for (const value of v) items.push(await encoded(value, seen));
+    return ["set", items];
+  }
+  if (v instanceof RegExp) return ["regexp", v.source, v.flags];
+  if (typeof Blob !== "undefined" && v instanceof Blob) {
+    const file = typeof File !== "undefined" && v instanceof File;
+    return [
+      file ? "file" : "blob",
+      v.type,
+      file ? v.name : null,
+      file ? v.lastModified : null,
+      await hash(new Uint8Array(await v.arrayBuffer())),
+    ];
+  }
   if (v instanceof Date) return ["date", v.getTime().toString()];
   if (v instanceof ArrayBuffer || ArrayBuffer.isView(v)) {
     const bytes =
@@ -154,6 +179,6 @@ async function hash(bytes: Uint8Array) {
 }
 export async function fingerprint(value: unknown) {
   return hash(
-    new TextEncoder().encode(JSON.stringify(await encoded(value, new Set()))),
+    new TextEncoder().encode(JSON.stringify(await encoded(value, new Map()))),
   );
 }

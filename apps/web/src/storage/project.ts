@@ -27,6 +27,14 @@ export function project(image: Image): DeviceView {
         !Array.isArray(bucket.water)
       )
         throw new Error("invalid_day");
+      if (
+        bucket.water.some((r) => fields(r).day !== bucket.day) ||
+        Object.values(fields(bucket.doses)).some(
+          (d) => fields(d).day !== bucket.day,
+        )
+      )
+        throw Error("invalid_day");
+      if (bucket.routines !== undefined) fields(bucket.routines);
       days.set(bucket.day, bucket);
       for (const w of bucket.water) water.push(fields(w));
     }

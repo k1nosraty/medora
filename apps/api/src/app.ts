@@ -107,6 +107,20 @@ export function createApp(
       c.req.header("X-Medora-Owner") !== owner
     )
       return c.json({ error: "account_changed" }, 409);
+    if (
+      c.req.method === "POST" &&
+      ["/api/v2/changes", "/api/v2/backups", "/api/v2/families"].includes(
+        c.req.path,
+      )
+    ) {
+      const limit = c.req.path === "/api/v2/changes" ? 1000 : 100;
+      if (
+        !(await store.loginBudget("write:" + c.req.path + ":" + owner, limit))
+      ) {
+        c.header("Retry-After", "900");
+        return c.json({ error: "rate_limit" }, 429);
+      }
+    }
     c.set("owner", owner);
     await next();
   });

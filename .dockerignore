@@ -10,6 +10,7 @@
 !apps/*/src/**
 !apps/web/index.html
 !apps/web/sw.template.js
+!apps/web/static.headers
 !apps/web/vite.config.ts
 !packages/
 !packages/domain/
@@ -48,3 +49,12 @@
 !infrastructure/docker/
 !infrastructure/docker/**
 **/node_modules
+**/.git
+**/.dev.vars*
+**/.env*
+**/.wrangler
+**/*.pem
+**/*.key
+**/dist
+**/test-results
+**/playwright-report

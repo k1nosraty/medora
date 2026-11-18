@@ -1,3 +1,4 @@
+import { dailyReport } from "../../../../packages/domain/src/report";
 import Dexie, { type Table } from "dexie";
 import {
   waterEntry,
@@ -73,6 +74,21 @@ export class Journal extends Dexie {
   }
   async unresolved(owner: string) {
     return this.conflicts.where("owner").equals(owner).toArray();
+  }
+  async report(owner: string, first: number, last: number) {
+    return this.transaction("r", this.water, this.profiles, async () => {
+      const water = await this.water
+        .where("[owner+day]")
+        .between([owner, first], [owner, last], true, true)
+        .toArray();
+      const profile = await this.profile(owner);
+      return dailyReport(
+        first,
+        last,
+        water.map((r) => r.body),
+        profile.settings,
+      );
+    });
   }
   async entries(owner: string, day: number) {
     return (

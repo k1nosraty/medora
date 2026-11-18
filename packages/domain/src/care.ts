@@ -15,7 +15,8 @@ import {
 } from "../../../web/public/medication/domain/sleep.js";
 import { cycleFlows } from "../../../web/public/medication/domain/cycle.js";
 
-export type Fields = Record<string, unknown>;
+import { collection, type Fields } from "./collections";
+export { collection, type Fields } from "./collections";
 export const kinds = [
   "medicines",
   "visits",
@@ -36,16 +37,6 @@ export interface PlanInput {
   unit: string;
   quantity: string;
   stock: string;
-}
-export function collection(
-  state: Fields,
-  kind: string,
-): Record<string, Fields> {
-  const value = state[kind];
-  if (value === undefined) return {};
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw Error("invalid_collection");
-  return value as Record<string, Fields>;
 }
 const minuteText = (m: number) =>
   [Math.floor(m / 60), m % 60].map((x) => String(x).padStart(2, "0")).join(":");

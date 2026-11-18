@@ -1,6 +1,11 @@
 export function passwordKeys(raw: string | undefined): Record<string, string> {
   if (!raw) throw new Error("MEDORA_PASSWORD_KEYS is required");
-  const keys: unknown = JSON.parse(raw);
+  let keys: unknown;
+  try {
+    keys = JSON.parse(raw);
+  } catch {
+    throw Error("Invalid password key registry");
+  }
   if (
     !keys ||
     typeof keys !== "object" ||

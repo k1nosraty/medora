@@ -37,6 +37,8 @@ jobs:
       - run: node scripts/verification/rehearse.mjs
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: npm --prefix web run typecheck && npm --prefix web test && npm --prefix web run test:care && npm --prefix web run test:alarms
+      - run: npm --prefix web run test:browser
       - run: pnpm test:e2e
       - run: web/node_modules/.bin/wrangler deploy --config infrastructure/cloudflare/local.json --dry-run --outdir "$RUNNER_TEMP/worker"
       - name: Exercise standalone storage, Node and reverse proxy
@@ -48,3 +50,5 @@ jobs:
           . "$config"
           set +a
           env -u MEDORA_TEST_DATABASE_URL MEDORA_TEST_COMPOSE_ENV="$config" MEDORA_TEST_COMPOSE_PROJECT=medora-ci node scripts/verification/runtime.mjs http://127.0.0.1:8808
+          node scripts/verification/accounts.mjs http://127.0.0.1:8808 http://127.0.0.1:8810
+          bash scripts/verification/restore-compose.sh "$config" medora-ci "$RUNNER_TEMP/medora-restore"

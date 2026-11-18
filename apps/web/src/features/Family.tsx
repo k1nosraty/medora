@@ -2,47 +2,22 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "../context";
 import { civilDay } from "../i18n";
-interface Group {
-  id: string;
-  label: string;
-  manager: boolean;
-  members: {
-    id: string;
-    name: string;
-    self: boolean;
-    shared: boolean;
-    canRead: boolean;
-  }[];
-}
+import { familyRequest, readFamily } from "../services/account";
 export default function Family() {
   const { owner, t, notice, locale } = useApp(),
     client = useQueryClient();
   const [total, setTotal] = useState<{ label: string; amount: number } | null>(
     null,
   );
-  const call = async (body?: unknown) => {
-    const r = await fetch("/api/v2/families", {
-      method: body ? "POST" : "GET",
-      cache: "no-store",
-      headers: { "X-Medora-Owner": owner, "Content-Type": "application/json" },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-    if (!r.ok) throw Error("unavailable");
-    return r.json();
-  };
   const home = useQuery({
     queryKey: ["families", owner],
-    queryFn: () =>
-      call() as Promise<{
-        groups: Group[];
-        invitations: { id: string; label: string }[];
-      }>,
+    queryFn: () => readFamily(owner),
     networkMode: "online",
     staleTime: 0,
   });
   const act = useMutation({
     mutationFn: async ({ body, label }: { body: unknown; label?: string }) => {
-      const r = await call(body);
+      const r = await familyRequest(owner, body);
       if (label) setTotal({ label, amount: r.result.amount });
       else setTotal(null);
     },

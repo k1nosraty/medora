@@ -5,7 +5,7 @@
 | A · Code | Full implementation of each required feature and normal runtime entry point, production review and a frozen candidate |
 | B · Features | End-to-end parity for all rows in FEATURE_PARITY.md, including delivery of reminders with the app closed, rich editors, family and administration |
 | C · Data | Independent hosted namespace census, frozen authorized source, physical and application-level mappings, all pending operations, client generation fencing and reconciliation against that complete source |
-| D · Security | Portable identity lifecycle, family permission enforcement, private field protection, retained session semantics and hosted configuration checks |
+| D · Security | Complete legacy identity/session continuity, all family permissions, private field protection and hosted configuration checks |
 | E · Performance | Comparable complete-feature measurements, representative large data and field responsiveness |
 | F · UI | Bilingual mobile and desktop inspection for every rebuilt workflow and assistive-technology checks |
 | G · Deployment | Hosted isolated Cloudflare integration, rehearsed post-write rollback and immutable release evidence |

@@ -1,6 +1,7 @@
+import { verifyFixture } from "./verify-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -39,7 +40,19 @@ try {
     join(source, "identity.json"),
   ]);
   const physical = JSON.parse(run([cli, "import", archive]));
+  assert.deepEqual(physical, JSON.parse(run([cli, "import", archive])));
   assert.deepEqual(physical, JSON.parse(run([cli, "verify", archive])));
+  const legacyRestore = join(dir, "restored");
+  await mkdir(legacyRestore, { mode: 0o700 });
+  assert.deepEqual(
+    physical,
+    JSON.parse(run([cli, "restore-copy", archive, join(legacyRestore, "do")])),
+  );
+  run([
+    "scripts/verification/legacy-source.mjs",
+    legacyRestore,
+    join(source, "expectations.json"),
+  ]);
   const records = JSON.parse(run([cli, "project", archive]));
   assert.deepEqual(records, JSON.parse(run([cli, "project", archive])));
   assert.deepEqual(
@@ -50,7 +63,7 @@ try {
     accounts: 2,
     legacy_people: 2,
     legacy_sessions: 2,
-    legacy_care: 1603,
+    legacy_care: 1607,
     households: 1,
     memberships: 2,
     grants: 1,
@@ -60,12 +73,20 @@ try {
   const { manifest } = JSON.parse(
     await readFile(join(archive, "manifest.json"), "utf8"),
   );
+  await verifyFixture(
+    url,
+    manifest.snapshot,
+    JSON.parse(await readFile(join(source, "expectations.json"), "utf8")),
+  );
   console.log(
     JSON.stringify({
       source: "synthetic Workerd",
       snapshot: manifest.snapshot,
       physical,
       records,
+      fixtureValuesCompared: true,
+      privateFieldsDecrypted: true,
+      restoredLegacyRuntime: true,
       replay: true,
       reconciled: true,
     }),

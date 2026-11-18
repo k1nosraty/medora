@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Pencil, Trash2 } from "lucide-react";
@@ -9,12 +9,23 @@ import { useApp } from "../context";
 export default function Water() {
   const { owner, t, locale, calendar, notice } = useApp();
   const [day, setDay] = useState(civilDay);
+  const [page, setPage] = useState(0);
   const [edit, setEdit] = useState<WaterRow | null>(null);
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["entries", owner, day],
     queryFn: () => journal.entries(owner, day),
   });
+  const sorted = useMemo(
+    () =>
+      [...(query.data ?? [])].sort(
+        (a, b) =>
+          b.body!.time.localeCompare(a.body!.time) || a.id.localeCompare(b.id),
+      ),
+    [query.data],
+  );
+  const lastPage = Math.max(0, Math.ceil(sorted.length / 40) - 1),
+    current = Math.min(page, lastPage);
   const conflicts = useQuery({
     queryKey: ["entries", owner, "conflicts"],
     queryFn: () => journal.unresolved(owner),
@@ -68,6 +79,7 @@ export default function Water() {
             const next = e.target.valueAsNumber / 86400000;
             if (Number.isInteger(next) && next <= civilDay()) {
               setDay(next);
+              setPage(0);
               setEdit(null);
               form.reset({ amount: 250, time: clockTime() });
             }
@@ -161,45 +173,64 @@ export default function Water() {
           <p>{t.empty}</p>
         ) : (
           <ul>
-            {[...query.data]
-              .sort((a, b) => b.body!.time.localeCompare(a.body!.time))
-              .map((row) => (
-                <li key={row.id}>
-                  <bdi>{row.body!.time}</bdi>
-                  <span>
-                    {number.format(row.body!.amount)} {t.unit}
-                  </span>
-                  {row.pending ? (
-                    <small>{t.pending}</small>
-                  ) : (
-                    <>
-                      <button
-                        className="icon"
-                        aria-label={t.edit + " " + row.body!.time}
-                        onClick={() => {
-                          setEdit(row);
-                          form.reset(row.body!);
-                          form.setFocus("amount");
-                        }}
-                      >
-                        <Pencil />
-                      </button>
-                      <button
-                        className="icon"
-                        disabled={mutation.isPending}
-                        aria-label={t.remove + " " + row.body!.time}
-                        onClick={() => {
-                          if (window.confirm(t.confirm))
-                            mutation.mutate({ row, body: null });
-                        }}
-                      >
-                        <Trash2 />
-                      </button>
-                    </>
-                  )}
-                </li>
-              ))}
+            {sorted.slice(current * 40, (current + 1) * 40).map((row) => (
+              <li key={row.id}>
+                <bdi>{row.body!.time}</bdi>
+                <span>
+                  {number.format(row.body!.amount)} {t.unit}
+                </span>
+                {row.pending ? (
+                  <small>{t.pending}</small>
+                ) : (
+                  <>
+                    <button
+                      className="icon"
+                      aria-label={t.edit + " " + row.body!.time}
+                      onClick={() => {
+                        setEdit(row);
+                        form.reset(row.body!);
+                        form.setFocus("amount");
+                      }}
+                    >
+                      <Pencil />
+                    </button>
+                    <button
+                      className="icon"
+                      disabled={mutation.isPending}
+                      aria-label={t.remove + " " + row.body!.time}
+                      onClick={() => {
+                        if (window.confirm(t.confirm))
+                          mutation.mutate({ row, body: null });
+                      }}
+                    >
+                      <Trash2 />
+                    </button>
+                  </>
+                )}
+              </li>
+            ))}
           </ul>
+        )}
+        {lastPage > 0 && (
+          <div className="page-controls">
+            <button
+              className="secondary"
+              disabled={!current}
+              onClick={() => setPage(current - 1)}
+            >
+              {t.previous}
+            </button>
+            <output>
+              {number.format(current + 1)} / {number.format(lastPage + 1)}
+            </output>
+            <button
+              className="secondary"
+              disabled={current === lastPage}
+              onClick={() => setPage(current + 1)}
+            >
+              {t.next}
+            </button>
+          </div>
         )}
       </section>
     </>

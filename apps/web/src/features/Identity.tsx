@@ -2,16 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useApp } from "../context";
 
-async function submit(path: string, data: unknown) {
-  const response = await fetch("/api/v2/identity/" + path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) throw Error("identity_failed");
-  return response.json();
-}
+import { submitIdentity } from "../services/account";
 export default function Identity() {
   const { t, notice } = useApp();
   const [purpose, setPurpose] = useState<"register" | "reset">("register");
@@ -19,7 +10,7 @@ export default function Identity() {
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (challenge) {
-        await submit("verify", {
+        await submitIdentity("verify", {
           challenge,
           code: String(data.get("code")).replace(/[۰-۹٠-٩]/g, (d) =>
             String(d.charCodeAt(0) & 15),
@@ -30,7 +21,7 @@ export default function Identity() {
         setChallenge(null);
         notice(t.signInNow);
       } else {
-        const value = await submit("challenges", {
+        const value = await submitIdentity("challenges", {
           purpose,
           email: data.get("email"),
         });

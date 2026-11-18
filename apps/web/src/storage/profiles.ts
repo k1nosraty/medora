@@ -12,6 +12,9 @@ export async function importProfile(
 ) {
   const manifest = await archive.images.get(id);
   if (!manifest?.checked) throw Error("unchecked_archive");
+  const { id: stored, checked, ...contents } = manifest;
+  if (!checked || stored !== id || (await fingerprint(contents)) !== id)
+    throw Error("manifest_mismatch");
   const rows = await archive.rows.where("image").equals(id).sortBy("ordinal");
   if (rows.length !== manifest.digests.length) throw Error("missing_records");
   const source: SourceRow[] = [];
@@ -22,7 +25,7 @@ export async function importProfile(
     source.push(row);
   }
   let settings: Record<string, unknown>;
-  if (source.some((row) => row.store === "file")) {
+  if (manifest.schema.length===2 && manifest.schema[0]==="file" && manifest.schema[1]==="restored" && source.some(row=>row.store==="file" && row.key==="encrypted")) {
     settings = Object.fromEntries(
       source
         .filter((row) => row.store === "restored")

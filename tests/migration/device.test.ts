@@ -75,3 +75,26 @@ it("resumes an interrupted checkpoint and rejects corrupted target values", asyn
   );
   db.close();
 });
+
+it("preserves structured-clone references, maps, sets, binary blobs and cycles", async () => {
+  const shared = { detail: "synthetic" };
+  const value = new Map<unknown, unknown>();
+  value.set(shared, new Set([shared, value]));
+  value.set("file", new Blob(["fixture"], { type: "text/plain" }));
+  const db = new DeviceArchive("graph-" + crypto.randomUUID());
+  try {
+    const source = {
+      version: 3,
+      schema: [],
+      preferences: {},
+      rows: [{ store: "extra", key: "row", value }],
+    };
+    const report = await archiveImage(db, source);
+    const copy = (await db.rows.get([report.id, 0]))!.value as typeof value;
+    const key = [...copy.keys()][0];
+    expect(copy.get(key)).toEqual(new Set([key, copy]));
+    expect(await (copy.get("file") as Blob).text()).toBe("fixture");
+  } finally {
+    db.close();
+  }
+});

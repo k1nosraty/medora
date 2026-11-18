@@ -65,6 +65,11 @@ export default defineConfig({
           .replace('"__VERSION__"', JSON.stringify(hash.digest("hex")))
           .replace('"__FILES__"', JSON.stringify([...files.keys()]));
         this.emitFile({ type: "asset", fileName: "sw.js", source: sw });
+        this.emitFile({
+          type: "asset",
+          fileName: "_headers",
+          source: asset("./static.headers"),
+        });
       },
     },
   ],

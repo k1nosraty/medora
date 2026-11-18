@@ -1,6 +1,10 @@
 import pg from "pg";
 import { readFile } from "node:fs/promises";
-import { exportObjects, importObjects } from "./object-archive.mjs";
+import {
+  exportObjects,
+  importObjects,
+  restoreCopy,
+} from "./object-archive.mjs";
 import { projectArchive } from "./project.mjs";
 const [action, dir, census, output, names] = process.argv.slice(2);
 if (!process.env.MEDORA_ARCHIVE_KEY_FILE)
@@ -22,7 +26,13 @@ try {
     );
     console.log("Authenticated archive written;", m.entries.length, "objects");
   } else if (
-    ["import", "verify", "project", "verify-projection"].includes(action) &&
+    [
+      "import",
+      "verify",
+      "project",
+      "verify-projection",
+      "restore-copy",
+    ].includes(action) &&
     process.env.DATABASE_URL
   ) {
     const client = new pg.Client({
@@ -32,9 +42,11 @@ try {
     try {
       console.log(
         JSON.stringify(
-          await (action.includes("project")
-            ? projectArchive(client, dir, key, action === "verify-projection")
-            : importObjects(client, dir, key, action === "verify")),
+          await (action === "restore-copy"
+            ? restoreCopy(client, dir, key, census)
+            : action.includes("project")
+              ? projectArchive(client, dir, key, action === "verify-projection")
+              : importObjects(client, dir, key, action === "verify")),
         ),
       );
     } finally {

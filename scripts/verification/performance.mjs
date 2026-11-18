@@ -68,9 +68,47 @@ try {
     await page.getByRole("button", { name: "ثبت آب", exact: true }).click();
     await page.getByRole("listitem").waitFor();
     await page.waitForTimeout(200);
+    const observedInteraction = await page.evaluate(
+      () => window.measurements.interaction,
+    );
+    await page.evaluate(async () => {
+      const open = indexedDB.open("medora-journal-v2");
+      const db = await new Promise((resolve, reject) => {
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(open.error);
+      });
+      const tx = db.transaction("water", "readwrite"),
+        table = tx.objectStore("water"),
+        now = new Date();
+      const day =
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000;
+      for (let i = 0; i < 12000; i++) {
+        const fixtureDay = i < 2000 ? day : day - 1 - (i % 90);
+        table.put({
+          owner: "device",
+          id: "fixture-" + i,
+          revision: 1,
+          day: fixtureDay,
+          body: { amount: 1, day: fixtureDay, time: "12:00" },
+        });
+      }
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onabort = () => reject(tx.error);
+      });
+      db.close();
+    });
+    await page.reload({ waitUntil: "commit" });
+    await page.getByRole("listitem").nth(39).waitFor();
+    await page.getByRole("button", { name: "بعدی", exact: true }).waitFor();
+    const largeList = await page.evaluate(() => performance.now());
+    await page.getByRole("button", { name: "بعدی", exact: true }).click();
+    if ((await page.getByRole("listitem").count()) !== 40)
+      throw Error("Paging failed");
     samples.push({
       ...first,
-      interaction: await page.evaluate(() => window.measurements.interaction),
+      largeList,
+      interaction: observedInteraction,
       usable,
       route: route - start,
     });

@@ -75,12 +75,20 @@ export default function Archive() {
           db.close();
         }
       } else {
+        const cycle = data.get("action") === "cycle";
         const url = URL.createObjectURL(
-          await exportProfile(journal, owner, password),
+          await exportProfile(
+            journal,
+            owner,
+            password,
+            cycle ? "cycle" : "device",
+          ),
         );
         const link = document.createElement("a");
         link.href = url;
-        link.download = "medora-care.medora";
+        link.download = cycle
+          ? "medora-cycle.medoracycle"
+          : "medora-care.medora";
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 2000);
         notice(t.complete);
@@ -166,6 +174,14 @@ export default function Archive() {
           value="export"
         >
           {t.download}
+        </button>
+        <button
+          className="secondary"
+          disabled={fileWork.isPending}
+          type="submit"
+          value="cycle"
+        >
+          {t.exportCycle}
         </button>
       </form>
       {device &&

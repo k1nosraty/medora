@@ -80,7 +80,10 @@ export function repository(pool: Pool) {
         SELECT id, password_key, password_salt, password_proof FROM medora.accounts WHERE username = ${username} AND sync_generation=2`);
       return result.rows[0];
     },
-    async loginBudget(bucket: string) {
+    async loginBudget(
+      bucket: string,
+      maximum = bucket === "service" ? 1500 : 10,
+    ) {
       const result = await db.execute<{
         attempts: number;
       }>(sql`INSERT INTO medora.login_attempts(bucket,attempts,expires_at)
@@ -88,7 +91,7 @@ export function repository(pool: Pool) {
         attempts=CASE WHEN medora.login_attempts.expires_at <= now() THEN 1 ELSE medora.login_attempts.attempts+1 END,
         expires_at=CASE WHEN medora.login_attempts.expires_at <= now() THEN excluded.expires_at ELSE medora.login_attempts.expires_at END
         RETURNING attempts`);
-      return result.rows[0]!.attempts <= (bucket === "service" ? 1500 : 10);
+      return result.rows[0]!.attempts <= maximum;
     },
     async createSession(
       owner: string,

@@ -305,3 +305,32 @@ summary {
 .archive-link + .archive-link {
   margin-block-start: 0.65rem;
 }
+
+.page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  background: var(--field);
+  border-radius: var(--radius);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: start;
+}
+table :is(th, td, caption) {
+  padding: 0.7rem;
+  text-align: start;
+  border-block-end: 1px solid var(--line);
+}
+
+input[type="checkbox"] {
+  width: 1.35rem;
+  height: 1.35rem;
+  min-height: 0;
+  accent-color: var(--brand);
+}

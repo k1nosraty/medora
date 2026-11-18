@@ -1,3 +1,4 @@
+import { listBackups, putBackup, getBackup } from "../services/backups";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "../context";
 import { exportProfile, restoreFile } from "../storage/backup";
@@ -10,28 +11,14 @@ export default function CloudBackups() {
   const { owner, t, locale, notice, setOwner } = useApp(),
     client = useQueryClient(),
     navigate = useNavigate();
-  const headers = { "X-Medora-Owner": owner };
   const backups = useQuery({
     queryKey: ["backups", owner],
-    queryFn: async () => {
-      const r = await fetch("/api/v2/backups", { headers, cache: "no-store" });
-      if (!r.ok) throw Error("network");
-      return (await r.json()).backups as {
-        id: string;
-        bytes: number;
-        created_at: string;
-      }[];
-    },
+    queryFn: () => listBackups(owner),
   });
   const save = useMutation({
     mutationFn: async (password: string) => {
-      const file = await exportProfile(journal, owner, password);
-      const r = await fetch("/api/v2/backups", {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/octet-stream" },
-        body: file,
-      });
-      if (!r.ok) throw Error("failed");
+      const file = await exportProfile(journal, owner, password, "cloud");
+      await putBackup(owner, file);
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["backups", owner] });
@@ -41,14 +28,10 @@ export default function CloudBackups() {
   });
   const restore = useMutation({
     mutationFn: async ({ id, password }: { id: string; password: string }) => {
-      const response = await fetch(
-        "/api/v2/backups/" + encodeURIComponent(id),
-        { headers, cache: "no-store" },
-      );
-      if (!response.ok) throw Error("failed");
+      const file = await getBackup(owner, id);
       const db = new DeviceArchive();
       try {
-        const copy = await restoreFile(await response.blob(), password, db);
+        const copy = await restoreFile(file, password, db);
         return await importProfile(db, journal, copy.id);
       } finally {
         db.close();

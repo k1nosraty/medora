@@ -15,7 +15,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import { backup, DatabaseSync } from "node:sqlite";
 
@@ -260,4 +260,41 @@ export async function importObjects(client, dir, master, verifyOnly = false) {
       0,
     ),
   };
+}
+
+export async function restoreCopy(client, dir, master, output) {
+  if (!output) throw Error("A new stopped namespace directory is required");
+  const verified = await importObjects(client, dir, master, true);
+  const manifest = await readManifest(dir, master);
+  await mkdir(output, { mode: 0o700 });
+  const marker = join(output, ".incomplete");
+  await writeFile(marker, "Restore in progress", { mode: 0o600, flag: "wx" });
+  for (const ns of Object.keys(manifest.inventory)) {
+    if (ns !== basename(ns) || ns === "." || ns === ".." || !ns)
+      throw Error("Invalid namespace");
+    await mkdir(join(output, ns), { mode: 0o700 });
+  }
+  for (const e of manifest.entries) {
+    if (
+      !Object.hasOwn(manifest.inventory, e.namespace) ||
+      e.object !== basename(e.object) ||
+      !e.object.endsWith(".sqlite")
+    )
+      throw Error("Invalid archive member");
+    const { rows } = await client.query(
+      "SELECT archive FROM medora.source_objects WHERE snapshot=$1 AND namespace=$2 AND object_id=$3",
+      [manifest.snapshot, e.namespace, e.object],
+    );
+    const bytes = unseal(master, manifest.snapshot, e, rows[0].archive);
+    try {
+      const file = join(output, e.namespace, e.object);
+      await writeFile(file, bytes, { mode: 0o600, flag: "wx", flush: true });
+      if (sha(await readFile(file)) !== e.digest)
+        throw Error("Restored image mismatch");
+    } finally {
+      bytes.fill(0);
+    }
+  }
+  await rm(marker);
+  return verified;
 }

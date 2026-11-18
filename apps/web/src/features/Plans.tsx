@@ -63,6 +63,22 @@ export default function Plans() {
         ))}
       </div>
       <h2>{t[kind]}</h2>
+      {kind === "cycleDays" && (
+        <label>
+          <input
+            type="checkbox"
+            checked={state.cycleLocalOnly === true}
+            disabled={mutation.isPending}
+            onChange={(e) => {
+              const value = e.target.checked;
+              mutation.mutate((s) => {
+                s.cycleLocalOnly = value;
+              });
+            }}
+          />
+          {t.privateCycle}
+        </label>
+      )}
       <label>
         {t.date}
         <input

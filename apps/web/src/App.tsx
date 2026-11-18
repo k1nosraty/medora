@@ -7,6 +7,7 @@ import { AppContext } from "./context";
 import { words, type Locale } from "./i18n";
 import { guest, journal } from "./storage/journal";
 import { synchronize } from "./storage/sync";
+const Reports = lazy(() => import("./features/Reports"));
 const Water = lazy(() => import("./features/Water"));
 const Account = lazy(() => import("./features/Account"));
 const Plans = lazy(() => import("./features/Plans"));
@@ -126,6 +127,7 @@ export function App() {
         <Suspense fallback={<p role="status">{t.loading}</p>}>
           <Routes>
             <Route path="/" element={<Today />} />
+            <Route path="/reports" element={<Reports />} />
             <Route path="/water" element={<Water />} />
             <Route path="/archive" element={<Files />} />
             <Route path="/plans/:kind" element={<Plans />} />
