@@ -1,6 +1,6 @@
 # Cloudflare architecture and capacity
 
-**Local verification only. Cloudflare readiness remains open until an authorized dedicated hosted environment is verified.** Use external PostgreSQL from day one. The portable Worker entry is `apps/api/src/worker.ts`. The combined legacy-compatible Worker remains available for migration rehearsals. A fresh portable installation uses a dedicated database, after applying the checked SQL migrations and initializing it with `postgres-handoff.mjs initialize`.
+**Local verification only. Cloudflare readiness remains open until an authorized dedicated hosted environment is verified.** Use external PostgreSQL from day one. The portable Worker entry is `apps/api/src/adapters/worker.ts`. The combined legacy-compatible Worker remains available for migration rehearsals. A fresh portable installation uses a dedicated database, after applying the checked SQL migrations and initializing it with `postgres-handoff.mjs initialize`.
 
 ## Bindings and local verification
 

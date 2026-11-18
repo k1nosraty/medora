@@ -10,12 +10,14 @@ describe.skipIf(!url)("session and encrypted archive boundaries", () => {
     bytes = new Map<string, Uint8Array<ArrayBuffer>>(),
     domain = "https://medora.test";
   const app = createApp(repo, async () => false, {
-    put: async (k, b) => {
-      bytes.set(k, b);
-    },
-    get: async (k) => bytes.get(k)?.buffer ?? null,
-    delete: async (k) => {
-      bytes.delete(k);
+    storage: {
+      put: async (k, b) => {
+        bytes.set(k, b);
+      },
+      get: async (k) => bytes.get(k)?.buffer ?? null,
+      delete: async (k) => {
+        bytes.delete(k);
+      },
     },
   });
   const owners = [crypto.randomUUID(), crypto.randomUUID()],

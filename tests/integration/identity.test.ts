@@ -28,9 +28,7 @@ it.skipIf(!process.env.MEDORA_TEST_DATABASE_URL)(
     const app = createApp(
       store,
       verifier({ local: settings.passwordKey }),
-      undefined,
-      undefined,
-      service,
+      { identity: service },
     );
     const origin = "https://local.test";
     const send = (path: string, data: unknown) =>

@@ -81,9 +81,10 @@ export async function buildWeb(publicDir = sourcePublic, plugins = []) {
     "/design/optical-glass/visit-main.webp", "/design/optical-glass/routine-main.webp",
     "/manifest.webmanifest", "/manifest.en.webmanifest", "/icon-192.png", "/apple-touch-icon.png",
     "/medora-icon-192.png", "/vazirmatn.woff2"];
-  const [worker, routing] = await Promise.all([
+  const [worker, routing, iconLicense] = await Promise.all([
     readFile(resolve(ui, "pwa/sw.js"), "utf8"),
     bundleWorkbox(),
+    readFile(new URL("../../branding/LICENSE", import.meta.url), "utf8"),
   ]);
   const hash = createHash("sha256").update(html).update(worker).update(routing).update(JSON.stringify(shell));
   for (const asset of shell.slice(1)) hash.update(await readFile(new URL(asset.slice(1), publicDir)));
@@ -93,6 +94,7 @@ export async function buildWeb(publicDir = sourcePublic, plugins = []) {
   await Promise.all([
     emit(new URL("index.html", medication), html.replace("{{version}}", version)),
     emit(new URL("workbox.js", medication), routing),
+    emit(new URL("ICON-LICENSE.txt", publicDir), iconLicense),
     emit(new URL("sw.js", medication), worker.replaceAll("{{version}}", version).replace("{{assets}}", JSON.stringify(shell, null, 2))),
     emit(new URL("design/index.html", publicDir), translateMarkup(await render("gallery/index.html")))
   ]);

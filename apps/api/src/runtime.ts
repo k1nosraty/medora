@@ -35,26 +35,25 @@ export function createRuntime(
   const operations = operationService(pool, store, env);
   const reminders = reminderService(pool, store, env, operations);
   const release = releaseNotifications(pool, store, operations, env);
-  const app = createApp(
-    store,
-    verifier(passwordKeys(env.MEDORA_PASSWORD_KEYS)),
+  const app = createApp(store, verifier(passwordKeys(env.MEDORA_PASSWORD_KEYS)), {
     storage,
-    env.PUBLIC_ORIGIN || undefined,
+    publicOrigin: env.PUBLIC_ORIGIN || undefined,
     identity,
-    familyService(pool),
-    careService(pool),
-    householdService(pool),
-    mail?.invite,
-    env.MEDORA_LEGACY_WRITES_FENCED === "true"
-      ? env.EMAIL_SESSION_KEY
-      : undefined,
+    family: familyService(pool),
+    care: careService(pool),
+    household: householdService(pool),
+    inviteDelivery: mail?.invite,
+    legacySessionKey:
+      env.MEDORA_LEGACY_WRITES_FENCED === "true"
+        ? env.EMAIL_SESSION_KEY
+        : undefined,
     reminders,
     operations,
-    promotionService(pool, store, operations, env),
-    adminAccounts(pool, operations, env.EMAIL_SESSION_KEY, storage),
-    administrativeExport(pool, operations),
+    promotions: promotionService(pool, store, operations, env),
+    accounts: adminAccounts(pool, operations, env.EMAIL_SESSION_KEY, storage),
+    exportOperations: administrativeExport(pool, operations),
     release,
-  );
+  });
   return {
     app,
     async tick() {

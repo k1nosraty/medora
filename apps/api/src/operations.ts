@@ -8,7 +8,7 @@ export interface OperationsEnv {
   ADMIN_EMAIL?: string;
   SUPPORT_EMAILS?: string;
 }
-export interface OperationsConfig {
+interface OperationsConfig {
   flags: { promotions: number; support: number };
   notice: {
     title: string;

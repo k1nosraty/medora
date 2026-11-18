@@ -1,5 +1,5 @@
 import product from "../../web/src/worker.mjs";
-import journal from "../../apps/api/src/worker.ts";
+import journal from "../../apps/api/src/adapters/worker.ts";
 
 export {
   Credentials,

@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 import { writerConnectionOptions } from "./writer-settings";
-import { r2Storage, type R2Bucket } from "./objects";
-import { createRuntime, type RuntimeEnv } from "./runtime";
+import { r2Storage, type R2Bucket } from "../objects";
+import { createRuntime, type RuntimeEnv } from "../runtime";
 
 interface Env extends RuntimeEnv {
   BACKUPS: R2Bucket;

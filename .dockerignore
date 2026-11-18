@@ -33,6 +33,7 @@
 !apps/web/scripts/product.mjs
 !branding/
 !branding/logo.svg
+!branding/LICENSE
 !scripts/
 !scripts/migration/
 !scripts/migration/**
@@ -61,3 +62,4 @@
 **/*.dump
 **/*.gcm
 web/public/medication/workbox.js
+web/public/ICON-LICENSE.txt

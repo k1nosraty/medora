@@ -1,8 +1,8 @@
 node_modules/
 .wrangler/
-.dev.vars
 .pilot-secrets.json
 .wrangler.staging.local.jsonc
+public/ICON-LICENSE.txt
 public/medication/index.html
 public/medication/sw.js
 public/medication/workbox.js

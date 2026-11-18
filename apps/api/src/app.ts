@@ -27,23 +27,42 @@ import type { IdentityService } from "./identity";
 import type { FamilyService } from "./family";
 import { familyRoutes } from "./family-routes";
 const cookie = "__Host-medora_v2";
+interface AppServices {
+  storage?: ObjectStorage | undefined;
+  publicOrigin?: string | undefined;
+  identity?: IdentityService | undefined;
+  family?: FamilyService;
+  care?: CareService;
+  household?: ReturnType<typeof householdService>;
+  inviteDelivery?: InviteDelivery | undefined;
+  legacySessionKey?: string | undefined;
+  reminders?: ReturnType<typeof reminderService>;
+  operations?: ReturnType<typeof operationService>;
+  promotions?: ReturnType<typeof promotionService>;
+  accounts?: ReturnType<typeof adminAccounts>;
+  exportOperations?: (actor: string) => Promise<Response>;
+  release?: ReturnType<typeof releaseNotifications>;
+}
+
 export function createApp(
   store: Repository,
   verify: VerifyPassword,
-  storage?: ObjectStorage,
-  publicOrigin?: string,
-  identity?: IdentityService,
-  family?: FamilyService,
-  care?: CareService,
-  household?: ReturnType<typeof householdService>,
-  inviteDelivery?: InviteDelivery,
-  legacySessionKey?: string,
-  reminders?: ReturnType<typeof reminderService>,
-  operations?: ReturnType<typeof operationService>,
-  promotions?: ReturnType<typeof promotionService>,
-  accounts?: ReturnType<typeof adminAccounts>,
-  exportOperations?: (actor: string) => Promise<Response>,
-  release?: ReturnType<typeof releaseNotifications>,
+  {
+    storage,
+    publicOrigin,
+    identity,
+    family,
+    care,
+    household,
+    inviteDelivery,
+    legacySessionKey,
+    reminders,
+    operations,
+    promotions,
+    accounts,
+    exportOperations,
+    release,
+  }: AppServices = {},
 ) {
   const app = new Hono<{ Variables: { owner: string } }>();
   app.use("*", secureHeaders());

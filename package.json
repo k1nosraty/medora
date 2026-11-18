@@ -8,9 +8,11 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"tests/**/*.{ts,tsx}\" --max-warnings=0",
+    "lint": "eslint \"*.config.ts\" \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"tests/**/*.{ts,tsx}\" --max-warnings=0",
     "test": "vitest run",
     "build": "pnpm --filter @medora/web build && pnpm --filter @medora/api build",
+    "test:compat": "npm --prefix web run typecheck && npm --prefix web test && npm --prefix web run test:care && npm --prefix web run test:alarms",
+    "test:product": "MEDORA_PUBLIC_DIR=\"$PWD/apps/web/dist\" npm --prefix web exec -- playwright test --config \"$PWD/web/playwright.config.mjs\"",
     "test:e2e": "playwright test",
     "test:handoff": "node scripts/verification/postgres-handoff.mjs",
     "db:migrate": "node scripts/migration/apply.mjs"

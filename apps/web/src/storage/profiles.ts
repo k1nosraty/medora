@@ -3,8 +3,6 @@ import { project } from "./project";
 import { Journal } from "./journal";
 import type { SourceRow } from "./legacy";
 import { fingerprint } from "./legacy";
-export const localProfile = (owner: string) =>
-  owner === "device" || owner.startsWith("restore:");
 export async function importProfile(
   archive: DeviceArchive,
   db: Journal,

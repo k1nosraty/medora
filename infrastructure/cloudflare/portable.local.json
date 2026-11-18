@@ -1,6 +1,6 @@
 {
   "name": "medora-portable-local",
-  "main": "../../apps/api/src/worker.ts",
+  "main": "../../apps/api/src/adapters/worker.ts",
   "compatibility_date": "2026-10-29",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,

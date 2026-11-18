@@ -69,7 +69,7 @@ The stack serves the frontend and API through Caddy on port 8808 and Mailpit on 
 
 ## Cloudflare staging
 
-Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, scheduled mail to Mailpit, two-account browser sharing, offline reconnection and password reset. The dry-run bundle includes frontend assets. Reproduce against an isolated loopback database by setting MEDORA_TEST_DATABASE_URL and running node scripts/verification/worker.mjs http://127.0.0.1:8810. Repository and environment discovery found no identified isolated remote PostgreSQL/Hyperdrive configuration or complete authorized source snapshot. A hosted staging deployment requires positive confirmation of the database, bucket, account and key registry boundaries.
+Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, scheduled mail to Mailpit, two-account browser sharing, offline reconnection and password reset. The frontend asset directory is built separately from the Worker bundle. Reproduce against an isolated loopback database by setting MEDORA_TEST_DATABASE_URL and running `node scripts/verification/worker.mjs http://127.0.0.1:8810`. Repository and environment discovery found no identified isolated remote PostgreSQL/Hyperdrive configuration or complete authorized source snapshot. A hosted staging deployment requires positive confirmation of the database, bucket, account and key registry boundaries.
 
 | Binding or setting | Purpose |
 | --- | --- |

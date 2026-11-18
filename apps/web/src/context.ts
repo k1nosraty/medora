@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import type { Copy, Locale } from "./i18n";
-export interface Context {
+interface Context {
   t: Copy;
   locale: Locale;
   calendar: string;

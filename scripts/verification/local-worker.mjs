@@ -35,6 +35,10 @@ export async function withLocalWorker(
   );
   const env = {
     PATH: process.env.PATH,
+    TMPDIR: dir,
+    XDG_CONFIG_HOME: join(dir, "config"),
+    XDG_CACHE_HOME: join(dir, "cache"),
+    XDG_STATE_HOME: join(dir, "state-home"),
     WRANGLER_SEND_METRICS: "false",
     CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: db.href,
   };

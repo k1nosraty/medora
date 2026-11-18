@@ -6,7 +6,7 @@ const fields = (x: unknown): Fields => {
   return x as Fields;
 };
 
-export interface DeviceView {
+interface DeviceView {
   settings: Fields;
   days: Map<number, Fields>;
   water: Fields[];

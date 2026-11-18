@@ -23,6 +23,10 @@ node scripts/migration/objects.mjs verify "$NEW_ARCHIVE"
 
 Set MEDORA_ARCHIVE_KEY_FILE for all three object commands and DATABASE_URL for the isolated PostgreSQL target. A verified physical archive preserves original schemas, including data an application export might exclude. The normalized application tables require separate semantic verification before any cutover.
 
+## Logical Durable Object archives
+
+The incumbent Worker also supports logical encrypted archives through `/api/migration`. Use `web/scripts/migrate-care.mjs` for `MEDSRV02` and `web/scripts/migrate-care-v1.mjs` for `MEDSRV01`. Each reader has a `verify` command that accepts an isolated compatibility Worker origin and archive path. Pass a dedicated migration token and the archive's password via `MEDORA_MIGRATION_TOKEN` and `MEDORA_BACKUP_PASSWORD`. Keep the archive and its credentials private. Logical archive verification covers the records and format the exporter enumerates. Complete namespace reconciliation requires the independent census described above.
+
 ## Evidence scope
 
 Synthetic server rehearsal used seven namespaces, fourteen SQLite files and twenty-eight rows, including a relationship, blob and large timestamp in an unfamiliar table. Truncating the last archive part interrupted an import. Restoring that part, rerunning twice and independently verifying the target succeeded. Deliberate corruption of target ciphertext failed verification. Device fixtures checked v1 capture, binary and pending fields, a 301-row interrupted import, repeated import and detection of altered target values.

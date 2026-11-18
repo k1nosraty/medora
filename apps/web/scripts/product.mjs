@@ -51,7 +51,6 @@ try {
         info.isFile() &&
         ([
           "FONT-LICENSE.txt",
-          "ICON-LICENSE.txt",
           "_headers",
           "_redirects",
         ].includes(name) ||

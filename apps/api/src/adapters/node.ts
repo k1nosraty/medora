@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import { Pool } from "pg";
-import { s3Storage } from "./objects";
-import { createRuntime } from "./runtime";
+import { s3Storage } from "../objects";
+import { createRuntime } from "../runtime";
 import { writerConnectionOptions } from "./writer-settings";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");

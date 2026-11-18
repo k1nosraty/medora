@@ -13,6 +13,8 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "skipLibCheck": true,
     "types": [
       "node"
@@ -23,7 +25,8 @@
   "include": [
     "apps/*/src",
     "packages/*/src",
-    "migrations/local",
+    "*.config.ts",
+    "apps/web/vite.config.ts",
     "tests"
   ]
 }

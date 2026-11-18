@@ -50,6 +50,14 @@ The forward and reverse synthetic handoffs compared 48 tables with ordered row d
 
 The hosted Hyperdrive and R2 endpoints, cloud resource quotas, real legacy snapshots and actual provider delivery are still unverified. No hosted action was performed.
 
+## Repository cleanup re-verification
+
+The cleanup reran the workspace and incumbent type checks, ESLint, Vite and Node builds, both local Worker bundles, 20 Vitest checks, and the incumbent's 44 Node tests, 13 care checks and alarm drill. Chromium and WebKit passed 80 scenarios on each product build and 18 journal scenarios. The 104 screenshot pairs and 24 Axe checks passed, as did interrupted service-worker recovery. The generated public icon license matched the canonical copy on disk and through Caddy.
+
+All three legacy migration scenarios ran against fresh synthetic PostgreSQL databases. They exercised post-write rollback, refusal to publish an unsupported recovery, and imported-account erasure. The two-account PostgreSQL handoff used local Workerd, Node and Versity, preserving four offline edits, sessions, the pending outbox job, and one encrypted object. The transfer returned to Workerd after new writes.
+
+All three Docker targets built using a private local cache of the same locked npm packages after the direct container download stalled. A separate localhost stack passed frontend and API smoke checks, account and offline replay checks, and an independent restore that matched 58 SQL inventory lines, the compatibility volume and one encrypted object read through S3. These results use synthetic data.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

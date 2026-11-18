@@ -74,9 +74,9 @@ jobs:
             export "MEDORA_HANDOFF_$slot=${MEDORA_TEST_DATABASE_URL%/*}/$name"
           done
           node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
-      - run: npm --prefix web run typecheck && npm --prefix web test && npm --prefix web run test:care && npm --prefix web run test:alarms
+      - run: pnpm test:compat
       - run: npm --prefix web run test:browser
-      - run: MEDORA_PUBLIC_DIR="$PWD/apps/web/dist" npm --prefix web exec -- playwright test --config "$PWD/web/playwright.config.mjs"
+      - run: pnpm test:product
       - run: node scripts/verification/visual-parity.mjs > dist/visual-parity.json
       - run: node web/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
       - run: pnpm test:e2e

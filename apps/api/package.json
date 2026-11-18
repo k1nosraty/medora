@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/node.ts --bundle --platform=node --format=esm --external:pg --external:hono --external:@hono/node-server --external:drizzle-orm --external:aws4fetch --outfile=dist/server.mjs",
+    "build": "esbuild src/adapters/node.ts --bundle --platform=node --format=esm --external:pg --external:hono --external:@hono/node-server --external:drizzle-orm --external:aws4fetch --outfile=dist/server.mjs",
     "start": "node dist/server.mjs"
   },
   "dependencies": {

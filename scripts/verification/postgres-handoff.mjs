@@ -336,7 +336,7 @@ try {
   });
   await initializePrimary(source);
   await sourceDb.connect();
-  const script = await bundleWorker("apps/api/src/worker.ts");
+  const script = await bundleWorker("apps/api/src/adapters/worker.ts");
   const workerFor = (database) =>
     new Miniflare(
       convertV4MiniflareOptions({
