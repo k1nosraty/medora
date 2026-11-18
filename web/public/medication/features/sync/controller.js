@@ -19,7 +19,7 @@ function syncError(response) {
 }
 
 export function installCareSync({ reload, remindersChanged, formatDay, readCare = accessCare, readSettings = accessCareSettings,
-  transport = fetch, now = Date.now }) {
+  transport = /** @type {(path: string, options?: RequestInit) => Promise<Response>} */ (fetch), now = Date.now }) {
   const status = $("account-sync-status");
   const enable = $("account-sync-enable");
   const disable = $("account-sync-disable");

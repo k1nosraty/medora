@@ -49,7 +49,7 @@ export function monitorUpdates() {
 export async function refreshApp({
   reload = false,
   canReload = () => true,
-} = {}) {
+}: { reload?: boolean; canReload?: () => boolean } = {}) {
   if (serviceWorkers) {
     const worker = await register();
     const previous = worker.active;

@@ -1,9 +1,5 @@
-import { clearFeature, paintFeature } from "./lazy-renderer";
-import {
-  button,
-  dayCardOptions,
-  element,
-} from "../../../../web/public/medication/shared/ui/dom.js";
+import { clearFeature, paintFeature } from "./renderer";
+import { element } from "../../../../web/public/medication/shared/ui/dom.js";
 import { cycleEstimate } from "../../../../web/public/medication/domain/cycle.js";
 import {
   localDigits,
@@ -131,19 +127,7 @@ export function installCycleOverview({
       };
     });
     const host = $("cycle-days");
-    paintFeature(host, <CycleWeek days={days} />, () => {
-      host.replaceChildren(
-        ...days.map(({ day, mark, date, current, label, choose }) => {
-          const cell = choose ? button(date, choose) : element("span", date);
-          cell.dataset.focusKey = "cycle-day-" + day;
-          if (mark) cell.dataset.cycleMark = mark;
-          if (current) cell.setAttribute("aria-current", "date");
-          if (!choose) cell.setAttribute("role", "img");
-          cell.setAttribute("aria-label", label);
-          return cell;
-        }),
-      );
-    });
+    paintFeature(host, <CycleWeek days={days} />);
     const view = getFamilyView();
     $("cycle-full-calendar").hidden = Boolean(
       view && !view.canView("insights"),
@@ -175,27 +159,7 @@ export function installCycleOverview({
       choose: () => showRecord(day),
     }));
     const host = $("cycle-bars");
-    paintFeature(host, <CycleTrend bars={bars} />, () => {
-      host.replaceChildren(
-        ...bars.map(({ key, label, amount, date, height, choose }) => {
-          const item = element("li");
-          const control = button("", choose);
-          control.dataset.focusKey = key;
-          control.setAttribute("aria-label", label);
-          const plot = element("span", "", "cycle-bar-track");
-          const bar = element("span", "", "cycle-bar");
-          bar.style.blockSize = height;
-          plot.append(bar);
-          control.append(
-            element("strong", amount),
-            plot,
-            element("small", date),
-          );
-          item.append(control);
-          return item;
-        }),
-      );
-    });
+    paintFeature(host, <CycleTrend bars={bars} />);
   }
 
   function historyRow(entry: Entry, view: FamilyView | null): HistoryRow {
@@ -288,13 +252,7 @@ export function installCycleOverview({
     $("cycle-calendar").hidden = $("cycle-records").hidden = !latest;
     const history = $("cycle-history");
     const rows = entries.map((entry) => historyRow(entry, view));
-    paintFeature(
-      history,
-      <CycleHistory key={++historyPaint} rows={rows} />,
-      () => {
-        history.replaceChildren(...rows.map(initialHistoryRow));
-      },
-    );
+    paintFeature(history, <CycleHistory key={++historyPaint} rows={rows} />);
     series = {
       interval: entries
         .slice(0, -1)
@@ -503,48 +461,4 @@ function CycleHistory({ rows }: { rows: HistoryRow[] }) {
       {author && <small className="family-stamp">{author}</small>}
     </article>
   ));
-}
-
-function initialHistoryRow({
-  id,
-  date,
-  duration,
-  flow,
-  note,
-  author,
-  actions,
-}: HistoryRow) {
-  const row = element("article", "", "cycle-record");
-  row.id = id;
-  row.tabIndex = -1;
-  row.dataset.focusScope = id;
-  const heading = element("div", "", "cycle-record-heading");
-  heading.append(element("h3", date));
-  if (actions) {
-    const removeButton = button(t("ui.delete"), actions.remove);
-    removeButton.classList.add("danger-link");
-    heading.append(
-      dayCardOptions(
-        t("ui.cycle-record-options"),
-        button(t("ui.edit"), actions.edit),
-        removeButton,
-      ),
-    );
-  }
-  const facts = element("div", "", "cycle-record-facts");
-  facts.append(element("span", duration));
-  if (flow) facts.append(element("span", flow));
-  row.append(heading, facts);
-  if (note) {
-    const details = element("details", "", "cycle-record-note");
-    const summary = element("summary");
-    const preview = element("span", note, "cycle-note-preview");
-    const full = element("p", note);
-    preview.dir = full.dir = "auto";
-    summary.append(element("span", t("ui.cycle-note-details")), preview);
-    details.append(summary, full);
-    row.append(details);
-  }
-  if (author) row.append(element("small", author, "family-stamp"));
-  return row;
 }

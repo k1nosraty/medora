@@ -1,6 +1,5 @@
 import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
-import { renderStats as initialPaint } from "../../../../web/public/medication/features/reports/stats.js";
-import { paintFeature } from "./lazy-renderer";
+import { paintFeature } from "./renderer";
 
 type Stat = [label: string, value: string, tone?: string];
 export function renderStats(host: HTMLElement, stats: Stat[]) {
@@ -10,5 +9,5 @@ export function renderStats(host: HTMLElement, stats: Stat[]) {
       <dd>{value}</dd>
     </div>
   ));
-  paintFeature(host, tiles, () => initialPaint(host, stats));
+  paintFeature(host, tiles);
 }

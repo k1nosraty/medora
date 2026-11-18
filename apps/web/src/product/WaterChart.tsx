@@ -1,26 +1,42 @@
 import { useLayoutEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { $ } from "../../../../web/public/medication/shared/ui/dom.js";
-import {
-  chartHosts,
-  chartTarget,
-  clearWaterChart as resetHosts,
-  renderWaterChart as firstPaint,
-  waterChartModel,
-} from "../../../../web/public/medication/features/reports/water-chart.js";
-import { clearFeature, paintFeature } from "./lazy-renderer";
+import { waterChartModel } from "./waterChartModel";
+import { clearFeature, paintFeature } from "./renderer";
+
+function chartTarget(
+  key: string,
+  index: number,
+  last: number,
+  direction: string,
+) {
+  const rtl = direction === "rtl";
+  switch (key) {
+    case "ArrowLeft":
+      return index + (rtl ? 1 : -1);
+    case "ArrowRight":
+      return index + (rtl ? -1 : 1);
+    case "Home":
+      return 0;
+    case "End":
+      return last;
+  }
+}
+
+function chartHosts() {
+  return {
+    chart: document.getElementById("report-chart")!,
+    selection: document.getElementById("report-chart-selection")!,
+    picker: document.querySelector<HTMLSelectElement>("#report-chart-pick")!,
+    dates: document.getElementById("report-chart-dates")!,
+    previous: document.getElementById("report-chart-previous")!,
+    next: document.getElementById("report-chart-next")!,
+  };
+}
 
 type Model = ReturnType<typeof waterChartModel>;
 interface Props {
   model: Model;
-  hosts: {
-    chart: HTMLElement;
-    selection: HTMLElement;
-    picker: HTMLSelectElement;
-    dates: HTMLElement;
-    previous: HTMLElement;
-    next: HTMLElement;
-  };
+  hosts: ReturnType<typeof chartHosts>;
 }
 
 function WaterChart({ model, hosts }: Props) {
@@ -38,7 +54,7 @@ function WaterChart({ model, hosts }: Props) {
   }, [picker, previous, next, model.bars.length]);
   useLayoutEffect(() => {
     picker.selectedIndex = selected;
-    previous.setAttribute("aria-disabled", String(selected === 0));
+    previous.setAttribute("aria-disabled", String(selected <= 0));
     next.setAttribute(
       "aria-disabled",
       String(selected === model.bars.length - 1),
@@ -100,30 +116,20 @@ function WaterChart({ model, hosts }: Props) {
   );
 }
 
-const mounted = new WeakSet<HTMLElement>();
-
 export function renderWaterChart(...input: Parameters<typeof waterChartModel>) {
   const model = waterChartModel(...input);
-  const hosts = chartHosts() as Props["hosts"];
+  const hosts = chartHosts();
   if (hosts.chart.dataset.chartKey === model.key) return;
+  document.getElementById("report-water-trend")!.dir = model.direction;
+  hosts.chart.style.setProperty("--goal", model.goal);
+  hosts.chart.dataset.chartKey = model.key;
   paintFeature(
     hosts.chart,
     <WaterChart model={model} hosts={hosts} key={model.key} />,
-    () => firstPaint(...input),
-    () => {
-      // Only the cold-rendered children are unmanaged. React owns later paints.
-      if (!mounted.has(hosts.chart)) {
-        for (const host of [hosts.picker, hosts.dates, hosts.selection])
-          host.replaceChildren();
-        mounted.add(hosts.chart);
-      }
-      const trend = $("report-water-trend")!;
-      trend.dir = model.direction;
-      hosts.chart.style.setProperty("--goal", model.goal);
-      hosts.chart.dataset.chartKey = model.key;
-    },
   );
 }
 export function clearWaterChart() {
-  resetHosts(clearFeature);
+  const { chart } = chartHosts();
+  clearFeature(chart);
+  delete chart.dataset.chartKey;
 }

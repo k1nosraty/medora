@@ -13,7 +13,7 @@ const numbers = new Intl.NumberFormat(locale);
 function clockText(value) { return value.replace(/\d/g, digit => numbers.format(Number(digit))); }
 const visitColorOf = color => Object.hasOwn(appearanceColors, color) ? color : "green";
 
-export function installAppointments({ getState, getFamilyView = () => null, today, selectedDate = () => undefined, render, mutate, requestDeletion, refreshFields, formatDay, formatDayNumber, formatShortMonth }) {
+export function installAppointments({ getState, getFamilyView = () => /** @type {object | null} */ (null), today, selectedDate = () => undefined, render, mutate, requestDeletion, refreshFields, formatDay, formatDayNumber, formatShortMonth }) {
   let editingVisit = null;
   let delegation;
   let clinicZone;

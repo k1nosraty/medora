@@ -1,8 +1,7 @@
-import { renderEntries as initialPaint } from "../../../../web/public/medication/features/water/entries.js";
-import { paintFeature } from "./lazy-renderer";
+import { paintFeature } from "./renderer";
 import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
 
-interface Entry {
+export interface WaterEntry {
   id: string;
   day: number;
   amount: number;
@@ -10,11 +9,11 @@ interface Entry {
   recordedBy?: string;
 }
 interface HistoryProps {
-  entries: Entry[];
-  view: { authorName(entry: Entry): string } | undefined;
-  label(entry: Entry): string;
-  edit(entry: Entry): void;
-  remove(entry: Entry): void;
+  entries: WaterEntry[];
+  view: { authorName(entry: WaterEntry): string } | null | undefined;
+  label(entry: WaterEntry): string;
+  edit(entry: WaterEntry): void;
+  remove(entry: WaterEntry): void;
 }
 const action = "secondary glass-secondary-action tracker-utility";
 function WaterEntries({ entries, view, label, edit, remove }: HistoryProps) {
@@ -51,7 +50,5 @@ function WaterEntries({ entries, view, label, edit, remove }: HistoryProps) {
   ));
 }
 export function renderEntries(host: HTMLElement, props: HistoryProps) {
-  paintFeature(host, <WaterEntries {...props} />, () =>
-    initialPaint(host, props),
-  );
+  paintFeature(host, <WaterEntries {...props} />);
 }

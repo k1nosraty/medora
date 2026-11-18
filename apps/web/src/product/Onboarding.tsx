@@ -4,6 +4,8 @@ import {
   t,
 } from "../../../../web/public/medication/shared/i18n/locale.js";
 
+import { paintFeature } from "./renderer";
+
 type IntroState = {
   intro?: string;
   medicines: object;
@@ -107,28 +109,5 @@ export function showIntro(care: IntroState, save: Save) {
       document.getElementById("screen-title")!.focus();
     }
   };
-  // The server-rendered controls are usable on the first paint. Avoid replacing
-  // an element under a pointer or a keyboard user while the renderer downloads.
-  const control = welcome.querySelector<HTMLButtonElement>("#welcome-start")!;
-  control.onclick = start;
-  const interaction = new AbortController();
-  const keepControls = () => interaction.abort();
-  for (const event of ["focusin", "pointerdown", "keydown"]) {
-    welcome.addEventListener(event, keepControls, {
-      once: true,
-      signal: interaction.signal,
-    });
-  }
-  void import("./renderer")
-    .then(({ paint }) => {
-      if (
-        !interaction.signal.aborted &&
-        !welcome.hidden &&
-        !welcome.contains(document.activeElement)
-      ) {
-        paint(welcome, <Welcome start={() => void start()} />);
-      }
-    })
-    .catch(() => {})
-    .finally(keepControls);
+  paintFeature(welcome, <Welcome start={() => void start()} />);
 }

@@ -44,14 +44,14 @@ function translateMarkup(source) {
     .replace(/\{\{msg:([a-z0-9.-]+)\}\}/g, (_, key) => `<!--msg:${key}-->${textFor(key)}`);
 }
 
-export async function buildWeb(publicDir = sourcePublic, plugins = []) {
+export async function buildWeb(publicDir = sourcePublic, plugins = [], entryPoints = { bootstrap: "bootstrap.js", medora: "app/medora.js" }) {
   const medication = new URL("medication/", publicDir);
   const appCSS = await render("styles/app.css") + "\n";
   await emit(new URL("styles/app.css", medication), appCSS);
   const assetDirectory = new URL("bundles/", medication);
   const bundle = await build({
     plugins, jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' },
-    absWorkingDir: fileURLToPath(new URL("medication/", sourcePublic)), entryPoints: { bootstrap: "bootstrap.js", medora: "app/medora.js" },
+    absWorkingDir: fileURLToPath(new URL("medication/", sourcePublic)), entryPoints,
     bundle: true, splitting: true, write: false, outdir: fileURLToPath(assetDirectory), entryNames: "[name]-[hash]",
     chunkNames: "chunk-[hash]", format: "esm", platform: "browser", target: "es2022", minify: true
   });

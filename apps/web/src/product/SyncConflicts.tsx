@@ -1,7 +1,6 @@
 import { dayNumber } from "../../../../web/public/medication/shared/ui/dates.js";
 import { timeText } from "../../../../web/public/medication/domain/care-index.js";
-import { element } from "../../../../web/public/medication/shared/ui/dom.js";
-import { clearFeature, paintFeature } from "./lazy-renderer";
+import { clearFeature, paintFeature } from "./renderer";
 import {
   listSeparator,
   localDigits,
@@ -363,26 +362,7 @@ export function showCareConflict(
           ),
         };
       });
-    paintFeature(table, <Differences rows={rows} />, () => {
-      table.replaceChildren(
-        ...rows.map(({ label, local, cloud }) => {
-          const row = element("div");
-          row.append(element("dt", label));
-          for (const [index, value] of [local, cloud].entries()) {
-            const side = element("dd");
-            side.append(
-              element(
-                "small",
-                ui(index ? "sync-cloud-version" : "sync-device-version"),
-              ),
-              element("bdi", value),
-            );
-            row.append(side);
-          }
-          return row;
-        }),
-      );
-    });
+    paintFeature(table, <Differences rows={rows} />);
     pages.hidden = differences.length <= pageSize;
     previous.disabled = start === 0;
     next.disabled = start + pageSize >= differences.length;

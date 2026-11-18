@@ -2,8 +2,7 @@ import {
   keepMonthFocus,
   monthLayout,
 } from "../../../../web/public/medication/shared/ui/month-layout.js";
-import { renderMonthGrid as firstPaint } from "../../../../web/public/medication/shared/ui/month-grid.js";
-import { clearFeature, paintFeature } from "./lazy-renderer";
+import { clearFeature, paintFeature } from "./renderer";
 
 type MonthOptions = Parameters<typeof monthLayout>[0];
 
@@ -56,9 +55,7 @@ function MonthGrid({
 }
 export function renderMonthGrid(root: HTMLElement, options: MonthOptions) {
   keepMonthFocus(root, () =>
-    paintFeature(root, <MonthGrid {...monthLayout(options)} />, () =>
-      firstPaint(root, options),
-    ),
+    paintFeature(root, <MonthGrid {...monthLayout(options)} />),
   );
 }
 export const clearMonthGrid = clearFeature;

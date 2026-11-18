@@ -1,9 +1,5 @@
 import type { CSSProperties } from "react";
-import {
-  renderSleepChart as initialChart,
-  renderSleepHistory as initialHistory,
-} from "../../../../web/public/medication/features/sleep/history.js";
-import { paintFeature } from "./lazy-renderer";
+import { paintFeature } from "./renderer";
 
 interface Cell {
   day: number;
@@ -48,7 +44,6 @@ export function renderSleepChart(host: HTMLElement, cells: Cell[]) {
         </button>
       </li>
     )),
-    () => initialChart(host, cells),
   );
 }
 
@@ -83,6 +78,5 @@ export function renderSleepHistory(host: HTMLElement, entries: Night[]) {
         )}
       </article>
     )),
-    () => initialHistory(host, entries),
   );
 }

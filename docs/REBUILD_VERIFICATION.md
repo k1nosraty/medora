@@ -4,7 +4,7 @@
 
 ## Product and portability
 
-The default entry opens /medication/. It includes the release screen and dialog templates, styles, art, fonts, translations, offline shell and other public surfaces. Routing, date navigation, entry actions, update handling and account transport use TypeScript. Onboarding, the week selector, both month grids, the Today summary and same-time navigation, water history, sleep history and its chart, cycle week, trend and history, report statistics, the interactive water report, support history and the sync-conflict table have typed React presentations. Controls on a cold load work before React DOM finishes downloading. Other feature controllers still use the original modular JavaScript. The separate /journal/ entry retains device migration and journal workflows.
+The default entry opens /medication/. It includes the release screen and dialog templates, styles, art, fonts, translations, offline shell and other public surfaces. The [frontend port ledger](FRONTEND_PORT.md) records current React and TypeScript ownership, dependencies on the original modules, and the browser checks. The separate /journal/ entry retains device migration and journal workflows.
 
 The canonical product negotiates its account writer. The native compatibility runtime preserves the original API and services while its writer is active. The PostgreSQL rehearsal uses the same care, identity and household services on Node and Workerd. Its changes include medicines, doses, appointments, routines, water, sleep, cycle, settings and sealed private fields. The release ledger identifies functionality that still depends on compatibility mode.
 

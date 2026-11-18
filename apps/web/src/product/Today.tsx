@@ -1,5 +1,5 @@
 import { useCallback, type KeyboardEvent } from "react";
-import { clearFeature, paintFeature } from "./lazy-renderer";
+import { clearFeature, paintFeature } from "./renderer";
 import { glassObject } from "../../../../web/public/medication/design/three-dimensional.js";
 import {
   localDigits,
@@ -7,10 +7,7 @@ import {
 } from "../../../../web/public/medication/shared/i18n/locale.js";
 import { routineComplete } from "../../../../web/public/medication/domain/routine-plan.js";
 import { doseTime } from "../../../../web/public/medication/domain/care-index.js";
-import {
-  button,
-  element,
-} from "../../../../web/public/medication/shared/ui/dom.js";
+import { element } from "../../../../web/public/medication/shared/ui/dom.js";
 
 interface TimelineEvent {
   key: string;
@@ -230,7 +227,6 @@ export function renderToday(
   const focus = $("today-focus");
   const controls = $("day-focus-navigation");
   clearFeature(focus);
-  focus.replaceChildren();
   if (group.length < 2) clearFeature(controls);
   controls.hidden = group.length < 2;
   if (grouped) {
@@ -272,9 +268,7 @@ export function renderToday(
               : "ui.add-a-medicine-appointment-or-routine-to-your-plan",
           );
     const state = { completed, title, summary, add: !total && !view };
-    paintFeature(focus, <TodayState {...state} />, () =>
-      initialTodayState(focus, state),
-    );
+    paintFeature(focus, <TodayState {...state} />);
   }
   focus.hidden = day !== today;
   const queue = [
@@ -378,9 +372,7 @@ function renderGroup(
           ),
       }));
       const dots = { options, index, select, previous };
-      paintFeature(controls, <FocusDots {...dots} />, () =>
-        initialDots(controls, dots),
-      );
+      paintFeature(controls, <FocusDots {...dots} />);
     }
     viewport.replaceChildren(card);
     if (source)
@@ -496,31 +488,6 @@ function TodayState({ completed, title, summary, add }: TodayStateProps) {
   );
 }
 
-function initialTodayState(
-  host: HTMLElement,
-  { completed, title, summary, add }: TodayStateProps,
-) {
-  const hero = element("div", "", "today-state");
-  hero.dataset.complete = String(completed);
-  const copy = element("div");
-  copy.append(element("h3", title), element("p", summary));
-  if (add) {
-    const action = element(
-      "button",
-      t("ui.add-your-first-plan"),
-      "primary-action",
-    );
-    action.type = "button";
-    action.dataset.openQuick = "";
-    copy.append(action);
-  }
-  const art = element("span", "", "today-state-art");
-  art.setAttribute("aria-hidden", "true");
-  art.append(glassObject(completed ? "complete" : "control-calendar", "image"));
-  hero.append(copy, art);
-  host.append(hero);
-}
-
 interface FocusDotsProps {
   options: { key: string; text: string }[];
   index: number;
@@ -568,19 +535,4 @@ function FocusDots(props: FocusDotsProps) {
       onKeyDown={(event) => navigateDots(event, props)}
     />
   ));
-}
-
-function initialDots(host: HTMLElement, props: FocusDotsProps) {
-  host.replaceChildren(
-    ...props.options.map(({ text }, option) => {
-      const dot: HTMLButtonElement = button("", () => props.select(option));
-      dot.className = "day-focus-dot";
-      dot.dataset.focusKey = "day-focus-dot-" + option;
-      dot.setAttribute("aria-label", text);
-      dot.setAttribute("aria-pressed", String(option === props.index));
-      dot.tabIndex = option === props.index ? 0 : -1;
-      dot.addEventListener("keydown", (event) => navigateDots(event, props));
-      return dot;
-    }),
-  );
 }

@@ -28,7 +28,7 @@ function normalizeSearch(text) {
   return text.toLowerCase().replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/[\s‌-]+/g, "");
 }
 
-export function installRoutines({ getState, getFamilyView = () => null, today, mutate, render, formatDay, refreshFields, requestDeletion }) {
+export function installRoutines({ getState, getFamilyView = () => /** @type {object | null} */ (null), today, mutate, render, formatDay, refreshFields, requestDeletion }) {
   const editor = fields("editor");
   const form = fields("form");
   const logDialog = fields("log-dialog");

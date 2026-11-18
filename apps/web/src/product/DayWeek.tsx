@@ -1,5 +1,4 @@
-import { renderWeek as initialPaint } from "../../../../web/public/medication/app/week-strip.js";
-import { paintFeature } from "./lazy-renderer";
+import { paintFeature } from "./renderer";
 
 interface Day {
   value: number;
@@ -36,7 +35,5 @@ export function renderWeek(
   days: Day[],
   choose: (day: number) => void,
 ) {
-  paintFeature(host, <DayWeek days={days} choose={choose} />, () =>
-    initialPaint(host, days, choose),
-  );
+  paintFeature(host, <DayWeek days={days} choose={choose} />);
 }

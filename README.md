@@ -68,3 +68,4 @@ npm --prefix web run test:browser
 - [مهاجرت و پشتیبان](docs/MIGRATION.md) و [بازگشت](docs/ROLLBACK.md)
 - [Cloudflare](docs/CLOUDFLARE_DEPLOYMENT.md)، [VPS](docs/VPS_DEPLOYMENT.md) و [معیارهای انتشار](docs/DEPLOYMENT.md)
 - [نقشهٔ نسخهٔ سازگاری](web/README.md) و [طراحی و دارایی‌ها](docs/DESIGN_SYSTEM.md)
+- [وضعیت انتقال رابط به React و TypeScript](docs/FRONTEND_PORT.md)
