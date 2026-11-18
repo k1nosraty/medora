@@ -24,7 +24,7 @@ jobs:
       WRANGLER_SEND_METRICS: 'false'
     steps:
       - uses: actions/checkout@v4
-        with: {persist-credentials: false}
+        with: {persist-credentials: false, fetch-depth: 0}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: {node-version: '24.18.0', cache: pnpm}
@@ -34,11 +34,27 @@ jobs:
       - run: pnpm typecheck && pnpm lint
       - run: pnpm db:migrate && pnpm db:migrate
       - run: pnpm test
-      - run: mkdir -p dist && node scripts/verification/rehearse.mjs > dist/reconciliation.json
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: node scripts/verification/product-runtime.mjs
+      - name: Exercise generation fencing and post-write rollback on a fresh database
+        env:
+          PGDATABASE: medora_fixture
+          PGHOST: 127.0.0.1
+          PGUSER: medora
+          PGPASSWORD: fixture-ci-only
+          MEDORA_TEST_DATABASE_URL: postgresql://medora:fixture-ci-only@127.0.0.1:5432/medora_transition
+        run: |
+          createdb medora_transition
+          mkdir -p dist
+          node scripts/verification/rehearse.mjs > dist/reconciliation.json
+          createdb medora_unmapped
+          MEDORA_TEST_DATABASE_URL="${MEDORA_TEST_DATABASE_URL%/*}/medora_unmapped" node scripts/verification/rehearse.mjs --unmapped > dist/recovery-refusal.json
       - run: npm --prefix web run typecheck && npm --prefix web test && npm --prefix web run test:care && npm --prefix web run test:alarms
       - run: npm --prefix web run test:browser
+      - run: MEDORA_PUBLIC_DIR="$PWD/apps/web/dist" npm --prefix web exec -- playwright test --config "$PWD/web/playwright.config.mjs"
+      - run: node scripts/verification/visual-parity.mjs > dist/visual-parity.json
+      - run: node web/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
       - run: pnpm test:e2e
       - run: node scripts/verification/pwa-update.mjs
       - run: web/node_modules/.bin/wrangler deploy --config infrastructure/cloudflare/local.json --dry-run --outdir "$PWD/dist/worker"
@@ -57,7 +73,7 @@ jobs:
       - name: Identify and package verified candidate
         run: |
           node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
-          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json
+          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/visual-parity.json dist/performance-product.json
       - uses: actions/upload-artifact@v4
         with:
           name: medora-candidate

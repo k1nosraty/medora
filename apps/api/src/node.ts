@@ -1,3 +1,4 @@
+import { writerConnectionOptions } from "./writer-settings";
 import { householdService } from "./household";
 import { careService } from "./care";
 import { familyService } from "./family";
@@ -13,7 +14,11 @@ import { mailConfiguration } from "./mail";
 import { s3Storage } from "./objects";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 8 });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 8,
+  ...writerConnectionOptions(process.env.MEDORA_LEGACY_WRITES_FENCED),
+});
 const storage = process.env.S3_ENDPOINT
   ? s3Storage(
       process.env.S3_ENDPOINT,

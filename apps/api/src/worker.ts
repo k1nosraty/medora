@@ -1,3 +1,4 @@
+import { writerConnectionOptions } from "./writer-settings";
 import { householdService } from "./household";
 import { careService } from "./care";
 import { familyService } from "./family";
@@ -11,6 +12,7 @@ import { r2Storage, type R2Bucket } from "./objects";
 import { mailConfiguration, type MailEnv } from "./mail";
 import { identityService } from "./identity";
 interface Env extends MailEnv {
+  MEDORA_LEGACY_WRITES_FENCED?: string;
   BACKUPS: R2Bucket;
   HYPERDRIVE: { connectionString: string };
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -22,6 +24,7 @@ export default {
     if (!mail) return;
     const pool = new Pool({
       connectionString: env.HYPERDRIVE.connectionString,
+      ...writerConnectionOptions(env.MEDORA_LEGACY_WRITES_FENCED),
       max: 2,
     });
     try {
@@ -44,6 +47,7 @@ export default {
       return env.ASSETS.fetch(request);
     const pool = new Pool({
       connectionString: env.HYPERDRIVE.connectionString,
+      ...writerConnectionOptions(env.MEDORA_LEGACY_WRITES_FENCED),
       max: 2,
     });
     try {

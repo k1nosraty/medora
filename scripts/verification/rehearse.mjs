@@ -125,7 +125,8 @@ try {
       ...(unmapped
         ? { unsupportedMutation: postWriteRollback }
         : { postWriteRollback }),
-      reconciled: true,
+      sourceProjectionReconciled: true,
+      reconciled: !unmapped,
     }),
   );
 } finally {

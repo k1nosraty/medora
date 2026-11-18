@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import {
@@ -20,6 +21,7 @@ const scratch = await mkdtemp(join(tmpdir(), "medora-design-"));
 const servers = [];
 const browsers = [];
 let compared = 0;
+const accessibility = [];
 
 // A screenshot alone cannot distinguish an inaccessible control from a working one.
 function visibleLayout(page) {
@@ -251,6 +253,34 @@ try {
               " differs from reference",
           );
           compared++;
+          if (["onboarding", "today", "edit-water"].includes(name)) {
+            const signatures = await Promise.all(
+              pages.map(async (page) => {
+                const audit = await new AxeBuilder({ page })
+                  .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+                  .analyze();
+                return audit.violations
+                  .flatMap((rule) =>
+                    rule.nodes.map(
+                      (node) => rule.id + " " + JSON.stringify(node.target),
+                    ),
+                  )
+                  .sort();
+              }),
+            );
+            assert.deepEqual(
+              signatures[1].filter((issue) => !signatures[0].includes(issue)),
+              [],
+              engine.name() + " " + name + " new accessibility violation",
+            );
+            accessibility.push({
+              engine: engine.name(),
+              lang,
+              screen: name,
+              original: signatures[0].length,
+              candidate: signatures[1].length,
+            });
+          }
         }
         await both(async (page, origin) => {
           await page.clock.setFixedTime(new Date("2026-11-15T09:45:00Z"));
@@ -326,6 +356,7 @@ try {
       identicalDocumentMarkup: true,
       identicalVisibleLayouts: compared,
       identicalViewportCaptures: compared,
+      accessibility,
     }),
   );
 } finally {

@@ -1,17 +1,109 @@
 {
   "name": "medora-v2-local",
-  "main": "../../apps/api/src/worker.ts",
+  "main": "./candidate.mjs",
   "compatibility_date": "2026-10-29",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": false,
   "preview_urls": false,
   "assets": {
     "directory": "../../apps/web/dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": [
+      "/api/*"
+    ]
   },
   "hyperdrive": [
-    { "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000"
+    }
   ],
-  "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "medora-v2-local" }]
+  "r2_buckets": [
+    {
+      "binding": "BACKUPS",
+      "bucket_name": "medora-v2-local"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PILOT",
+        "class_name": "PushPilot"
+      },
+      {
+        "name": "REMINDERS",
+        "class_name": "MedicationReminders"
+      },
+      {
+        "name": "EMAIL_ACCOUNTS",
+        "class_name": "EmailAccount"
+      },
+      {
+        "name": "CREDENTIALS",
+        "class_name": "Credentials"
+      },
+      {
+        "name": "PROMOTIONS",
+        "class_name": "Promotions"
+      },
+      {
+        "name": "OPERATIONS",
+        "class_name": "Operations"
+      },
+      {
+        "name": "FAMILIES",
+        "class_name": "Families"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "candidate-v1",
+      "new_sqlite_classes": [
+        "PushPilot",
+        "MedicationReminders",
+        "EmailAccount",
+        "Credentials",
+        "Promotions",
+        "Operations",
+        "Families"
+      ]
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "PUSH_ENROLL_LIMIT",
+      "namespace_id": "861510",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    },
+    {
+      "name": "PUSH_DEVICE_LIMIT",
+      "namespace_id": "861511",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "PROMOTION_EVENT_LIMIT",
+      "namespace_id": "861512",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "EMAIL_AUTH_LIMIT",
+      "namespace_id": "861513",
+      "simple": {
+        "limit": 8,
+        "period": 60
+      }
+    }
+  ]
 }

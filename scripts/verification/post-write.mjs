@@ -1,3 +1,4 @@
+import { withLocalWorker } from "./local-worker.mjs";
 import { fixtureMailbox } from "./mailbox.mjs";
 import { readdir, lstat } from "node:fs/promises";
 import { join } from "node:path";
@@ -33,7 +34,11 @@ export async function verifyPostWrite({
   expected,
   unmapped,
 }) {
-  const client = new Client({ connectionString: url });
+  const fencedConnection = {
+    connectionString: url,
+    options: "-c medora.source_fenced=true",
+  };
+  const client = new Client(fencedConnection);
   await client.connect();
   const socket = createServer().listen(0, "127.0.0.1");
   await once(socket, "listening");
@@ -47,6 +52,7 @@ export async function verifyPostWrite({
       PATH: process.env.PATH,
       DATABASE_URL: url,
       HOST: "127.0.0.1",
+      MEDORA_LEGACY_WRITES_FENCED: "true",
       ...(mailbox && {
         MEDORA_MAILPIT: mailbox.origin,
         MEDORA_CODE_KEY: randomBytes(32).toString("hex"),
@@ -161,6 +167,57 @@ export async function verifyPostWrite({
     const receipt = await send("changes", add);
     assert.equal(receipt.status, 200);
     probeFencedSource();
+    for (const sourceFenced of [false, true]) {
+      await withLocalWorker(
+        url,
+        48977,
+        {
+          MEDORA_PASSWORD_KEYS: JSON.stringify({ legacy: "a".repeat(64) }),
+          MEDORA_LEGACY_WRITES_FENCED: String(sourceFenced),
+        },
+        async (gateway) => {
+          const mode = await (
+            await fetch(gateway + "/api/v2/product-writer")
+          ).json();
+          assert.equal(mode.writer, sourceFenced ? "postgres" : "frozen");
+          const response = await fetch(gateway + "/api/v2/changes", {
+            method: "POST",
+            headers: { ...headers, Origin: gateway },
+            body: JSON.stringify(add),
+          });
+          assert.equal(response.status, sourceFenced ? 200 : 503);
+          if (sourceFenced) {
+            assert.deepEqual(
+              await response.json(),
+              await receipt.clone().json(),
+            );
+            assert.equal(
+              (
+                await fetch(gateway + "/api/account/care", {
+                  method: "PUT",
+                  headers: { ...headers, Origin: gateway },
+                  body: "{}",
+                })
+              ).status,
+              503,
+            );
+          }
+        },
+      );
+    }
+    // A stale API sharing this database does not receive the new setting.
+    const previous = new Client({ connectionString: url });
+    await previous.connect();
+    try {
+      await assert.rejects(
+        previous.query(
+          "UPDATE medora.records SET revision=revision WHERE false",
+        ),
+        { code: "55000" },
+      );
+    } finally {
+      await previous.end();
+    }
     assert.deepEqual(
       await (await send("changes", add)).json(),
       await receipt.json(),
@@ -326,7 +383,7 @@ export async function verifyPostWrite({
     );
     await client.query("ROLLBACK");
     // Hold the shared guard as an in-flight writer would. The freeze cannot finish early.
-    const draining = new Client({ connectionString: url });
+    const draining = new Client(fencedConnection);
     await draining.connect();
     let frozen;
     try {

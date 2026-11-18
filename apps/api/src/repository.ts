@@ -26,7 +26,8 @@ export function repository(pool: Pool) {
   return {
     async productWriter() {
       const { rows } = await db.execute<{ phase: string }>(
-        sql`SELECT phase FROM medora.writer_transition WHERE singleton`,
+        sql`SELECT CASE WHEN phase='rehearsal' AND current_setting('medora.source_fenced',true) IS DISTINCT FROM 'true'
+          THEN 'frozen' ELSE phase END AS phase FROM medora.writer_transition WHERE singleton`,
       );
       return rows[0]?.phase === "open"
         ? "legacy"

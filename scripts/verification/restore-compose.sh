@@ -9,6 +9,9 @@ output=${3:?new private directory}
 mkdir -m 700 "$output"
 output=$(realpath "$output")
 target="medora-restore-$(openssl rand -hex 8)"
+# Shell variables take precedence over --env-file in Compose. Read each fixture's
+# credentials from its own private file even when called after the browser smoke.
+unset MEDORA_DB_PASSWORD MEDORA_STORAGE_SECRET MEDORA_CODE_KEY MEDORA_MAIL_KEY MEDORA_PASSWORD_KEYS
 source_compose=(docker compose --env-file "$config" -p "$project")
 # A second application key set could not read the copied users. Only infrastructure credentials differ.
 node scripts/verification/local-env.mjs "$output/restore.env" >/dev/null
@@ -39,16 +42,31 @@ SELECT schemaname,sequencename,last_value FROM pg_sequences WHERE schemaname NOT
 COMMIT;
 SQL
 }
-resume_source() { "${source_compose[@]}" unpause api >/dev/null; }
+compat_volume() {
+  docker volume ls -q --filter "label=com.docker.compose.project=$1" --filter label=com.docker.compose.volume=compatibility-state
+}
+src_compat=$(compat_volume "$project")
+[[ -n "$src_compat" && "$src_compat" != *$'\n'* && -n "$("${source_compose[@]}" ps -q compatibility)" ]]
+resume_source() {
+  "${source_compose[@]}" start compatibility >/dev/null
+  "${source_compose[@]}" unpause api >/dev/null
+}
 "${source_compose[@]}" pause api >/dev/null
 trap resume_source EXIT
+"${source_compose[@]}" stop compatibility >/dev/null
 inventory "$config" "$project" > "$output/source.inventory"
 "${source_compose[@]}" exec -T postgres pg_dump -Fc --no-owner -U medora medora > "$output/database.dump"
 docker run --rm --network none --read-only --user 0:0 -v "$src_volume:/objects:ro" --entrypoint tar "$tool_image" --xattrs -C /objects -cf - . > "$output/objects.tar"
+docker run --rm --network none --read-only --user 0:0 -v "$src_compat:/state:ro" --entrypoint tar "$tool_image" --xattrs -C /state -cf - . > "$output/compatibility.tar"
 resume_source
 trap - EXIT
-(cd "$output" && sha256sum database.dump objects.tar > SHA256SUMS && sha256sum -c SHA256SUMS)
+(cd "$output" && sha256sum database.dump objects.tar compatibility.tar > SHA256SUMS && sha256sum -c SHA256SUMS)
 "${restore_compose[@]}" up -d --wait postgres storage
+"${restore_compose[@]}" up --no-start --no-deps compatibility >/dev/null
+dst_compat=$(compat_volume "$target")
+[[ -n "$dst_compat" && "$src_compat" != "$dst_compat" && "$dst_compat" != *$'\n'* ]]
+docker run --rm -i --network none --read-only --user 0:0 -v "$dst_compat:/state" --entrypoint tar "$tool_image" --xattrs -C /state -xf - < "$output/compatibility.tar"
+docker run --rm -i --network none --read-only --user 0:0 -v "$dst_compat:/state:ro" --entrypoint tar "$tool_image" --compare -C /state -f - < "$output/compatibility.tar"
 dst_volume=$(docker volume ls -q --filter "label=com.docker.compose.project=$target" --filter label=com.docker.compose.volume=objects)
 [[ -n "$dst_volume" && "$src_volume" != "$dst_volume" && "$dst_volume" != *$'\n'* ]]
 docker run --rm -i --network none --read-only --user 0:0 -v "$dst_volume:/objects" --entrypoint tar "$tool_image" --xattrs -C /objects -xf - < "$output/objects.tar"

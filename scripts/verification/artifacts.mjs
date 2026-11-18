@@ -27,17 +27,56 @@ const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 if (git("status", "--porcelain"))
   throw Error("Commit candidate changes before recording artifact hashes");
 for (const entry of [
-  "apps/web/dist/index.html",
+  "apps/web/dist/medication/index.html",
+  "apps/web/dist/medication/sw.js",
+  "apps/web/dist/journal/index.html",
   "apps/web/dist/sw.js",
   "apps/web/dist/manifest.webmanifest",
   "apps/api/dist/server.mjs",
-  join(worker, "worker.js"),
+  join(worker, "candidate.js"),
 ]) {
   const info = await stat(entry);
   if (!info.isFile() || info.size === 0)
     throw Error("Missing required artifact: " + entry);
 }
+const evidenceFiles = [
+  "reconciliation.json",
+  "recovery-refusal.json",
+  "visual-parity.json",
+  "performance-product.json",
+];
+const evidence = await Promise.all(
+  evidenceFiles.map(async (name) => {
+    const bytes = await readFile(join("dist", name));
+    return {
+      name,
+      report: JSON.parse(bytes),
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
+  }),
+);
+const [reconciled, refused, visual, performance] = evidence.map(
+  (entry) => entry.report,
+);
+if (
+  reconciled.source !== "synthetic Workerd" ||
+  !reconciled.reconciled ||
+  !reconciled.legacyWriterFenced ||
+  !reconciled.postWriteRollback?.replayed ||
+  refused.reconciled !== false ||
+  !refused.unsupportedMutation?.recoveryPublicationBlocked ||
+  !visual.identicalDocumentMarkup ||
+  visual.identicalViewportCaptures !== 40 ||
+  visual.identicalVisibleLayouts !== 40 ||
+  visual.accessibility?.length !== 12 ||
+  performance.trials?.length !== 3
+)
+  throw Error("Incomplete candidate fixture evidence");
 const manifest = {
+  readiness: "NOT READY",
+  production: "NOT DEPLOYED",
+  reference: visual.reference,
+  evidence: evidence.map(({ name, sha256 }) => ({ name, sha256 })),
   branch:
     git("branch", "--show-current") ||
     process.env.GITHUB_HEAD_REF ||

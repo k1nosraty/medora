@@ -33,6 +33,7 @@ services:
       MEDORA_MAIL_KEY: ${MEDORA_MAIL_KEY:?Set the local delivery key}
       MEDORA_FROM: medora@example.test
       MEDORA_MAILPIT: http://mailpit:8025
+      MEDORA_LEGACY_WRITES_FENCED: ${MEDORA_LEGACY_WRITES_FENCED:-false}
       PUBLIC_ORIGIN: ${MEDORA_PUBLIC_ORIGIN:-}
       HOST: 0.0.0.0
       DATABASE_URL: postgresql://medora:${MEDORA_DB_PASSWORD}@postgres:5432/medora
@@ -52,6 +53,20 @@ services:
       interval: 4s
       timeout: 3s
       retries: 20
+  compatibility:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+      target: compatibility-fixture
+    environment:
+      MEDORA_COMPAT_FIXTURE_KEY: ${MEDORA_MAIL_KEY:?Set the isolated fixture key}
+      MEDORA_FIXTURE_STATE: /state
+      MEDORA_FIXTURE_MAILPIT: http://mailpit:8025
+      MEDORA_FIXTURE_HOST: 0.0.0.0
+      MEDORA_LEGACY_WRITES_FENCED: ${MEDORA_LEGACY_WRITES_FENCED:-false}
+    volumes: [compatibility-state:/state]
+    depends_on:
+      mailpit: {condition: service_started}
   web:
     build:
       context: .
@@ -60,6 +75,8 @@ services:
     ports: ["127.0.0.1:${MEDORA_PORT:-8808}:8080"]
     depends_on:
       api: {condition: service_healthy}
+      compatibility: {condition: service_started}
 volumes:
   database:
   objects:
+  compatibility-state:
