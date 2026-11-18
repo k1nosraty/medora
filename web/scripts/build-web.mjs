@@ -1,4 +1,5 @@
 import { build, transform } from "esbuild";
+import { bundleWorkbox } from "./workbox.mjs";
 import messagesFa from "../public/medication/shared/i18n/messages-fa.js";
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
@@ -80,14 +81,18 @@ export async function buildWeb(publicDir = sourcePublic, plugins = []) {
     "/design/optical-glass/visit-main.webp", "/design/optical-glass/routine-main.webp",
     "/manifest.webmanifest", "/manifest.en.webmanifest", "/icon-192.png", "/apple-touch-icon.png",
     "/medora-icon-192.png", "/vazirmatn.woff2"];
-  const worker = await readFile(resolve(ui, "pwa/sw.js"), "utf8");
-  const hash = createHash("sha256").update(html).update(worker).update(JSON.stringify(shell));
+  const [worker, routing] = await Promise.all([
+    readFile(resolve(ui, "pwa/sw.js"), "utf8"),
+    bundleWorkbox(),
+  ]);
+  const hash = createHash("sha256").update(html).update(worker).update(routing).update(JSON.stringify(shell));
   for (const asset of shell.slice(1)) hash.update(await readFile(new URL(asset.slice(1), publicDir)));
   const revision = process.env.GITHUB_SHA;
   if (revision && !/^[a-f0-9]{40}$/.test(revision)) throw new Error("Invalid deployment revision");
   const version = revision || hash.digest("hex").slice(0, 20);
   await Promise.all([
     emit(new URL("index.html", medication), html.replace("{{version}}", version)),
+    emit(new URL("workbox.js", medication), routing),
     emit(new URL("sw.js", medication), worker.replaceAll("{{version}}", version).replace("{{assets}}", JSON.stringify(shell, null, 2))),
     emit(new URL("design/index.html", publicDir), translateMarkup(await render("gallery/index.html")))
   ]);

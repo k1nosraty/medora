@@ -84,6 +84,11 @@ const root = resolve("apps/web/dist");
 let workerd, returningWorker, node, browser, nodeClosed;
 let upstream = "worker";
 let upgradeShell = false;
+const legacyShell = execFileSync(
+  "git",
+  ["show", "5ee5e47cafe7644b5dd15ae7408e909c755ee211:web/ui/pwa/sw.js"],
+  { encoding: "utf8" },
+);
 const mime = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -141,12 +146,22 @@ const gateway = createServer(async (request, response) => {
     );
     if (!file.startsWith(root + sep)) return response.writeHead(404).end();
     let bytes = await readFile(file);
-    if (upgradeShell && incoming.pathname === "/medication/sw.js")
+    if (incoming.pathname === "/medication/sw.js") {
+      const worker = bytes.toString();
+      const assetList = worker.match(/const shell = (\[[\s\S]*?\]);/)?.[1];
+      if (!assetList)
+        throw Error("Cannot identify the canonical precache list");
       bytes = Buffer.from(
-        bytes
-          .toString()
-          .replace(/prefix \+ "[a-f0-9]+"/, 'prefix + "handoff-fixture"'),
+        upgradeShell
+          ? worker.replace(
+              /prefix \+ "[a-f0-9]+"/,
+              'prefix + "handoff-fixture"',
+            )
+          : legacyShell
+              .replaceAll("{{version}}", "legacy-handoff-fixture")
+              .replace("{{assets}}", assetList),
       );
+    }
     response
       .writeHead(200, {
         "Content-Type": mime[extname(file)] ?? "application/octet-stream",

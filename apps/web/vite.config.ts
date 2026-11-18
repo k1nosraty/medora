@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { bundleWorkbox } from "../../web/scripts/workbox.mjs";
 const asset = (p: string) => readFileSync(new URL(p, import.meta.url));
 export default defineConfig({
   base: "./",
@@ -20,7 +21,7 @@ export default defineConfig({
             .end();
         });
       },
-      generateBundle(_, bundle) {
+      async generateBundle(_, bundle) {
         const art: Record<string, string> = {
           "art/logo.svg": "../../branding/logo.svg",
           "art/water.webp": "../../web/public/design/optical-glass/water.webp",
@@ -66,6 +67,13 @@ export default defineConfig({
           );
         if (!files.has("index.html"))
           files.set("index.html", asset("./index.html"));
+        const routing = await bundleWorkbox();
+        this.emitFile({
+          type: "asset",
+          fileName: "workbox.js",
+          source: routing,
+        });
+        files.set("workbox.js", routing);
         const hash = createHash("sha256");
         for (const [name, bytes] of [...files].sort(([a], [b]) =>
           a.localeCompare(b),

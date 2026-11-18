@@ -6,7 +6,9 @@ import vm from "node:vm";
 test("the installed shell serves a coherent offline page and does not intercept APIs", async () => {
   const publicDir = new URL("../public/", import.meta.url);
   const source = await readFile(new URL("medication/sw.js", publicDir), "utf8");
+  const workbox = await readFile(new URL("medication/workbox.js", publicDir), "utf8");
   const origin = "https://medora.example";
+  const location = new URL(origin + "/medication/sw.js");
   const listeners = new Map();
   const stored = new Map();
   const network = [];
@@ -19,8 +21,13 @@ test("the installed shell serves a coherent offline page and does not intercept 
     async match(path) { return stored.get(path)?.clone(); },
     async put(path, response) { stored.set(path, response); }
   };
-  vm.runInNewContext(source, {
+  const sandbox = vm.createContext({
     URL,
+    location,
+    importScripts(path) {
+      assert.equal(path, "/medication/workbox.js");
+      vm.runInContext(workbox, sandbox);
+    },
     Request: class extends Request {
       constructor(path, options) { super(new URL(path, origin), options); }
     },
@@ -30,12 +37,13 @@ test("the installed shell serves a coherent offline page and does not intercept 
       return new URL(request.url).pathname.endsWith("missing.webp")
         ? new Response("missing", { status: 404 }) : new Response("network");
     },
-    self: { location: { origin }, addEventListener: (type, listener) => listeners.set(type, listener),
+    self: { location, addEventListener: (type, listener) => listeners.set(type, listener),
       skipWaiting() {
         assert.ok(stored.has("/medication/"));
         skippedWaiting = true;
       } }
   });
+  vm.runInContext(source, sandbox);
   let installed;
   listeners.get("install")({ waitUntil: promise => { installed = promise; } });
   await installed;
@@ -63,6 +71,7 @@ test("the installed shell serves a coherent offline page and does not intercept 
   assert.equal(await (await fetchThroughWorker(pastChunk)).text(), "previous release");
   assert.equal(fetchThroughWorker("/api/reminders"), undefined);
   assert.equal(fetchThroughWorker("/api/promotion"), undefined);
+  assert.equal(fetchThroughWorker("/api/v2/care"), undefined);
   assert.equal(fetchThroughWorker("/admin/"), undefined);
   assert.equal(fetchThroughWorker("/design/"), undefined);
   const dental = "/design/matte-3d/visit-dental.webp";

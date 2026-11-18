@@ -1,3 +1,5 @@
+importScripts("./workbox.js");
+
 const prefix = "medora-v2-shell-" + self.registration.scope + "-";
 const version = prefix + "__VERSION__";
 const files = "__FILES__";
@@ -17,26 +19,21 @@ self.addEventListener("activate", (e) =>
     })(),
   ),
 );
-self.addEventListener("fetch", (e) => {
-  const r = e.request;
-  if (r.method !== "GET" || !r.url.startsWith(self.registration.scope)) return;
-  if (
-    r.mode === "navigate" &&
-    new URL(r.url).pathname === new URL(self.registration.scope).pathname
-  ) {
-    e.respondWith(
-      caches
-        .open(version)
-        .then(
-          async (c) => (await c.match(shell, { ignoreVary: true })) ?? fetch(r),
-        ),
-    );
-  } else if (urls.includes(r.url))
-    e.respondWith(
-      caches
-        .open(version)
-        .then(
-          async (c) => (await c.match(r, { ignoreVary: true })) ?? fetch(r),
-        ),
-    );
-});
+MedoraWorkbox.registerRoute(
+  ({ request, url }) =>
+    request.url.startsWith(self.registration.scope) &&
+    request.mode === "navigate" &&
+    url.pathname === new URL(self.registration.scope).pathname,
+  async ({ request }) => {
+    const cache = await caches.open(version);
+    return (await cache.match(shell, { ignoreVary: true })) ?? fetch(request);
+  },
+);
+
+MedoraWorkbox.registerRoute(
+  ({ request }) => urls.includes(request.url),
+  async ({ request }) => {
+    const cache = await caches.open(version);
+    return (await cache.match(request, { ignoreVary: true })) ?? fetch(request);
+  },
+);

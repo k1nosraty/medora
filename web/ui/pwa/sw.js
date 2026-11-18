@@ -1,3 +1,5 @@
+importScripts("/medication/workbox.js");
+
 const prefix = "medora-medication-shell-";
 const cacheName = prefix + "{{version}}";
 const artPrefix = "medora-medication-art-";
@@ -24,32 +26,30 @@ self.addEventListener("activate", event => {
   })());
 });
 
-self.addEventListener("fetch", event => {
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || event.request.method !== "GET") return;
-  if (optionalArt.test(url.pathname)) {
-    event.respondWith((async () => {
-      const cache = await caches.open(artworkCache);
-      const saved = await cache.match(url.pathname);
-      if (saved) return saved;
-      const response = await fetch(event.request);
-      if (response.ok) await cache.put(url.pathname, response.clone()).catch(() => {});
-      return response;
-    })());
-    return;
-  }
-  const bundled = versioned.test(url.pathname);
-  const legacy = legacyModule.test(url.pathname);
-  if (!shell.includes(url.pathname) && !bundled && !legacy) return;
-  event.respondWith((async () => {
+MedoraWorkbox.registerRoute(
+  ({ sameOrigin, url }) => sameOrigin && optionalArt.test(url.pathname),
+  async ({ request, url }) => {
+    const cache = await caches.open(artworkCache);
+    const saved = await cache.match(url.pathname);
+    if (saved) return saved;
+    const response = await fetch(request);
+    if (response.ok) await cache.put(url.pathname, response.clone()).catch(() => {});
+    return response;
+  },
+);
+
+MedoraWorkbox.registerRoute(
+  ({ sameOrigin, url }) => sameOrigin &&
+    (shell.includes(url.pathname) || versioned.test(url.pathname) || legacyModule.test(url.pathname)),
+  async ({ request, url }) => {
     const current = await openShell();
     const saved = await current.match(url.pathname);
     if (saved) return saved;
-    // The content-addressed path identifies the exact bytes, even across releases.
-    if (bundled || legacy) {
+    // Old tabs can still use the preceding release's chunks.
+    if (versioned.test(url.pathname) || legacyModule.test(url.pathname)) {
       const previous = await caches.match(url.pathname);
       if (previous) return previous;
     }
-    return fetch(event.request);
-  })());
-});
+    return fetch(request);
+  },
+);

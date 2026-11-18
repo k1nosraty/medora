@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { execFileSync } from "node:child_process";
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 import { resolve, sep, extname } from "node:path";
@@ -7,6 +8,13 @@ import assert from "node:assert/strict";
 
 const root = resolve("apps/web/dist/journal");
 const bundled = await readFile(resolve(root, "sw.js"), "utf8");
+const previous = execFileSync(
+  "git",
+  ["show", "69505ef:apps/web/sw.template.js"],
+  { encoding: "utf8" },
+);
+const files = bundled.match(/const files = (\[[\s\S]*?\]);/)?.[1];
+if (!files) throw Error("Cannot identify the journal precache list");
 const types = {
   ".js": "application/javascript",
   ".css": "text/css",
@@ -29,7 +37,13 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (path === "/sw.js") {
-      const changed = bundled
+      const changed = (
+        release === 1
+          ? previous
+              .replace('"__VERSION__"', '"update-fixture-1"')
+              .replace('"__FILES__"', files)
+          : bundled
+      )
         .replace(
           /const version = prefix \+ "[0-9a-f]+";/,
           'const version = prefix + "update-fixture-' + release + '";',
