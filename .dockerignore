@@ -27,6 +27,7 @@
 !web/public/**
 !web/scripts/
 !web/scripts/build-web.mjs
+!web/scripts/workbox.mjs
 !web/scripts/fixture-service.mjs
 !apps/web/scripts/
 !apps/web/scripts/product.mjs
@@ -59,3 +60,4 @@
 **/*.sql.gz
 **/*.dump
 **/*.gcm
+web/public/medication/workbox.js
