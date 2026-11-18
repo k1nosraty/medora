@@ -1,3 +1,4 @@
+import { backupStorage, restoreBackupCatalog } from "./backup-recovery.mjs";
 import pg from "pg";
 import { readFile } from "node:fs/promises";
 import {
@@ -33,6 +34,7 @@ try {
       "verify-projection",
       "restore-copy",
       "restore-after-writes",
+      "restore-backup-catalog",
     ].includes(action) &&
     process.env.DATABASE_URL
   ) {
@@ -41,27 +43,43 @@ try {
     });
     await client.connect();
     try {
-      console.log(
-        JSON.stringify(
-          await (action === "restore-after-writes"
-            ? (await import("./reverse-care.mjs")).reverseCare(
-                client,
-                dir,
-                key,
-                census,
-              )
-            : action === "restore-copy"
-              ? restoreCopy(client, dir, key, census)
-              : action.includes("project")
-                ? projectArchive(
-                    client,
-                    dir,
-                    key,
-                    action === "verify-projection",
-                  )
-                : importObjects(client, dir, key, action === "verify")),
-        ),
-      );
+      const storage = backupStorage(process.env);
+      if (action === "restore-backup-catalog") {
+        if (!storage)
+          throw Error("An isolated backup storage target is required");
+        console.log(
+          JSON.stringify({
+            restoredBackupObjects: await restoreBackupCatalog(
+              client,
+              storage,
+              dir,
+              key,
+            ),
+          }),
+        );
+      } else
+        console.log(
+          JSON.stringify(
+            await (action === "restore-after-writes"
+              ? (await import("./reverse-care.mjs")).reverseCare(
+                  client,
+                  dir,
+                  key,
+                  census,
+                  storage,
+                )
+              : action === "restore-copy"
+                ? restoreCopy(client, dir, key, census)
+                : action.includes("project")
+                  ? projectArchive(
+                      client,
+                      dir,
+                      key,
+                      action === "verify-projection",
+                    )
+                  : importObjects(client, dir, key, action === "verify")),
+          ),
+        );
     } finally {
       await client.end();
     }

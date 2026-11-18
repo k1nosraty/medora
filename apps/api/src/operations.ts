@@ -150,8 +150,18 @@ export function operationService(
           FROM medora.operations_tickets ORDER BY CASE status WHEN 'open' THEN 0 ELSE 1 END,at DESC LIMIT 100`);
       return result.rows;
     },
-    addTicket(email: string, message: string, diagnostics: Diagnostics) {
+    addTicket(
+      owner: string,
+      email: string,
+      message: string,
+      diagnostics: Diagnostics,
+    ) {
       return transactional(async (c) => {
+        const active = await c.query(
+          "SELECT 1 FROM medora.accounts WHERE id=$1 AND email=$2 AND sync_generation=2 FOR SHARE",
+          [owner, email],
+        );
+        if (!active.rowCount) return { signedOut: true };
         if ((await config(c)).flags.support === 0) return { disabled: true };
         const now = Date.now();
         const recent = await c.query(

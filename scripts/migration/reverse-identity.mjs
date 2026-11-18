@@ -7,7 +7,7 @@ export async function identityReplay(client, snapshot) {
   } = await client.query(
     `SELECT
     EXISTS(SELECT 1 FROM medora.rollback_exceptions WHERE relation_name NOT IN ('challenges','mail_outbox')) AS unsupported,
-    EXISTS(SELECT 1 FROM medora.challenges WHERE expires_at>now()) AS pending,
+    EXISTS(SELECT 1 FROM medora.challenges WHERE expires_at>now()) OR EXISTS(SELECT 1 FROM medora.backup_cleanup) AS pending,
     EXISTS(SELECT 1 FROM medora.legacy_session_access l WHERE NOT EXISTS
       (SELECT 1 FROM medora.legacy_sessions s WHERE s.snapshot=$1 AND (s.owner,s.digest,s.expires_at)=(l.owner,l.digest,l.expires_at))) AS invalid_session`,
     [snapshot],
@@ -43,7 +43,7 @@ export async function identityReplay(client, snapshot) {
   const sessions = await client.query(
     `SELECT s.owner,s.digest,s.expires_at::float8 AS expires_at,l.digest IS NULL AS revoked
     FROM medora.legacy_sessions s LEFT JOIN medora.legacy_session_access l ON l.owner=s.owner AND l.digest=s.digest
-    WHERE s.snapshot=$1 ORDER BY s.digest COLLATE "C"`,
+    WHERE s.snapshot=$1 AND NOT EXISTS(SELECT 1 FROM medora.account_deletions d WHERE d.owner=s.owner) ORDER BY s.digest COLLATE "C"`,
     [snapshot],
   );
   for (const row of sessions.rows) {

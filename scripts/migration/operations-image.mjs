@@ -39,11 +39,16 @@ export async function operationsImage(client, manifest, key) {
     db = new DatabaseSync(":memory:");
   try {
     db.deserialize(bytes);
+    function kv(key) {
+      const row = db.prepare("SELECT value FROM _cf_KV WHERE key=?").get(key);
+      return row ? deserialize(row.value) : null;
+    }
     const config = db
       .prepare("SELECT value FROM _cf_KV WHERE key='config'")
       .get();
     return {
       entry,
+      release: kv("release-batch"),
       config: config ? deserialize(config.value) : defaults,
       originalConfig: config ? deserialize(config.value) : null,
       tables: Object.fromEntries(
@@ -70,6 +75,11 @@ export async function activateOperations(client, manifest, key) {
     "UPDATE medora.operations_config SET config=$1 WHERE singleton",
     [JSON.stringify(original.config)],
   );
+  if (original.release)
+    await client.query(
+      "UPDATE medora.release_batches SET batch=$1 WHERE singleton",
+      [JSON.stringify(original.release)],
+    );
   for (const [name, rows] of Object.entries(original.tables)) {
     const { fields } = tables[name];
     for (const row of rows)
@@ -153,11 +163,32 @@ export async function operationsReplay(client, manifest, key) {
     )
       throw Error("Frozen operations census mismatch");
   }
+  const releaseHistory = await client.query(
+    "SELECT previous,following FROM medora.release_history ORDER BY sequence",
+  );
+  let release = original.release;
+  for (const item of releaseHistory.rows) {
+    if (
+      !isDeepStrictEqual(release, item.previous) ||
+      !item.following ||
+      !/^[0-9a-f]{40}$/.test(item.following.version)
+    )
+      throw Error("Release history diverged");
+    release = item.following;
+  }
+  const releaseFinal = await client.query(
+    "SELECT batch FROM medora.release_batches WHERE singleton",
+  );
+  if (!isDeepStrictEqual(releaseFinal.rows[0]?.batch, release))
+    throw Error("Frozen release batch mismatch");
   return {
     entry: original.entry,
     events,
     previousConfig: original.originalConfig,
     nextConfig: config,
+    release: releaseHistory.rows.length
+      ? { previous: original.release, following: release }
+      : null,
     changedConfig: !isDeepStrictEqual(config, original.config),
   };
 }

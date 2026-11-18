@@ -1,3 +1,6 @@
+import { releaseNotifications, type ReleaseEnv } from "./release-notifications";
+import { removeBackupObjects } from "./account-deletion";
+import { administrativeExport } from "./admin-export";
 import { adminAccounts } from "./admin-accounts";
 import { promotionService, type PromotionEnv } from "./promotions";
 import { operationService } from "./operations";
@@ -15,7 +18,7 @@ import { passwordKeys } from "./settings";
 import { r2Storage, type R2Bucket } from "./objects";
 import { mailConfiguration, type MailEnv } from "./mail";
 import { identityService } from "./identity";
-interface Env extends MailEnv, PushEnv, PromotionEnv {
+interface Env extends MailEnv, PushEnv, PromotionEnv, ReleaseEnv {
   MEDORA_LEGACY_WRITES_FENCED?: string;
   EMAIL_SESSION_KEY?: string;
   BACKUPS: R2Bucket;
@@ -37,7 +40,10 @@ export default {
         await identityService(pool, store, mail.settings, mail.deliver).drain();
       const operations = operationService(pool, store, env);
       await operations.maintenance();
+      if ((await store.productWriter()) !== "frozen")
+        await removeBackupObjects(pool, r2Storage(env.BACKUPS));
       await reminderService(pool, store, env, operations)?.tick();
+      await releaseNotifications(pool, store, operations, env)?.tick();
     } finally {
       await pool.end();
     }
@@ -58,10 +64,11 @@ export default {
       const store = repository(pool),
         mail = mailConfiguration(env);
       const operations = operationService(pool, store, env);
+      const storage = r2Storage(env.BACKUPS);
       return await createApp(
         store,
         verifier(passwordKeys(env.MEDORA_PASSWORD_KEYS)),
-        r2Storage(env.BACKUPS),
+        storage,
         undefined,
         mail
           ? identityService(pool, store, mail.settings, mail.deliver)
@@ -76,7 +83,9 @@ export default {
         reminderService(pool, store, env, operations),
         operations,
         promotionService(pool, store, operations, env),
-        adminAccounts(pool, operations, env.EMAIL_SESSION_KEY),
+        adminAccounts(pool, operations, env.EMAIL_SESSION_KEY, storage),
+        administrativeExport(pool, operations),
+        releaseNotifications(pool, store, operations, env),
       ).fetch(request);
     } finally {
       ctx.waitUntil(pool.end());

@@ -14,6 +14,9 @@ describe.skipIf(!url)("session and encrypted archive boundaries", () => {
       bytes.set(k, b);
     },
     get: async (k) => bytes.get(k)?.buffer ?? null,
+    delete: async (k) => {
+      bytes.delete(k);
+    },
   });
   const owners = [crypto.randomUUID(), crypto.randomUUID()],
     tokens = [token(), token()];
@@ -32,7 +35,7 @@ describe.skipIf(!url)("session and encrypted archive boundaries", () => {
         "X-Medora-Owner": expectedOwner!,
         "Content-Type": "application/octet-stream",
       },
-      ...(body && {body}),
+      ...(body && { body }),
     });
   beforeAll(async () => {
     for (const [i, id] of owners.entries()) {

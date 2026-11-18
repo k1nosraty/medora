@@ -2,15 +2,20 @@ import { AwsClient } from "aws4fetch";
 export interface ObjectStorage {
   put(key: string, bytes: Uint8Array<ArrayBuffer>): Promise<void>;
   get(key: string): Promise<ArrayBuffer | null>;
+  delete(key: string): Promise<void>;
 }
 export interface R2Bucket {
   put(key: string, data: ArrayBufferView): Promise<unknown>;
   get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+  delete(key: string): Promise<unknown>;
 }
 export function r2Storage(bucket: R2Bucket): ObjectStorage {
   return {
     async put(k, b) {
       await bucket.put(k, b);
+    },
+    async delete(k) {
+      await bucket.delete(k);
     },
     async get(k) {
       return (await bucket.get(k))?.arrayBuffer() ?? null;
@@ -45,6 +50,10 @@ export function s3Storage(
     async put(key, bytes) {
       const r = await client.fetch(url(key), { method: "PUT", body: bytes });
       if (!r.ok) throw new Error("object_write");
+    },
+    async delete(key) {
+      const r = await client.fetch(url(key), { method: "DELETE" });
+      if (!r.ok && r.status !== 404) throw Error("object_delete");
     },
     async get(key) {
       const r = await client.fetch(url(key));

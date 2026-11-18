@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
-export async function verifyRegistration(origin, mailbox) {
-  const username = "rollback_fixture",
-    email = username + "@example.test",
+export async function verifyRegistration(
+  origin,
+  mailbox,
+  username = "rollback_fixture",
+) {
+  const email = username + "@example.test",
     password = randomBytes(24).toString("hex");
   const headers = { Origin: origin, "Content-Type": "application/json" };
   const send = (endpoint, value) =>
@@ -64,5 +67,5 @@ export async function verifyRegistration(origin, mailbox) {
     zone: "UTC",
   });
   assert.equal(edit.status, 200);
-  return { owner, username, email, password, water };
+  return { owner, username, email, password, water, headers };
 }

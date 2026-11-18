@@ -1,3 +1,4 @@
+import { sendReleaseNotice } from "./release.mjs";
 import { operations } from "../operations/audit.mjs";
 import { careSession } from "../accounts/email-auth.mjs";
 import { DurableObject } from "cloudflare:workers";
@@ -52,35 +53,21 @@ export class MedicationReminders extends DurableObject {
       return current;
     });
     if (!reservation) return;
-    const english = reservation.plan.language === "en";
-    const outcome = await sendPush(
-      this.env,
-      reservation.plan.subscription,
-      {
-        title: english ? "Medora has been updated" : "مدورا به‌روز شد",
-        body: english
-          ? "Tap to open the latest version."
-          : "برای باز کردن نسخهٔ تازه، روی اعلان بزنید.",
-        tag: "medora-release",
-        release: version,
-        day: new Date().toISOString().slice(0, 10),
-      },
-      43_200,
+    const { status, retry } = await sendReleaseNotice(
+      (...args) => sendPush(this.env, ...args),
+      reservation.plan,
+      version,
       async () =>
         (await storage.get("state"))?.revision === reservation.revision,
     );
-    const retry =
-      ["failed", "superseded", "paused"].includes(outcome.status) ||
-      outcome.providerStatus === 429 ||
-      outcome.providerStatus >= 500;
     await storage.transaction(async (txn) => {
       if ((await txn.get("release-send"))?.version !== version) return;
       if (!retry) await txn.put("release-sent", version);
       await txn.delete("release-send");
     });
-    const count = operations(this.env)?.count(["release:" + outcome.status]);
+    const count = operations(this.env)?.count(["release:" + status]);
     if (count) this.ctx.waitUntil(count.catch(() => {}));
-    return retry ? "retry" : outcome.status;
+    return retry ? "retry" : status;
   }
 
   async restoreReminder(state) {

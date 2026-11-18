@@ -1,3 +1,6 @@
+import { releaseNotifications } from "./release-notifications";
+import { removeBackupObjects } from "./account-deletion";
+import { administrativeExport } from "./admin-export";
 import { adminAccounts } from "./admin-accounts";
 import { promotionService } from "./promotions";
 import { operationService } from "./operations";
@@ -49,13 +52,22 @@ const runner = identity
   : undefined;
 runner?.unref();
 const operations = operationService(pool, store, process.env);
-const operationsRunner = setInterval(
-  () =>
-    void operations
-      .maintenance()
-      .catch(() => console.warn("operations_maintenance_deferred")),
-  60_000,
-);
+const release = releaseNotifications(pool, store, operations, process.env);
+let sweeping = false;
+const operationsRunner = setInterval(async () => {
+  if (sweeping) return;
+  sweeping = true;
+  try {
+    await operations.maintenance();
+    if (storage && (await store.productWriter()) !== "frozen")
+      await removeBackupObjects(pool, storage);
+    await release?.tick();
+  } catch {
+    console.warn("operations_maintenance_deferred");
+  } finally {
+    sweeping = false;
+  }
+}, 5000);
 operationsRunner.unref();
 const reminders = reminderService(pool, store, process.env, operations);
 let ticking = false;
@@ -89,7 +101,9 @@ const app = createApp(
   reminders,
   operations,
   promotionService(pool, store, operations, process.env),
-  adminAccounts(pool, operations, process.env.EMAIL_SESSION_KEY),
+  adminAccounts(pool, operations, process.env.EMAIL_SESSION_KEY, storage),
+  administrativeExport(pool, operations),
+  release,
 );
 const server = serve({
   fetch: app.fetch,

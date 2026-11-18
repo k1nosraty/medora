@@ -1,3 +1,4 @@
+import type { releaseNotifications } from "./release-notifications";
 import type { adminAccounts } from "./admin-accounts";
 import { smallJson } from "../../../web/src/http/validation.mjs";
 import type { promotionService } from "./promotions";
@@ -41,6 +42,8 @@ export function createApp(
   operations?: ReturnType<typeof operationService>,
   promotions?: ReturnType<typeof promotionService>,
   accounts?: ReturnType<typeof adminAccounts>,
+  exportOperations?: (actor: string) => Promise<Response>,
+  release?: ReturnType<typeof releaseNotifications>,
 ) {
   const app = new Hono<{ Variables: { owner: string } }>();
   app.use("*", secureHeaders());
@@ -127,6 +130,18 @@ export function createApp(
     app.route("/api/v2/identity", identityRoutes(identity));
   }
   if (operations) app.route("/api/v2", publicOperations(operations));
+  app.get("/api/v2/operations/release", async (c) => {
+    if (
+      !release ||
+      c.req.query("version") !== release.version ||
+      (await store.productWriter()) !== "postgres"
+    )
+      return c.json({ error: "not_found" }, 404);
+    return c.json({
+      version: release.version,
+      status: await release.publish(),
+    });
+  });
   async function requestOwner(c: Parameters<typeof getCookie>[0]) {
     const raw = getCookie(c, cookie);
     const owner =
@@ -218,6 +233,13 @@ export function createApp(
         { push: Boolean(reminders), email: Boolean(identity) },
       ),
     );
+  if (operations && exportOperations)
+    app.get("/api/v2/admin/operations/export", async (c) => {
+      const profile = await store.profile(c.get("owner"));
+      if (!profile || operations.role(profile.email) !== "admin")
+        return c.json({ error: "forbidden" }, 403);
+      return exportOperations(profile.email);
+    });
   app.get("/api/v2/profile", async (c) => {
     const profile = await store.profile(c.get("owner"));
     return c.json(
@@ -247,7 +269,7 @@ export function createApp(
         ? c.json({ error: "bad_request" }, 400)
         : c.json(await accounts.list(after, query));
     });
-    app.patch(path, async (c) => {
+    app.on(["PATCH", "DELETE"], path, async (c) => {
       const body = (await smallJson(c.req.raw)) as {
         username?: unknown;
         tag?: unknown;
@@ -267,15 +289,19 @@ export function createApp(
         ? { digest: await digest(raw), legacy: false }
         : previous && { digest: previous.digest, legacy: true };
       if (!session) return c.json({ error: "reauthenticate" }, 403);
-      const result = await accounts.revoke(
+      const result = await accounts.change(
         c.get("owner"),
         session,
         body.username,
         body.tag,
+        c.req.method === "DELETE",
       );
-      return result
-        ? c.json({ error: result }, result === "reauthenticate" ? 403 : 409)
-        : c.json({});
+      return result.error
+        ? c.json(
+            { error: result.error },
+            result.error === "reauthenticate" ? 403 : 409,
+          )
+        : c.json(result);
     });
   }
   if (household)

@@ -1,3 +1,4 @@
+import { backupReplay, writeRecoveredBackups } from "./backup-recovery.mjs";
 import { promotionReplay } from "./promotion-image.mjs";
 import { operationsReplay } from "./operations-image.mjs";
 import { reminderReplay } from "./reverse-reminders.mjs";
@@ -89,7 +90,7 @@ async function recoveryWorker(
   );
 }
 
-export async function reverseCare(client, archive, key, output) {
+export async function reverseCare(client, archive, key, output, storage) {
   const manifest = await readManifest(archive, key);
   const ns = Object.keys(manifest.inventory).filter((k) =>
     k.endsWith("-EmailAccount"),
@@ -102,10 +103,20 @@ export async function reverseCare(client, archive, key, output) {
   );
   if (gate.rows[0]?.phase !== "frozen")
     throw Error("Both writers must be fenced before recovery");
+  const backups = await backupReplay(client);
+  if (backups.length && !storage)
+    throw Error("A separate authorized backup object source is required");
   const reminders = await reminderReplay(client, manifest, key);
   const campaign = await promotionReplay(client, manifest, key);
   const operational = await operationsReplay(client, manifest, key);
   const identity = await identityReplay(client, manifest.snapshot);
+  const { rows: deleted } =
+    await client.query(`SELECT a.id,c.owner IS NOT NULL AS archived
+    FROM medora.account_deletions d JOIN medora.accounts a ON a.id=d.owner AND a.sync_generation=1
+    LEFT JOIN medora.cutover_accounts c ON c.owner=a.id
+    WHERE NOT EXISTS(SELECT 1 FROM medora.care_state s WHERE s.owner=a.id)
+      AND NOT EXISTS(SELECT 1 FROM medora.sessions s WHERE s.owner=a.id)
+      AND NOT EXISTS(SELECT 1 FROM medora.legacy_session_access s WHERE s.owner=a.id)`);
   const { rows: owners } = await client.query(
     `SELECT a.id,a.cursor,coalesce(c.seed_cursor,0) AS seed_cursor,coalesce(p.source_revision,0) AS source_revision,
       r.owner IS NOT NULL AS registered FROM medora.accounts a
@@ -119,8 +130,9 @@ export async function reverseCare(client, archive, key, output) {
   } = await client.query("SELECT count(*)::int n FROM medora.accounts");
   if (
     owners.length !== identity.size ||
-    owners.length !== count.n ||
-    owners.filter((owner) => !owner.registered).length !==
+    owners.length + deleted.length !== count.n ||
+    owners.filter((owner) => !owner.registered).length +
+      deleted.filter((row) => row.archived).length !==
       Object.keys(manifest.identities[ns[0]]).length
   )
     throw Error("Reverse owner census mismatch");
@@ -205,6 +217,8 @@ export async function reverseCare(client, archive, key, output) {
       )
         throw Error("Operations namespace identity mismatch");
       await ops.get(opsId).replay(operational);
+      if (operational.release)
+        await ops.get(opsId).restoreRelease(operational.release);
       await ops
         .get(opsId)
         .restoreReminderIds(
@@ -234,7 +248,7 @@ export async function reverseCare(client, archive, key, output) {
         "medora-credentials-v1"
       )
         throw Error("Credential namespace identity mismatch");
-      await credentials.get(credId).replay([...identity.values()]);
+      await credentials.get(credId).replay([...identity.values()], deleted);
       const families = await worker.getDurableObjectNamespace("FAMILY");
       const familyId = families.idFromName("care-groups");
       if (
@@ -244,6 +258,12 @@ export async function reverseCare(client, archive, key, output) {
         throw Error("Household namespace identity mismatch");
       await families.get(familyId).replay(group.events, group.final);
       const binding = await worker.getDurableObjectNamespace("ACCOUNT");
+      for (const owner of deleted.filter((row) => row.archived)) {
+        const id = binding.idFromName(owner.id);
+        if (manifest.identities[ns[0]][id.toString() + ".sqlite"] !== owner.id)
+          throw Error("Deleted account identity mismatch");
+        await binding.get(id).eraseDeletedAccount();
+      }
       for (const owner of owners) {
         const id = binding.idFromName(owner.id);
         if (
@@ -349,12 +369,21 @@ export async function reverseCare(client, archive, key, output) {
     } finally {
       await worker.dispose();
     }
+    await writeRecoveredBackups(
+      join(scratch, "do"),
+      backups,
+      storage,
+      manifest.snapshot,
+      key,
+    );
     await rename(join(scratch, "do"), join(output, "do"));
     await rm(marker);
     return {
       owners: owners.length,
       replayed,
       reminderDevices: reminders.edited.length,
+      backupObjects: backups.length,
+      deletedAccounts: deleted.length,
     };
   } finally {
     await rm(scratch, { recursive: true, force: true });

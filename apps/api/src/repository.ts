@@ -54,9 +54,11 @@ export function repository(pool: Pool) {
     },
     async reserveBackup(owner: string, id: string, bytes: number) {
       await db.transaction(async (tx) => {
-        await tx.execute(
-          sql`SELECT id FROM medora.accounts WHERE id=${owner} FOR UPDATE`,
+        await tx.execute(sql`SELECT medora.lock_writer()`);
+        const active = await tx.execute(
+          sql`SELECT id FROM medora.accounts WHERE id=${owner} AND sync_generation=2 FOR UPDATE`,
         );
+        if (!active.rows.length) throw new Conflict("account_changed");
         const found = await tx.execute(
           sql`SELECT 1 FROM medora.backups WHERE owner=${owner} AND digest=${id}`,
         );
@@ -74,10 +76,22 @@ export function repository(pool: Pool) {
         );
       });
     },
-    async finishBackup(owner: string, id: string) {
-      await db.execute(
-        sql`UPDATE medora.backups SET ready=true WHERE owner=${owner} AND digest=${id}`,
-      );
+    async finishBackup(owner: string, id: string, write: () => Promise<void>) {
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT medora.lock_writer()`);
+        const active = await tx.execute(
+          sql`SELECT id FROM medora.accounts WHERE id=${owner} AND sync_generation=2 FOR UPDATE`,
+        );
+        if (!active.rows.length) throw new Conflict("account_changed");
+        const reserved = await tx.execute(
+          sql`SELECT 1 FROM medora.backups WHERE owner=${owner} AND digest=${id}`,
+        );
+        if (!reserved.rows.length) throw new Conflict("missing_reservation");
+        await write();
+        await tx.execute(
+          sql`UPDATE medora.backups SET ready=true WHERE owner=${owner} AND digest=${id} AND NOT ready`,
+        );
+      });
     },
     async hasBackup(owner: string, id: string) {
       return (

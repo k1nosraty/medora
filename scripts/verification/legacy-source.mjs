@@ -88,6 +88,7 @@ const mf = new Miniflare(
     bindings: {
       MEDORA_LEGACY_WRITES_FENCED: String(fenced),
       EMAIL_AUTH_SECRET: "a".repeat(64),
+      MEDORA_PAUSE_PUSH: "true",
     },
     outboundService: () => {
       throw Error("Fixture network disabled");
@@ -200,6 +201,24 @@ if (verification) {
         ...(e.registration ? [e.registration.owner] : []),
       ],
     );
+    if (e.erased)
+      assert.ok(!creds.rows.some((row) => row.email_id === e.erased.owner));
+    if (e.erased?.archived) {
+      const care = await read(
+        "EmailAccount",
+        e.erased.owner,
+        "care-sync",
+        null,
+      );
+      assert.equal(care.value, undefined);
+      const key = await read(
+        "EmailAccount",
+        e.erased.owner,
+        "future-extension",
+        null,
+      );
+      assert.equal(key.value, undefined);
+    }
     if (e.registration) {
       const { owner, username, password, water } = e.registration;
       const ns = await mf.getDurableObjectNamespace("EmailAccount"),
@@ -334,16 +353,15 @@ if (verification) {
         1,
       );
     }
+    const { rows: groups } = await read(
+      "Families",
+      "care-groups",
+      null,
+      "SELECT id FROM family_groups",
+    );
     same(
-      (
-        await read(
-          "Families",
-          "care-groups",
-          null,
-          "SELECT id FROM family_groups",
-        )
-      ).rows[0].id,
-      e.group,
+      groups.map((row) => row.id),
+      e.erased?.archived ? [] : [e.group],
     );
     same(
       (await read("MedicationReminders", e.device, "state", null)).value
@@ -376,6 +394,23 @@ if (verification) {
         .value,
       true,
     );
+    if (e.postRelease) {
+      same(
+        (await read("Operations", "operations", "release-batch", null)).value,
+        e.postRelease,
+      );
+      same(
+        (
+          await read(
+            "MedicationReminders",
+            e.postReminders.id,
+            "release-sent",
+            null,
+          )
+        ).value,
+        e.postRelease.version,
+      );
+    }
     if (e.postTicket) {
       const { rows: tickets } = await read(
         "Operations",

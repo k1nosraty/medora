@@ -1,7 +1,9 @@
-import {accountTransport} from "/medication/shared/account-transport.js";
+import {accountTransport,productPath} from "/medication/shared/account-transport.js";
 import { $, element } from "/medication/shared/ui/dom.js";
 import { t, locale } from "/medication/shared/i18n/locale.js";
 
+const exportLink=document.querySelector('a[href="/api/admin/operations/export"]');
+if(exportLink) void productPath(exportLink.getAttribute("href")).then(path=>{exportLink.href=path;}).catch(()=>{});
 const dateTime = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
 const names = { dose: "دارو", water: "آب", routine: "روتین", appointment: "قرار" };
 const outcomes = { accepted: "پذیرفته‌شده", rejected: "ردشده", failed: "خطای ارسال", gone: "اشتراک منقضی", expired: "مهلت گذشته" };

@@ -40,7 +40,7 @@ export async function reminderImages(client, manifest, key) {
       if (has("_cf_KV"))
         for (const item of image
           .prepare(
-            "SELECT key,value FROM _cf_KV WHERE key IN ('state','lastTest')",
+            "SELECT key,value FROM _cf_KV WHERE key IN ('state','lastTest','release-sent','release-send')",
           )
           .all())
           values[item.key] = deserialize(item.value);

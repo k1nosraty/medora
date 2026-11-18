@@ -65,7 +65,13 @@ export function authenticatedOperations(
             : "unavailable",
         }
       : null;
-    const result = await service.addTicket(email, message, diagnostics);
+    const result = await service.addTicket(
+      c.get("owner"),
+      email,
+      message,
+      diagnostics,
+    );
+    if (result.signedOut) return c.json({ error: "sign_in" }, 401);
     if (result.disabled) return c.json({ error: "unavailable" }, 503);
     return result.ticket
       ? c.json({ ticket: result.ticket }, 201)

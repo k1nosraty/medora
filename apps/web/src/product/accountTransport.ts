@@ -199,6 +199,14 @@ async function care(path: string, opts: RequestInit) {
         : { records: input.records }),
   });
 }
+export async function productPath(path: string) {
+  const mode = await (selection ??= selectWriter()).catch((error) => {
+    selection = undefined;
+    throw error;
+  });
+  return mode.writer === "postgres" ? endpoint(path.slice(5)) : path;
+}
+
 export async function accountTransport(
   path: string,
   options: RequestInit = {},

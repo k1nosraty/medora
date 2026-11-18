@@ -55,9 +55,11 @@ export function householdService(pool: Pool) {
   async function execute(c: PoolClient, who: string, d: HouseholdCommand) {
     if (d.action === "create") {
       if (!d.name) return deny("invalid");
-      await c.query("SELECT id FROM medora.accounts WHERE id=$1 FOR UPDATE", [
-        who,
-      ]);
+      const activeAccount = await c.query(
+        "SELECT id FROM medora.accounts WHERE id=$1 AND sync_generation=2 FOR UPDATE",
+        [who],
+      );
+      if (!activeAccount.rowCount) return deny("forbidden");
       if (
         (
           await c.query(
@@ -92,9 +94,11 @@ export function householdService(pool: Pool) {
       if (!invite) return deny("missing");
       if (!invite.active) return deny("expired");
       if (d.action === "accept") {
-        await c.query("SELECT id FROM medora.accounts WHERE id=$1 FOR UPDATE", [
-          who,
-        ]);
+        const activeAccount = await c.query(
+          "SELECT id FROM medora.accounts WHERE id=$1 AND sync_generation=2 FOR UPDATE",
+          [who],
+        );
+        if (!activeAccount.rowCount) return deny("forbidden");
         const membershipCount = await c.query(
           "SELECT 1 FROM medora.family_members WHERE person=$1 LIMIT 40",
           [who],

@@ -1,11 +1,18 @@
+import { verifyRecoveredCatalog } from "./catalog-readback.mjs";
+import { fixtureObjects } from "./fixture-objects.mjs";
+import { saveFixtureBackup, eraseFixtureAccount } from "./backup-erasure.mjs";
+import { backupStorage } from "../migration/backup-recovery.mjs";
 import { verifyRegistration } from "./registration-cutover.mjs";
 import { verifyCampaignWrites } from "./promotion-cutover.mjs";
-import { verifyOperationalWrites } from "./operations-cutover.mjs";
+import {
+  verifyCampaignExport,
+  verifyOperationalWrites,
+} from "./operations-cutover.mjs";
 import { fixturePush, verifyReminderWrites } from "./reminder-cutover.mjs";
 import { hmac } from "../../web/src/accounts/auth-crypto.mjs";
 import { withLocalWorker } from "./local-worker.mjs";
 import { fixtureMailbox } from "./mailbox.mjs";
-import { readdir, lstat } from "node:fs/promises";
+import { readdir, lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { verifyHouseholdWrites } from "./household-post-write.mjs";
 import { verifyProductBrowser } from "./product-browser.mjs";
@@ -38,6 +45,7 @@ export async function verifyPostWrite({
   snapshot,
   expected,
   unmapped,
+  eraseImported,
 }) {
   const fencedConnection = {
     connectionString: url,
@@ -52,6 +60,8 @@ export async function verifyPostWrite({
   const origin = "http://127.0.0.1:" + port;
   const mailbox = await fixtureMailbox();
   const push = fixturePush();
+  const objects = await fixtureObjects();
+  const storage = backupStorage(objects.bindings);
   const legacyKey = randomBytes(32).toString("hex");
   const api = spawn(process.execPath, ["apps/api/dist/server.mjs"], {
     stdio: "ignore",
@@ -62,7 +72,9 @@ export async function verifyPostWrite({
       MEDORA_LEGACY_WRITES_FENCED: "true",
       EMAIL_SESSION_KEY: legacyKey,
       ADMIN_EMAIL: expected.people[1].credential[2],
+      MEDORA_RELEASE: "a".repeat(40),
       ...push,
+      ...objects.bindings,
       ...{
         MEDORA_MAILPIT: mailbox.origin,
         MEDORA_CODE_KEY: randomBytes(32).toString("hex"),
@@ -139,6 +151,66 @@ export async function verifyPostWrite({
         await inspector.end();
       }
       return { pendingPasswordReset: true, recoveryPublicationBlocked: true };
+    }
+    if (eraseImported) {
+      const admin = await send("session", {
+        username: "fixture1",
+        password: "synthetic fixture password",
+      });
+      assert.equal(admin.status, 200);
+      const actor = {
+        ...headers,
+        Cookie: admin.headers.get("set-cookie").split(";")[0],
+      };
+      const backup = await saveFixtureBackup(origin, headers, person.id);
+      await eraseFixtureAccount(
+        origin,
+        actor,
+        {
+          username: "fixture0",
+          password: "synthetic fixture password",
+          headers,
+          owner: person.id,
+        },
+        objects,
+        backup,
+        true,
+      );
+      assert.equal((await sessionWith(originalCookie)).status, 401);
+      // Wait for the cleanup transaction to commit after object readback.
+      for (let n = 0; n < 50; n++) {
+        const pending = await client.query(
+          "SELECT 1 FROM medora.backup_cleanup LIMIT 1",
+        );
+        if (!pending.rowCount) break;
+        await delay(100);
+      }
+      await freezeWriter(client, snapshot);
+      expected.erased = {
+        name: person.credential[0],
+        owner: person.id,
+        archived: true,
+      };
+      expected.people.shift();
+      const recovered = await reverseCare(
+        client,
+        archive,
+        key,
+        restored,
+        storage,
+      );
+      assert.deepEqual(recovered, {
+        owners: 1,
+        replayed: 0,
+        reminderDevices: 0,
+        backupObjects: 0,
+        deletedAccounts: 1,
+      });
+      return {
+        ...recovered,
+        delayedObjectCleanupRetried: true,
+        legacySessionRevoked: true,
+      };
     }
     const { rows: seeds } = await client.query(
       "SELECT id,revision FROM medora.records WHERE owner=$1 AND id IN ('w-0','w-1') ORDER BY id",
@@ -383,8 +455,33 @@ export async function verifyPostWrite({
       /different reverse projection/,
     );
     await client.query("ROLLBACK");
+    const publication = await fetch(
+      origin + "/api/v2/operations/release?version=" + "a".repeat(40),
+    );
+    assert.equal(publication.status, 200);
+    assert.equal((await publication.json()).status, "paused");
+    assert.equal(
+      (
+        await fetch(
+          origin + "/api/v2/operations/release?version=" + "b".repeat(40),
+        )
+      ).status,
+      404,
+    );
     const admin = await verifyOperationalWrites(origin, headers, expected);
     await verifyCampaignWrites(origin, expected, headers);
+    await verifyCampaignExport(origin, admin.actor, expected.postCampaign);
+    await withLocalWorker(
+      url,
+      48977,
+      {
+        ADMIN_EMAIL: "fixture1@example.test",
+        MEDORA_PASSWORD_KEYS: JSON.stringify({ legacy: "a".repeat(64) }),
+        MEDORA_LEGACY_WRITES_FENCED: "true",
+      },
+      (gateway) =>
+        verifyCampaignExport(gateway, admin.actor, expected.postCampaign),
+    );
     await verifyReminderWrites(
       origin,
       expected,
@@ -394,6 +491,23 @@ export async function verifyPostWrite({
       url,
       client,
     );
+    // The release integration test exercises provider retry. This rehearsal
+    // independently supplies its completed batch and receipt to the reverse journal.
+    expected.postRelease = {
+      version: "a".repeat(40),
+      after: expected.postReminders.id,
+      done: true,
+    };
+    await client.query("BEGIN");
+    await client.query(
+      "UPDATE medora.release_batches SET batch=$1 WHERE singleton",
+      [JSON.stringify(expected.postRelease)],
+    );
+    await client.query(
+      "UPDATE medora.reminder_devices SET values=jsonb_set(values,'{release-sent}',to_jsonb($2::text)) WHERE id=$1",
+      [expected.postReminders.id, expected.postRelease.version],
+    );
+    await client.query("COMMIT");
     const password = randomBytes(24).toString("hex");
     assert.equal(
       (await send("identity/verify", { ...(await requestReset()), password }))
@@ -441,6 +555,22 @@ export async function verifyPostWrite({
     headers.Cookie = relogin.headers.get("set-cookie").split(";")[0];
     expected.passwordReset = password;
     expected.registration = await verifyRegistration(origin, mailbox);
+    const backup = await saveFixtureBackup(origin, headers, person.id);
+    const erased = await verifyRegistration(origin, mailbox, "erase_fixture");
+    const erasedBackup = await saveFixtureBackup(
+      origin,
+      erased.headers,
+      erased.owner,
+    );
+    await eraseFixtureAccount(
+      origin,
+      admin.actor,
+      erased,
+      objects,
+      erasedBackup,
+    );
+    expected.erased = { name: erased.username, owner: erased.owner };
+    delete expected.registration.headers;
     // Hold the shared guard as an in-flight writer would. The freeze cannot finish early.
     const draining = new Client(fencedConnection);
     await draining.connect();
@@ -474,6 +604,27 @@ export async function verifyPostWrite({
       client.query("DELETE FROM medora.backups WHERE false"),
       { code: "55000" },
     );
+    await assert.rejects(
+      reverseCare(client, archive, key, restored),
+      /authorized backup object source/,
+    );
+    await assert.rejects(lstat(restored), { code: "ENOENT" });
+    const keyName = "/medora-test/backups/" + person.id + "/" + backup;
+    const savedBytes = objects.objects.get(keyName);
+    const corrupt = Buffer.from(savedBytes);
+    corrupt[corrupt.length - 1] ^= 1;
+    objects.objects.set(keyName, corrupt);
+    try {
+      await assert.rejects(
+        reverseCare(client, archive, key, restored + "-corrupt", storage),
+        /Backup object digest mismatch/,
+      );
+      await assert.rejects(lstat(join(restored + "-corrupt", "do")), {
+        code: "ENOENT",
+      });
+    } finally {
+      objects.objects.set(keyName, savedBytes);
+    }
     // Stop a separate recovery process after SQLite images exist in its private
     // workspace. A restart in the very same destination must produce one tree.
     const interrupted = restored + "-retry";
@@ -491,6 +642,7 @@ export async function verifyPostWrite({
           PATH: process.env.PATH,
           DATABASE_URL: url,
           MEDORA_ARCHIVE_KEY_FILE: keyFile,
+          ...objects.bindings,
         },
       },
     );
@@ -518,18 +670,32 @@ export async function verifyPostWrite({
       await stopped;
     }
     await assert.rejects(lstat(join(interrupted, "do")), { code: "ENOENT" });
-    const result = await reverseCare(client, archive, key, restored);
+    const result = await reverseCare(client, archive, key, restored, storage);
     assert.deepEqual(result, {
       owners: 3,
       replayed: person.revision + second.revision - 14 + 1,
       reminderDevices: 2,
+      backupObjects: 1,
+      deletedAccounts: 1,
     });
-    await assert.rejects(reverseCare(client, archive, key, restored), {
+    await assert.rejects(reverseCare(client, archive, key, restored, storage), {
       code: "EEXIST",
     });
     assert.deepEqual(
-      await reverseCare(client, archive, key, restored + "-retry"),
+      await reverseCare(client, archive, key, restored + "-retry", storage),
       result,
+    );
+    const transfer = await readFile(
+      join(restored, "do", ".medora-journal-backups", person.id + "_" + backup),
+    );
+    assert.equal(transfer.length, 192);
+    await verifyRecoveredCatalog(
+      client,
+      url,
+      join(restored, "do"),
+      key,
+      person.id,
+      backup,
     );
     return result;
   } finally {
@@ -537,5 +703,6 @@ export async function verifyPostWrite({
     await closed;
     await client.end();
     await mailbox?.close();
+    await objects.close();
   }
 }

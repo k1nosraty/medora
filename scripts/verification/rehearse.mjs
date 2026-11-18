@@ -7,7 +7,8 @@ import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 const unmapped = process.argv[2] === "--unmapped";
-if (process.argv.length !== (unmapped ? 3 : 2))
+const eraseImported = process.argv[2] === "--erase-imported";
+if (process.argv.length !== (unmapped || eraseImported ? 3 : 2))
   throw Error("Unknown rehearsal mode");
 const url = process.env.MEDORA_TEST_DATABASE_URL;
 if (!url || !["localhost", "127.0.0.1"].includes(new URL(url).hostname))
@@ -113,11 +114,14 @@ try {
     snapshot: manifest.snapshot,
     expected,
     unmapped,
+    eraseImported,
   });
   if (!unmapped) {
     const postFile = join(dir, "postwrite-expectations.json");
     await writeFile(postFile, JSON.stringify(expected), { mode: 0o600 });
-    for (const root of [restored, restored + "-retry"])
+    for (const root of eraseImported
+      ? [restored]
+      : [restored, restored + "-retry"])
       run(["scripts/verification/legacy-source.mjs", root, postFile]);
   }
   console.log(
@@ -133,14 +137,19 @@ try {
       legacyWriterFenced: true,
       ...(unmapped
         ? { unsupportedMutation: postWriteRollback }
-        : {
-            postWriteRollback,
-            passwordResetReplayed: true,
-            registrationReplayed: true,
-            legacySessionContinuity: true,
-            operationsReplayed: true,
-            campaignMediaReplayed: true,
-          }),
+        : eraseImported
+          ? { importedAccountErasure: postWriteRollback }
+          : {
+              postWriteRollback,
+              releaseNotificationReplayed: true,
+              operationsExportVerified: true,
+              corruptBackupPublicationBlocked: true,
+              passwordResetReplayed: true,
+              registrationReplayed: true,
+              legacySessionContinuity: true,
+              operationsReplayed: true,
+              campaignMediaReplayed: true,
+            }),
       sourceProjectionReconciled: true,
       reconciled: !unmapped,
     }),

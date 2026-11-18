@@ -10,7 +10,7 @@ export async function householdReplay(client, snapshot) {
   const { rows: accounts } = await client.query(
     `SELECT a.id,a.username,p.epoch FROM medora.accounts a
     LEFT JOIN medora.legacy_people p ON p.owner=a.id AND p.snapshot=$1
-    WHERE a.sync_generation=2`,
+    WHERE a.sync_generation=2 OR EXISTS(SELECT 1 FROM medora.account_deletions d WHERE d.owner=a.id)`,
     [snapshot],
   );
   const people = new Map(accounts.map((a) => [a.id, a]));

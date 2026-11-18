@@ -9,9 +9,18 @@ import {
 } from "../../web/public/medication/domain/care-records.js";
 
 export class CredentialRecovery extends DurableObject {
-  replay(entries) {
+  replay(entries, deleted) {
     this.ctx.storage.transactionSync(() => {
       const sql = this.ctx.storage.sql;
+      for (const { id, archived } of deleted) {
+        const match = sql
+          .exec("SELECT 1 FROM credentials_v1 WHERE email_id=?", id)
+          .toArray();
+        if (Boolean(match.length) !== archived)
+          throw Error("Deleted credential baseline mismatch");
+        if (archived)
+          sql.exec("DELETE FROM credentials_v1 WHERE email_id=?", id);
+      }
       const originals = sql
         .exec("SELECT * FROM credentials_v1 ORDER BY username")
         .toArray();
@@ -75,7 +84,7 @@ export class CredentialRecovery extends DurableObject {
 export class ReminderRecovery extends DurableObject {
   async replay(before, after) {
     await this.ctx.storage.transaction(async (storage) => {
-      for (const key of ["state", "lastTest"]) {
+      for (const key of ["state", "lastTest", "release-sent", "release-send"]) {
         if (
           !equalCareValues(
             { value: await storage.get(key) },
@@ -182,6 +191,26 @@ export class OperationsRecovery extends DurableObject {
   async alarm() {
     await this.ctx.storage.setAlarm(Date.now() + 60_000);
   }
+  async restoreRelease(batch) {
+    const storage = this.ctx.storage;
+    if (
+      !equalCareValues(
+        (await storage.get("release-batch")) ?? null,
+        batch.previous,
+      )
+    )
+      throw Error("Release batch baseline mismatch");
+    await storage.put("release-batch", batch.following);
+    if (batch.following.done) await storage.deleteAlarm();
+    else
+      await storage.setAlarm(
+        Math.max(
+          Date.now() + 1000,
+          batch.following.readyAt ?? 0,
+          batch.following.runningUntil ?? 0,
+        ),
+      );
+  }
   async restoreReminderIds(ids) {
     if (ids.length)
       await this.ctx.storage.put(
@@ -191,6 +220,10 @@ export class OperationsRecovery extends DurableObject {
 }
 
 export class Recovery extends DurableObject {
+  async eraseDeletedAccount() {
+    await this.ctx.storage.deleteAll();
+    await this.ctx.storage.deleteAlarm();
+  }
   restoreSessions({ account, sessions, revoked, history }) {
     this.ctx.storage.transactionSync(() => {
       const sql = this.ctx.storage.sql;

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 export async function verifyOperationalWrites(origin, headers, expected) {
   const base = origin + "/api/v2";
@@ -115,9 +116,62 @@ export async function verifyOperationalWrites(origin, headers, expected) {
     (await request("/admin/accounts?q=fixture0", "GET")).status,
     403,
   );
+  assert.equal((await request("/admin/operations/export", "GET")).status, 403);
+  const records = await readOperationsExport(origin, agent);
+  assert.ok(
+    records
+      .find((entry) => entry.type === "operations")
+      .tickets.some((row) => row.id === ticket.id),
+  );
   expected.postTicket = { id: ticket.id, reply: updated.reply };
   return {
     actor: agent,
     target: { username: users[0].username, tag: users[0].tag },
   };
+}
+
+export async function readOperationsExport(origin, actor) {
+  const exportFile = await fetch(origin + "/api/v2/admin/operations/export", {
+    headers: actor,
+  });
+  assert.equal(exportFile.status, 200);
+  assert.equal(
+    exportFile.headers.get("Content-Disposition"),
+    'attachment; filename="medora-server-data.ndjson"',
+  );
+  const records = (await exportFile.text())
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.equal(records[0].type, "manifest");
+  assert.equal(records.at(-1).type, "end");
+  assert.ok(
+    records
+      .filter((entry) => entry.type === "accounts")
+      .flatMap((entry) => entry.rows)
+      .every(
+        (row) =>
+          Object.keys(row).sort().join(",") === "created_at,email,username",
+      ),
+  );
+  return records;
+}
+
+export async function verifyCampaignExport(origin, actor, campaign) {
+  const records = await readOperationsExport(origin, actor);
+  assert.ok(
+    records.some(
+      (entry) => entry.type === "image/gif" && entry.id === campaign.mediaId,
+    ),
+  );
+  const chunks = records.filter(
+    (entry) => entry.type === "media_chunk" && entry.id === campaign.mediaId,
+  );
+  assert.deepEqual(
+    chunks.map((entry) => entry.offset),
+    [0, 96 * 1024],
+  );
+  const hash = createHash("sha256");
+  for (const chunk of chunks) hash.update(Buffer.from(chunk.data, "base64"));
+  assert.equal(hash.digest("hex"), campaign.hash);
 }
