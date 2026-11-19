@@ -818,50 +818,56 @@ test.describe("appointments on a device in Tehran", () => {
   });
 });
 
-test("large text reflows care screens and the backup form at 320 pixels", async ({ page }) => {
-  await open(page, { language: "en", width: 320, height: 640, theme: "dark", medicine: true });
-  await page.evaluate(async () => {
-    const { accessCare } = await import("/medication/shared/storage.js");
-    const { today } = await import("/medication/shared/ui/dates.js");
-    await accessCare(state => {
-      state.medicines.sample.phases[0].slots[0].minute = 0;
-      state.cycleEnabled = true;
-      state.water = [{ day: today(), amount: 250, id: "water-sample", time: "10:00" }];
-      state.visits = { visit: { day: today(), name: "Sample appointment", id: "visit", time: "13:00", zone: "UTC" } };
+const largeTextViews = [
+  ["care screens", ["today", "water", "medications", "appointments", "routines", "insights", "reports", "cycle"]],
+  ["backup form", ["settings"]],
+];
+for (const language of ["en", "fa"]) {
+  for (const [section, views] of largeTextViews) {
+    test(`large text reflows ${language} ${section} at 320 pixels`, async ({ page }) => {
+      await open(page, { language, width: 320, height: 640, theme: "dark", medicine: true });
+      await page.evaluate(async () => {
+        const { accessCare } = await import("/medication/shared/storage.js");
+        const { today } = await import("/medication/shared/ui/dates.js");
+        await accessCare(state => {
+          state.medicines.sample.phases[0].slots[0].minute = 0;
+          state.cycleEnabled = true;
+          state.water = [{ day: today(), amount: 250, id: "water-sample", time: "10:00" }];
+          state.visits = { visit: { day: today(), name: "Sample appointment", id: "visit", time: "13:00", zone: "UTC" } };
+        });
+      });
+      for (const view of views) {
+        await page.goto("/medication/?view=" + (view === "reports" ? "insights" : view));
+        await expect(page.locator("#app")).toBeVisible();
+        await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+        if (view === "reports") await page.locator('[data-insight="reports"]').click();
+        if (view === "settings") await page.locator('[data-settings-panel="backup-settings"]').click();
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth), language + " " + view).toBe(320);
+        if (view === "appointments") {
+          const card = page.locator("#visits .visit-panel-row");
+          const action = card.locator(".care-record-action");
+          await expect(action).toBeVisible();
+          const cardBounds = await card.boundingBox();
+          const controlBounds = await action.boundingBox();
+          expect(controlBounds.x).toBeGreaterThanOrEqual(cardBounds.x);
+          expect(controlBounds.x + controlBounds.width).toBeLessThanOrEqual(cardBounds.x + cardBounds.width);
+        }
+        if (view === "today") {
+          const box = await page.locator("#today-water button[data-open-water]").boundingBox();
+          expect(box.width).toBeGreaterThanOrEqual(44);
+          expect(box.x + box.width).toBeLessThanOrEqual(320);
+          await expect(page.locator("#day-week button").first()).toHaveAccessibleName(/^\S+\s+\S+, /);
+        }
+        if (view === "settings") {
+          const content = page.locator("#settings-content");
+          await expect(content).toBeVisible();
+          await expect.poll(() => content.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+          await expect(page.locator("#android-restore-submit")).toBeEnabled();
+        }
+      }
     });
-  });
-  for (const language of ["en", "fa"]) {
-    await page.evaluate(language => localStorage.setItem("medora-language", language), language);
-    for (const view of ["today", "water", "medications", "appointments", "routines", "insights", "reports", "cycle", "settings"]) {
-      await page.goto("/medication/?view=" + (view === "reports" ? "insights" : view));
-      await expect(page.locator("#app")).toBeVisible();
-      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-      if (view === "reports") await page.locator('[data-insight="reports"]').click();
-      if (view === "settings") await page.locator('[data-settings-panel="backup-settings"]').click();
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth), language + " " + view).toBe(320);
-      if (view === "appointments") {
-        const card = page.locator("#visits .visit-panel-row");
-        const action = card.locator(".care-record-action");
-        await expect(action).toBeVisible();
-        const cardBounds = await card.boundingBox();
-        const controlBounds = await action.boundingBox();
-        expect(controlBounds.x).toBeGreaterThanOrEqual(cardBounds.x);
-        expect(controlBounds.x + controlBounds.width).toBeLessThanOrEqual(cardBounds.x + cardBounds.width);
-      }
-      if (view === "today") {
-        const box = await page.locator("#today-water button[data-open-water]").boundingBox();
-        expect(box.width).toBeGreaterThanOrEqual(44);
-        expect(box.x + box.width).toBeLessThanOrEqual(320);
-        await expect(page.locator("#day-week button").first()).toHaveAccessibleName(/^\S+\s+\S+, /);
-      }
-      if (view === "settings") {
-        const content = page.locator("#settings-content");
-        await expect.poll(() => content.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
-        await expect(page.locator("#android-restore-submit")).toBeEnabled();
-      }
-    }
   }
-});
+}
 
 test("the medicine editor keeps a changed draft when dismissal is declined", async ({ page }) => {
   await open(page, { language: "en" });
