@@ -8,6 +8,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 const require = createRequire(import.meta.url);
 const { Miniflare, Response, convertV4MiniflareOptions } = require("miniflare");
 const { build } = require("esbuild");
+const edgeRatePeriod = 60;
 
 test("registration, password recovery and account deletion preserve authorization", { timeout: 20_000 }, async () => {
   const { outputFiles } = await build({
@@ -40,7 +41,7 @@ test("registration, password recovery and account deletion preserve authorizatio
       PROMOTIONS: { className: "Promotions", useSQLite: true },
       OPERATIONS: { className: "Operations", useSQLite: true }
     },
-    ratelimits: { EMAIL_AUTH_LIMIT: { namespace_id: "750503", simple: { limit: 8, period: 60 } } },
+    ratelimits: { EMAIL_AUTH_LIMIT: { namespace_id: "750503", simple: { limit: 8, period: edgeRatePeriod } } },
     bindings: {
       EMAIL_AUTH_SECRET: "d".repeat(64), EMAIL_FROM: "login@medora.example", RESEND_API_KEY: "test",
       ADMIN_EMAIL: "Me@Example.com", PROMOTION_MEDIA_HOSTS: "media.example.com", SUPPORT_EMAILS: "english@example.com", ...bindings
@@ -285,11 +286,23 @@ test("registration, password recovery and account deletion preserve authorizatio
     // Independent sources cannot globally lock an account. The existing
     // independent edge limiter still limits repeated attempts per source.
     assert.equal((await login("second_user", password, "192.0.2.30")).status, 200);
-    const repeatedSource = "192.0.2.250";
-    for (let i = 0; i < 8; i++) {
-      assert.equal((await login("unregistered_user", password, repeatedSource)).status, 401);
+    // Miniflare resets the limiter on wall-clock boundaries. If the requests
+    // cross one, repeat with a fresh source and require a complete window.
+    const rateWindow = () => Math.floor(Date.now() / (edgeRatePeriod * 1000));
+    let limited;
+    for (const source of ["192.0.2.250", "192.0.2.251"]) {
+      const window = rateWindow();
+      for (let i = 0; i < 8; i++) {
+        assert.equal((await login("unregistered_user", password, source)).status, 401);
+      }
+      const response = await login("second_user", password, source);
+      if (rateWindow() === window) {
+        limited = response;
+        break;
+      }
     }
-    assert.equal((await login("second_user", password, repeatedSource)).status, 429);
+    assert.ok(limited, "expected all login attempts to fit in one rate-limit window");
+    assert.equal(limited.status, 429);
     assert.equal(deliveries.length, 2);
 
     const adminCookie = cookieOf(loggedIn);
