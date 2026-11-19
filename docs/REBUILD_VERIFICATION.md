@@ -184,6 +184,8 @@ The audited starting checkout was `ea90f73` on `codex/medora-2-full-rebuild`. Th
 
 The visual fixture independently compares the incumbent design. Its normalized water chart uses the historical two-row control for that comparison. The product test and direct loopback screenshots also exercise the actual single-row control in Persian RTL and English LTR, verify a single labelled select between the two date arrows and test day, week, month and year navigation. The compiled artwork and its public URLs are byte-identical for all 940 activity colors.
 
+A separate fresh-WebKit probe behind the Caddy gateway intermittently timed out before or during the welcome interaction when opening `?view=insights` with service workers enabled. The same probe reproduced the timeout on the starting build and the candidate with the same gateway configuration. The direct mobile and desktop screenshots used service workers blocked for that WebKit check. The standalone fixtures passed service-worker update and IndexedDB persistence on WebKit. The gateway timeout remains unclassified and needs a Safari device and network trace before release.
+
 Release status now reads the configured version. Only scheduled work queues a notification. Synthetic receipts and provider doubles cover retry and replay. The source snapshot, independent namespace census, authorized key-version references and historical backup corpus remain required. Source reconciliation is **BLOCKED** and production is **NOT READY**.
 
 ## Outstanding release evidence
