@@ -336,12 +336,16 @@ test("React device settings distinguish permission, enrolment, schedule and deli
       navigator.serviceWorker,
     );
     let current = null;
+    window.fixtureSubscriptionReads = 0;
     navigator.serviceWorker.register = (url, options) =>
       url === "/sw.js"
         ? Promise.resolve({
             active: {},
             pushManager: {
-              getSubscription: async () => current,
+              getSubscription: async () => {
+                window.fixtureSubscriptionReads++;
+                return current;
+              },
               subscribe: async () => {
                 current = {
                   toJSON: () => subscription,
@@ -389,6 +393,7 @@ test("React device settings distinguish permission, enrolment, schedule and deli
   config = true;
   await page.locator("#push-check").click();
   await expect(page.locator("#push-status")).toContainText("device settings");
+  expect(await page.evaluate(() => window.fixtureSubscriptionReads)).toBe(0);
   await page.locator("#push-enable").click();
   expect(writes).toHaveLength(0);
   await page.evaluate(() => window.allowFixtureNotifications());
@@ -396,6 +401,7 @@ test("React device settings distinguish permission, enrolment, schedule and deli
   await expect(page.locator("#push-status")).toHaveText(
     "Notifications are on. Nothing is scheduled.",
   );
+  expect(await page.evaluate(() => window.fixtureSubscriptionReads)).toBeGreaterThan(0);
   await page.locator("#push-show-details").check();
   await expect.poll(() => writes.length).toBe(2);
   await page.locator("#push-test").click();

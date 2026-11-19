@@ -443,10 +443,13 @@ async function setup() {
         check();
       });
     }
-    subscription = await root.pushManager.getSubscription();
+    const settings = (await accessCareSettings()).reminders;
+    // WebKit can stall on this lookup before the device has been enrolled.
+    subscription = settings?.token
+      ? await root.pushManager.getSubscription()
+      : null;
     registration = root;
     update({ availability: "available" });
-    const settings = (await accessCareSettings()).reminders;
     controls(settings);
     if (settings?.token) await syncReminders(true);
     else
