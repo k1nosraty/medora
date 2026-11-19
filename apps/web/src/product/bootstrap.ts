@@ -1,4 +1,5 @@
 import { monitorUpdates, refreshApp } from "./updates";
+import "./layout.css";
 
 const status = document.getElementById("boot-status")!;
 const retry = document.querySelector<HTMLButtonElement>("#boot-retry")!;
@@ -76,6 +77,5 @@ try {
     ? "Medora couldn’t load. Try again."
     : "مدورا باز نشد. دوباره تلاش کنید.";
   retry.textContent = english ? "Reload" : "بارگذاری دوباره";
+  retry.hidden = false;
 }
-
-if (!status.hidden) retry.hidden = false;

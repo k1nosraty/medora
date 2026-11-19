@@ -121,16 +121,23 @@ export async function compileWeb({
   for (const [name, contents] of outputs)
     await emit(new URL(name, assetDirectory), contents);
 
-  const assetPath = (prefix) =>
-    "/medication/bundles/" +
-    [...outputs.keys()].find((name) => name.startsWith(prefix + "-"));
+  const assetPath = (prefix, extension) => {
+    const name = [...outputs.keys()].find(
+      (name) => name.startsWith(prefix + "-") && name.endsWith(extension),
+    );
+    return name && "/medication/bundles/" + name;
+  };
+  const styles = [assetPath("style", ".css"), assetPath("bootstrap", ".css")]
+    .filter(Boolean)
+    .map((path) => `  <link rel="stylesheet" href="${path}">`)
+    .join("\n");
   const html = translateMarkup(
     messagesFa,
     await render(ui, "index.html", [], {}, htmlOverrides),
   )
-    .replace("/medication/bootstrap.js", assetPath("bootstrap"))
-    .replace("/medication/app/medora.js", assetPath("medora"))
-    .replace("{{app-style}}", assetPath("style"));
+    .replace("/medication/bootstrap.js", assetPath("bootstrap", ".js"))
+    .replace("/medication/app/medora.js", assetPath("medora", ".js"))
+    .replace('  <link rel="stylesheet" href="{{app-style}}">', styles);
   const svg = (
     await readdir(new URL("assets/", medication), {
       recursive: true,

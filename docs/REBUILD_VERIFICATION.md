@@ -155,6 +155,14 @@ The full reference visual run completed 160 exact layout comparisons, checked 1,
 
 Historical IndexedDB versions 1–3, encrypted Android and Web archive restore, separate Cycle archive import and export, and family revocation were exercised with synthetic fixtures. Device enrolment, permission denial, retry, private notification details and provider response were independently modeled by the browser fixture. Physical device delivery and a complete authorized source reconciliation remain separate release gates. See [performance](PERFORMANCE.md#family-notifications-today-settings-and-cycle-ownership) for the comparable cold benchmark.
 
+## Local gateway layout regression
+
+The Caddy run exposed a collapsed Today calendar that the previous browser fixture missed. The gateway blocks inline style attributes. The React mount points now use a versioned, precached stylesheet. The family icon uses SVG presentation attributes for the original accent colors, and a successful first launch leaves the startup retry button hidden. The browser fixture now enforces the inline-style restriction and checks the mount points, calendar geometry, and family gradient.
+
+The web service was rebuilt on the existing loopback stack at `127.0.0.1:8808`. Synthetic first-run screenshots matched the design reference exactly at widths of 457 and 565 in Persian and 1280 in English using Chromium, and at 565 in Persian using WebKit. Chromium also exercised day navigation, reports, account access, and an offline reload with the new stylesheet served from the service-worker cache. The full visual run against the same image's assets matched all 160 screenshots and layouts and reported zero candidate violations across 64 Axe samples. The reference commit and pixel thresholds stayed the same.
+
+All 69 Chromium product cases passed in the combined run. After the new regression test distinguished WebKit's native select styling from application style violations, the focused rerun passed in both engines and the WebKit project completed with 69 passes.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

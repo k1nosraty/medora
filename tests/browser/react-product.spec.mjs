@@ -38,6 +38,7 @@ test("onboarding stays interactive while the dashboard bundle is delayed", async
     unblock();
   }
   await expect(page.locator("#welcome-screen")).toBeHidden();
+  await expect(page.locator("#boot-retry")).toBeHidden();
   await expect(page.locator("#screen-title")).toBeFocused();
 });
 
@@ -312,6 +313,7 @@ test("the React recovery form exports readable data from a newer IndexedDB witho
   });
   await page.reload();
   await expect(page.locator("#boot-status")).toContainText("older version");
+  await expect(page.locator("#boot-retry")).toBeVisible();
   await page.locator("#boot-recovery summary").click();
   const password = "fixture password only";
   await page.locator("#boot-recovery-password").fill(password);

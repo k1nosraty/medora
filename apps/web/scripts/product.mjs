@@ -118,7 +118,7 @@ try {
         )
         .replace(
           /(<div id="day-controls"[^>]*>)[\s\S]*$/,
-          '$1\n        <input id="day" type="date" hidden>\n        <div id="day-tools-react" style="display:contents"></div>\n      </div>\n',
+          '$1\n        <input id="day" type="date" hidden>\n        <div id="day-tools-react" class="layout-contents"></div>\n      </div>\n',
         ),
       "forms/account.html": (
         await readFile(
@@ -127,7 +127,7 @@ try {
         )
       ).replace(
         /<div class="account-modes"[\s\S]*?(?=<p id="account-status")/,
-        '<div id="account-react" style="display:contents"></div>\n      ',
+        '<div id="account-react" class="layout-contents"></div>\n      ',
       ),
       "forms/quick-add.html":
         '<dialog id="quick-dialog" class="sheet add-sheet" aria-labelledby="quick-title"></dialog>',
@@ -142,7 +142,7 @@ try {
         )
       ).replace(
         /<button[^>]+id="open-care-inbox"[\s\S]*?<\/button>/,
-        '<span id="care-inbox-react" style="display:contents"></span>',
+        '<span id="care-inbox-react" class="layout-contents"></span>',
       ),
       "layout/program-cards.html":
         '<section id="today-programs" aria-label="{{msg:ui.care-shortcuts}}"></section>',
@@ -151,7 +151,7 @@ try {
       "layout/today-water.html":
         '<section id="today-water" class="today-tracker water program-water" aria-labelledby="today-water-label"></section>',
       "layout/water-feedback.html":
-        '<div id="water-feedback-react" style="display:contents"></div>',
+        '<div id="water-feedback-react" class="layout-contents"></div>',
       "layout/cycle-today.html":
         '<section class="today-tracker program-cycle" id="cycle-today-card" aria-labelledby="cycle-today-label" hidden></section>',
       "layout/cycle-tracking.html": (
@@ -166,15 +166,15 @@ try {
         )
         .replace(
           /<details id="cycle-preparation"[\s\S]*?<\/details>/,
-          '<div id="cycle-preparation-react" style="display:contents"></div>',
+          '<div id="cycle-preparation-react" class="layout-contents"></div>',
         )
         .replace(
           /<details>\s*<summary>[^<]+<\/summary>\s*<form id="cycle-bulk-form"[\s\S]*?(?=<button id="cycle-open-settings")/,
-          '<div id="cycle-tools-react" style="display:contents"></div>\n          ',
+          '<div id="cycle-tools-react" class="layout-contents"></div>\n          ',
         )
         .replace(
           /<button id="cycle-open-settings"[^>]+>[\s\S]*?<\/button>/,
-          '<div id="cycle-settings-link-react" style="display:contents"></div>',
+          '<div id="cycle-settings-link-react" class="layout-contents"></div>',
         ),
       "screens/cycle.html": (
         await readFile(
@@ -202,15 +202,15 @@ try {
         )
         .replace(
           /<section id="today-reminders"[\s\S]*?<\/section>/,
-          '<div id="today-reminders-react" style="display:contents"></div>',
+          '<div id="today-reminders-react" class="layout-contents"></div>',
         )
         .replace(
           /<div class="daily-main"[^>]*>[\s\S]*?(?= *<div id="today-family-bottom")/,
-          '<div id="today-timeline-react" style="display:contents"></div>\n        ',
+          '<div id="today-timeline-react" class="layout-contents"></div>\n        ',
         )
         .replace(
           /<div id="today-cycle-feedback"[\s\S]*?<\/div>/,
-          '<div id="cycle-feedback-react" style="display:contents"></div>',
+          '<div id="cycle-feedback-react" class="layout-contents"></div>',
         ),
       "screens/insights.html": '<div data-screen="insights" hidden></div>',
       "screens/medications.html": await readFile(

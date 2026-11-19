@@ -32,6 +32,56 @@ async function product(page) {
   await expect(page.locator("#app")).toBeVisible();
 }
 
+test("React hosts preserve the product layout under the inline-style restriction", async ({
+  page,
+}) => {
+  const styleViolations = [];
+  await page.exposeFunction("recordStyleViolation", (target) => {
+    styleViolations.push(target);
+  });
+  await page.addInitScript(() => {
+    document.addEventListener("securitypolicyviolation", (event) => {
+      if (!event.effectiveDirective.startsWith("style-src")) return;
+      const target = event.target;
+      // WebKit reports its own inline styling on native selects without a style attribute.
+      if (target instanceof HTMLSelectElement && !target.hasAttribute("style"))
+        return;
+      void window.recordStyleViolation(target.id || target.nodeName);
+    });
+  });
+  await product(page);
+  for (const id of [
+    "day-tools-react",
+    "care-inbox-react",
+    "account-react",
+    "water-feedback-react",
+    "today-timeline-react",
+    "today-reminders-react",
+    "cycle-feedback-react",
+    "cycle-preparation-react",
+    "cycle-tools-react",
+    "cycle-settings-link-react",
+  ]) {
+    await expect(page.locator(`#${id}`)).toHaveCSS("display", "contents");
+  }
+  const stops = page.locator("#care-network-node stop");
+  await expect(stops.nth(1)).toHaveCSS("stop-color", "rgb(234, 181, 247)");
+  await expect(stops.nth(2)).toHaveCSS("stop-color", "rgb(76, 71, 187)");
+  const dates = page.locator("#day-controls");
+  const week = dates.locator("#day-week");
+  await expect(week.getByRole("button")).toHaveCount(7);
+  const weekBox = await week.boundingBox();
+  expect(weekBox.width).toBeGreaterThan((await dates.boundingBox()).width / 2);
+  for (const id of ["previous-day", "next-day"]) {
+    const arrowBox = await dates.locator(`#${id}`).boundingBox();
+    expect(arrowBox.y + arrowBox.height / 2).toBeGreaterThan(weekBox.y);
+    expect(arrowBox.y + arrowBox.height / 2).toBeLessThan(weekBox.y + weekBox.height);
+  }
+  await page.locator('[data-destination="insights"]').click();
+  await expect(page.locator("#insights-tab-host")).toHaveCSS("display", "contents");
+  expect(styleViolations).toEqual([]);
+});
+
 test("React family groups, invitations and grants follow the existing action protocol", async ({
   page,
 }) => {

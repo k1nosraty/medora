@@ -590,6 +590,7 @@ try {
   $("welcome-screen").hidden = true;
   $("care-main").hidden = false;
   $("boot-status").hidden = false;
+  $("boot-retry").hidden = false;
   $("boot-status").textContent = t(
     storageMessage(
       error,

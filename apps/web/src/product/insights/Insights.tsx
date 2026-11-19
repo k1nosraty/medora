@@ -111,7 +111,7 @@ export function installInsights({
     root,
     <>
       <div id="insights-header">
-        <div id="insights-tab-host" style={{ display: "contents" }} />
+        <div id="insights-tab-host" className="layout-contents" />
       </div>
       <CalendarShell
         hidden={false}

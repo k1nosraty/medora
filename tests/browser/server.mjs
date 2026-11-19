@@ -70,7 +70,9 @@ export function browserServer(intercept) {
     try {
       const body = await readFile(file);
       response.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream",
-        "Cache-Control": "no-cache", ...(pathname === "/sw.js" && { "Service-Worker-Allowed": "/" }) });
+        "Cache-Control": "no-cache", ...(pathname === "/sw.js" && { "Service-Worker-Allowed": "/" }),
+        // Match the product's inline-style restriction in browser and visual tests.
+        ...(pathname === "/medication/" && { "Content-Security-Policy": "style-src 'self'" }) });
       response.end(body);
     } catch { response.writeHead(404).end(); }
   });

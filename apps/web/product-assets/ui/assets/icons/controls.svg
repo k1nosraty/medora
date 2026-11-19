@@ -13,8 +13,8 @@
     <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></symbol>
     <radialGradient id="care-network-node" cx="34%" cy="24%" r="76%">
       <stop offset="0" stop-color="#fff"/>
-      <stop offset=".37" style="stop-color:var(--accent-glow, #eab5f7)"/>
-      <stop offset="1" style="stop-color:var(--accent-cover, #4c47bb)"/>
+      <stop offset=".37" stop-color="var(--accent-glow, #eab5f7)"/>
+      <stop offset="1" stop-color="var(--accent-cover, #4c47bb)"/>
     </radialGradient>
     <symbol id="i-care-network" viewBox="0 0 32 32">
       <path d="M16 7.6 7.8 23h16.4L16 7.6Z" fill="none" stroke="currentColor" stroke-width="1.7"/>

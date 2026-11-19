@@ -277,6 +277,16 @@ try {
     publicCandidate = resolve(
       process.env.MEDORA_VISUAL_CANDIDATE ?? "apps/web/dist",
     );
+  const compatibleFamilyGradient = (markup) =>
+    markup
+      .replace(
+        'style="stop-color:var(--accent-glow, #eab5f7)"',
+        'stop-color="var(--accent-glow, #eab5f7)"',
+      )
+      .replace(
+        'style="stop-color:var(--accent-cover, #4c47bb)"',
+        'stop-color="var(--accent-cover, #4c47bb)"',
+      );
   const stable = (await readdir(publicReference, { recursive: true })).filter(
     (path) =>
       /\.(?:svg|webp|png|woff2?|ttf|css|webmanifest|html)$/i.test(path) &&
@@ -288,7 +298,11 @@ try {
         readFile(join(root, path)),
       ),
     );
-    assert.ok(left.equals(right), "Original asset changed: " + path);
+    const expected =
+      path === "design/index.html"
+        ? Buffer.from(compatibleFamilyGradient(left.toString()))
+        : left;
+    assert.ok(expected.equals(right), "Original asset changed: " + path);
   }
   const candidateMarkup = await readFile(
     join(publicCandidate, "medication/index.html"),
@@ -301,12 +315,16 @@ try {
   const shell = (markup) =>
     markup
       .replace(
+        /^  <link rel="stylesheet" href="\/medication\/bundles\/bootstrap-[A-Z0-9]+\.css">\n/m,
+        "",
+      )
+      .replace(
         /<div class="account-modes"[\s\S]*?(?=<p id="account-status")/,
-        '<div id="account-react" style="display:contents"></div>\n      ',
+        '<div id="account-react" class="layout-contents"></div>\n      ',
       )
       .replace(
         /<button[^>]+id="open-care-inbox"[\s\S]*?<\/button>/,
-        '<span id="care-inbox-react" style="display:contents"></span>',
+        '<span id="care-inbox-react" class="layout-contents"></span>',
       )
       .replace(
         /^ *(<div id="family-context"[^>]*>)[\s\S]*?(?=\s*<section id="today-story")/m,
@@ -318,15 +336,15 @@ try {
       )
       .replace(
         /<div class="daily-main"[^>]*>[\s\S]*?(?= *<div id="today-family-bottom")/,
-        '<div id="today-timeline-react" style="display:contents"></div>\n        ',
+        '<div id="today-timeline-react" class="layout-contents"></div>\n        ',
       )
       .replace(
         /<section id="today-reminders"[\s\S]*?<\/section>/,
-        '<div id="today-reminders-react" style="display:contents"></div>',
+        '<div id="today-reminders-react" class="layout-contents"></div>',
       )
       .replace(
         /<div id="today-(water|cycle)-feedback"[\s\S]*?<\/div>/g,
-        '<div id="$1-feedback-react" style="display:contents"></div>',
+        '<div id="$1-feedback-react" class="layout-contents"></div>',
       )
       .replace(/^ *<div id="cycle-overview-react" hidden><\/div>\n/m, "")
       .replace(
@@ -335,15 +353,15 @@ try {
       )
       .replace(
         /<details id="cycle-preparation"[\s\S]*?<\/details>/,
-        '<div id="cycle-preparation-react" style="display:contents"></div>',
+        '<div id="cycle-preparation-react" class="layout-contents"></div>',
       )
       .replace(
         /<details>\s*<summary><!--msg:ui\.cycle-bulk-->[^<]+<\/summary>\s*<form id="cycle-bulk-form"[\s\S]*?(?=<button id="cycle-open-settings")/,
-        '<div id="cycle-tools-react" style="display:contents"></div>\n          ',
+        '<div id="cycle-tools-react" class="layout-contents"></div>\n          ',
       )
       .replace(
         /<button id="cycle-open-settings"[^>]+>[\s\S]*?<\/button>/,
-        '<div id="cycle-settings-link-react" style="display:contents"></div>',
+        '<div id="cycle-settings-link-react" class="layout-contents"></div>',
       )
       .replace(
         /^ *(<dialog id="(?:family-dialog|quick-dialog|settings-dialog|cycle-backup-dialog|medication-dialog|medicine-details|appearance-dialog|visit-dialog|visit-category-dialog|routine-editor|routine-category-dialog|routine-log-dialog|cycle-dialog|cycle-day-dialog)"[^>]*>)[\s\S]*?<\/dialog>/gm,
@@ -359,7 +377,7 @@ try {
       )
       .replace(
         /(<div id="day-controls"[^>]*>)\s*<div class="day-toolbar"[\s\S]*?<button[^>]+id="next-day"[\s\S]*?<\/button>\s*<\/div>/,
-        '$1\n        <input id="day" type="date" hidden>\n        <div id="day-tools-react" style="display:contents"></div>\n      </div>',
+        '$1\n        <input id="day" type="date" hidden>\n        <div id="day-tools-react" class="layout-contents"></div>\n      </div>',
       )
       .replace(
         /(<section id="today-story"[^>]*>)[\s\S]*?<\/section>/,
@@ -381,7 +399,9 @@ try {
   assert.equal(
     shell(candidateMarkup),
     shell(
-      await readFile(join(publicReference, "medication/index.html"), "utf8"),
+      compatibleFamilyGradient(
+        await readFile(join(publicReference, "medication/index.html"), "utf8"),
+      ),
     ),
     "Markup outside React-owned feature hosts",
   );
@@ -856,7 +876,9 @@ try {
   }
   const report = {
     reference,
-    identicalDesignFiles: stable.length,
+    identicalDesignFiles: stable.filter((path) => path !== "design/index.html")
+      .length,
+    verifiedDesignMarkupChanges: ["design/index.html"],
     identicalDocumentMarkup: true,
     identicalVisibleLayouts: compared + visualMismatches.length,
     identicalViewportCaptures: compared - rendererControls.length,
