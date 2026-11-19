@@ -13,10 +13,11 @@ import { reminderCopy } from "./copy.mjs";
 
 const encoder = new TextEncoder();
 export const sendWindow = 5 * 60_000;
-function publicState(state) {
+function publicState(state, paused) {
   return {
     revision: state?.revision ?? 0,
     enabled: Boolean(state?.plan),
+    ...(state?.plan && paused && { deliveryPaused: true }),
     next: state?.next?.at ?? null,
     nextKinds: state?.next ? (state.next.kinds ?? ["dose"]) : [],
     ...(state?.accountPlanError && {
@@ -76,8 +77,8 @@ export class ReminderDevice {
 
   async status() {
     const state = await this.storage.get("state");
-    if (state?.revoked) return { ...publicState(state), revoked: true };
-    const result = publicState(state);
+    const result = publicState(state, this.dependencies.paused());
+    if (state?.revoked) return { ...result, revoked: true };
     if (!state?.link?.owner) return result;
     const applied = state.link.revision;
     const target =
@@ -136,15 +137,16 @@ export class ReminderDevice {
 
   /** @param {number} revision @param {any} plan @param {{owner:string,revision:number,details:boolean}|null} link */
   async replace(revision, plan, link = null, revoke = false) {
+    const paused = this.dependencies.paused();
     return this.storage.transaction(async (storage) => {
       const previous = await storage.get("state");
-      if (previous?.revoked) return { ...publicState(previous), revoked: true };
-      if (revision <= (previous?.revision ?? 0)) return publicState(previous);
+      if (previous?.revoked) return { ...publicState(previous, paused), revoked: true };
+      if (revision <= (previous?.revision ?? 0)) return publicState(previous, paused);
       if (revoke) {
         const state = { revision, revoked: true, plan: null, next: null };
         await saveState(storage, state);
         await storage.delete(["lastTest", "release-send", "release-sent"]);
-        return { ...publicState(state), revoked: true };
+        return { ...publicState(state, paused), revoked: true };
       }
       if (
         link &&
@@ -157,7 +159,7 @@ export class ReminderDevice {
       ) {
         const state = { ...previous, revision };
         await saveState(storage, state, await storage.getAlarm());
-        return publicState(state);
+        return publicState(state, paused);
       }
       const next = plan ? nextCareReminder(plan, Date.now()) : null;
       const state = {
@@ -170,7 +172,7 @@ export class ReminderDevice {
         attempts: 0,
       };
       await saveState(storage, state);
-      return publicState(state);
+      return publicState(state, paused);
     });
   }
 

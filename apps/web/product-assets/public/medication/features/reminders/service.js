@@ -141,6 +141,8 @@ function deliveryText(result) {
       return t("ui.wait-one-minute-before-testing-again");
     case "superseded":
       return t("ui.the-schedule-changed-during-the-test-try-again");
+    case "paused":
+      return t("ui.notification-delivery-paused");
     default:
       return t("ui.turn-on-reminders-first");
   }
@@ -315,6 +317,9 @@ async function sync(check = false, snapshot) {
       });
       controls(updated.reminders);
       status(t("ui.the-notification-subscription-expired-enable-notification"));
+    } else if (remote.deliveryPaused && !remote.accountPlanError) {
+      status(t("ui.notification-delivery-paused"));
+      settingsBadge(t("ui.reminders-paused"), true);
     } else if (remote.accountSchedule?.status === "pending") {
       status(t("ui.syncing-reminders"));
       settingsBadge(t("ui.syncing-reminders"));
