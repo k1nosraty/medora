@@ -1,4 +1,5 @@
 import { expect, test } from "./runner.mjs";
+import { replacedModules } from "../../packages/web-build/product-ownership.mjs";
 
 test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
 test.use({ serviceWorkers: "block" });
@@ -26,13 +27,11 @@ for (const lang of ["fa", "en"]) {
       test.setTimeout(90_000);
       const { default: AxeBuilder } = await import("@axe-core/playwright");
       const unexpected = [];
-      const replaced =
-        /\/medication\/features\/(?:appointments\/(?:editor|view)|routines\/(?:view|card)|backups\/dialog|cycle\/(?:controller|daily|settings)|family\/(?:panel|context|fields)|reminders\/controller|settings\/dialog|reports\/(?:controller|view)|today\/story|sync\/(?:controller|conflict-view)|account\/dialog)\.js$/;
       await page.route(/\/web\//, async (route) => {
         unexpected.push(new URL(route.request().url()).pathname);
         await route.abort();
       });
-      await page.route(replaced, async (route) => {
+      await page.route((url) => replacedModules.has(url.pathname.slice(1)), async (route) => {
         unexpected.push(new URL(route.request().url()).pathname);
         await route.abort();
       });

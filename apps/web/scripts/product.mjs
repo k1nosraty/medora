@@ -12,6 +12,7 @@ import {
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve, join, relative } from "node:path";
 import { compileWeb, copyWebResources } from "../../../packages/web-build/compile.mjs";
+import { replacedModules } from "../../../packages/web-build/product-ownership.mjs";
 import { bundleWorkbox } from "./workbox.mjs";
 import fa from "../product-assets/public/medication/shared/i18n/messages-fa.js";
 import en from "../product-assets/public/medication/shared/i18n/messages-en.js";
@@ -29,58 +30,7 @@ const onboardingCopy = (messages) => ({
   privacy: messages["ui.your-records-stay-on-this-device"],
   error: messages["ui.could-not-save-try-again"],
 });
-const components = new Map([
-  ["medication/app/onboarding.js", "Onboarding.tsx"],
-  ["medication/app/routes.js", "routes.ts"],
-  ["medication/app/day-navigation.js", "dayNavigation.tsx"],
-  ["medication/app/entry-actions.js", "entryActions.ts"],
-  ["medication/app/update.js", "updates.ts"],
-  ["medication/features/today/view.js", "Today.tsx"],
-  ["medication/features/cycle/overview.js", "CycleOverview.tsx"],
-  ["medication/app/week-strip.js", "DayWeek.tsx"],
-  ["medication/shared/ui/month-grid.js", "MonthGrid.tsx"],
-  ["medication/features/reports/stats.js", "ReportStats.tsx"],
-  ["medication/features/reports/water-chart.js", "WaterChart.tsx"],
-  ["medication/features/sleep/history.js", "SleepHistory.tsx"],
-  ["medication/features/operations.js", "Operations.tsx"],
-  ["medication/shared/account-transport.js", "accountTransport.ts"],
-  ["medication/features/water/controller.js", "waterController.tsx"],
-]);
-const replacedModules = new Set([
-  ...components.keys(),
-  "medication/bootstrap.js",
-  "medication/app/medora.js",
-  "medication/app/navigation.js",
-  "medication/features/account/dialog.js",
-  "medication/features/family/panel.js",
-  "medication/features/family/context.js",
-  "medication/features/family/fields.js",
-  "medication/features/settings/dialog.js",
-  "medication/features/reminders/controller.js",
-  "medication/features/cycle/settings.js",
-  "medication/features/cycle/daily.js",
-  "medication/shared/ui/day-card.js",
-  "medication/features/sync/controller.js",
-  "medication/features/sync/conflict-view.js",
-  "medication/features/backups/dialog.js",
-  "medication/features/sleep/controller.js",
-  "medication/features/medicines/appearance.js",
-  "medication/features/appointments/editor.js",
-  "medication/features/appointments/view.js",
-  "medication/features/routines/view.js",
-  "medication/features/routines/card.js",
-  "medication/features/reports/controller.js",
-  "medication/features/cycle/controller.js",
-  "medication/features/today/story.js",
-  "medication/features/reports/view.js",
-  "medication/features/medicines/editor.js",
-  "medication/features/medicines/view.js",
-  "medication/features/promotions/dialog.js",
-  "medication/features/support-tickets.js",
-  "medication/features/water/entries.js",
-  "medication/shared/ui/confirm-delete.js",
-  "medication/shared/ui/pickers.js",
-]);
+
 try {
   // Keep the published URLs for installed clients and the separate browser tools.
   await cp(source, staging, {
@@ -119,15 +69,9 @@ try {
             fa: onboardingCopy(fa),
             en: onboardingCopy(en),
           });
-          build.onResolve({ filter: /^\.{1,2}\// }, (args) => {
-            // Unported controllers import the corresponding candidate components.
-            if (relative(source, args.resolveDir).startsWith("..")) return;
-            const module = relative(
-              source,
-              resolve(args.resolveDir, args.path),
-            );
-            if (components.has(module))
-              return { path: join(app, "src/product", components.get(module)) };
+          build.onResolve({ filter: /(?:^|\/)account-transport\.js$/ }, ({ path, resolveDir }) => {
+            if (resolve(resolveDir, path) === join(source, "medication/shared/account-transport.js"))
+              return { path: join(app, "src/product/accountTransport.ts") };
           });
           build.onEnd(({ metafile }) => {
             if (!metafile) return;

@@ -12,8 +12,9 @@
 			X-Content-Type-Options nosniff
 			Referrer-Policy no-referrer
 			X-Frame-Options DENY
-			Content-Security-Policy "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
 		}
+		@plain not path /medication/ /admin/ /admin/preview/
+		header @plain Content-Security-Policy "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
 		@rich path /medication/ /admin/ /admin/preview/
 		header @rich Content-Security-Policy "default-src 'self'; img-src 'self' https:; media-src 'self' https:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
 		@shell path /sw.js /medication/* /admin/* /design/* /journal/ /journal/sw.js /journal/manifest.webmanifest

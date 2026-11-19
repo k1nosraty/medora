@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(process.argv[2] ?? fileURLToPath(new URL("../../apps/web/dist/", import.meta.url)));
 const trials = Number(process.argv[3] ?? 3);
-const measureDashboard = process.argv[4] === "--dashboard";
+const measureDashboard = process.argv.includes("--dashboard");
+const entry = process.argv.includes("--insights") ? "/medication/?view=insights" : "/medication/";
 if (!Number.isSafeInteger(trials) || trials < 1) throw new Error("Supply a positive trial count");
 const port = 8873;
 const origin = `http://127.0.0.1:${port}`;
@@ -41,7 +42,7 @@ try {
       bytes += event.encodedDataLength;
       completed.push({ path: resources.get(event.requestId), bytes: event.encodedDataLength });
     });
-    await page.goto(origin + "/medication/", { waitUntil: "commit" });
+    await page.goto(origin + entry, { waitUntil: "commit" });
     await page.locator("#welcome-start").waitFor({ state: "visible" });
     const ready = await page.evaluate(() => Math.round(performance.now()));
     const measurement = { usableMs: ready, requests, transferBytes: bytes,
@@ -59,7 +60,7 @@ try {
   const paths = await Promise.all(shell.map(url => stat(join(root, url, url.endsWith("/") ? "index.html" : ""))));
   const percentile = (field, fraction) =>
     measurements.map(trial => trial[field]).sort((a, b) => a - b)[Math.ceil(trials * fraction) - 1];
-  console.log(JSON.stringify({ root, network: "160 ms, 200 kB/s down, 75 kB/s up", trials: measurements,
+  console.log(JSON.stringify({ root, entry, network: "160 ms, 200 kB/s down, 75 kB/s up", trials: measurements,
     median: { usableMs: percentile("usableMs", 0.5), requests: percentile("requests", 0.5),
       transferBytes: percentile("transferBytes", 0.5),
       ...(measureDashboard && { dashboardMs: percentile("dashboardMs", 0.5) }) }, p95: { usableMs: percentile("usableMs", 0.95) },

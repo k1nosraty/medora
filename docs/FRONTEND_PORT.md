@@ -8,7 +8,7 @@ The canonical esbuild guard rejects inputs from the root `web/` directory and th
 
 ## Dependency boundaries
 
-- **Build inputs.** Both the primary product and Journal resolve their own frontend dependencies from the pnpm workspace. The Docker compatibility build consumes the same sources with a separate npm toolchain.
+- **Build inputs.** The primary product, Journal and Docker compatibility build resolve dependencies from the same pnpm workspace. Only the compatibility build bundles the incumbent UI entry.
 - **Active primary UI.** The TypeScript entry mounts React for Family, device notification settings, Today, Settings and Cycle. Native dialog and section elements serve as mount points. The application router, picker integration and IndexedDB transaction adapter coordinate those roots.
 - **Shared application services.** Family permissions and time-zone projection use `family/{api,access,projection,quick-action}.js`. Device registration, local private-detail preferences and delivery check use `reminders/service.js`. Account synchronization, IndexedDB, backup codecs, medication rules, Cycle estimates and date calculations remain shared. `cycle/archive.js` retains the existing encrypted private format.
 - **Historical and independent UI.** The published incumbent controller URLs and HTML source serve the compatibility build and design gallery. The main esbuild graph rejects the superseded Family, reminder, Settings and Cycle controller modules. The browser matrix also rejects their HTTP requests. Independent administration, pilot, campaign review and Journal keep their separate entry points.
@@ -60,6 +60,17 @@ The medication build excludes the old editor, view and appearance controllers by
 | Shared browser and backend services | `family/{api,access,projection,quick-action}.js`, `reminders/service.js`, `sync/service.js`, `cycle/archive.js` and the care domain and storage modules retain authorizations, persisted record shapes, scheduling, encryption and operation receipts. Native dialog, form, focus, browser permission and worker APIs remain platform boundaries. |
 | Historical compatibility UI | `family/{panel,context,fields}.js`, `settings/dialog.js`, `reminders/controller.js`, `cycle/{daily,controller,settings}.js` and the original template contents serve the reference build or design gallery. The canonical compiler rejects these inputs and supplies React mount points. |
 | Remaining legacy UI in the primary entry | The canonical import graph and browser request guard found no active dependency on the superseded workflow controllers. Shared layout containers, initial boot markup, styles, and the published compatibility URLs still exist. |
+
+### Final controller and template review
+
+`packages/web-build/product-ownership.mjs` lists each superseded UI module. The product compiler rejects those sources and the primary browser matrix rejects requests to the same paths. Fourteen obsolete build aliases were removed. The remaining alias explicitly resolves shared service imports of the old account transport to the writer-aware TypeScript implementation.
+
+| Disposition | Sources and reason |
+| --- | --- |
+| Retain for compatibility | The incumbent bootstrap and navigation, account and sync tools, care entry controllers, family, settings, reminder UI, Cycle, reports and format-specific archive dialogs in the shared inventory. The compatibility build and older published module URLs still use them. |
+| Retain as independent tools | `/admin/` and `/admin/preview/` use `features/promotions/{creative,presentation}.js`. `/design/` exercises incumbent editors and screenshot references. `/pilot/` owns registration diagnostics and its own worker. Journal remains a distinct React entry. |
+| Retain as shared services and shell | Date and time-zone formatting, native picker integration, dialog fit and focus, display and theme, IndexedDB, sync, reminders, family policy, care rules and codecs. The TypeScript product still coordinates some native DOM interactions. React owns workflow rendering. |
+| Migrate or remove | No additional incumbent user workflow was found in the primary graph. The template include graph contains 12 incumbent-only fragments and 29 shared by the incumbent and gallery, in addition to the fragments consumed by the primary shell. Every tracked HTML fragment has a build consumer. |
 
 ## Remaining compatibility tree
 

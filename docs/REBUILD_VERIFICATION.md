@@ -188,6 +188,36 @@ A separate fresh-WebKit probe behind the Caddy gateway intermittently timed out 
 
 Release status now reads the configured version. Only scheduled work queues a notification. Synthetic receipts and provider doubles cover retry and replay. The source snapshot, independent namespace census, authorized key-version references and historical backup corpus remain required. Source reconciliation is **BLOCKED** and production is **NOT READY**.
 
+## Final architecture and quality review
+
+This run started from clean `9f8a92b` on `codex/medora-2-full-rebuild`. The candidate and starting benchmark build both used the frozen pnpm lockfile. Browser and backend checks used newly provisioned loopback fixtures and synthetic records.
+
+| Verification | Fresh result |
+| --- | --- |
+| `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, both `bundle-worker.mjs` entries | Passed. The dependency audit reported zero known production dependency advisories. |
+| Two `pnpm db:migrate` invocations, then `pnpm test` | All 20 migration checksums verified. 26 tests passed across 16 files, zero failed or skipped. |
+| `pnpm test:compat`, `product-runtime.mjs` | 44 compatibility and 13 care tests passed, zero failed or skipped. The encrypted closed-client alarm and standalone Workerd product scenarios completed. |
+| `pnpm test:product` | 72 Chromium and 72 WebKit passed, zero failed or skipped. Included the additional delayed-bundle Insights case, historical IndexedDB, lost acknowledgement, delegated grants, archive recovery, offline upgrade and the RTL/LTR and responsive Axe matrix. |
+| `pnpm test:incumbent` | 41 per engine passed. 62 candidate-only cases were skipped and zero failed. |
+| `frontend-independence.mjs --offline` | 61 per engine passed with both `web/` and `apps/compat-worker/` physically absent. No forbidden request appeared in the primary browser matrix. |
+| `pnpm test:e2e`, `pwa-update.mjs` | Nine Journal tests per engine passed, zero failed or skipped. The interrupted update, retry, cached shell and persistence scenario completed. |
+| `visual-parity.mjs` | First run failed on one English 390 px WebKit Cycle screenshot. The 3,143 changed pixels had a maximum channel delta of 3. The complete unchanged rerun passed 80 layouts and captures per engine, and all 64 Axe samples had zero candidate violations. No thresholds or baselines were changed. |
+| `postgres-handoff.mjs` | Final frontend build passed Workerd/R2 to Node/S3 and reverse handoff. 48 tables, nine sequences and 109 constraints matched. Two accounts retained all eight offline writes, the family grant, sessions and an independently decrypted object. |
+| `rehearse.mjs` in all three modes | The mapped rollback, unsupported recovery refusal and imported-account erasure drills passed against separately created fixture databases. |
+| Compose, `runtime.mjs`, `accounts.mjs`, `worker.mjs`, `restore-compose.sh` | Node/Caddy, loopback registration and mail, owner-bound sync, Caddy policy coverage and signed object restore passed. The first standalone Workerd attempt failed to start. A fresh invocation passed real PostgreSQL and R2, scheduled mail and browser recovery. Restore matched database rows, sequences, compatibility state and the encrypted catalog object. |
+
+The primary build no longer uses fourteen obsolete resolver aliases. Its browser matrix and compiler now check the same incumbent module paths. The new deliberate dashboard delay on a fresh Insights link produced one expected failing Chromium control against the baseline. The final build passed both engines. The [ownership ledger](FRONTEND_PORT.md) and [performance results](PERFORMANCE.md#final-architecture-review) describe the scope.
+
+### Fresh WebKit and Caddy controls
+
+The independent Caddy matchers now deliver the existing HTTPS media policy on the medication, administration and campaign preview routes. The previous default header overwrote that policy. The worker, Journal and design paths retain the default policy. This header correction and the quicker Insights onboarding were verified separately from the timeout.
+
+Playwright 1.64.1 WebKit 27.2 ran at 390 × 844 with fresh contexts and the same local Caddy configuration. Three worker-enabled trials each timed out on the incumbent `5ee5e47`, the starting build `9f8a92b`, and the final candidate. The incumbent stopped at welcome interaction or Reports. The starting build stopped at welcome visibility or interaction. All three candidate trials reached Insights and then stopped at the Reports click. The committed probe also reproduced a candidate timeout at welcome interaction. One worker-blocked control per build passed. The same final candidate served directly by the Node browser fixture passed all three worker-enabled attempts, including worker activation and the offline Insights reload.
+
+Caddy logged zero static HTTP errors in these traces. The longest static request took at most 9 ms on the server, and the only non-success page response was the expected anonymous family `401`. The failing traces contained responses from the worker. In a separate candidate run, even a bounded page-side read stopped responding after onboarding. The Caddy and worker combination reproduced the symptom in this environment. The evidence cannot distinguish WebKit process or automation behavior from a browser interaction with the gateway and worker lifecycle. The original check remains a nonzero exit on timeout.
+
+Run `timeout 35s node scripts/verification/insights-gateway.mjs http://127.0.0.1:<fixture-port>` against a local Caddy fixture. Use `--block-worker` for the separate control. Repeat with a clean browsing profile in native macOS Safari and on an iPhone, including Safari and the installed web app. Serve the same synthetic fixture over trusted isolated HTTPS. Open the Insights link from a fresh origin and again with an active worker, then verify offline reload. Collect Web Inspector network timings, worker registration and controller transitions, cache state, and the matching Caddy request log from a failing run. [Playwright WebKit platform scope](https://playwright.dev/docs/browsers#webkit)
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

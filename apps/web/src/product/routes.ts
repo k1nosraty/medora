@@ -12,7 +12,7 @@ const screens = new Set([
 export type Screen = typeof screens extends Set<infer Value> ? Value : never;
 export type Mode = "push" | "replace" | "pop";
 
-function isScreen(value: unknown): value is Screen {
+export function isScreen(value: unknown): value is Screen {
   return typeof value === "string" && screens.has(value as Screen);
 }
 

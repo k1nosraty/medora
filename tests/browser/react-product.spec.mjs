@@ -5,42 +5,45 @@ import { decryptBackup } from "../../packages/domain/src/crypto/backup.js";
 test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
 test.use({ serviceWorkers: "block" });
 
-test("onboarding stays interactive while the dashboard bundle is delayed", async ({
-  page,
-}) => {
-  let unblock;
-  const gate = new Promise((resolve) => {
-    unblock = resolve;
-  });
-  let dashboardRequested = false;
-  await page.route("**/medication/bundles/chunk-*.js", async (route) => {
-    const response = await route.fetch();
-    if ((await response.text()).includes("family-notice")) {
-      dashboardRequested = true;
-      await gate;
-    }
-    await route.fulfill({ response });
-  });
-
-  try {
-    await page.goto("/medication/", { waitUntil: "commit" });
-    const start = page.locator("#welcome-start");
-    await expect(start).toBeEnabled();
-    await expect.poll(() => dashboardRequested).toBe(true);
-    await start.click();
-    await expect(start).toBeDisabled();
-    const intro = await page.evaluate(async () => {
-      const { accessCare } = await import("/medication/shared/storage.js");
-      return (await accessCare()).intro;
+for (const [path, screen] of [["/medication/", "today"], ["/medication/?view=insights", "insights"]]) {
+  test(`onboarding stays interactive while the ${screen} dashboard bundle is delayed`, async ({
+    page,
+  }) => {
+    let unblock;
+    const gate = new Promise((resolve) => {
+      unblock = resolve;
     });
-    expect(intro).not.toBe("done");
-  } finally {
-    unblock();
-  }
-  await expect(page.locator("#welcome-screen")).toBeHidden();
-  await expect(page.locator("#boot-retry")).toBeHidden();
-  await expect(page.locator("#screen-title")).toBeFocused();
-});
+    let dashboardRequested = false;
+    await page.route("**/medication/bundles/chunk-*.js", async (route) => {
+      const response = await route.fetch();
+      if ((await response.text()).includes("family-notice")) {
+        dashboardRequested = true;
+        await gate;
+      }
+      await route.fulfill({ response });
+    });
+
+    try {
+      await page.goto(path, { waitUntil: "commit" });
+      const start = page.locator("#welcome-start");
+      await expect(start).toBeEnabled();
+      await expect.poll(() => dashboardRequested).toBe(true);
+      await start.click();
+      await expect(start).toBeDisabled();
+      const intro = await page.evaluate(async () => {
+        const { accessCare } = await import("/medication/shared/storage.js");
+        return (await accessCare()).intro;
+      });
+      expect(intro).not.toBe("done");
+    } finally {
+      unblock();
+    }
+    await expect(page.locator("#welcome-screen")).toBeHidden();
+    await expect(page.locator("#boot-retry")).toBeHidden();
+    await expect(page.locator("#screen-title")).toBeFocused();
+    await expect(page.locator("#app")).toHaveAttribute("data-active-screen", screen);
+  });
+}
 
 async function open(page, language, view, viewport) {
   await page.setViewportSize(viewport);

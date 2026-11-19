@@ -139,3 +139,17 @@ The starting commit `ea90f73` and the audited candidate were built from source. 
 | Total canonical JavaScript, raw / gzip | 942,341 / 263,288 B | 945,213 / 265,973 B |
 
 The welcome marker remains within its 6,000 ms budget. The dashboard uses a different marker and still takes about 7.1 seconds on this profile. The warm test used 24 synthetic plans. The three medication actions made zero resource requests in both builds. Reproduce with `node tests/browser/measure.mjs <assets> 3 --dashboard` and `node tests/browser/measure-medication.mjs <baseline-assets> <candidate-assets>`. The activity palette change saves 4,604,460 bytes of checked-in source and preserves installed image bytes and requests.
+
+### Final architecture review
+
+Each median used three fresh Chromium contexts at 390 × 844, 160 ms latency, 200 kB/s download, 75 kB/s upload and service workers blocked. The baseline was built from `9f8a92b`. The candidate lets plain screen links display onboarding before dashboard downloads. A delayed-bundle test failed on the baseline Insights link and passed on the candidate in both engines.
+
+| Marker | Baseline | Candidate |
+| --- | ---: | ---: |
+| Home welcome button | 4,495 ms | 4,491 ms |
+| Home dashboard after immediate click | 7,119 ms | 7,134 ms |
+| Insights welcome button | 7,503 ms | 4,485 ms |
+| Insights dashboard after immediate click | 7,555 ms | 7,110 ms |
+| Insights requests and bytes by welcome | 30 / 1,263,280 B | 20 / 719,741 B |
+
+Reproduce with `node tests/browser/measure.mjs <assets> 3 --dashboard --insights` and omit `--insights` for the home control. The home dashboard remained around 7.1 seconds. The two largest startup transfers in the uncompressed fixture were the shared JavaScript chunk and the compiled stylesheet. The shell stayed at 45 resources and grew by 105 bytes. Splitting the compiled CSS or changing offline precaching would require separate measurements and compatibility evidence.

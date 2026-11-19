@@ -29,6 +29,20 @@ const row = [id, username + "@example.test", username, salt, proof];
 if (project) {
   if (!/^medora-[a-z0-9-]+$/.test(project))
     throw Error("Invalid fixture project");
+  for (const [path, media] of [
+    ["/medication/?view=insights", true],
+    ["/admin/", true],
+    ["/admin/preview/", true],
+    ["/journal/", false],
+    ["/medication/sw.js", false],
+  ]) {
+    const response = await fetch(new URL(path, origin), { method: "HEAD", redirect: "error" });
+    assert.equal(response.status, 200, path);
+    const policy = response.headers.get("Content-Security-Policy");
+    assert.ok(policy?.includes("frame-ancestors 'none'"), path);
+    for (const directive of ["img-src", "media-src"])
+      assert.equal(policy.includes(directive + " 'self' https:"), media, path);
+  }
   const envFile = process.env.MEDORA_TEST_COMPOSE_ENV;
   const sql =
     "INSERT INTO medora.accounts(id,email,username,password_salt,password_proof,password_key,sync_generation) VALUES (" +
