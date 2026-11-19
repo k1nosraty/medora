@@ -287,10 +287,6 @@ export function Reports({
               aria-label={t("ui.water-intake-chart")}
             />
             <div id="report-chart-dates" className="quiet" />
-            <label className="report-chart-picker">
-              {t("ui.select-chart-date")}
-              <select id="report-chart-pick" />
-            </label>
             <div className="report-chart-controls">
               <button
                 type="button"
@@ -300,11 +296,17 @@ export function Reports({
               >
                 <Icon name="back" />
               </button>
-              <p
-                id="report-chart-selection"
-                className="quiet"
-                aria-live="polite"
-              />
+              <div className="report-chart-date-picker">
+                <p
+                  id="report-chart-selection"
+                  className="quiet"
+                  aria-live="polite"
+                />
+                <select
+                  id="report-chart-pick"
+                  aria-label={t("ui.select-chart-date")}
+                />
+              </div>
               <button
                 type="button"
                 id="report-chart-next"

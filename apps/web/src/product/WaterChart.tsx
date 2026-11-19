@@ -106,7 +106,7 @@ function WaterChart({ model, hosts }: Props) {
       {bar &&
         createPortal(
           <>
-            <span>{bar.date}</span>
+            <span className="report-chart-date">{bar.date}</span>
             <strong>{bar.value}</strong>
             {bar.average && <small>{bar.average}</small>}
           </>,

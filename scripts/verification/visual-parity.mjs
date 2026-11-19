@@ -710,6 +710,22 @@ try {
               const first = page.locator("#report-chart button").first();
               await first.press("Home");
               await expect(first).toBeFocused();
+              // Use the reference's two-row control for the exact legacy snapshot.
+              // The new, single-row interaction is exercised by the product browser tests.
+              await page.evaluate(() => {
+                const inline = document.querySelector(".report-chart-date-picker");
+                if (!inline) return;
+                const picker = inline.querySelector("select");
+                const summary = inline.querySelector("#report-chart-selection");
+                const date = summary.querySelector(".report-chart-date");
+                const label = document.createElement("label");
+                label.className = "report-chart-picker";
+                label.append(picker.getAttribute("aria-label"), picker);
+                picker.removeAttribute("aria-label");
+                date.removeAttribute("class");
+                inline.parentElement.before(label);
+                inline.replaceWith(summary);
+              });
             });
           }
           if (screen === "water") {

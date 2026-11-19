@@ -61,6 +61,49 @@ async function open(page, language, view, viewport) {
   );
 }
 
+for (const [language, width] of [["fa", 390], ["en", 320]]) {
+  test(`the ${language} water report opens its date picker between the navigation arrows`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-11-16T12:00:00Z"));
+    await open(page, language, "insights", { width, height: 844 });
+    await page.evaluate(async () => {
+      const { accessCare } = await import("/medication/shared/storage.js");
+      const { today } = await import("/medication/shared/ui/dates.js");
+      await accessCare((state) => {
+        state.water = [{ id: "sample", day: today(), time: "10:00", amount: 250 }];
+      });
+    });
+    await page.reload();
+    await page.locator('[data-insight="reports"]').click();
+    const row = page.locator(".report-chart-controls");
+    const picker = row.getByRole("combobox", {
+      name: language === "fa" ? "انتخاب روز یا بازه" : "Choose a day or period",
+    });
+    const previous = row.locator("#report-chart-previous");
+    const next = row.locator("#report-chart-next");
+    await expect(picker).toBeVisible();
+    await expect(page.locator(".report-chart-picker")).toHaveCount(0);
+    expect(await picker.evaluate((select) => {
+      const date = select.parentElement.querySelector(".report-chart-date");
+      const { x, y, width, height } = date.getBoundingClientRect();
+      return document.elementFromPoint(x + width / 2, y + height / 2) === select;
+    })).toBe(true);
+    await previous.focus();
+    await page.keyboard.press("Tab");
+    await expect(picker).toBeFocused();
+    await expect(picker.locator("..")).toHaveCSS("outline-style", "solid");
+    for (const period of ["week", "month", "year"]) {
+      await page.locator(`[data-report-range="${period}"]`).click();
+      await picker.selectOption({ index: 0 });
+      const chart = page.locator("#report-chart > button");
+      await expect(chart.first()).toHaveAttribute("aria-pressed", "true");
+      await expect(previous).toHaveAttribute("aria-disabled", "true");
+      await next.click();
+      await expect(chart.nth(1)).toHaveAttribute("aria-pressed", "true");
+      expect(await picker.evaluate((select) => select.selectedIndex)).toBe(1);
+    }
+  });
+}
+
 test("sleep saves and edits a nap without dropping extra fields or overwriting a concurrent edit", async ({
   page,
 }) => {

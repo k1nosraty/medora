@@ -1,3 +1,44 @@
 .layout-contents {
   display: contents;
 }
+
+.report-chart-date-picker {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  border-radius: .65rem;
+}
+
+.report-chart-date-picker > select {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.report-chart-date-picker:has(> select:focus-visible) {
+  outline: 2px solid var(--water-ink);
+  outline-offset: -2px;
+}
+
+.report-chart-date {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.report-chart-date::after {
+  content: "";
+  inline-size: .42rem;
+  block-size: .42rem;
+  flex: none;
+  margin-block-start: -.18rem;
+  border: solid currentColor;
+  border-width: 0 .1rem .1rem 0;
+  transform: rotate(45deg);
+}
