@@ -368,6 +368,7 @@ test("React device settings distinguish permission, enrolment, schedule and deli
         : register(url, options);
   }, push);
   let config = false;
+  let paused = false;
   const writes = [];
   let snapshot = { enabled: false, revision: 0 };
   await page.route("**/api/config", (route) =>
@@ -379,14 +380,18 @@ test("React device settings distinguish permission, enrolment, schedule and deli
       expect(route.request().postDataJSON()).toEqual({ subscription: push });
       await route.fulfill({ json: { token } });
     } else if (path.endsWith("/test")) {
-      await route.fulfill({ json: { status: "accepted" } });
+      await route.fulfill({ json: { status: paused ? "paused" : "accepted" } });
     } else {
       if (route.request().method() === "PUT") {
         const change = route.request().postDataJSON();
         writes.push(change);
         snapshot = { enabled: change.enabled, revision: change.revision };
       }
-      await route.fulfill({ json: snapshot });
+      await route.fulfill({
+        json: paused
+          ? { ...snapshot, deliveryPaused: true, accountSchedule: { status: "pending" } }
+          : snapshot,
+      });
     }
   });
   await product(page);
@@ -413,6 +418,13 @@ test("React device settings distinguish permission, enrolment, schedule and deli
   await expect.poll(() => writes.length).toBe(2);
   await page.locator("#push-test").click();
   await expect(page.locator("#push-test-result")).toContainText("accepted");
+  paused = true;
+  await page.locator("#push-check").click();
+  const pausedText = "Notification delivery is temporarily paused.";
+  await expect(page.locator("#push-status")).toHaveText(pausedText);
+  await page.locator("#push-test").click();
+  await expect(page.locator("#push-test-result")).toHaveText(pausedText);
+  paused = false;
   await page.locator("#push-disable").click();
   await expect(page.locator("#push-status")).toContainText("off");
   expect(writes.map((item) => item.enabled)).toEqual([true, true, false]);

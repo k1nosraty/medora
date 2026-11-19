@@ -10,6 +10,8 @@ const pool = new Pool({
   max: 8,
   ...writerConnectionOptions(process.env.MEDORA_LEGACY_WRITES_FENCED),
 });
+// pg removes failed idle clients. Keep the server available and the diagnostic free of connection details.
+pool.on("error", () => console.warn("database_connection_lost"));
 const storage = process.env.S3_ENDPOINT
   ? s3Storage(
       process.env.S3_ENDPOINT,
