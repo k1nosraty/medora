@@ -15,13 +15,14 @@ env:
   WRANGLER_SEND_METRICS: 'false'
 jobs:
   browser:
-    name: Browser · ${{ matrix.suite }}
+    name: Browser · ${{ matrix.suite }} · ${{ matrix.engine }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
         suite: [product, incumbent]
+        engine: [chromium, webkit]
     steps:
       - uses: actions/checkout@v4
         with: {persist-credentials: false}
@@ -31,10 +32,22 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - if: matrix.suite == 'product'
         run: pnpm --filter @medora/web build
+      - run: pnpm exec playwright install --with-deps ${{ matrix.engine }}
+      - run: pnpm "test:${{ matrix.suite }}" --project=${{ matrix.engine }} --reporter=list,github
+  frontend-independence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24.18.0', cache: pnpm}
+      - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium webkit
-      - run: pnpm "test:${{ matrix.suite }}" --reporter=list,github
+      - run: node scripts/verification/frontend-independence.mjs --offline
   verify:
-    needs: browser
+    needs: [browser, frontend-independence]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     services:
@@ -121,7 +134,6 @@ jobs:
       - run: node tests/browser/measure.mjs apps/web/dist 3 --insights > dist/performance-insights.json
       - run: pnpm test:e2e
       - run: node scripts/verification/pwa-update.mjs
-      - run: node scripts/verification/frontend-independence.mjs --offline
       - name: Build both Worker adapters
         run: |
           node scripts/verification/bundle-worker.mjs infrastructure/cloudflare/candidate.mjs dist/worker/candidate.js

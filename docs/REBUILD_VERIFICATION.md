@@ -278,7 +278,7 @@ Hosted runs of `9946c9b` and `9873b77` each completed 143 product cases and hit 
 | Strict visual parity and Axe | All 160 layout and viewport comparisons matched exactly on the complete serial rerun. All 64 accessibility samples reported zero candidate violations. The initial parallel run differed in one English desktop WebKit settings capture, with unchanged geometry and a maximum two-level channel difference. Comparison rules and references stayed the same. |
 | Cold onboarding budget | Three Chromium runs per route passed the 6,000 ms median limit. Median 4,558 ms for the product entry and 4,561 ms for direct Insights. |
 
-Browser verification runs as separate product and incumbent jobs before the remaining rebuild checks. The standalone suite, product, incumbent and benchmark servers use distinct or OS-assigned ports. Native macOS Safari and iOS Home Screen and provider delivery still require their own device or hosted checks.
+Browser verification uses one job per product or incumbent suite and browser engine. The standalone clean-room suite runs alongside those jobs. The final verify job waits for all five jobs, so manual candidate archival still requires all browser and clean-room checks to pass. The standalone suite, product, incumbent and benchmark servers use distinct or OS-assigned ports. Native macOS Safari and iOS Home Screen and provider delivery still require their own device or hosted checks.
 
 ## Outstanding release evidence
 
