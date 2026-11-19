@@ -48,7 +48,8 @@ jobs:
       - run: node scripts/verification/frontend-independence.mjs --offline
   verify:
     needs: [browser, frontend-independence]
-    runs-on: ubuntu-latest
+    # Match the local rendering environment for exact WebKit screenshots.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     services:
       postgres:
