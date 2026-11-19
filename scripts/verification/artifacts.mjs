@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { verifyCoverage } from "./evidence.mjs";
+import { verifyCoverage, verifyStartupPerformance } from "./evidence.mjs";
 async function inventory(root, base = root) {
   const result = [];
   for (const e of (await readdir(base, { withFileTypes: true })).sort((a, b) =>
@@ -49,6 +49,7 @@ const evidenceFiles = [
   "postgres-handoff.json",
   "visual-parity.json",
   "performance-product.json",
+  "performance-insights.json",
   "source-copy.json",
 ];
 const evidence = await Promise.all(
@@ -61,9 +62,11 @@ const evidence = await Promise.all(
     };
   }),
 );
-const [reconciled, refused, erased, handoff, visual, performance, sourceCopy] =
+const [reconciled, refused, erased, handoff, visual, performance, insights, sourceCopy] =
   evidence.map((entry) => entry.report);
 verifyCoverage(handoff, visual);
+verifyStartupPerformance(performance, "/medication/");
+verifyStartupPerformance(insights, "/medication/?view=insights");
 if (
   reconciled.source !== "synthetic Workerd" ||
   !reconciled.reconciled ||
@@ -98,9 +101,11 @@ if (
   !refused.unsupportedMutation?.recoveryPublicationBlocked ||
   !refused.unsupportedMutation?.pendingPasswordReset ||
   !visual.identicalDocumentMarkup ||
-  performance.trials?.length !== 3 ||
   sourceCopy.input !== "synthetic" ||
   !/^[0-9a-f]{64}$/.test(sourceCopy.manifestSha256) ||
+  !Number.isSafeInteger(sourceCopy.migrations?.count) ||
+  sourceCopy.migrations.count < 1 ||
+  !/^[0-9a-f]{64}$/.test(sourceCopy.migrations.historySha256) ||
   sourceCopy.restoredImagesVerified !== true ||
   sourceCopy.physical?.namespaces !== 7 ||
   sourceCopy.physical?.objects !== 15 ||

@@ -259,6 +259,27 @@ The first GitHub Actions run hit the 30-minute job limit during the product brow
 
 A single-CPU Chromium rerun reproduced the hidden conflict review. The trace showed an automatic read advancing the common base to the new cloud revision before the fixture made the device edit. The restore test now holds browser care reads during the two synthetic edits, asserts both edits still share the original base, and releases the reads before checking the conflict choices. The application sync engine is unchanged. The corrected case passed five single-CPU Chromium repetitions and three WebKit repetitions.
 
+Hosted runs of `9946c9b` and `9873b77` each completed 143 product cases and hit the same five 30-second case limits on WebKit in the combined family and medication journeys. Chromium completed all 74 cases. The revised suite uses independent browser sessions and real IndexedDB fixtures for shorter scenarios and retains the prior validations, accessibility checks and 30-second case limit.
+
+### Finalization from `9873b77`
+
+| Local check | Result |
+| --- | --- |
+| Frozen workspace install, production dependency audit, TypeScript, lint, production builds and both Worker bundles | Passed. The production dependency audit reported no known vulnerabilities. |
+| SQL migration checks and Vitest against isolated PostgreSQL | All 20 migrations verified twice. 28 tests passed across 16 files, including HEAD authorization and audit behavior, backup access, and checks for missing or slow startup evidence. |
+| Product Playwright | Chromium 97 passed and WebKit 97 passed, with zero failures and skips. |
+| Incumbent Playwright | 41 passed per engine and 56 candidate-only cases skipped per engine. |
+| Frozen clean-room install and standalone browser suite | 66 passed per engine with `web/` and `apps/compat-worker/` physically absent. |
+| Journal and PWA | 9 Journal cases passed per engine. Interrupted service-worker update, offline recovery and retry passed separately. |
+| Compatibility and reminders | 44 compatibility and 13 care checks passed. The closed-client reminder fixture passed for all exercised categories. |
+| Synthetic source and rollback | Compared 7 namespaces, 15 images and 25 physical rows. Source byte hashes matched before and after. A used PostgreSQL target was rejected before output creation. Fixture rehearsals completed normal, unsupported-mutation and imported-account removal recovery. |
+| Workerd ↔ Node and Compose restore | Two accounts and eight offline writes survived handoff and return. Verified outbox, encrypted backup and the restored object catalog. The loopback account, invitation, provider-double and session-revocation checks passed. |
+| Loopback Caddy HTTP and HTTPS | WebKit opened the direct Reports route, acquired a controlling service worker and reloaded Reports offline. The HTTPS preflight verified the dedicated fixture certificate and hostname through Node. The isolated browser granted a certificate exception for the synthetic loopback endpoint. |
+| Strict visual parity and Axe | All 160 layout and viewport comparisons matched exactly on the complete serial rerun. All 64 accessibility samples reported zero candidate violations. The initial parallel run differed in one English desktop WebKit settings capture, with unchanged geometry and a maximum two-level channel difference. Comparison rules and references stayed the same. |
+| Cold onboarding budget | Three Chromium runs per route passed the 6,000 ms median limit. Median 4,558 ms for the product entry and 4,561 ms for direct Insights. |
+
+Browser verification runs as separate product and incumbent jobs before the remaining rebuild checks. The standalone suite, product, incumbent and benchmark servers use distinct or OS-assigned ports. Native macOS Safari and iOS Home Screen and provider delivery still require their own device or hosted checks.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

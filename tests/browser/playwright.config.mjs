@@ -2,7 +2,8 @@ import { defineConfig, devices } from "./runner.mjs";
 import { fileURLToPath } from "node:url";
 
 const executablePath = process.env.MEDORA_CHROMIUM;
-const port = Number(process.env.MEDORA_TEST_PORT ?? 8872);
+const defaultPort = process.env.MEDORA_INCUMBENT_BROWSER === "1" ? 8875 : 8872;
+const port = Number(process.env.MEDORA_TEST_PORT ?? defaultPort);
 const url = "http://127.0.0.1:" + port;
 const server = fileURLToPath(new URL("./server.mjs", import.meta.url));
 

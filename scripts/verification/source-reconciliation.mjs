@@ -17,19 +17,6 @@ export async function reconcileSourceCopy({ source, census, identities, output, 
   const fromSource = relative(frozen, destination);
   if (!isAbsolute(fromSource) && fromSource !== ".." && !fromSource.startsWith(".." + sep))
     throw Error("The output directory must be outside the frozen source copy");
-  await mkdir(destination, { mode: 0o700 });
-  const archive = join(destination, "archive");
-  const restored = join(destination, "restored");
-  // SQLite can open a WAL shared-memory file even for a read-only connection.
-  const scratch = await mkdtemp(join(destination, ".source-"));
-  let manifest;
-  try {
-    const working = join(scratch, "do");
-    await cp(frozen, working, { recursive: true, verbatimSymlinks: true });
-    manifest = await exportObjects(working, census, archive, key, identities);
-  } finally {
-    await rm(scratch, { force: true, recursive: true });
-  }
   const client = new pg.Client({ connectionString: database });
   await client.connect();
   try {
@@ -39,11 +26,27 @@ export async function reconcileSourceCopy({ source, census, identities, output, 
       UNION ALL SELECT 1 FROM pg_class WHERE relnamespace = 'public'::regnamespace LIMIT 1`);
     if (!acquired || existing.rowCount)
       throw Error("Source verification requires an unused, dedicated fixture database");
+    await mkdir(destination, { mode: 0o700 });
+    const archive = join(destination, "archive");
+    const restored = join(destination, "restored");
+    // SQLite can open a WAL shared-memory file even for a read-only connection.
+    const scratch = await mkdtemp(join(destination, ".source-"));
+    let manifest;
+    try {
+      const working = join(scratch, "do");
+      await cp(frozen, working, { recursive: true, verbatimSymlinks: true });
+      manifest = await exportObjects(working, census, archive, key, identities);
+    } finally {
+      await rm(scratch, { force: true, recursive: true });
+    }
     for (let attempt = 0; attempt < 2; attempt++)
       execFileSync(process.execPath, ["scripts/migration/apply.mjs"], {
         env: { PATH: process.env.PATH, DATABASE_URL: database },
         stdio: "pipe",
       });
+    const { rows: history } = await client.query(
+      "SELECT filename, digest FROM public.medora_migrations ORDER BY filename",
+    );
 
     const physical = await importObjects(client, archive, key);
     assert.deepEqual(await importObjects(client, archive, key), physical);
@@ -58,6 +61,10 @@ export async function reconcileSourceCopy({ source, census, identities, output, 
       manifestSha256: sha(await readFile(join(archive, "manifest.json"))),
       archive,
       restored,
+      migrations: {
+        count: history.length,
+        historySha256: sha(JSON.stringify(history)),
+      },
       physical,
       projected,
     };
@@ -84,8 +91,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       key = Buffer.from(hex, "hex");
       const census = JSON.parse(await readFile(censusFile, "utf8"));
       const identities = JSON.parse(await readFile(identityFile, "utf8"));
-      const { manifestSha256, physical, projected } = await reconcileSourceCopy({ source, census, identities, output, key, database });
-      console.log(JSON.stringify({ input: scope.slice(2), manifestSha256, physical, projected, restoredImagesVerified: true, readiness: "NOT READY" }));
+      const { manifestSha256, migrations, physical, projected } = await reconcileSourceCopy({ source, census, identities, output, key, database });
+      console.log(JSON.stringify({ input: scope.slice(2), manifestSha256, migrations, physical, projected, restoredImagesVerified: true, readiness: "NOT READY" }));
     } catch {
       console.error("Source reconciliation failed. Preserve the source, output and target checkpoints for isolated inspection.");
       process.exitCode = 1;

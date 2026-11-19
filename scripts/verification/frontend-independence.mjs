@@ -22,7 +22,7 @@ function pnpm(...args) {
     env: {
       ...process.env,
       MEDORA_PUBLIC_DIR: join(fixture, "apps/web/dist"),
-      MEDORA_TEST_PORT: process.env.MEDORA_INDEPENDENCE_PORT ?? "49751",
+      MEDORA_TEST_PORT: process.env.MEDORA_INDEPENDENCE_PORT ?? "8876",
     },
     stdio: "inherit",
   });

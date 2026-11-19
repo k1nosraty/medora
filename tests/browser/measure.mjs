@@ -1,27 +1,21 @@
 import { chromium } from "@playwright/test";
-import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
-import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { browserServer } from "./server.mjs";
 
 const root = resolve(process.argv[2] ?? fileURLToPath(new URL("../../apps/web/dist/", import.meta.url)));
 const trials = Number(process.argv[3] ?? 3);
 const measureDashboard = process.argv.includes("--dashboard");
 const entry = process.argv.includes("--insights") ? "/medication/?view=insights" : "/medication/";
 if (!Number.isSafeInteger(trials) || trials < 1) throw new Error("Supply a positive trial count");
-const port = 8873;
-const origin = `http://127.0.0.1:${port}`;
-const server = spawn(process.execPath, [fileURLToPath(new URL("./server.mjs", import.meta.url))], {
-  env: { ...process.env, MEDORA_PUBLIC_DIR: root, MEDORA_TEST_PORT: String(port) }, stdio: "inherit"
-});
+process.env.MEDORA_PUBLIC_DIR = root;
+const server = browserServer().listen(0, "127.0.0.1");
+await once(server, "listening");
+const origin = `http://127.0.0.1:${server.address().port}`;
 let browser;
 try {
-  for (let index = 0; index < 30; index++) {
-    if (await fetch(origin).then(response => response.ok, () => false)) break;
-    await sleep(100);
-  }
   browser = await chromium.launch({ executablePath: process.env.MEDORA_CHROMIUM });
   const measurements = [];
   for (let trial = 0; trial < trials; trial++) {
@@ -67,7 +61,7 @@ try {
     shell: { requests: shell.length, bytes: paths.reduce((sum, file) => sum + file.size, 0) } }, null, 2));
 } finally {
   await browser?.close();
-  const stopped = once(server, "exit");
-  server.kill();
-  await stopped;
+  await new Promise((resolve, reject) =>
+    server.close((error) => error ? reject(error) : resolve()),
+  );
 }

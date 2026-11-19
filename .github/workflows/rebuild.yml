@@ -11,8 +11,30 @@ on:
         default: false
 permissions:
   contents: read
+env:
+  WRANGLER_SEND_METRICS: 'false'
 jobs:
+  browser:
+    name: Browser · ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [product, incumbent]
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24.18.0', cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - if: matrix.suite == 'product'
+        run: pnpm --filter @medora/web build
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm "test:${{ matrix.suite }}" --reporter=list,github
   verify:
+    needs: browser
     runs-on: ubuntu-latest
     timeout-minutes: 60
     services:
@@ -27,7 +49,6 @@ jobs:
     env:
       DATABASE_URL: postgresql://medora:fixture-ci-only@127.0.0.1:5432/medora_fixture
       MEDORA_TEST_DATABASE_URL: postgresql://medora:fixture-ci-only@127.0.0.1:5432/medora_fixture
-      WRANGLER_SEND_METRICS: 'false'
     steps:
       - uses: actions/checkout@v4
         with: {persist-credentials: false, fetch-depth: 0}
@@ -49,7 +70,6 @@ jobs:
           node infrastructure/cloudflare/staging.mjs --check
           node infrastructure/cloudflare/staging.mjs --portable --check
       - run: pnpm exec playwright install --with-deps chromium webkit
-      - run: pnpm test:product --reporter=list,github
       - run: node scripts/verification/product-runtime.mjs
       - name: Exercise generation fencing and post-write rollback on a fresh database
         env:
@@ -96,9 +116,9 @@ jobs:
           done
           node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
       - run: pnpm test:compat
-      - run: pnpm test:incumbent --reporter=list,github
       - run: node scripts/verification/visual-parity.mjs > dist/visual-parity.json
       - run: node tests/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
+      - run: node tests/browser/measure.mjs apps/web/dist 3 --insights > dist/performance-insights.json
       - run: pnpm test:e2e
       - run: node scripts/verification/pwa-update.mjs
       - run: node scripts/verification/frontend-independence.mjs --offline
@@ -119,10 +139,32 @@ jobs:
           node scripts/verification/worker.mjs http://127.0.0.1:8810
           timeout 35s node scripts/verification/insights-gateway.mjs http://127.0.0.1:8808
           bash scripts/verification/restore-compose.sh "$config" medora-ci "$RUNNER_TEMP/medora-restore"
+      - name: Verify a direct Reports link and offline reload over isolated Caddy HTTPS
+        run: |
+          tls=$(mktemp -d)
+          trap 'docker stop medora-ci-https >/dev/null 2>&1 || true; rm -rf "$tls"' EXIT
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj '/CN=127.0.0.1' \
+            -addext 'subjectAltName=IP:127.0.0.1' -keyout "$tls/key.pem" -out "$tls/cert.pem"
+          cat > "$tls/Caddyfile" <<'CADDY'
+          {
+            admin off
+            persist_config off
+          }
+          https://127.0.0.1:8812 {
+            bind 127.0.0.1
+            tls /fixture/cert.pem /fixture/key.pem
+            reverse_proxy http://127.0.0.1:8808
+          }
+          CADDY
+          docker run --rm --detach --name medora-ci-https --network host \
+            --volume "$tls:/fixture:ro" caddy:2.11.7-alpine caddy run --config /fixture/Caddyfile
+          curl --fail --silent --retry 8 --retry-connrefused --cacert "$tls/cert.pem" \
+            https://127.0.0.1:8812/medication/ >/dev/null
+          MEDORA_TEST_TLS_CERT="$tls/cert.pem" timeout 35s node scripts/verification/insights-gateway.mjs https://127.0.0.1:8812
       - name: Identify and package verified candidate
         run: |
           node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
-          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/imported-account-erasure.json dist/postgres-handoff.json dist/source-copy.json dist/visual-parity.json dist/performance-product.json
+          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/imported-account-erasure.json dist/postgres-handoff.json dist/source-copy.json dist/visual-parity.json dist/performance-product.json dist/performance-insights.json
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch' && inputs.archive_candidate
         with:

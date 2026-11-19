@@ -23,6 +23,7 @@ MEDORA_TEST_DATABASE_URL="$ERASURE_FIXTURE_URL" node scripts/verification/rehear
 node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
 node scripts/verification/visual-parity.mjs > dist/visual-parity.json
 node tests/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
+node tests/browser/measure.mjs apps/web/dist 3 --insights > dist/performance-insights.json
 node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
 ```
 

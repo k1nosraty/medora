@@ -2,7 +2,8 @@ import { expect, it } from "vitest";
 import { fixtureDatabase } from "../../scripts/verification/fixture-database.mjs";
 import {
   accessibilityScenes, evidenceVersion, handoffAccounts, offlineCase,
-  offlineOperations, verifyCoverage, visualCase, visualProfiles, visualScenes,
+  offlineOperations, verifyCoverage, verifyStartupPerformance,
+  visualCase, visualProfiles, visualScenes,
 } from "../../scripts/verification/evidence.mjs";
 
 it("restricts mutation-capable rehearsals to dedicated loopback databases", () => {
@@ -15,6 +16,19 @@ it("restricts mutation-capable rehearsals to dedicated loopback databases", () =
     "malformed",
     fixture + "?host=example.test",
   ]) expect(() => fixtureDatabase(invalid)).toThrow(/dedicated loopback/);
+});
+
+it("requires measured onboarding within budget for the requested route", () => {
+  const route = "/medication/?view=insights";
+  const report = {
+    entry: route,
+    trials: [6100, 4200, 6000].map((usableMs) => ({ usableMs })),
+    median: { usableMs: 6000 },
+  };
+  expect(() => verifyStartupPerformance(report, route)).not.toThrow();
+  expect(() => verifyStartupPerformance(report, "/medication/")).toThrow(/Incomplete/);
+  const slow = { ...report, trials: [6100, 4200, 6001].map((usableMs) => ({ usableMs })) };
+  expect(() => verifyStartupPerformance(slow, route)).toThrow(/6001 ms/);
 });
 
 it("requires all current handoff, visual and accessibility scenarios", () => {

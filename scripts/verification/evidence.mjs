@@ -51,3 +51,15 @@ export function verifyCoverage(handoff, visual) {
     offlineOperations.map((operation) => offlineCase(account, operation))),
     (row) => row.id, (row) => row.replayed === true, "offline handoff");
 }
+
+export function verifyStartupPerformance(report, entry) {
+  if (report?.entry !== entry || !Array.isArray(report.trials) ||
+      report.trials.length !== 3)
+    throw Error("Incomplete startup measurements for " + entry);
+  const times = report.trials.map((trial) => trial?.usableMs);
+  if (times.some((time) => !Number.isFinite(time) || time <= 0))
+    throw Error("Incomplete startup measurements for " + entry);
+  const median = times.toSorted((a, b) => a - b)[1];
+  if (median !== report.median?.usableMs || median > 6000)
+    throw Error(`Startup budget failed for ${entry}: ${median} ms (limit 6000 ms)`);
+}

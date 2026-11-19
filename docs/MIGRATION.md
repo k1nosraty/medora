@@ -43,7 +43,22 @@ Use the local end-to-end check after obtaining a frozen copy through an explicit
 pnpm verify:source --authorized-copy "$FROZEN_DO_COPY" "$INDEPENDENT_CENSUS" "$OBJECT_IDENTITIES" "$NEW_PRIVATE_OUTPUT"
 ```
 
-Use `--synthetic` for fixtures. The command verifies the SQL migrations twice, authenticates and compares the imported physical images, projects the records twice, checks projection in both directions, and verifies a restored native image. It requires an unused database and leaves both archive and restored image available for inspection. The restored image contains sensitive source records when the input is real. Keep it private and run the legacy readback only in a separate authorized local runtime. The console reports the input class, manifest digest and aggregate results. Complete census attestation, historical key and backup checks, independent semantic readback and release review remain separate gates.
+Use `--synthetic` for fixtures. The command rejects an occupied database before making a working copy. It verifies the SQL migrations twice, reports the ordered migration-history digest, authenticates and compares the imported physical images, checks projection in both directions, and verifies a restored native image. It leaves both archive and restored image available for inspection. Keep a real restored image private and run the legacy readback only in a separate authorized local runtime. The console reports aggregate results. Complete census attestation, historical key and backup checks, independent semantic readback and release review remain separate gates.
+
+### Authorized reconciliation inputs
+
+Provide the paths to the following inputs through the approved private transfer channel. Keep the original sealed copy and work from a separate read-only copy. The fixture tools neither acquire a hosted source nor establish its provenance.
+
+| Input | Format and scope |
+| --- | --- |
+| Frozen namespace tree | A stopped, consistent Wrangler/Workerd `do/` copy with one directory per namespace and the SQLite images, metadata and any required WAL companions. Supply the source runtime revision, capture time and proof that writers were drained in the custody record. |
+| Independent namespace census | JSON object mapping full namespace directory names to arrays of exact SQLite filenames, including `metadata.sqlite` when present. Obtain it from the source authority independently of the files being checked. Include accountless devices and otherwise-unreferenced objects. |
+| Object identities | JSON object mapping each namespace to an object of SQLite filename → logical object name. Omit the metadata file from the identity mapping. Include the separately verified owner and relationship evidence for the semantic readback. |
+| Historical backup corpus | Original encrypted files and multipart metadata, with an independent relative-file SHA-256 list. Include the supported Android, Web, Cycle and server archive generations present at source. Match each archive to its historical format and authorized key version. |
+| Key-version and session evidence | A private inventory of password pepper versions, session signing, reminder/VAPID, private envelope, backup and pending-job encryption references for the relevant records. Resolve them through the approved secret store in the isolated runtime. |
+| Object-storage inventory | Source bucket export and independent manifest linking each object key to byte count, SHA-256 and its database reference. Use the PostgreSQL and object-store handoff for portable installations. Legacy promotion chunks are checked from the native object images. |
+
+For the independent semantic readback, compare the recorded owners, groups, membership and grant direction, live and revoked sessions, pending jobs, receipts and archives against the restored isolated runtime. Device-only IndexedDB and pending browser operations stay at the original product origin and have their own [preservation checks](DATA_PRESERVATION.md). A missing custody record, unmatched key, incomplete namespace or unreadable historical backup leaves production reconciliation **BLOCKED**.
 
 ## Relational rehearsal
 
