@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
-const mode = process.argv.slice(2);
-if (mode.length && (mode.length !== 1 || mode[0] !== "--portable"))
-  throw Error("Use --portable for standalone PostgreSQL");
-const portable = mode.length === 1;
+const flags = process.argv.slice(2);
+if (new Set(flags).size !== flags.length ||
+    flags.some((flag) => !["--portable", "--check"].includes(flag)))
+  throw Error("Use --portable for standalone PostgreSQL and --check to verify without writing a file");
+const portable = flags.includes("--portable");
 const config = JSON.parse(
   readFileSync(
     new URL(
@@ -32,8 +33,16 @@ config.account_id = account;
 config.workers_dev = true;
 config.hyperdrive[0].id = hyperdrive;
 config.r2_buckets[0].bucket_name = bucket;
-writeFileSync(
-  new URL("./.staging.generated.json", import.meta.url),
-  JSON.stringify(config, null, 2),
-  { mode: 0o600 },
-);
+if (config.routes || config.route || config.preview_urls !== false || config.env ||
+    config.hyperdrive.length !== 1 || config.r2_buckets.length !== 1 ||
+    config.durable_objects?.bindings.some((binding) => binding.script_name || binding.environment))
+  throw Error("The staging configuration must use only its own bindings and workers.dev");
+if (flags.includes("--check")) {
+  console.log(JSON.stringify({ worker: config.name, previews: false, dedicatedBindingsRequired: true }));
+} else {
+  writeFileSync(
+    new URL("./.staging.generated.json", import.meta.url),
+    JSON.stringify(config, null, 2),
+    { mode: 0o600, flag: "wx" },
+  );
+}

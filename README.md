@@ -64,6 +64,8 @@ pnpm test:incumbent
 
 برای آزمون‌های PostgreSQL، `MEDORA_TEST_DATABASE_URL` باید به پایگاه آزمایشی جدا روی loopback با نامی مانند `medora_fixture` اشاره کند. پیش از اجرا با `DATABASE_URL` همان پایگاه، `pnpm db:migrate` را اجرا کنید. آزمون‌های وابسته به PostgreSQL بدون اتصال آزمایشی کنار گذاشته می‌شوند. آزمون‌های Playwright را بعد از ساخت اجرا کنید. `pnpm test:product` محصول بازسازی‌شده و دستور آخر محصول سازگاری را باز می‌کند. تمرین مهاجرت، بازیابی و توقف نوشتن به پایگاه‌های تازه نیاز دارد. [گزارش و دامنهٔ آزمون‌ها](docs/REBUILD_VERIFICATION.md)
 
+برای اجرای خودکار گزارش‌ها در Safari روی مک، پس از ساخت محصول، Caddy و Safari WebDriver را روی همان مک آماده کنید و `pnpm verify:safari` را بزنید. بررسی نسخهٔ منبع در `pnpm verify:source` به کپی ثابت، فهرست مستقل و یک PostgreSQL آزمایشی تازه نیاز دارد. [راهنمای تطبیق منبع](docs/MIGRATION.md)
+
 ## راهنماهای اصلی
 
 - [معماری](docs/ARCHITECTURE.md) و [حفظ داده‌های دستگاه](docs/DATA_PRESERVATION.md)

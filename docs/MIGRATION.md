@@ -37,6 +37,14 @@ Repository discovery found the committed Android compatibility fixture and local
 
 Full authorized source reconciliation is **BLOCKED**. This workspace has no identified, explicitly authorized complete source snapshot, independent namespace census, key-version references, or historical backup corpus. Local synthetic reconciliations cover their fixture namespaces and objects.
 
+Use the local end-to-end check after obtaining a frozen copy through an explicitly authorized process. Supply a new dedicated loopback PostgreSQL database, the independent census and object-identity map, and a private 32-byte hex key file with mode 0600. Set `MEDORA_TEST_DATABASE_URL` and `MEDORA_ARCHIVE_KEY_FILE` in the local environment. Choose a new private output directory outside the source tree and keep the inputs and output out of Git.
+
+```sh
+pnpm verify:source --authorized-copy "$FROZEN_DO_COPY" "$INDEPENDENT_CENSUS" "$OBJECT_IDENTITIES" "$NEW_PRIVATE_OUTPUT"
+```
+
+Use `--synthetic` for fixtures. The command verifies the SQL migrations twice, authenticates and compares the imported physical images, projects the records twice, checks projection in both directions, and verifies a restored native image. It requires an unused database and leaves both archive and restored image available for inspection. The restored image contains sensitive source records when the input is real. Keep it private and run the legacy readback only in a separate authorized local runtime. The console reports the input class, manifest digest and aggregate results. Complete census attestation, historical key and backup checks, independent semantic readback and release review remain separate gates.
+
 ## Relational rehearsal
 
 A second rehearsal starts the actual legacy classes in Workerd, populates synthetic records and stops the process. Its census is derived from object IDs allocated during setup. The exporter authenticates a separately supplied mapping of opaque SQLite filenames to logical object names. Pass the identity JSON path after NEW_ARCHIVE to enable semantic projection. Do not infer an account owner from a filename.

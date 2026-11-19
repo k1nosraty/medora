@@ -1,6 +1,6 @@
 # Rebuild verification
 
-**NOT READY. Production NOT DEPLOYED.** Work was performed on the local branch `codex/medora-2-full-rebuild`. The design and behavior reference is `5ee5e47cafe7644b5dd15ae7408e909c755ee211`. No push, hosted deployment or production access occurred. The local Git commit identifies this revision. The release manifest records hashes for the separately archived candidate.
+**NOT READY. Production NOT DEPLOYED.** The verification branch is `codex/medora-2-full-rebuild`. The design and behavior reference is `5ee5e47cafe7644b5dd15ae7408e909c755ee211`. No hosted deployment or production access occurred. The Git commit and local release manifest identify the candidate and its fixture evidence.
 
 ## Product and portability
 
@@ -230,10 +230,35 @@ On 2026-11-19, the tester confirmed that Reports opened online and offline in a 
 
 The iPhone requests reached the corrected origin. The access log contains no iPhone request for `?view=insights` or to the previous-build origin, so it does not establish direct-link timing or a prior-build comparison. macOS Safari and the iPhone Home Screen app remain untested. The iPhone Safari tab result passes. Release remains **NOT READY**, with the separate source reconciliation gate still open.
 
+### Automated Safari coverage
+
+The browser suite exercises iPhone tab and Home Screen modes in Chromium and WebKit. It verifies the installation message or notification controls, checks that first launch performs zero subscription lookups, and reloads a direct Reports link offline with a real medication Service Worker and a synthetic IndexedDB record. The operating-system notification permission and push provider are simulated.
+
+`pnpm verify:safari` can exercise the same direct route behind Caddy in native macOS Safari. Build the app first, make Caddy available on PATH, and enable Safari WebDriver with `safaridriver --enable`. The command starts loopback-only fixtures, checks for a controlling Service Worker, stops its own Caddy process and verifies the offline reload. Linux verified the Caddy configuration and the platform guard. Running the Safari session requires a Mac. [Apple Safari WebDriver](https://developer.apple.com/documentation/webkit/testing-with-webdriver-in-safari)
+
+### Final local verification from `17c98c5`
+
+All data and services used here were synthetic loopback fixtures. The browser commands used system Chrome and Playwright WebKit.
+
+| Command or fixture | Fresh result |
+| --- | --- |
+| `pnpm install --frozen-lockfile`, `pnpm audit --prod --audit-level=high`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, compatibility build and both Worker bundles | Passed. No known production dependency vulnerability reported. |
+| `pnpm db:migrate` twice, then `pnpm test` | All 20 migration checksums verified on both runs. 26 passed in 16 files. |
+| `pnpm test:compat` | 44 compatibility and 13 care tests passed, plus the closed-client alarm verification. |
+| `pnpm test:product` | Chromium 74 passed. WebKit 74 passed. No failures or skips. The new iPhone tab and installed-mode cases passed in both engines. The focused setup initially failed in WebKit because the page-scoped API mock did not reach a service-worker-controlled request. Moving the response to the loopback fixture fixed the test setup. |
+| `pnpm test:incumbent` | Each engine passed 41 and skipped 33 candidate-only cases. No failures. |
+| `pnpm test:e2e`, `node scripts/verification/pwa-update.mjs` | Journal and shared browser checks passed 9 per engine, including IndexedDB v1–v3 and encrypted backup. Interrupted Service Worker update and offline recovery passed separately. |
+| `node scripts/verification/frontend-independence.mjs --offline` | Frozen install and production build succeeded with both root `web/` and `apps/compat-worker/` physically absent. Each engine passed 63 checks. The browser request guard passed. |
+| `node scripts/verification/visual-parity.mjs` | Each engine matched all 80 screenshots and passed 32 accessibility comparisons. No mismatches, renderer allowances or threshold changes. |
+| `node scripts/verification/insights-gateway.mjs <loopback-caddy-origin>` | Three of three fresh WebKit contexts completed direct navigation, Reports and offline reload with a controlling Service Worker. Online Reports took 678–1,223 ms on loopback. |
+| `pnpm verify:source --synthetic …`, `node scripts/verification/rehearse.mjs` in normal, unmapped and erasure modes | Reconciled 7 namespaces, 15 images, 25 physical rows and 1,607 projected care records. Frozen source hashes stayed unchanged. Remote and occupied database targets and output inside the source tree were rejected. All three rollback modes completed on fresh databases with system Chrome after the initial local browser location error. |
+| `pnpm test:handoff`, fixture runtime, Worker and Compose restore scripts | Two accounts replayed eight offline writes across Workerd and Node. Verified return after writes, outbox resumption, grants, sessions, Service Worker update and encrypted object reads. A separate Compose restore matched PostgreSQL rows and sequences and reopened the cataloged S3 object. |
+| Staging renderer with `--check`, both modes | Passed with synthetic references. Refused a production-shaped bucket name. No generated configuration, hosted access or deployment. |
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.
-- Remaining React and TypeScript controllers, the native-only diagnostic pilot and release delivery with actual providers. Production key continuity and pending challenge continuity remain open.
-- A verified fleet drain, hosted staging using dedicated resources, real-device push and installation checks, and production-scale performance. The owner’s explicit approval is required before any future push or deployment.
+- Real-device iPhone Home Screen installation and push delivery, plus direct navigation in native macOS Safari. The browser emulation and the reported native iPhone tab check cover different cases.
+- A verified fleet drain, hosted staging with dedicated resources, actual notification and mail delivery, key and pending challenge continuity, and production-scale performance. Hosted deployment requires separate owner approval. Rebuild pushes run fixture verification. Candidate archive upload is available only by a separate manual workflow invocation.
 
 The fixture commands, required bindings, abort conditions and archived candidate identity are in [the deployment checklist](DEPLOYMENT.md). Recovery semantics and approved inputs are in [the migration guide](MIGRATION.md).

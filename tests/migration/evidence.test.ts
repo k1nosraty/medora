@@ -12,6 +12,7 @@ it("restricts mutation-capable rehearsals to dedicated loopback databases", () =
   for (const invalid of [
     "postgresql://example.test/medora_fixture",
     "postgresql://localhost/medora",
+    "malformed",
     fixture + "?host=example.test",
   ]) expect(() => fixtureDatabase(invalid)).toThrow(/dedicated loopback/);
 });

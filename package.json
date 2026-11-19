@@ -15,6 +15,8 @@
     "test:product": "playwright test --config tests/browser/product.config.mjs",
     "test:e2e": "playwright test",
     "test:handoff": "node scripts/verification/postgres-handoff.mjs",
+    "verify:source": "node scripts/verification/source-reconciliation.mjs",
+    "verify:safari": "node scripts/verification/safari-insights.mjs",
     "db:migrate": "node scripts/migration/apply.mjs",
     "test:incumbent": "pnpm --filter @medora/compat-worker build && MEDORA_INCUMBENT_BROWSER=1 playwright test --config tests/browser/product.config.mjs"
   },

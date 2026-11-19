@@ -3,6 +3,12 @@ on:
   pull_request:
   push:
     branches: ['codex/medora-2-full-rebuild']
+  workflow_dispatch:
+    inputs:
+      archive_candidate:
+        description: Upload the verified candidate artifact after separate approval
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -34,6 +40,14 @@ jobs:
       - run: pnpm db:migrate && pnpm db:migrate
       - run: pnpm test
       - run: pnpm build
+      - name: Validate isolated Cloudflare configuration without generating or deploying it
+        env:
+          MEDORA_STAGE_ACCOUNT: "0123456789abcdef0123456789abcdef"
+          MEDORA_STAGE_HYPERDRIVE: "abcdef0123456789abcdef0123456789"
+          MEDORA_STAGE_BUCKET: medora-fixture-staging
+        run: |
+          node infrastructure/cloudflare/staging.mjs --check
+          node infrastructure/cloudflare/staging.mjs --portable --check
       - run: pnpm exec playwright install --with-deps chromium webkit
       - run: node scripts/verification/product-runtime.mjs
       - name: Exercise generation fencing and post-write rollback on a fresh database
@@ -51,6 +65,13 @@ jobs:
           MEDORA_TEST_DATABASE_URL="${MEDORA_TEST_DATABASE_URL%/*}/medora_unmapped" node scripts/verification/rehearse.mjs --unmapped > dist/recovery-refusal.json
           createdb medora_erase_imported
           MEDORA_TEST_DATABASE_URL="${MEDORA_TEST_DATABASE_URL%/*}/medora_erase_imported" node scripts/verification/rehearse.mjs --erase-imported > dist/imported-account-erasure.json
+          createdb medora_fixture_source
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          umask 077
+          openssl rand -hex 32 > "$work/archive-key"
+          node scripts/verification/legacy-source.mjs "$work/source"
+          MEDORA_TEST_DATABASE_URL="${MEDORA_TEST_DATABASE_URL%/*}/medora_fixture_source" MEDORA_ARCHIVE_KEY_FILE="$work/archive-key" node scripts/verification/source-reconciliation.mjs --synthetic "$work/source/do" "$work/source/census.json" "$work/source/identity.json" "$work/check" > dist/source-copy.json
       - name: Rehearse PostgreSQL and R2 migration with offline browsers
         run: |
           export PGHOST=127.0.0.1 PGUSER=medora PGPASSWORD=fixture-ci-only
@@ -96,12 +117,14 @@ jobs:
           env -u MEDORA_TEST_DATABASE_URL MEDORA_TEST_COMPOSE_ENV="$config" MEDORA_TEST_COMPOSE_PROJECT=medora-ci node scripts/verification/runtime.mjs http://127.0.0.1:8808
           node scripts/verification/accounts.mjs http://127.0.0.1:8808 http://127.0.0.1:8810
           node scripts/verification/worker.mjs http://127.0.0.1:8810
+          timeout 35s node scripts/verification/insights-gateway.mjs http://127.0.0.1:8808
           bash scripts/verification/restore-compose.sh "$config" medora-ci "$RUNNER_TEMP/medora-restore"
       - name: Identify and package verified candidate
         run: |
           node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
-          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/imported-account-erasure.json dist/postgres-handoff.json dist/visual-parity.json dist/performance-product.json
+          tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/imported-account-erasure.json dist/postgres-handoff.json dist/source-copy.json dist/visual-parity.json dist/performance-product.json
       - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && inputs.archive_candidate
         with:
           name: medora-candidate
           path: ${{ runner.temp }}/medora-candidate.tar.gz

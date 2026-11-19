@@ -49,6 +49,7 @@ const evidenceFiles = [
   "postgres-handoff.json",
   "visual-parity.json",
   "performance-product.json",
+  "source-copy.json",
 ];
 const evidence = await Promise.all(
   evidenceFiles.map(async (name) => {
@@ -60,7 +61,7 @@ const evidence = await Promise.all(
     };
   }),
 );
-const [reconciled, refused, erased, handoff, visual, performance] =
+const [reconciled, refused, erased, handoff, visual, performance, sourceCopy] =
   evidence.map((entry) => entry.report);
 verifyCoverage(handoff, visual);
 if (
@@ -97,7 +98,14 @@ if (
   !refused.unsupportedMutation?.recoveryPublicationBlocked ||
   !refused.unsupportedMutation?.pendingPasswordReset ||
   !visual.identicalDocumentMarkup ||
-  performance.trials?.length !== 3
+  performance.trials?.length !== 3 ||
+  sourceCopy.input !== "synthetic" ||
+  !/^[0-9a-f]{64}$/.test(sourceCopy.manifestSha256) ||
+  sourceCopy.restoredImagesVerified !== true ||
+  sourceCopy.physical?.namespaces !== 7 ||
+  sourceCopy.physical?.objects !== 15 ||
+  sourceCopy.projected?.accounts !== 2 ||
+  sourceCopy.readiness !== "NOT READY"
 )
   throw Error("Incomplete candidate fixture evidence");
 const manifest = {

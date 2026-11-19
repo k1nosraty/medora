@@ -27,6 +27,8 @@ export function browserServer(intercept) {
     const cookie = request.headers.cookie ?? "";
     if (pathname === "/api/v2/product-writer") { json(response, { writer: "legacy" }); return; }
     if (pathname === "/__browser-test/actions") { json(response, actions); return; }
+    const pushKey = /(?:^|;\s*)test-push-key=([\w-]{87})(?:;|$)/.exec(cookie)?.[1];
+    if (pathname === "/api/config" && pushKey) { json(response, { publicKey: pushKey }); return; }
     const familyMode = /test-family-policy=(read|write|revoked)/.exec(cookie)?.[1];
     if (pathname === "/api/family" && familyMode) {
       const allowed = familyMode === "write";
