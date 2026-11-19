@@ -1,26 +1,26 @@
-import { visitInstant } from "../../../web/public/medication/domain/care-plan.js";
+import { visitInstant } from "../../../apps/web/product-assets/public/medication/domain/care-plan.js";
 import {
   localWall,
   timezone,
   dayMs,
-} from "../../../web/public/medication/domain/wall-clock.js";
-import * as engine from "../../../web/public/medication/domain/medication-rules.js";
+} from "../../../apps/web/product-assets/public/medication/domain/wall-clock.js";
+import * as engine from "../../../apps/web/product-assets/public/medication/domain/medication-rules.js";
 import {
   compilePhases,
   createCareIndex,
   trackSchedule,
   doseId,
   doseTime,
-} from "../../../web/public/medication/domain/care-index.js";
+} from "../../../apps/web/product-assets/public/medication/domain/care-index.js";
 import {
   routineLog,
   routineOccurs,
-} from "../../../web/public/medication/domain/routine-plan.js";
+} from "../../../apps/web/product-assets/public/medication/domain/routine-plan.js";
 import {
   validSleepRecord,
   sleepConflicts,
-} from "../../../web/public/medication/domain/sleep.js";
-import { cycleFlows } from "../../../web/public/medication/domain/cycle.js";
+} from "../../../apps/web/product-assets/public/medication/domain/sleep.js";
+import { cycleFlows } from "../../../apps/web/product-assets/public/medication/domain/cycle.js";
 
 import { collection, type Fields } from "./collections";
 export { collection, type Fields } from "./collections";

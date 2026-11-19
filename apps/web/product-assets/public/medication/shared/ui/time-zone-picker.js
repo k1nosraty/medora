@@ -43,7 +43,7 @@ const persianNames = {
   "Africa/Cairo": ["قاهره", "مصر"]
 };
 
-const searchKey = text => text.normalize("NFKD").toLowerCase()
+export const zoneSearchKey = text => text.normalize("NFKD").toLowerCase()
   .replace(/[يى]/g, "ی").replace(/ك/g, "ک").replace(/[^\p{L}\p{N}]/gu, "");
 const cityOf = zone => zone === "Asia/Calcutta" ? "Kolkata" : zone.split("/").at(-1).replaceAll("_", " ");
 const aliasesFor = zone => persianNames[zone === "Asia/Calcutta" ? "Asia/Kolkata" : zone] ?? [];
@@ -58,10 +58,26 @@ function utcOffset(zone, now) {
   return `UTC${minutes < 0 ? "-" : "+"}${hours}:${remainder}`;
 }
 
+export function timeZoneChoices(selected, device, now) {
+  const pinned = new Set([device, "Asia/Tehran", "UTC", selected]);
+  const others = (Intl.supportedValuesOf?.("timeZone") ?? []).filter(zone => !pinned.has(zone))
+    .sort((a, b) => cities.compare(timeZoneCity(a), timeZoneCity(b)) || cities.compare(a, b));
+  return [...pinned, ...others].map(zone => {
+    const name = timeZoneCity(zone);
+    return {
+      zone,
+      title: zone === device ? t("ui.sync-device-zone-option", name) : name,
+      region: zone.split("/").slice(0, -1).join(" / ").replaceAll("_", " "),
+      offset: utcOffset(zone, now),
+      key: zoneSearchKey([zone, cityOf(zone), ...aliasesFor(zone)].join(" ")),
+    };
+  });
+}
+
 export function installTimeZonePicker(search, options, empty) {
   let rows = [];
   function filter() {
-    const query = searchKey(search.value);
+    const query = zoneSearchKey(search.value);
     let matches = 0;
     for (const { row, key } of rows) {
       row.hidden = !key.includes(query);
@@ -77,14 +93,7 @@ export function installTimeZonePicker(search, options, empty) {
     get value() { return options.querySelector("input:checked")?.value; },
     load(saved, device, now) {
       const selected = saved ?? device;
-      const pinned = new Set([device, "Asia/Tehran", "UTC", selected]);
-      const others = (Intl.supportedValuesOf?.("timeZone") ?? []).filter(zone => !pinned.has(zone))
-        .sort((a, b) => cities.compare(timeZoneCity(a), timeZoneCity(b)) || cities.compare(a, b));
-      rows = [...pinned, ...others].map(zone => {
-        const city = cityOf(zone);
-        const aliases = aliasesFor(zone);
-        const name = timeZoneCity(zone);
-        const title = zone === device ? t("ui.sync-device-zone-option", name) : name;
+      rows = timeZoneChoices(selected, device, now).map(({ zone, title, region, offset: utc, key }) => {
         const row = element("label", "", "time-zone-option");
         const radio = element("input");
         radio.type = "radio";
@@ -93,12 +102,11 @@ export function installTimeZonePicker(search, options, empty) {
         radio.checked = zone === selected;
         const text = element("span", "", "time-zone-name");
         text.append(element("bdi", title));
-        const region = zone.split("/").slice(0, -1).join(" / ").replaceAll("_", " ");
         if (region) text.append(element("small", region, "time-zone-region"));
-        const offset = element("bdi", utcOffset(zone, now), "time-zone-offset");
+        const offset = element("bdi", utc, "time-zone-offset");
         offset.dir = "ltr";
         row.append(radio, text, offset);
-        return { row, key: searchKey([zone, city, ...aliases].join(" ")) };
+        return { row, key };
       });
       options.replaceChildren(...rows.map(({ row }) => row));
       search.value = "";

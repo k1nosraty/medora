@@ -1,19 +1,19 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { nextPlannedDose } from "../../../../../web/public/medication/features/medicines/next-dose.js";
+import { nextPlannedDose } from "../../../product-assets/public/medication/features/medicines/next-dose.js";
 import {
   amountText,
   doseUnit,
-} from "../../../../../web/public/medication/features/medicines/quantity.js";
+} from "../../../product-assets/public/medication/features/medicines/quantity.js";
 import {
   appearanceColors,
   medicineShapes,
-} from "../../../../../web/public/medication/features/medicines/appearance-options.js";
-import { timeText } from "../../../../../web/public/medication/domain/care-index.js";
+} from "../../../product-assets/public/medication/features/medicines/appearance-options.js";
+import { timeText } from "../../../product-assets/public/medication/domain/care-index.js";
 import {
   listSeparator,
   localDigits,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import type { installPickers } from "../Pickers";
 import { paintFeature } from "../renderer";
 import { MedicineArt, medicineColor, medicineShape } from "./MedicineArt";

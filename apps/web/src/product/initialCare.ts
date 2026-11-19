@@ -1,4 +1,4 @@
-import { accessCare } from "../../../../web/public/medication/shared/storage.js";
+import { accessCare } from "../../product-assets/public/medication/shared/storage.js";
 import type { CareState } from "./product";
 
 export const initialCare = accessCare().then(

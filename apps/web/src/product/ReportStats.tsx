@@ -1,4 +1,4 @@
-import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
+import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
 import { paintFeature } from "./renderer";
 
 type Stat = [label: string, value: string, tone?: string];

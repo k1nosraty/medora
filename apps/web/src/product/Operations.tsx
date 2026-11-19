@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   language,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
 import { accountTransport } from "./accountTransport";
 import { paintFeature } from "./renderer";
 import { readTickets, sendTicket, type Ticket } from "./supportApi";

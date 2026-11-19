@@ -112,6 +112,30 @@ The production release gate still requires reconciliation against a complete aut
 
 The cold onboarding median was 4,541 ms versus 5,087 ms on a new baseline. In a separate run the focused dashboard median after an immediate click was 7,289 ms versus 7,555 ms. See the [performance measurements](PERFORMANCE.md#appointments-routines-and-shared-frontend-migration).
 
+## Account, preferences, Cycle tools and frontend source independence
+
+The rebuild started clean at `eb063ce`. A fresh typecheck, lint and frontend build passed. The baseline visual run matched 160 visible layouts, 155 exact screenshots and one previously established WebKit rendering variant. Four captures differed.
+
+The canonical frontend now builds from `apps/web`, `packages` and branding. The compatibility build generates its own `web/public` from the shared source. The canonical JavaScript input guard rejects the top-level `web/` directory, the old account and sync controllers, and the other previously replaced UI controllers. Legacy family, notification and daily Cycle UI still run from the relocated workspace sources.
+
+| Command or fixture | Completed result |
+| --- | --- |
+| `pnpm typecheck`, `pnpm lint`, `pnpm build` | Passed frontend and Node production build, lint and typecheck. Both Worker bundle commands and the local Docker compatibility image build also passed. |
+| `pnpm test` after fixture PostgreSQL migration | 23 tests passed across 14 files. |
+| `pnpm test:compat` | 44 compatibility tests, 13 care tests and the closed-client alarm check passed. |
+| `pnpm test:product` | 65 Chromium and 65 WebKit tests passed. The run included the eight primary routes, reports, Axe, four RTL/LTR viewport combinations and the Workerd-backed workflows. |
+| `pnpm test:product --grep 'cycle daily log\|cycle bulk history\|the product installs an updated worker'` | Three follow-up cases passed per engine with the final Cycle validation and worker upgrade check. |
+| `npm --prefix web run test:browser` | 41 incumbent tests passed per engine. The 50 candidate-only cases were skipped as configured. |
+| `pnpm test:e2e` and `node scripts/verification/pwa-update.mjs` | Nine journal browser tests passed per engine. Interrupted installation, previous offline shell, retry and device data checks passed. |
+| `node scripts/verification/frontend-independence.mjs --offline` | Frozen install, production frontend build and 55 cases per engine passed in a temporary source copy that excluded all of `web/`. The route matrix recorded zero forbidden requests. The worker upgrade case compared the original IndexedDB water records before and after an offline reload. |
+| `pnpm test:handoff` | Local PostgreSQL and loopback S3-protocol fixtures reconciled 48 tables, 9 sequences, 273 constraints and one decrypted backup object. Two accounts kept eight offline writes, sessions and a directional grant across a same-origin Workerd-to-Node switch and reverse recovery. The fixture also checked outbox delivery, a failed object copy, a concurrent writer drain and two-tab service-worker recovery. |
+| `node scripts/verification/rehearse.mjs` with no flag, `--unmapped` and `--erase-imported` | All three fresh loopback rehearsals completed. They verified the legacy writer fence, mapped post-write rollback, refusal to publish an unsupported reverse mapping, and imported-account erasure with deferred backup cleanup. |
+| `node scripts/verification/visual-parity.mjs` | Both engines passed the full run with 160 matching layouts, 157 exact captures, three incumbent renderer variants, zero remaining mismatches and zero candidate Axe violations in 64 samples. |
+
+The earlier English mobile medication editor differed at 81 pixels by one channel level. An incumbent-only control matched the alternate paint under WebKit 27.2. The earlier English mobile and desktop schedule pairs differed at 78 and 2,824 pixels respectively, each by at most one channel level. Both schedules matched exactly in the completed run. The same run accepted the Persian and English desktop appearance captures only after independent incumbent paints matched. No pixel thresholds or reference images were changed. An additional incumbent-only replay still showed a desktop medicine-details raster mismatch with identical geometry. The controlled results establish compositor variability, while the exact cause of every individual differing schedule pixel remains unproven.
+
+Synthetic device and Workerd cases exercised IndexedDB v1–v3 medication and dose edits with extensions, reconnect and lost acknowledgement, private recovery key rotation, encrypted Android and Web archives, and the separate encrypted Cycle archive. The production reconciliation gate still requires a complete authorized source snapshot, independent census, relevant key-version references and the backup corpus. The workspace contains synthetic evidence. The gate is **BLOCKED** and release stays **NOT READY**.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

@@ -3,14 +3,14 @@ import { clearFeature, disposeCards, paintFeature } from "./renderer";
 import { type RenderDose } from "./medication/Medication";
 import type { RoutineEntry } from "./routines/model";
 import type { Dose, MedicinePlan } from "./medication/model";
-import { glassObject } from "../../../../web/public/medication/design/three-dimensional.js";
+import { glassObject } from "../../product-assets/public/medication/design/three-dimensional.js";
 import {
   localDigits,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
-import { routineComplete } from "../../../../web/public/medication/domain/routine-plan.js";
-import { doseTime } from "../../../../web/public/medication/domain/care-index.js";
-import { element } from "../../../../web/public/medication/shared/ui/dom.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
+import { routineComplete } from "../../product-assets/public/medication/domain/routine-plan.js";
+import { doseTime } from "../../product-assets/public/medication/domain/care-index.js";
+import { element } from "../../product-assets/public/medication/shared/ui/dom.js";
 
 interface TimelineEvent {
   key: string;

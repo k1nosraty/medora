@@ -35,8 +35,8 @@ COPY --from=build /app/web/node_modules web/node_modules
 COPY web/package.json web/package.json
 COPY web/scripts/fixture-service.mjs web/scripts/fixture-service.mjs
 COPY web/src web/src
-COPY web/public/medication/domain web/public/medication/domain
-COPY web/public/medication/shared/crypto web/public/medication/shared/crypto
+COPY apps/web/product-assets/public/medication/domain apps/web/product-assets/public/medication/domain
+COPY apps/web/product-assets/public/medication/shared/crypto apps/web/product-assets/public/medication/shared/crypto
 COPY infrastructure/cloudflare/local.json infrastructure/cloudflare/local.json
 RUN mkdir -p /state && chown node:node /state
 USER node

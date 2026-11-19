@@ -2,16 +2,16 @@ import { useLayoutEffect } from "react";
 import {
   locale,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { cycleIsEnabled } from "../../../../../web/public/medication/domain/profile.js";
-import { cycleTotals } from "../../../../../web/public/medication/domain/cycle.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
+import { cycleTotals } from "../../../product-assets/public/medication/domain/cycle.js";
 import {
   sleepIsEnabled,
   sleepReport,
-} from "../../../../../web/public/medication/domain/sleep.js";
-import { sleepDuration } from "../../../../../web/public/medication/features/sleep/presentation.js";
-import type { calendarFormat } from "../../../../../web/public/medication/shared/ui/calendar-format.js";
-import type { createCareIndex } from "../../../../../web/public/medication/domain/care-index.js";
+} from "../../../product-assets/public/medication/domain/sleep.js";
+import { sleepDuration } from "../../../product-assets/public/medication/features/sleep/presentation.js";
+import type { calendarFormat } from "../../../product-assets/public/medication/shared/ui/calendar-format.js";
+import type { createCareIndex } from "../../../product-assets/public/medication/domain/care-index.js";
 import { Icon, PlanArtwork } from "../PlanCard";
 import { renderWaterChart, clearWaterChart } from "../WaterChart";
 import type { CareState, FamilyView } from "../product";

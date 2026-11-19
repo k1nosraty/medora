@@ -56,7 +56,7 @@ test("the service worker displays a notification without an open client", async 
   const listeners = new Map();
   const notifications = [];
   const paths = [];
-  const source = await readFile(new URL("../public/sw.js", import.meta.url), "utf8");
+  const source = await readFile(new URL("../../apps/web/product-assets/public/sw.js", import.meta.url), "utf8");
   vm.runInNewContext(source, {
     self: {
       addEventListener: (name, listener) => listeners.set(name, listener),

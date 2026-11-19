@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { artworkPath } from "../../../../../web/public/medication/design/three-dimensional.js";
-import { quantityFromText } from "../../../../../web/public/medication/domain/medication-rules.js";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
+import { artworkPath } from "../../../product-assets/public/medication/design/three-dimensional.js";
+import { quantityFromText } from "../../../product-assets/public/medication/domain/medication-rules.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import { clearFeature, paintFeature } from "../renderer";
 import type { FamilyDoseRecord } from "./model";
 

@@ -78,7 +78,7 @@ jobs:
       - run: npm --prefix web run test:browser
       - run: pnpm test:product
       - run: node scripts/verification/visual-parity.mjs > dist/visual-parity.json
-      - run: node web/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
+      - run: node tests/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
       - run: pnpm test:e2e
       - run: node scripts/verification/pwa-update.mjs
       - run: node scripts/verification/bundle-worker.mjs infrastructure/cloudflare/candidate.mjs dist/worker/candidate.js

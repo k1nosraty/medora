@@ -3,7 +3,7 @@ import type { Pool, PoolClient } from "pg";
 import { ReminderDevice } from "../../../web/src/reminders/device.mjs";
 import { routeReminders } from "../../../web/src/reminders/routes.mjs";
 import { portablePush } from "../../../web/src/reminders/push.mjs";
-import { reminderCareProjection } from "../../../web/public/medication/domain/care-plan.js";
+import { reminderCareProjection } from "../../web/product-assets/public/medication/domain/care-plan.js";
 import { pilotConfig } from "../../../web/src/http/validation.mjs";
 import type { Repository } from "./repository";
 import { withReminder } from "./reminder-storage";

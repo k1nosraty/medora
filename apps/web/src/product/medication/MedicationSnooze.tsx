@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { integer } from "../../../../../web/public/medication/shared/ui/input-values.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { integer } from "../../../product-assets/public/medication/shared/ui/input-values.js";
 import { paintFeature } from "../renderer";
 
 const presets = [

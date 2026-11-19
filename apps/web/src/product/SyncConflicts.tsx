@@ -1,17 +1,17 @@
-import { dayNumber } from "../../../../web/public/medication/shared/ui/dates.js";
-import { timeText } from "../../../../web/public/medication/domain/care-index.js";
-import { clearFeature, paintFeature } from "./renderer";
+import { dayNumber } from "../../product-assets/public/medication/shared/ui/dates.js";
+import { timeText } from "../../product-assets/public/medication/domain/care-index.js";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   listSeparator,
   localDigits,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
-import { timeZoneCity } from "../../../../web/public/medication/shared/ui/time-zone-picker.js";
-import { amountText } from "../../../../web/public/medication/features/medicines/quantity.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
+import { timeZoneCity } from "../../product-assets/public/medication/shared/ui/time-zone-picker.js";
+import { amountText } from "../../product-assets/public/medication/features/medicines/quantity.js";
 import {
   equal,
   medicineScheduleFields,
-} from "../../../../web/public/medication/features/sync/merge.js";
+} from "../../product-assets/public/medication/features/sync/merge.js";
 
 const kinds = {
   medicines: "medicines",
@@ -143,24 +143,12 @@ const enums: Record<string, Record<string, string>> = {
   mode: { done: "done", quantity: "quantity-goal", steps: "steps-checklist" },
   theme: { light: "light", dark: "dark", system: "system" },
 };
-type Value =
-  | null
-  | number
-  | boolean
-  | string
-  | Value[]
-  | { [key: string]: Value | undefined };
 type FormatDay = (day: number) => string;
-type Difference = [
-  label: string,
-  key: string,
-  local: Value | undefined,
-  cloud: Value | undefined,
-];
+type Difference = [label: string, key: string, local: unknown, cloud: unknown];
 interface Conflict {
   path: [kind: keyof typeof kinds, id: string, field?: string];
-  local?: Value;
-  cloud?: Value;
+  local?: unknown;
+  cloud?: unknown;
 }
 interface DifferenceRow {
   label: string;
@@ -171,20 +159,16 @@ interface DifferenceRow {
 const ui = (key: string) => t("ui." + key);
 const fieldLabel = (key: string) => ui(fields[key] ?? "sync-additional-field");
 
-function child(value: Value | undefined, key: string): Value | undefined {
+function child(value: unknown, key: string): unknown {
   if (value === null || typeof value !== "object") return;
-  return Array.isArray(value) ? value[Number(key)] : value[key];
-}
-
-function $<T extends HTMLElement = HTMLElement>(id: string) {
-  return document.getElementById(id)! as T;
+  return Object.getOwnPropertyDescriptor(value, key)?.value;
 }
 
 function readable(
-  value: Value | undefined,
+  value: unknown,
   key: string,
   kind: string,
-  unit: Value | undefined,
+  unit: unknown,
   formatDay: FormatDay,
 ) {
   if (value == null || value === "") return ui("sync-not-set");
@@ -227,24 +211,11 @@ function readable(
   return translated ? ui(translated) : String(value);
 }
 
-export function showCareConflict(
-  conflict: Conflict | null,
-  snapshot: Value | undefined,
+function describeConflict(
+  conflict: Conflict,
+  snapshot: unknown,
   formatDay: FormatDay,
 ) {
-  const title = $("account-sync-record");
-  const table = $("account-sync-differences");
-  const pages = $("account-sync-pages");
-  const previous = $<HTMLButtonElement>("account-sync-prev");
-  const next = $<HTMLButtonElement>("account-sync-next");
-  clearFeature(table);
-  pages.hidden = true;
-  previous.onclick = next.onclick = null;
-  if (!conflict) {
-    title.textContent = "";
-    return;
-  }
-
   const {
     path: [kind, id, field],
     local,
@@ -266,7 +237,7 @@ export function showCareConflict(
     child(record, "name") ??
     child(medicine, "name") ??
     child(routine, "name");
-  title.textContent = [ui(kinds[kind]), name].filter(Boolean).join(" · ");
+  const title = [ui(kinds[kind]), name].filter(Boolean).join(" · ");
 
   const rows: Difference[] = [];
   if (field === "schedule") {
@@ -283,7 +254,7 @@ export function showCareConflict(
       kind === "scheduleHistory" ||
       kind === "routineLogs";
     if (recordLevel && (local === undefined || cloud === undefined)) {
-      const presence = (value: Value | undefined) =>
+      const presence = (value: unknown) =>
         ui(value === undefined ? "sync-record-deleted" : "sync-record-present");
       rows.push([ui("sync-status"), "", presence(local), presence(cloud)]);
     }
@@ -296,12 +267,7 @@ export function showCareConflict(
   }
 
   const differences: Difference[] = [];
-  function add(
-    label: string,
-    key: string,
-    left: Value | undefined,
-    right: Value | undefined,
-  ) {
+  function add(label: string, key: string, left: unknown, right: unknown) {
     if (equal(left, right)) return;
     const sample = left ?? right;
     if (
@@ -337,53 +303,124 @@ export function showCareConflict(
       ui("sync-other-differences"),
     ]);
 
+  const unit = child(record, "unit") ?? child(medicine, "unit");
+  const displayRows = differences.map(([label, key, left, right]) => ({
+    label,
+    local: readable(
+      left,
+      key,
+      recordKind,
+      child(local, "unit") ?? unit,
+      formatDay,
+    ),
+    cloud: readable(
+      right,
+      key,
+      recordKind,
+      child(cloud, "unit") ?? unit,
+      formatDay,
+    ),
+  }));
+  return { title, rows: displayRows };
+}
+
+export function SyncConflictReview({
+  conflict,
+  snapshot,
+  formatDay,
+  choose,
+}: {
+  conflict: Conflict;
+  snapshot: unknown;
+  formatDay: FormatDay;
+  choose(side: "device" | "cloud"): void;
+}) {
+  const [start, setStart] = useState(0);
+  const [requestedFocus, setRequestedFocus] = useState<
+    "previous" | "next" | null
+  >(null);
+  const previous = useRef<HTMLButtonElement>(null);
+  const next = useRef<HTMLButtonElement>(null);
+  const { title, rows } = describeConflict(conflict, snapshot, formatDay);
   const pageSize = 16;
-  let start = 0;
-  function render() {
-    const rows: DifferenceRow[] = differences
-      .slice(start, start + pageSize)
-      .map(([label, key, left, right]) => {
-        const unit = child(record, "unit") ?? child(medicine, "unit");
-        return {
-          label,
-          local: readable(
-            left,
-            key,
-            recordKind,
-            child(local, "unit") ?? unit,
-            formatDay,
-          ),
-          cloud: readable(
-            right,
-            key,
-            recordKind,
-            child(cloud, "unit") ?? unit,
-            formatDay,
-          ),
-        };
-      });
-    paintFeature(table, <Differences rows={rows} />);
-    pages.hidden = differences.length <= pageSize;
-    previous.disabled = start === 0;
-    next.disabled = start + pageSize >= differences.length;
-    $("account-sync-page").textContent = t(
-      "ui.sync-difference-range",
-      localDigits(start + 1),
-      localDigits(Math.min(start + pageSize, differences.length)),
-      localDigits(differences.length),
-    );
-  }
-  previous.onclick = () => {
-    start -= pageSize;
-    render();
-    if (previous.disabled) next.focus();
-  };
-  next.onclick = () => {
-    start += pageSize;
-    render();
-    if (next.disabled) previous.focus();
-  };
-  render();
+  const end = Math.min(start + pageSize, rows.length);
+
+  useLayoutEffect(() => {
+    if (requestedFocus === "previous") previous.current?.focus();
+    if (requestedFocus === "next") next.current?.focus();
+    if (requestedFocus) setRequestedFocus(null);
+  }, [requestedFocus]);
+
+  return (
+    <section
+      id="account-sync-review"
+      aria-labelledby="account-sync-review-title"
+    >
+      <h4 id="account-sync-review-title">{ui("sync-review-title")}</h4>
+      <p>
+        <bdi id="account-sync-record">{title}</bdi>
+      </p>
+      <dl id="account-sync-differences">
+        <Differences rows={rows.slice(start, end)} />
+      </dl>
+      <div
+        id="account-sync-pages"
+        className="buttons"
+        hidden={rows.length <= pageSize}
+      >
+        <button
+          id="account-sync-prev"
+          type="button"
+          className="secondary"
+          ref={previous}
+          disabled={start === 0}
+          onClick={() => {
+            setStart(start - pageSize);
+            if (start === pageSize) setRequestedFocus("next");
+          }}
+        >
+          {ui("previous")}
+        </button>
+        <p id="account-sync-page" role="status">
+          {t(
+            "ui.sync-difference-range",
+            localDigits(start + 1),
+            localDigits(end),
+            localDigits(rows.length),
+          )}
+        </p>
+        <button
+          id="account-sync-next"
+          type="button"
+          className="secondary"
+          ref={next}
+          disabled={end === rows.length}
+          onClick={() => {
+            setStart(end);
+            if (end + pageSize >= rows.length) setRequestedFocus("previous");
+          }}
+        >
+          {ui("next")}
+        </button>
+      </div>
+      <button
+        id="account-sync-keep-device"
+        type="button"
+        className="secondary"
+        onClick={() => choose("device")}
+      >
+        {ui("sync-keep-device")}
+      </button>
+      <button
+        id="account-sync-keep-cloud"
+        type="button"
+        className="secondary"
+        onClick={() => choose("cloud")}
+      >
+        {ui("sync-keep-cloud")}
+      </button>
+    </section>
+  );
 }
 
 function Differences({ rows }: { rows: DifferenceRow[] }) {

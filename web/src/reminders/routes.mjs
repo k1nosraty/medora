@@ -8,7 +8,7 @@ import {
 import {
   matchesSubscriptionId,
   subscriptionId,
-} from "../../public/medication/domain/subscription-id.js";
+} from "../../../apps/web/product-assets/public/medication/domain/subscription-id.js";
 
 const encoder = new TextEncoder();
 const reply = (data, status = 200) =>

@@ -3,15 +3,15 @@ import {
   listSeparator,
   localDigits,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import {
   doseTime,
   timeText,
   type createCareIndex,
-} from "../../../../../web/public/medication/domain/care-index.js";
-import { routineComplete } from "../../../../../web/public/medication/domain/routine-plan.js";
-import { fitDialogToViewport } from "../../../../../web/public/medication/shared/ui/dom.js";
-import { setPressed } from "../../../../../web/public/medication/shared/ui/controls.js";
+} from "../../../product-assets/public/medication/domain/care-index.js";
+import { routineComplete } from "../../../product-assets/public/medication/domain/routine-plan.js";
+import { fitDialogToViewport } from "../../../product-assets/public/medication/shared/ui/dom.js";
+import { setPressed } from "../../../product-assets/public/medication/shared/ui/controls.js";
 import type { CareState, FamilyView } from "../product";
 import type { installDeletion } from "../DeleteConfirmation";
 import { PlanDayCard, PlanOptions, Icon } from "../PlanCard";

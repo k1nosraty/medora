@@ -3,9 +3,9 @@ import {
   shortWeek,
   t,
   weekIndex,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
 import { renderWeek } from "./DayWeek";
-import { isoDay as iso } from "../../../../web/public/medication/domain/care-index.js";
+import { isoDay as iso } from "../../product-assets/public/medication/domain/care-index.js";
 
 interface DayNavigationOptions {
   root: HTMLElement;

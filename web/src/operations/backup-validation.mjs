@@ -1,13 +1,13 @@
 import { passwordKey, passwordVersion } from "../accounts/keys.mjs";
 import { familyTableNames, validFamilyRows } from "../family/archive.mjs";
-import { timezone } from "../../public/medication/domain/wall-clock.js";
+import { timezone } from "../../../apps/web/product-assets/public/medication/domain/wall-clock.js";
 import { Buffer } from "node:buffer";
 import { validSubscription, validSubscriptionKey } from "../http/validation.mjs";
-import { matchesSubscriptionId } from "../../public/medication/domain/subscription-id.js";
+import { matchesSubscriptionId } from "../../../apps/web/product-assets/public/medication/domain/subscription-id.js";
 import { validSchedule } from "../reminders/medication-schedule.mjs";
 import { identify, mediaIdPattern } from "../promotions/media.mjs";
 import { validatedPromotion } from "../promotions/routes.mjs";
-import { validateCareRecords } from "../../public/medication/domain/care-records.js";
+import { validateCareRecords } from "../../../apps/web/product-assets/public/medication/domain/care-records.js";
 
 export async function digest(bytes) {
   const hash = await crypto.subtle.digest("SHA-256", bytes);

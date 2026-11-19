@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { readAndroidBackup } from "../public/medication/features/backups/android-format.js";
-import { isWebBackup, readWebBackup, writeWebBackup } from "../public/medication/features/backups/web-format.js";
+import { readAndroidBackup } from "../../apps/web/product-assets/public/medication/features/backups/android-format.js";
+import { isWebBackup, readWebBackup, writeWebBackup } from "../../apps/web/product-assets/public/medication/features/backups/web-format.js";
 import {
   WebPhase, WebSlot, validMedicationPhases, medicationSlots,
   quantityFromText, updateStock, isLowStock
-} from "../public/medication/domain/medication-rules.js";
+} from "../../apps/web/product-assets/public/medication/domain/medication-rules.js";
 import { nextMedicationReminder, nextCareReminder, validSchedule } from "../src/reminders/medication-schedule.mjs";
-import { scheduleForPush } from "../public/medication/domain/care-plan.js";
-import { routineComplete, routineLog } from "../public/medication/domain/routine-plan.js";
-import { createCareIndex, doseTime, trackSchedule } from "../public/medication/domain/care-index.js";
+import { scheduleForPush } from "../../apps/web/product-assets/public/medication/domain/care-plan.js";
+import { routineComplete, routineLog } from "../../apps/web/product-assets/public/medication/domain/routine-plan.js";
+import { createCareIndex, doseTime, trackSchedule } from "../../apps/web/product-assets/public/medication/domain/care-index.js";
 
 const day = iso => Date.parse(`${iso}T00:00:00Z`) / 86_400_000;
 const instant = iso => Date.parse(iso);

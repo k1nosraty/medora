@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { integer } from "../../../../../web/public/medication/shared/ui/input-values.js";
-import { routineComplete } from "../../../../../web/public/medication/domain/routine-plan.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { integer } from "../../../product-assets/public/medication/shared/ui/input-values.js";
+import { routineComplete } from "../../../product-assets/public/medication/domain/routine-plan.js";
 import { Icon } from "../PlanCard";
 import { displayAmount, type Activity, type Progress } from "./model";
 

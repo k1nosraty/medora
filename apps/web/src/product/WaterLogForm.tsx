@@ -1,14 +1,14 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { isoDay } from "../../../../web/public/medication/domain/care-index.js";
+import { isoDay } from "../../product-assets/public/medication/domain/care-index.js";
 import {
   localDigits,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
-import { dayMs } from "../../../../web/public/medication/domain/wall-clock.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
+import { dayMs } from "../../product-assets/public/medication/domain/wall-clock.js";
 import {
   integer,
   localClock,
-} from "../../../../web/public/medication/shared/ui/input-values.js";
+} from "../../product-assets/public/medication/shared/ui/input-values.js";
 import type { WaterEntry } from "./WaterEntries";
 
 type WaterValues = Pick<WaterEntry, "day" | "time" | "amount">;

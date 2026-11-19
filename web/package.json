@@ -18,7 +18,7 @@
     "typecheck": "tsc -p jsconfig.json",
     "test:care": "node --test scripts/care-engine.check.mjs",
     "test:alarms": "node scripts/reminder-alarm.check.mjs",
-    "test:browser": "npm run build && playwright test"
+    "test:browser": "npm run build && MEDORA_INCUMBENT_BROWSER=1 playwright test"
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "2.0.0"

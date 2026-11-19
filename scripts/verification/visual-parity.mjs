@@ -204,7 +204,7 @@ function visibleLayout(page, compareDosePresets) {
   );
 }
 async function serve(dir, port) {
-  const child = spawn(process.execPath, ["web/browser/server.mjs"], {
+  const child = spawn(process.execPath, ["tests/browser/server.mjs"], {
     stdio: "ignore",
     env: {
       PATH: process.env.PATH,
@@ -296,16 +296,24 @@ try {
   );
   assert.doesNotMatch(
     candidateMarkup,
-    /<template id="(?:phase|slot)-template"|<form id="(?:editor|snooze-form|visit-editor|routine-form|routine-log-form|cycle-form|cycle-day-form|profile-form|display-form|sleep-settings-form|android-restore|web-backup-export)"/,
+    /<template id="(?:phase|slot)-template"|<form id="(?:editor|snooze-form|visit-editor|routine-form|routine-log-form|cycle-form|cycle-day-form|cycle-bulk-form|cycle-print-form|profile-form|display-form|sleep-settings-form|android-restore|web-backup-export)"/,
   );
   const shell = (markup) =>
     markup
+      .replace(
+        /<div class="account-modes"[\s\S]*?(?=<p id="account-status")/,
+        '<div id="account-react" style="display:contents"></div>\n      ',
+      )
+      .replace(
+        /<details>\s*<summary><!--msg:ui\.cycle-bulk-->[^<]+<\/summary>\s*<form id="cycle-bulk-form"[\s\S]*?(?=<button id="cycle-open-settings")/,
+        '<div id="cycle-tools-react" style="display:contents"></div>\n          ',
+      )
       .replace(
         /^ *(<dialog id="(?:medication-dialog|medicine-details|appearance-dialog|visit-dialog|visit-category-dialog|routine-editor|routine-category-dialog|routine-log-dialog|cycle-dialog|cycle-day-dialog)"[^>]*>)[\s\S]*?<\/dialog>/gm,
         "  $1</dialog>",
       )
       .replace(
-        /^ *(<section id="(?:snooze-settings|backup-settings|profile-settings|display-settings|sleep-settings)"[^>]*>)[\s\S]*?<\/section>/gm,
+        /^ *(<section id="(?:snooze-settings|backup-settings|profile-settings|display-settings|sleep-settings|appointment-settings|water-settings)"[^>]*>)[\s\S]*?<\/section>/gm,
         "  $1</section>",
       )
       .replace(

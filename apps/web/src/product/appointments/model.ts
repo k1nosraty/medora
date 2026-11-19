@@ -3,20 +3,20 @@ import {
   appointmentOffsets,
   appointmentReminders,
   appointmentDefaults,
-} from "../../../../../web/public/medication/domain/care-plan.js";
+} from "../../../product-assets/public/medication/domain/care-plan.js";
 import {
   dayMs,
   timezone,
   localWall,
-} from "../../../../../web/public/medication/domain/wall-clock.js";
-import { isoDay } from "../../../../../web/public/medication/domain/care-index.js";
+} from "../../../product-assets/public/medication/domain/wall-clock.js";
+import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
 import {
   t,
   localDigits,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { CareInputError } from "../../../../../web/public/medication/shared/ui/care-error.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import { categoryOf } from "./categories";
-import { appearanceColors } from "../../../../../web/public/medication/features/medicines/appearance-options.js";
+import { appearanceColors } from "../../../product-assets/public/medication/features/medicines/appearance-options.js";
 
 export interface Visit {
   id: string;

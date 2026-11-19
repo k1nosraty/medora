@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { quickActions } from "../public/medication/features/family/quick-action.js";
+import { quickActions } from "../../apps/web/product-assets/public/medication/features/family/quick-action.js";
 
 test("quick family retry reuses both the operation ID and time until acknowledgement", () => {
   let count = 0;

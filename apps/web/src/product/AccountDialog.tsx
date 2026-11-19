@@ -1,10 +1,10 @@
 import type { FormEvent } from "react";
-import { showFeedback } from "../../../../web/public/medication/shared/ui/controls.js";
+import { showFeedback } from "../../product-assets/public/medication/shared/ui/controls.js";
 import {
   language,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
-import { fitDialogToViewport } from "../../../../web/public/medication/shared/ui/dom.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
+import { fitDialogToViewport } from "../../product-assets/public/medication/shared/ui/dom.js";
 import { accountTransport } from "./accountTransport";
 import {
   AccountCredentials,
@@ -12,6 +12,7 @@ import {
   type CredentialAction,
   type CredentialForm,
 } from "./AccountCredentials";
+import { AccountSync, type CareSync } from "./AccountSync";
 import { paintFeature } from "./renderer";
 
 const errors: Record<string, string> = {
@@ -90,6 +91,8 @@ interface AccountSession {
   grant?: string;
 }
 interface Options {
+  sync: CareSync;
+  formatDay(day: number): string;
   onSignIn(data: AccountSession): void;
   onSignOut(): void;
   onShortcut(panel: string): void;
@@ -112,16 +115,16 @@ const codeFrom = (id: string) =>
     String(digit.charCodeAt(0) & 15),
   );
 
-export function installAccount({ onSignIn, onSignOut, onShortcut }: Options) {
+export function installAccount({
+  sync,
+  formatDay,
+  onSignIn,
+  onSignOut,
+  onShortcut,
+}: Options) {
   const dialog = get<HTMLDialogElement>("account-dialog");
   const fit = fitDialogToViewport(dialog);
-  const host = document.createElement("div");
-  host.style.display = "contents";
-  const legacyModes = get("account-modes");
-  legacyModes.replaceWith(host);
-  for (const [panel] of Object.values(screens)) {
-    if (panel && panel !== "account-session") get(panel).remove();
-  }
+  const host = get("account-react");
   let screen: AccountScreen = "loading";
   let email = "";
   let challenge = "";
@@ -137,31 +140,127 @@ export function installAccount({ onSignIn, onSignOut, onShortcut }: Options) {
   function renderCredentials() {
     paintFeature(
       host,
-      <AccountCredentials
-        screen={screen}
-        recipient={email}
-        registrationAvailable={registrationAvailable}
-        busy={busy}
-        navigate={(next) => {
-          status();
-          view(next);
-        }}
-        submit={(event, form) => void submit(event, form)}
-        action={(name) => void act(name)}
-        passwordReset={passwordReset}
-      />,
+      <>
+        <AccountCredentials
+          screen={screen}
+          recipient={email}
+          registrationAvailable={registrationAvailable}
+          busy={busy}
+          navigate={(next) => {
+            status();
+            view(next);
+          }}
+          submit={(event, form) => void submit(event, form)}
+          action={(name) => void act(name)}
+          passwordReset={passwordReset}
+        />
+        <div
+          id="account-session"
+          className="account-session"
+          hidden={screen !== "session"}
+        >
+          <div className="account-identity">
+            <span
+              className="account-avatar"
+              id="account-avatar"
+              aria-hidden="true"
+            >
+              {(account?.username || account?.email || "")
+                .slice(0, 1)
+                .toUpperCase()}
+            </span>
+            <div>
+              <strong
+                id="account-username"
+                dir="auto"
+                hidden={!account?.username}
+              >
+                {account?.username}
+              </strong>
+              <bdi id="account-address">{account?.email}</bdi>
+            </div>
+          </div>
+          <AccountSync
+            sync={sync}
+            dialog={dialog}
+            formatDay={formatDay}
+            hidden={!account?.username}
+          />
+          <div className="account-shortcuts">
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              data-account-shortcut="notification-settings"
+              onClick={() => shortcut("notification-settings")}
+            >
+              <svg aria-hidden="true">
+                <use href="#i-bell" />
+              </svg>
+              {t("ui.notifications")}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              data-account-shortcut="backup-settings"
+              onClick={() => shortcut("backup-settings")}
+            >
+              <svg aria-hidden="true">
+                <use href="#i-lock" />
+              </svg>
+              {t("ui.backups")}
+            </button>
+          </div>
+          <button
+            type="button"
+            className="block-action account-primary"
+            id="legacy-setup"
+            hidden={!account || Boolean(account.username)}
+            disabled={busy}
+            onClick={() => {
+              status();
+              view("setup");
+            }}
+          >
+            {t("ui.set-username-and-password")}
+          </button>
+          <div className="buttons">
+            <a id="open-admin" href="/admin/" hidden={!account?.admin}>
+              {t("ui.admin-panel")}
+            </a>
+            <button
+              type="button"
+              id="email-logout"
+              className="secondary"
+              disabled={busy}
+              onClick={() => void signOut()}
+            >
+              {t("ui.sign-out")}
+            </button>
+          </div>
+        </div>
+      </>,
     );
-    for (const button of dialog.querySelectorAll<HTMLButtonElement>(
-      "#legacy-setup, #email-logout, [data-account-shortcut]",
-    ))
-      button.disabled = busy;
+  }
+
+  function shortcut(panel: string) {
+    dialog.close();
+    onShortcut(panel);
+  }
+
+  async function signOut() {
+    if (!(await request("logout", {}))) return;
+    account = undefined;
+    view("login");
+    status("از حساب خارج شدید.");
+    onSignOut();
   }
 
   function view(next: AccountScreen, focus = true) {
     screen = next;
     renderCredentials();
     const [, title, intro, focusField] = screens[next];
-    get("account-session").hidden = next !== "session";
     get("account-title").textContent = t(title);
     get("account-intro").textContent = t(
       next === "setup" && account
@@ -169,19 +268,6 @@ export function installAccount({ onSignIn, onSignOut, onShortcut }: Options) {
         : intro,
     );
     get("account-intro").hidden = !intro;
-    get("account-avatar").textContent = (
-      account?.username ||
-      account?.email ||
-      ""
-    )
-      .slice(0, 1)
-      .toUpperCase();
-    get("account-address").textContent = account?.email ?? "";
-    get("account-username").textContent = account?.username ?? "";
-    get("account-username").hidden = !account?.username;
-    get("legacy-setup").hidden = !account || Boolean(account.username);
-    get("account-sync-title").closest("section")!.hidden = !account?.username;
-    get("open-admin").hidden = !account?.admin;
     get("account-dismiss").textContent = t(
       account ? "بازگشت به مدورا" : "ادامه بدون ورود",
     );
@@ -406,25 +492,6 @@ export function installAccount({ onSignIn, onSignOut, onShortcut }: Options) {
   }
 
   renderCredentials();
-  for (const control of dialog.querySelectorAll<HTMLButtonElement>(
-    "[data-account-shortcut]",
-  )) {
-    control.addEventListener("click", () => {
-      dialog.close();
-      onShortcut(control.dataset.accountShortcut!);
-    });
-  }
   dialog.addEventListener("close", clearPasswords);
-  get("legacy-setup").addEventListener("click", () => {
-    status();
-    view("setup");
-  });
-  get("email-logout").addEventListener("click", async () => {
-    if (!(await request("logout", {}))) return;
-    account = undefined;
-    view("login");
-    status("از حساب خارج شدید.");
-    onSignOut();
-  });
   return open;
 }

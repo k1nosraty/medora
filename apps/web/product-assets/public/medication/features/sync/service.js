@@ -1,7 +1,5 @@
 import { careDelta } from "../../domain/care-delta.js";
 import { assertRestoreRevision, isCloudRevision, restoreTarget } from "../../domain/restore-intent.js";
-import { $ } from "../../shared/ui/dom.js";
-import { t } from "../../shared/i18n/locale.js";
 import { accessCare, accessCareSettings } from "../../shared/storage.js";
 import { localZone } from "../../domain/care-plan.js";
 import { careSnapshotFits, careSyncLimit, careVersion, portable, validateCareRecords } from "../../domain/care-records.js";
@@ -9,8 +7,6 @@ import { hasPrivateText } from "../../domain/private-fields.js";
 import { cycleDataFields, cyclePreferenceFields, withoutCycle } from "../../domain/cycle.js";
 import { applyPortable, CareConflict, conflictChoice, equal as same, mergeCare, mergeRestoredCare } from "./merge.js";
 import { generateRecoveryKey, importRecoveryKey, normalizePrivateCare, openPrivateCare, sealPrivateCare } from "./private-care.js";
-import { installTimeZonePicker } from "../../shared/ui/time-zone-picker.js";
-import { showCareConflict } from "./conflict-view.js";
 const path = "/api/account/care";
 
 function syncError(response) {
@@ -18,11 +14,12 @@ function syncError(response) {
     422: "private_key", 429: "rate_limit" })[response.status] ?? "sync_failed");
 }
 
-export function installCareSync({ reload, remindersChanged, formatDay, readCare = accessCare, readSettings = accessCareSettings,
+/** @typedef {{ enabled: boolean, syncedAt: number | undefined, status: string,
+ * running: boolean, rotating: boolean, recoveryStatus: string, recoveryVersion: number,
+ * review: { conflict: CareConflict, snapshot: ReturnType<typeof normalizePrivateCare> } | null }} SyncView */
+
+export function createCareSync({ reload, remindersChanged, readCare = accessCare, readSettings = accessCareSettings,
   transport = /** @type {(path: string, options?: RequestInit) => Promise<Response>} */ (fetch), now = Date.now }) {
-  const status = $("account-sync-status");
-  const enable = $("account-sync-enable");
-  const disable = $("account-sync-disable");
   let running = false;
   let timer;
   let message = "";
@@ -37,38 +34,29 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
   let retryCount = 0;
   let retryAt = 0;
   const maxAutomaticRetries = 4;
-  const keyInput = $("account-care-key");
-  const keyStatus = $("account-care-key-status");
-  const reveal = $("account-care-key-reveal");
-  function revealKey(visible) {
-    keyInput.type = visible ? "text" : "password";
-    reveal.textContent = t(visible ? "ui.sync-hide-key" : "ui.sync-show-key");
-  }
-  reveal.addEventListener("click", () => revealKey(keyInput.type === "password"));
-  $("account-dialog").addEventListener("close", () => revealKey(false));
-  const review = $("account-sync-review");
-  function showConflict(value, snapshot) {
-    conflict = value;
-    review.hidden = !value;
-    showCareConflict(value, snapshot, formatDay);
+  const listeners = new Set();
+  /** @type {SyncView} */
+  let view = { enabled: false, syncedAt: undefined, status: "", running: false, rotating: false,
+    recoveryStatus: "", recoveryVersion: 0, review: null };
+
+  /** @param {Partial<SyncView>} changes */
+  function publish(changes) {
+    view = { ...view, ...changes };
+    for (const listener of listeners) listener();
   }
 
-  for (const side of ["device", "cloud"]) {
-    $("account-sync-keep-" + side).addEventListener("click", () => {
-      if (running || !conflict) return;
-      choices.push({ path: conflict.path, local: conflict.local, cloud: conflict.cloud, side });
-      showConflict(undefined);
-      retryCount = retryAt = 0;
-      void sync(resumeActivation);
-    });
+  function showConflict(value, snapshot) {
+    conflict = value;
+    publish({ review: value ? { conflict: value, snapshot } : null });
   }
-  const zonePanel = $("account-care-zone-open");
-  const zoneFields = $("account-care-zone-picker");
-  const zonePicker = installTimeZonePicker($("account-care-zone-search"), $("account-care-zone-options"),
-    $("account-care-zone-empty"));
-  const zoneSave = $("account-care-zone-save");
-  const zoneStatus = $("account-care-zone-status");
-  let zoneRequest = 0;
+
+  function chooseConflict(side) {
+    if (running || !conflict) return;
+    choices.push({ path: conflict.path, local: conflict.local, cloud: conflict.cloud, side });
+    showConflict(undefined);
+    retryCount = retryAt = 0;
+    void sync(resumeActivation);
+  }
 
   async function prepareRestore(mode) {
     if (mode === "device") return restoreTarget(mode);
@@ -107,7 +95,8 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
       }
       return;
     }
-    running = enable.disabled = disable.disabled = true;
+    running = true;
+    publish({ running });
     const currentGeneration = authGeneration;
     const key = recovery;
     message = "در حال همگام‌سازی سوابق…";
@@ -278,7 +267,8 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
         "همگام‌سازی انجام نشد. سوابق روی دستگاه باقی ماندند.";
       if (!activate) retry(30_000);
     } finally {
-      running = enable.disabled = disable.disabled = false;
+      running = false;
+      publish({ running });
       await refresh();
       if (pendingSignIn) {
         pendingSignIn = false;
@@ -290,26 +280,19 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
   async function refresh() {
     try {
       const { accountCare } = await readSettings();
-      enable.textContent = t(accountCare?.enabled ? "همگام‌سازی اکنون" : "فعال‌کردن همگام‌سازی سوابق");
-      disable.hidden = !accountCare?.enabled;
-      const badge = $("account-sync-badge");
-      badge.dataset.enabled = String(Boolean(accountCare?.enabled));
-      badge.textContent = t(accountCare?.enabled ? "روشن" : "فقط روی دستگاه");
-      const last = $("account-sync-last");
-      last.hidden = !accountCare?.syncedAt;
-      last.textContent = last.hidden ? "" : t("ui.last-synced-value", new Date(accountCare.syncedAt).toLocaleString(document.documentElement.lang));
-      status.textContent = message ? t(message) : "";
+      publish({ enabled: Boolean(accountCare?.enabled), syncedAt: accountCare?.syncedAt, status: message });
     } catch {}
   }
 
-  enable.addEventListener("click", () => {
-    void readCare().then(state => {
-      if (!state.accountCare?.enabled && !confirm(t("ui.add-this-devices-records-to-the-current-account"))) return;
-      retryCount = retryAt = 0;
-      void sync(!state.accountCare?.enabled);
-    });
-  });
-  disable.addEventListener("click", async () => {
+  async function activate(allowActivation) {
+    if (running) return;
+    const state = await readCare();
+    if (running || (!state.accountCare?.enabled && !allowActivation())) return;
+    retryCount = retryAt = 0;
+    void sync(!state.accountCare?.enabled);
+  }
+
+  async function pause() {
     if (running) return;
     await readSettings(state => {
       if (!state.accountCare?.enabled) return;
@@ -319,62 +302,41 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
     await reload(true);
     message = "همگام‌سازی این دستگاه متوقف شد.";
     await refresh();
-  });
-  zonePanel.addEventListener("toggle", async () => {
-    const request = ++zoneRequest;
-    if (!zonePanel.open) return;
-    zoneFields.disabled = zoneSave.disabled = true;
-    zoneStatus.textContent = "";
-    try {
-      const response = await transport(path + "?zone", { cache: "no-store", signal: AbortSignal.timeout(12_000) });
-      if (!response.ok) throw new Error("zone_unavailable");
-      const data = await response.json();
-      if (request !== zoneRequest) return;
-      zonePicker.load(data.zone, localZone() ?? "UTC", now());
-      zoneFields.disabled = zoneSave.disabled = false;
-    } catch {
-      if (request === zoneRequest) zoneStatus.textContent = t("ui.sync-zone-unavailable");
-    }
-  });
-  zoneSave.addEventListener("click", async () => {
-    const zone = zonePicker.value;
-    if (!zone) return;
-    zoneSave.disabled = true;
-    try {
-      const { owner, revision } = await prepareRestore("merge");
-      const response = await transport(path, { method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ owner, revision, zone }), signal: AbortSignal.timeout(12_000) });
-      if (!response.ok) throw new Error("zone_unavailable");
-      zoneStatus.textContent = t("ui.sync-zone-saved");
-      schedule();
-    } catch {
-      zoneStatus.textContent = t("ui.sync-zone-unavailable");
-    } finally {
-      zoneSave.disabled = zoneFields.disabled;
-    }
-  });
+  }
 
-  $("account-care-key-generate").addEventListener("click", () => {
-    revealKey(true);
-    keyInput.value = generateRecoveryKey();
-    keyInput.select();
-    keyStatus.textContent = t("ui.sync-save-recovery-key");
-  });
-  $("account-care-key-rotate").addEventListener("click", async event => {
+  async function getZone() {
+    const response = await transport(path + "?zone", { cache: "no-store", signal: AbortSignal.timeout(12_000) });
+    if (!response.ok) throw new Error("zone_unavailable");
+    const data = await response.json();
+    return typeof data.zone === "string" ? data.zone : undefined;
+  }
+
+  async function setZone(zone) {
+    const { owner, revision } = await prepareRestore("merge");
+    const response = await transport(path, { method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ owner, revision, zone }), signal: AbortSignal.timeout(12_000) });
+    if (!response.ok) throw new Error("zone_unavailable");
+    schedule();
+  }
+
+  function generateKey() {
+    publish({ recoveryStatus: "ui.sync-save-recovery-key" });
+    return generateRecoveryKey();
+  }
+
+  async function rotateKey(value, confirmRotation) {
     if (running) return;
-    const control = event.currentTarget;
     const previous = recovery;
-    const input = keyInput.value.trim().toLowerCase();
+    const input = value.trim().toLowerCase();
     const generation = authGeneration;
     if (!previous) {
-      keyStatus.textContent = t("ui.sync-recovery-key-required");
+      publish({ recoveryStatus: "ui.sync-recovery-key-required" });
       return;
     }
-    if (!confirm(t("ui.sync-rotate-confirm"))) return;
+    if (!confirmRotation()) return;
     recoveryAttempt++;
-    const unlock = $("account-care-key-unlock");
-    unlock.disabled = true;
-    running = control.disabled = enable.disabled = disable.disabled = true;
+    running = true;
+    publish({ running, rotating: true });
     try {
       const replacement = await importRecoveryKey(input);
       if (replacement.id === previous.id) throw new Error("private_key");
@@ -409,46 +371,41 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
       }
       if (generation !== authGeneration) return;
       recovery = replacement;
-      keyInput.value = "";
-      revealKey(false);
-      keyStatus.textContent = t("ui.sync-key-rotated");
+      publish({ recoveryStatus: "ui.sync-key-rotated", recoveryVersion: view.recoveryVersion + 1 });
       schedule(0);
     } catch (error) {
-      if (generation === authGeneration) keyStatus.textContent = t(error.message === "rotation_legacy"
-        ? "ui.sync-rotation-legacy" : "ui.sync-rotation-failed");
+      if (generation === authGeneration) publish({ recoveryStatus: error.message === "rotation_legacy"
+        ? "ui.sync-rotation-legacy" : "ui.sync-rotation-failed" });
     } finally {
-      unlock.disabled = false;
-      running = control.disabled = enable.disabled = disable.disabled = false;
+      running = false;
+      publish({ running, rotating: false });
       if (pendingSignIn) {
         pendingSignIn = false;
         void sync(false, true);
       }
     }
-  });
-  $("account-care-key-unlock").addEventListener("click", async () => {
+  }
+  async function unlockKey(value) {
     const attempt = ++recoveryAttempt;
     try {
-      const imported = await importRecoveryKey(keyInput.value.trim().toLowerCase());
+      const imported = await importRecoveryKey(value.trim().toLowerCase());
       if (attempt !== recoveryAttempt) return;
       recovery = imported;
-      keyInput.value = "";
-      revealKey(false);
-      keyStatus.textContent = "";
+      publish({ recoveryStatus: "", recoveryVersion: view.recoveryVersion + 1 });
       if (running) pendingSignIn = true;
       else void sync(false, true);
     } catch {
-      if (attempt === recoveryAttempt) keyStatus.textContent = t("ui.sync-invalid-recovery-key");
+      if (attempt === recoveryAttempt) publish({ recoveryStatus: "ui.sync-invalid-recovery-key" });
     }
-  });
+  }
+
   function clearRecovery() {
     authGeneration++;
     recoveryAttempt++;
     showConflict(undefined);
     choices.length = 0;
     recovery = undefined;
-    keyInput.value = "";
-    revealKey(false);
-    keyStatus.textContent = "";
+    publish({ recoveryStatus: "", recoveryVersion: view.recoveryVersion + 1 });
   }
 
   async function signedOut() {
@@ -465,5 +422,13 @@ export function installCareSync({ reload, remindersChanged, formatDay, readCare 
   window.addEventListener("online", () => schedule(0));
   window.addEventListener("focus", () => schedule(0));
   setInterval(() => { if (!document.hidden && !running && now() >= retryAt) void sync(); }, 30_000);
-  return { refresh, schedule, signedOut, prepareRestore, clearRecovery, signedIn: () => void sync(false, true) };
+  return {
+    refresh, schedule, signedOut, prepareRestore, clearRecovery, signedIn: () => void sync(false, true),
+    activate, pause, getZone, setZone, generateKey, rotateKey, unlockKey, chooseConflict,
+    getSnapshot: () => view,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    },
+  };
 }

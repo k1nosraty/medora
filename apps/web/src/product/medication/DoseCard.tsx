@@ -2,18 +2,18 @@ import { useRef, useState } from "react";
 import {
   doseTime,
   timeText,
-} from "../../../../../web/public/medication/domain/care-index.js";
+} from "../../../product-assets/public/medication/domain/care-index.js";
 import {
   amountText,
   doseUnit,
   quantity,
-} from "../../../../../web/public/medication/features/medicines/quantity.js";
+} from "../../../product-assets/public/medication/features/medicines/quantity.js";
 import {
   listSeparator,
   locale,
   localDigits,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import type { FamilyView } from "../product";
 import { MedicineArt, medicineColor } from "./MedicineArt";
 import {

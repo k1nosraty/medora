@@ -1,11 +1,11 @@
-import { CareInputError } from "../../../../web/public/medication/shared/ui/care-error.js";
+import { CareInputError } from "../../product-assets/public/medication/shared/ui/care-error.js";
 import {
   locale,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
-import { waterGoalReached } from "../../../../web/public/medication/domain/care-plan.js";
-import { changeReminderRevision } from "../../../../web/public/medication/features/reminders/controller.js";
-import { localClock } from "../../../../web/public/medication/shared/ui/input-values.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
+import { waterGoalReached } from "../../product-assets/public/medication/domain/care-plan.js";
+import { changeReminderRevision } from "../../product-assets/public/medication/features/reminders/controller.js";
+import { localClock } from "../../product-assets/public/medication/shared/ui/input-values.js";
 import { renderEntries, type WaterEntry } from "./WaterEntries";
 import { WaterLogForm, type WaterTarget } from "./WaterLogForm";
 import { paintFeature } from "./renderer";

@@ -16,12 +16,12 @@ import { readdir, lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { verifyHouseholdWrites } from "./household-post-write.mjs";
 import { verifyProductBrowser } from "./product-browser.mjs";
-import { careDelta } from "../../web/public/medication/domain/care-delta.js";
+import { careDelta } from "../../apps/web/product-assets/public/medication/domain/care-delta.js";
 import {
   importRecoveryKey,
   openPrivateCare,
   sealPrivateCare,
-} from "../../web/public/medication/features/sync/private-care.js";
+} from "../../apps/web/product-assets/public/medication/features/sync/private-care.js";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";

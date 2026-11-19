@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cycleForecast, cycleTotals } from "../public/medication/domain/cycle.js";
-import { canEnableCycle, cycleIsEnabled } from "../public/medication/domain/profile.js";
-import { readWebBackup, writeWebBackup } from "../public/medication/features/backups/web-format.js";
+import { cycleForecast, cycleTotals } from "../../apps/web/product-assets/public/medication/domain/cycle.js";
+import { canEnableCycle, cycleIsEnabled } from "../../apps/web/product-assets/public/medication/domain/profile.js";
+import { readWebBackup, writeWebBackup } from "../../apps/web/product-assets/public/medication/features/backups/web-format.js";
 
 test("Cycle is opt-in and unavailable on a profile marked male", () => {
   assert.equal(cycleIsEnabled({}), false);

@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { isoDay } from "../../../../../web/public/medication/domain/care-index.js";
-import { cycleSymptoms } from "../../../../../web/public/medication/domain/cycle.js";
-import { equalCareValues } from "../../../../../web/public/medication/domain/care-contract.js";
-import { cycleIsEnabled } from "../../../../../web/public/medication/domain/profile.js";
-import { CareInputError } from "../../../../../web/public/medication/shared/ui/care-error.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
+import { cycleSymptoms } from "../../../product-assets/public/medication/domain/cycle.js";
+import { equalCareValues } from "../../../product-assets/public/medication/domain/care-contract.js";
+import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
+import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import { describeCycleDay, type CycleDayLabel } from "../cycleLabels";
 import { clearFeature, paintFeature } from "../renderer";
 import type { CareState } from "../product";

@@ -2,7 +2,7 @@
 
 At base 5ee5e47, three cold Chromium runs at 390 × 844 simulated 160 ms latency, 200 kB/s download and 75 kB/s upload, with service workers blocked. The median time until the onboarding control became usable was 5,995 ms with 24 requests and 1,097,905 transferred bytes. Maximum of three was 5,999 ms. The generated offline shell listed 35 files totalling 1,316,425 bytes. The largest measured response was the main JS bundle at 261,105 transferred bytes.
 
-Reproduce with `cd web && npm run build && node browser/measure.mjs`. For system Chromium set MEDORA_CHROMIUM to its executable. Usable time is an application marker. LCP, INP, CLS, TTFB, route transitions and large-list timings require separate instrumentation. Compare the same feature, device, cache state and payload before claiming an improvement.
+Reproduce with `npm --prefix web run build && node tests/browser/measure.mjs web/public 3`. For system Chromium set MEDORA_CHROMIUM to its executable. Usable time is an application marker. LCP, INP, CLS, TTFB, route transitions and large-list timings require separate instrumentation. Compare the same feature, device, cache state and payload before claiming an improvement.
 
 Baseline functional browser suite passed all 80 cases across Chromium and WebKit in 2.2 minutes.
 
@@ -41,7 +41,7 @@ The startup code now reads IndexedDB and presents React onboarding with a small,
 
 The immediate-click run exposes the remaining handoff cost. A local trial starting the full locale download in parallel measured 5,003 ms to onboarding and 7,535 ms to the dashboard. A low-priority HTML preload of the dashboard measured 6,048 ms to onboarding and 7,185 ms to the dashboard. The shipped split meets the six-second onboarding target. To reduce the remaining wait, split route-specific medication, family, settings and reports code away from the default dashboard entry and repeat both markers on the same network profile after each slice. Field latency, physical-device install and representative large histories remain open.
 
-Reproduce with `node web/browser/measure.mjs apps/web/dist 3` after a candidate build.
+Reproduce with `node tests/browser/measure.mjs apps/web/dist 3` after a candidate build.
 
 ### Medication and dose phase
 
@@ -65,7 +65,7 @@ The medication benchmark kept the same network and viewport. It used a ready das
 | Resource requests across those actions | 0 | 0 |
 | All canonical JS chunks, raw / gzip | 841,893 / 240,890 bytes | 860,133 / 245,583 bytes |
 
-Run `node web/browser/measure.mjs apps/web/dist 3` for onboarding and `node web/browser/measure-medication.mjs <baseline-assets> apps/web/dist` for the interaction comparison. Set `MEDORA_CHROMIUM` to the system executable if needed. Physical-device, hosted, and large-history observations remain open.
+Run `node tests/browser/measure.mjs apps/web/dist 3` for onboarding and `node tests/browser/measure-medication.mjs <baseline-assets> apps/web/dist` for the interaction comparison. Set `MEDORA_CHROMIUM` to the system executable if needed. Physical-device, hosted, and large-history observations remain open.
 
 ### Appointments, routines and shared frontend migration
 
@@ -83,6 +83,25 @@ Three fresh Chromium contexts per build repeated the same 390 × 844 loopback be
 | Resource requests during those three medication interactions | 0 | 0 |
 | Total canonical JS, raw / gzip | 860,133 / 245,583 bytes | 909,647 / 257,651 bytes |
 
-`node web/browser/measure.mjs apps/web/dist 3` measured onboarding. `node web/browser/measure-medication.mjs <baseline-assets> apps/web/dist` measured the three warm interactions. A separate run used the same throttle and clicked immediately after the welcome control appeared. With `--dashboard` added to the onboarding command, the three-trial median from navigation to the focused dashboard moved from 7,555 ms to 7,289 ms. Larger routine and appointment histories and physical devices remain open.
+`node tests/browser/measure.mjs apps/web/dist 3` measured onboarding. `node tests/browser/measure-medication.mjs <baseline-assets> apps/web/dist` measured the three warm interactions. A separate run used the same throttle and clicked immediately after the welcome control appeared. With `--dashboard` added to the onboarding command, the three-trial median from navigation to the focused dashboard moved from 7,555 ms to 7,289 ms. Larger routine and appointment histories and physical devices remain open.
 
 A separate unthrottled loopback fixture used 120 synthetic appointments at 390 × 844 with the service worker enabled. In three fresh Chromium contexts the warm first-page route through the next frame moved from 67 to 53 ms. The cached offline reload until the first 20 cards were ready moved from 111 to 93 ms. These browser timings exclude physical-device and hosted latency.
+
+### Account, reminder preferences and frontend source move
+
+The loopback comparison starts at `eb063ce`. Each build ran three cold Chromium trials at 390 × 844, with 160 ms latency, 200 kB/s down, 75 kB/s up and service workers blocked. The same command measures the usable welcome button and the focused dashboard after an immediate click.
+
+| Median measurement | `eb063ce` | Candidate |
+| --- | ---: | ---: |
+| Usable welcome button | 4,559 ms | 4,500 ms |
+| Focused dashboard | 7,333 ms | 7,259 ms |
+| Requests at onboarding readiness | 19 | 19 |
+| Bytes transferred at onboarding readiness | 770,738 | 750,709 |
+| Static offline shell files and bytes | 40 / 1,584,255 | 40 / 1,582,167 |
+| Medication navigation with 24 synthetic plans, through next frame | 31 ms | 30 ms |
+| Medication details, through next frame | 16 ms | 16 ms |
+| Dose commit and status, through next frame | 26 ms | 26 ms |
+| Resource requests across the three medication actions | 0 | 0 |
+| All canonical JS chunks, raw / gzip | 909,647 / 257,651 bytes | 927,588 / 263,013 bytes |
+
+Reproduce with `node tests/browser/measure.mjs apps/web/dist 3 --dashboard` and `node tests/browser/measure-medication.mjs <baseline-assets> apps/web/dist`. The six-second threshold applies to the welcome-button marker. The distinct dashboard path still exceeds seven seconds in this network profile. Route-specific splitting, physical-device startup and hosted latency remain open.

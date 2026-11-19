@@ -1,13 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../browser/runner.mjs";
 import { createHmac, scryptSync } from "node:crypto";
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { writeWebBackup } from "../public/medication/features/backups/web-format.js";
-import { emptyCareRecords } from "../public/medication/domain/family.js";
+import { writeWebBackup } from "../../apps/web/product-assets/public/medication/features/backups/web-format.js";
+import { emptyCareRecords } from "../../apps/web/product-assets/public/medication/domain/family.js";
 
-const require = createRequire(import.meta.url);
-const { Miniflare, convertV4MiniflareOptions } = require("miniflare");
-const { build } = require("esbuild");
+import { build, Miniflare, convertV4MiniflareOptions } from "./workerd.mjs";
 const secret = "8".repeat(64);
 const email = "restore-test@example.test";
 const password = "synthetic restore password";
@@ -24,7 +21,7 @@ test("browser restore honors intent against the Worker and transfers private not
   // The two-device restore and rotation exercises several cryptographic operations on CI.
   test.setTimeout(90_000);
   const { outputFiles } = await build({
-    absWorkingDir: fileURLToPath(new URL("../", import.meta.url)), entryPoints: ["src/worker.mjs"],
+    absWorkingDir: fileURLToPath(new URL("../../web/", import.meta.url)), entryPoints: ["src/worker.mjs"],
     bundle: true, platform: "browser", format: "esm", external: ["cloudflare:workers", "node:crypto", "node:buffer"], write: false
   });
   const worker = new Miniflare(convertV4MiniflareOptions({

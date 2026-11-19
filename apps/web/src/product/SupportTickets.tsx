@@ -1,4 +1,4 @@
-import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
+import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
 import type { Ticket } from "./supportApi";
 
 export function SupportTickets({ tickets }: { tickets: Ticket[] }) {

@@ -1,12 +1,12 @@
 import { useLayoutEffect, useState, type FormEvent } from "react";
-import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
+import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
 import {
   sleepInstant,
   sleepMinutes,
   sleepWall,
   validSleepRecord,
-} from "../../../../web/public/medication/domain/sleep.js";
-import { sleepDuration } from "../../../../web/public/medication/features/sleep/presentation.js";
+} from "../../product-assets/public/medication/domain/sleep.js";
+import { sleepDuration } from "../../product-assets/public/medication/features/sleep/presentation.js";
 
 export interface SleepRecord {
   start: number;

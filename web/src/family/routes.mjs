@@ -4,8 +4,8 @@ import { familyPageSize, familyTables, familyTableNames, validFamilyRows } from 
 import { DurableObject } from "cloudflare:workers";
 import { careSession, normalizeEmail } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
-import { allFamilySections, familySections, sharedCare } from "../../public/medication/domain/family.js";
-import { groupIconOf, groupIcons } from "../../public/medication/domain/group-icons.js";
+import { allFamilySections, familySections, sharedCare } from "../../../apps/web/product-assets/public/medication/domain/family.js";
+import { groupIconOf, groupIcons } from "../../../apps/web/product-assets/public/medication/domain/group-icons.js";
 import { clean, idPattern } from "./care.mjs";
 
 export const familyStore = env => env.FAMILIES?.getByName("care-groups");

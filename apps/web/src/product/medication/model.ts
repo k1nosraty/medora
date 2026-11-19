@@ -4,14 +4,14 @@ import {
   doseId,
   doseTime,
   trackSchedule,
-} from "../../../../../web/public/medication/domain/care-index.js";
+} from "../../../product-assets/public/medication/domain/care-index.js";
 import {
   localZone,
   minuteMs,
-} from "../../../../../web/public/medication/domain/care-plan.js";
-import * as engine from "../../../../../web/public/medication/domain/medication-rules.js";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { CareInputError } from "../../../../../web/public/medication/shared/ui/care-error.js";
+} from "../../../product-assets/public/medication/domain/care-plan.js";
+import * as engine from "../../../product-assets/public/medication/domain/medication-rules.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 
 export interface Phase {
   start: number;

@@ -3,7 +3,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { existsSync } from "node:fs";
 
 const web = resolve(process.argv[2] ?? fileURLToPath(new URL("../", import.meta.url)));
-const { mergeCare } = await import(pathToFileURL(resolve(web, "public/medication/features/sync/merge.js")));
+const { mergeCare } = await import(pathToFileURL(resolve(web, "../apps/web/product-assets/public/medication/features/sync/merge.js")));
 const water = Array.from({ length: 2200 }, (_, index) => ({
   id: "synthetic-water-" + index, day: 20_000 + Math.floor(index / 3), time: "10:00", amount: 250
 }));
@@ -27,10 +27,10 @@ function summarize(times) {
 }
 
 const result = { merge: { records: water.length, bytes: Buffer.byteLength(JSON.stringify(common)), ...summarize(mergeTimes) } };
-const privacyPath = resolve(web, "public/medication/features/sync/private-care.js");
+const privacyPath = resolve(web, "../apps/web/product-assets/public/medication/features/sync/private-care.js");
 if (existsSync(privacyPath)) {
   const { importRecoveryKey, openPrivateCare, sealPrivateCare } = await import(pathToFileURL(privacyPath));
-  const { validateCareRecords } = await import(pathToFileURL(resolve(web, "public/medication/domain/care-records.js")));
+  const { validateCareRecords } = await import(pathToFileURL(resolve(web, "../apps/web/product-assets/public/medication/domain/care-records.js")));
   const key = await importRecoveryKey("a".repeat(64));
   const visits = Object.fromEntries(Array.from({ length: 220 }, (_, index) => {
     const id = "synthetic-visit-" + index;

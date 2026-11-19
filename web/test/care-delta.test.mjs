@@ -4,7 +4,7 @@ import {
   careDelta,
   applyCareDelta,
   preserveCareExtensions,
-} from "../public/medication/domain/care-delta.js";
+} from "../../apps/web/product-assets/public/medication/domain/care-delta.js";
 test("mixed program changes, keyed removals, encrypted values and water ordering round-trip", () => {
   const base = {
     water: [

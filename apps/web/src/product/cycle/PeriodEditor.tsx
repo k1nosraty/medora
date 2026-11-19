@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { isoDay } from "../../../../../web/public/medication/domain/care-index.js";
-import { dayNumber } from "../../../../../web/public/medication/shared/ui/dates.js";
-import { CareInputError } from "../../../../../web/public/medication/shared/ui/care-error.js";
-import { cycleIsEnabled } from "../../../../../web/public/medication/domain/profile.js";
-import { glassObject } from "../../../../../web/public/medication/design/three-dimensional.js";
-import { mountDayCard } from "../../../../../web/public/medication/shared/ui/day-card.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
+import { dayNumber } from "../../../product-assets/public/medication/shared/ui/dates.js";
+import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
+import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
+import { glassObject } from "../../../product-assets/public/medication/design/three-dimensional.js";
+import { mountDayCard } from "../../../product-assets/public/medication/shared/ui/day-card.js";
 import { installCycleOverview } from "../CycleOverview";
 import { clearFeature, paintFeature } from "../renderer";
 import { Icon, PlanArtwork } from "../PlanCard";
@@ -36,13 +36,15 @@ export function CycleDateField({
   label,
   maximum,
   required,
+  endpoint,
   value,
   change,
 }: {
   id: string;
   label: string;
-  maximum: string;
+  maximum?: string;
   required?: boolean;
+  endpoint?: "start" | "end";
   value: string;
   change(value: string): void;
 }) {
@@ -55,6 +57,7 @@ export function CycleDateField({
           type="date"
           max={maximum}
           required={required}
+          data-endpoint={endpoint}
           hidden
           value={value}
           onInput={(event) => change(event.currentTarget.value)}

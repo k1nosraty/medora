@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState, type FormEvent } from "react";
-import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
+import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
 import type { CareState } from "./product";
 import { paintFeature } from "./renderer";
 

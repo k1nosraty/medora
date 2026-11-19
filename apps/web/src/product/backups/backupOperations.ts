@@ -1,13 +1,13 @@
-import { accessCare } from "../../../../../web/public/medication/shared/storage.js";
-import { portable } from "../../../../../web/public/medication/domain/care-records.js";
-import { changeReminderRevision } from "../../../../../web/public/medication/features/reminders/controller.js";
-import { CareInputError } from "../../../../../web/public/medication/shared/ui/care-error.js";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { localZone } from "../../../../../web/public/medication/domain/care-plan.js";
+import { accessCare } from "../../../product-assets/public/medication/shared/storage.js";
+import { portable } from "../../../product-assets/public/medication/domain/care-records.js";
+import { changeReminderRevision } from "../../../product-assets/public/medication/features/reminders/controller.js";
+import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { localZone } from "../../../product-assets/public/medication/domain/care-plan.js";
 import type {
   RestoreMode,
   RestoreTarget,
-} from "../../../../../web/public/medication/domain/restore-intent.js";
+} from "../../../product-assets/public/medication/domain/restore-intent.js";
 import type { CareState } from "../product";
 
 export type ValidatePhases = (phases: unknown) => boolean;
@@ -38,7 +38,7 @@ export async function exportBackup(
   validate: ValidatePhases,
 ) {
   const { writeWebBackup } =
-    await import("../../../../../web/public/medication/features/backups/web-format.js");
+    await import("../../../product-assets/public/medication/features/backups/web-format.js");
   const state: BackupCare = await accessCare();
   const recovery = state.restoreRecovery;
   if (includeRecovery && !recovery) throw new Error("restore_recovery_missing");
@@ -53,16 +53,16 @@ export async function readBackup(
   validate: ValidatePhases,
 ) {
   const { maxBackupBytes } =
-    await import("../../../../../web/public/medication/shared/crypto/backup.js");
+    await import("../../../product-assets/public/medication/shared/crypto/backup.js");
   if (file.size > maxBackupBytes) throw new Error("backup_too_large");
   const bytes = new Uint8Array(await file.arrayBuffer());
   const format =
-    await import("../../../../../web/public/medication/features/backups/web-format.js");
+    await import("../../../product-assets/public/medication/features/backups/web-format.js");
   const web = format.isWebBackup(bytes);
   const data = web
     ? await format.readWebBackup(bytes, password, validate)
     : await (
-        await import("../../../../../web/public/medication/features/backups/android-format.js")
+        await import("../../../product-assets/public/medication/features/backups/android-format.js")
       ).readAndroidBackup(bytes, password, validate, localZone());
   return { data, web, settings: format.webBackupSettings };
 }

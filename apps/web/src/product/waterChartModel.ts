@@ -1,7 +1,7 @@
 import {
   locale,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
 
 const number = new Intl.NumberFormat(locale).format;
 interface Interval {

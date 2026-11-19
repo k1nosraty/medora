@@ -2,12 +2,12 @@ import { Fragment } from "react";
 import {
   localDigits,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import {
   isoDay,
   type createCareIndex,
-} from "../../../../../web/public/medication/domain/care-index.js";
-import { timeZoneCity } from "../../../../../web/public/medication/shared/ui/time-zone-picker.js";
+} from "../../../product-assets/public/medication/domain/care-index.js";
+import { timeZoneCity } from "../../../product-assets/public/medication/shared/ui/time-zone-picker.js";
 import { Icon, PlanDayCard, PlanOptions } from "../PlanCard";
 import { clearFeature, mountCard, paintFeature } from "../renderer";
 import type { CareState, FamilyView } from "../product";

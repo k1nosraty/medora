@@ -4,10 +4,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
-import { scheduleForPush } from "../public/medication/domain/care-plan.js";
-import { subscriptionId } from "../public/medication/domain/subscription-id.js";
-import { emptyCareRecords } from "../public/medication/domain/family.js";
-import { ageAt, validPersonalProfile } from "../public/medication/domain/profile.js";
+import { scheduleForPush } from "../../apps/web/product-assets/public/medication/domain/care-plan.js";
+import { subscriptionId } from "../../apps/web/product-assets/public/medication/domain/subscription-id.js";
+import { emptyCareRecords } from "../../apps/web/product-assets/public/medication/domain/family.js";
+import { ageAt, validPersonalProfile } from "../../apps/web/product-assets/public/medication/domain/profile.js";
 
 const require = createRequire(import.meta.url);
 

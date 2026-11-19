@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sleepConflicts, sleepDay, sleepInstant, sleepMinutes, sleepReport } from "../public/medication/domain/sleep.js";
-import { cycleEstimate, cyclePatterns, cycleRoutineOccurs, withoutCycle } from "../public/medication/domain/cycle.js";
-import { sharedCare } from "../public/medication/domain/family.js";
-import { scheduleForPush } from "../public/medication/domain/care-plan.js";
-import { nextCareReminder, validSchedule } from "../public/medication/domain/reminder-schedule.js";
-import { portable, validateCareRecords } from "../public/medication/domain/care-records.js";
+import { sleepConflicts, sleepDay, sleepInstant, sleepMinutes, sleepReport } from "../../apps/web/product-assets/public/medication/domain/sleep.js";
+import { cycleEstimate, cyclePatterns, cycleRoutineOccurs, withoutCycle } from "../../apps/web/product-assets/public/medication/domain/cycle.js";
+import { sharedCare } from "../../apps/web/product-assets/public/medication/domain/family.js";
+import { scheduleForPush } from "../../apps/web/product-assets/public/medication/domain/care-plan.js";
+import { nextCareReminder, validSchedule } from "../../apps/web/product-assets/public/medication/domain/reminder-schedule.js";
+import { portable, validateCareRecords } from "../../apps/web/product-assets/public/medication/domain/care-records.js";
 import { reminderCopy } from "../src/reminders/copy.mjs";
 
 const zone = "Asia/Tehran";
@@ -68,7 +68,7 @@ test("sleep and discreet cycle reminders enter the actual timezone-aware push sc
 });
 
 test("overlapping records from two devices require a conflict choice before sync", async () => {
-  const { mergeCare, CareConflict } = await import("../public/medication/features/sync/merge.js");
+  const { mergeCare, CareConflict } = await import("../../apps/web/product-assets/public/medication/features/sync/merge.js");
   const ours = portable({ ...state, sleepRecords: { sleep } });
   const theirs = portable({ ...state, sleepRecords: { other: { ...sleep, start: start + 60_000 } } });
   assert.throws(() => mergeCare(null, ours, theirs), CareConflict);
@@ -78,7 +78,7 @@ test("overlapping records from two devices require a conflict choice before sync
 
 test("account protection encrypts sleep notes and cycle daily notes and tags", async () => {
   const { generateRecoveryKey, importRecoveryKey, openPrivateCare, sealPrivateCare } =
-    await import("../public/medication/features/sync/private-care.js");
+    await import("../../apps/web/product-assets/public/medication/features/sync/private-care.js");
   const key = await importRecoveryKey(generateRecoveryKey());
   const withTags = portable({ ...state, cycleDays: { [day]: { flow: "light", symptoms: {}, note: "private", tags: "personal" } } });
   const encrypted = await sealPrivateCare(withTags, key);

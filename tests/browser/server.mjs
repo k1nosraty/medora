@@ -19,7 +19,7 @@ function json(response, data, status = 200) {
 }
 
 export function browserServer(intercept) {
-  const root = resolve(process.env.MEDORA_PUBLIC_DIR ?? fileURLToPath(new URL("../public/", import.meta.url)));
+  const root = resolve(process.env.MEDORA_PUBLIC_DIR ?? fileURLToPath(new URL("../../apps/web/dist/", import.meta.url)));
   return createServer(async (request, response) => {
     const url = new URL(request.url, "http://localhost");
     const { pathname } = url;

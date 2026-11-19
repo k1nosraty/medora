@@ -3,12 +3,12 @@ import {
   validSchedule,
   reminderRequestLimit,
 } from "./medication-schedule.mjs";
-import { scheduleForPush } from "../../public/medication/domain/care-plan.js";
+import { scheduleForPush } from "../../../apps/web/product-assets/public/medication/domain/care-plan.js";
 import {
   dayMs,
   localWall,
   timezone,
-} from "../../public/medication/domain/wall-clock.js";
+} from "../../../apps/web/product-assets/public/medication/domain/wall-clock.js";
 import { reminderCopy } from "./copy.mjs";
 
 const encoder = new TextEncoder();

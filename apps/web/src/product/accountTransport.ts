@@ -1,4 +1,4 @@
-import { careDelta } from "../../../../web/public/medication/domain/care-delta.js";
+import { careDelta } from "../../product-assets/public/medication/domain/care-delta.js";
 
 // Only the candidate negotiates the new writer. An installed legacy client has
 // no route to PostgreSQL. A transition away from a writer requires a fresh page.

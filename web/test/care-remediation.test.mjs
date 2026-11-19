@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertRestoreRevision, restoreTarget } from "../public/medication/domain/restore-intent.js";
-import { saveMedicinePlan } from "../public/medication/domain/medicine-command.js";
-import { CareConflict, conflictChoice, mergeCare, mergeRestoredCare } from "../public/medication/features/sync/merge.js";
-import { emptyCareRecords, sharedCare } from "../public/medication/domain/family.js";
-import { validateCareRecords } from "../public/medication/domain/care-records.js";
-import { boundedCarePayload } from "../public/medication/domain/care-contract.js";
-import { reminderCareProjection } from "../public/medication/domain/care-plan.js";
+import { assertRestoreRevision, restoreTarget } from "../../apps/web/product-assets/public/medication/domain/restore-intent.js";
+import { saveMedicinePlan } from "../../apps/web/product-assets/public/medication/domain/medicine-command.js";
+import { CareConflict, conflictChoice, mergeCare, mergeRestoredCare } from "../../apps/web/product-assets/public/medication/features/sync/merge.js";
+import { emptyCareRecords, sharedCare } from "../../apps/web/product-assets/public/medication/domain/family.js";
+import { validateCareRecords } from "../../apps/web/product-assets/public/medication/domain/care-records.js";
+import { boundedCarePayload } from "../../apps/web/product-assets/public/medication/domain/care-contract.js";
+import { reminderCareProjection } from "../../apps/web/product-assets/public/medication/domain/care-plan.js";
 
 test("replacement is scoped to the confirmed revision and recognizes a lost acknowledgement", () => {
   const cloud = { owner: "a".repeat(64), revision: 4 };

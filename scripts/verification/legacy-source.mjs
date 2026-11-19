@@ -2,7 +2,7 @@ import {
   generateRecoveryKey,
   importRecoveryKey,
   sealPrivateCare,
-} from "../../web/public/medication/features/sync/private-care.js";
+} from "../../apps/web/product-assets/public/medication/features/sync/private-care.js";
 // Generates a stopped, synthetic local Workerd copy and an independent inventory.
 import assert from "node:assert/strict";
 import { sessionHash } from "../../web/src/accounts/auth-crypto.mjs";

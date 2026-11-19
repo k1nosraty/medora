@@ -8,6 +8,8 @@ The React medication editor and dose cards write the same `medora-medication-pro
 
 Appointment and routine React forms use the same canonical IndexedDB write transactions. Appointment edits preserve record identifiers, the clinic zone and unrecognized top-level fields. Routine progress still uses the original day bucket and is saved against the selected occurrence. The cycle editors keep start-day-keyed period records and separate daily logs. Both carry existing record fields across edits. Changing a daily entry requires the currently stored value to match the editor baseline. Archive screens use the established encrypted backup envelopes and restore intent.
 
+Account and sync presentation moved to React over the existing care sync service. Care storage, private-field handling, acknowledgement logic, sync revisions and owner selection keep their existing contracts. Clinic-zone and water reminder preferences save through the same update path and retain the original keys. Cycle bulk inserts retain their day-keyed records and reject the entire batch on overlap. Visit print renders selected categories through the existing date range and privacy rules and clears the print contents when printing ends.
+
 ## Preserve the public origin
 
 Keep the exact frontend scheme, host and port, the service-worker scope and the relative `/api` URLs. Update the upstream behind that origin when the backend moves. This keeps IndexedDB, cache, the installed PWA and the `__Host-` authentication cookie attached to the same site. Opening a different frontend origin creates a separate browser storage namespace. A different public API origin would require a new authentication and CORS design. A raw origin change cannot transfer browser data.

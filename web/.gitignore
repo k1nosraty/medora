@@ -2,13 +2,7 @@ node_modules/
 .wrangler/
 .pilot-secrets.json
 .wrangler.staging.local.jsonc
-public/ICON-LICENSE.txt
-public/medication/index.html
-public/medication/sw.js
-public/medication/workbox.js
-public/design/index.html
-public/medication/styles/app.css
+/public/
 
 /test-results/
 /playwright-report/
-/public/medication/bundles/

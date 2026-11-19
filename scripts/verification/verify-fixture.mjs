@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from "node:util";
 import {
   openPrivateCare,
   importRecoveryKey,
-} from "../../web/public/medication/features/sync/private-care.js";
+} from "../../apps/web/product-assets/public/medication/features/sync/private-care.js";
 
 // Read the target through direct SQL and compare it to the fixture writer's own inputs.
 // Keep mismatching values out of logs, including test credentials and notes.

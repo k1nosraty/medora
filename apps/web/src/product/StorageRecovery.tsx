@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
+import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
 import { paintFeature } from "./renderer";
 
 function StorageRecovery() {
@@ -14,8 +14,8 @@ function StorageRecovery() {
     setStatus("");
     try {
       const [{ encryptBackup }, { readCareRecovery }] = await Promise.all([
-        import("../../../../web/public/medication/shared/crypto/backup.js"),
-        import("../../../../web/public/medication/shared/storage.js"),
+        import("../../product-assets/public/medication/shared/crypto/backup.js"),
+        import("../../product-assets/public/medication/shared/storage.js"),
       ]);
       const bytes = await encryptBackup(
         await readCareRecovery(),

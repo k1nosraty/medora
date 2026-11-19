@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { accentOf, availableAccents } from "../public/medication/styles/theme.js";
+import { accentOf, availableAccents } from "../../apps/web/product-assets/public/medication/styles/theme.js";
 
 const publicDir = new URL("../public/", import.meta.url);
 

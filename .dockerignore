@@ -8,6 +8,8 @@
 !apps/*/package.json
 !apps/*/src/
 !apps/*/src/**
+!apps/web/product-assets/
+!apps/web/product-assets/**
 !apps/web/index.html
 !apps/web/sw.template.js
 !apps/web/static.headers
@@ -21,12 +23,8 @@
 !packages/web-build/**
 !web/
 !web/package*.json
-!web/ui/
-!web/ui/**
 !web/src/
 !web/src/**
-!web/public/
-!web/public/**
 !web/scripts/
 !web/scripts/build-web.mjs
 !web/scripts/workbox.mjs

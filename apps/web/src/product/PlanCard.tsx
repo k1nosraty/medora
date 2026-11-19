@@ -1,6 +1,6 @@
 import { useRef, type ReactNode } from "react";
-import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
-import { artworkPath } from "../../../../web/public/medication/design/three-dimensional.js";
+import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
+import { artworkPath } from "../../product-assets/public/medication/design/three-dimensional.js";
 
 export function Icon({ name }: { name: string }) {
   return (

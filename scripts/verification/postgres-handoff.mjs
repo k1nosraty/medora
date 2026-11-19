@@ -21,12 +21,12 @@ import { fixtureObjects } from "./fixture-objects.mjs";
 import { saveFixtureBackup } from "./backup-erasure.mjs";
 import { fixtureMailbox } from "./mailbox.mjs";
 import { bundleWorker } from "./bundle-worker.mjs";
-import { normalizePrivateCare } from "../../web/public/medication/features/sync/private-care.js";
+import { normalizePrivateCare } from "../../apps/web/product-assets/public/medication/features/sync/private-care.js";
 import { withLocalWorker } from "./local-worker.mjs";
 import {
   decryptBackup,
   encryptBackup,
-} from "../../web/public/medication/shared/crypto/backup.js";
+} from "../../apps/web/product-assets/public/medication/shared/crypto/backup.js";
 
 const [source, target, aborted, recoveryDb] = [
   "MEDORA_HANDOFF_SOURCE",

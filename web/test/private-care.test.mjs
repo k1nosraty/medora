@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { portable, validateCareRecords } from "../public/medication/domain/care-records.js";
-import { emptyCareRecords, sharedCare } from "../public/medication/domain/family.js";
-import { generateRecoveryKey, importRecoveryKey, openPrivateCare, sealPrivateCare } from "../public/medication/features/sync/private-care.js";
+import { portable, validateCareRecords } from "../../apps/web/product-assets/public/medication/domain/care-records.js";
+import { emptyCareRecords, sharedCare } from "../../apps/web/product-assets/public/medication/domain/family.js";
+import { generateRecoveryKey, importRecoveryKey, openPrivateCare, sealPrivateCare } from "../../apps/web/product-assets/public/medication/features/sync/private-care.js";
 
 test("protects private text while preserving readable schedules, legacy records and family permissions", async () => {
   const legacy = { ...emptyCareRecords(),

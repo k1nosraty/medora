@@ -4,11 +4,11 @@ import type { HouseholdCommand } from "@medora/contracts";
 import {
   groupIcons,
   groupIconOf,
-} from "../../../web/public/medication/domain/group-icons.js";
+} from "../../web/product-assets/public/medication/domain/group-icons.js";
 import {
   allFamilySections,
   familySections,
-} from "../../../web/public/medication/domain/family.js";
+} from "../../web/product-assets/public/medication/domain/family.js";
 import { Denied, deny, audit, delegated } from "./household-access";
 const validPolicy = (sections: string[] | undefined): sections is string[] =>
   Boolean(

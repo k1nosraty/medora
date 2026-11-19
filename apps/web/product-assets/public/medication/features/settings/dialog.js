@@ -20,9 +20,9 @@ const noSnoozeRenderer = undefined;
 
 /** @type {((host: HTMLElement) => () => void) | undefined} */
 const noBackupRenderer = undefined;
-/** @type {typeof import("../../../../../apps/web/src/product/settings/Preferences.js").renderPreferences | undefined} */
+/** @type {typeof import("../../../../../src/product/settings/Preferences.js").renderPreferences | undefined} */
 const noPreferencesRenderer = undefined;
-const preferencePanels = new Set(["display-settings", "profile-settings", "sleep-settings"]);
+const preferencePanels = new Set(["display-settings", "profile-settings", "sleep-settings", "appointment-settings", "water-settings"]);
 
 export function installSettings({ getState, mutate, refreshFields, renderSnooze = noSnoozeRenderer,
   renderBackup = noBackupRenderer, renderPreferences = noPreferencesRenderer }) {
@@ -69,14 +69,14 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
   const cycle = $("profile-cycle-enabled");
   const saveAppointmentSettings = $("save-appointment-settings");
   const automaticClinicZone = $("clinic-zone-automatic");
-  const clinicZonePicker = installTimeZonePicker($("clinic-zone-search"), $("clinic-zone-options"), $("clinic-zone-empty"));
+  const clinicZonePicker = renderPreferences ? undefined : installTimeZonePicker($("clinic-zone-search"), $("clinic-zone-options"), $("clinic-zone-empty"));
   function showClinicZonePicker() {
     $("clinic-zone-custom").hidden = automaticClinicZone.checked;
     if (!automaticClinicZone.checked && !clinicZonePicker.value) {
       clinicZonePicker.load(getState().clinicTimeZone, localZone() ?? "UTC", Date.now());
     }
   }
-  automaticClinicZone.addEventListener("change", showClinicZonePicker);
+  if (!renderPreferences) automaticClinicZone.addEventListener("change", showClinicZonePicker);
   function updateProfileAge() {
     const age = ageAt($("profile-birth-date").value, new Date());
     $("profile-age").textContent = age === null ? "—" : t("ui.value-years-old", numbers.format(age));
@@ -211,7 +211,7 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
     }
     if (panel === "backup-settings" && renderBackup && !releaseBackup)
       releaseBackup = renderBackup($("backup-settings"));
-    if (panel === "water-settings") updateWaterPause();
+    if (!renderPreferences && panel === "water-settings") updateWaterPause();
     $("settings-content").scrollTop = panel ? 0 : settingsHomeScroll;
   }
   for (const link of settingsLinks) {
@@ -272,52 +272,54 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
       if (!settings.dataset.panel) refreshSettingsHome(getState());
     }, remaining);
   }
-  $("water-reminders-enabled").addEventListener("change", () => {
-    $("water-reminder-fields").hidden = !$("water-reminders-enabled").checked;
-  });
-  $("water-reminders-pause").addEventListener("click", async event => {
-    const now = Date.now();
-    const paused = (getState().waterReminders?.pauseUntil ?? 0) > now;
-    await saveSettings(event.currentTarget, state => {
-      if (!state.waterReminders?.enabled) throw new Error("water reminders disabled");
-      state.waterReminders.pauseUntil = paused ? 0 : now + 3_600_000;
-    }, paused ? t("ui.water-reminders-resumed") : t("ui.water-reminders-paused-for-one-hour"), true);
-    updateWaterPause();
-  });
-  $("water-goal-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const goal = integer($("water-goal").value);
-    if (!(goal >= 1 && goal <= 20000)) {
-      settingsFeedback(t("ui.enter-a-water-goal-from-1-to-20-000-ml"), "error");
-      $("water-goal").focus();
-      return;
-    }
-    const enabled = $("water-reminders-enabled").checked;
-    const start = $("water-reminders-start").value;
-    const end = $("water-reminders-end").value;
-    const interval = Number($("water-reminders-interval").value);
-    const repeat = Number($("water-reminders-repeat").value);
-    if (enabled && (!start || !end || start >= end)) {
-      settingsFeedback(t("ui.the-end-time-must-be-after-the-start-time"), "error");
-      $("water-goal-form").querySelector('[data-for="water-reminders-end"]').focus();
-      return;
-    }
-    if (enabled && !(interval >= 15 && interval <= 240 && repeat >= 0 && repeat < interval)) {
-      settingsFeedback(t("ui.the-follow-up-must-come-before-the-next-reminder"), "error");
-      const repeatField = $("water-reminders-repeat");
-      repeatField.closest("details").open = true;
-      repeatField.focus();
-      return;
-    }
-    const saved = await saveSettings(event.submitter ?? $("water-goal-form").querySelector('[type="submit"]'), state => {
-      state.waterGoal = goal;
-      const previous = state.waterReminders ?? waterDefaults;
-      state.waterReminders = enabled ? { start, end, interval, repeat, pauseUntil: previous.pauseUntil, enabled }
-        : { ...previous, enabled: false };
-    }, t("ui.water-settings-saved"), true);
-    if (saved && !enabled) loadWaterSettings(getState());
-    updateWaterPause();
-  });
+  if (!renderPreferences) {
+    $("water-reminders-enabled").addEventListener("change", () => {
+      $("water-reminder-fields").hidden = !$("water-reminders-enabled").checked;
+    });
+    $("water-reminders-pause").addEventListener("click", async event => {
+      const now = Date.now();
+      const paused = (getState().waterReminders?.pauseUntil ?? 0) > now;
+      await saveSettings(event.currentTarget, state => {
+        if (!state.waterReminders?.enabled) throw new Error("water reminders disabled");
+        state.waterReminders.pauseUntil = paused ? 0 : now + 3_600_000;
+      }, paused ? t("ui.water-reminders-resumed") : t("ui.water-reminders-paused-for-one-hour"), true);
+      updateWaterPause();
+    });
+    $("water-goal-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const goal = integer($("water-goal").value);
+      if (!(goal >= 1 && goal <= 20000)) {
+        settingsFeedback(t("ui.enter-a-water-goal-from-1-to-20-000-ml"), "error");
+        $("water-goal").focus();
+        return;
+      }
+      const enabled = $("water-reminders-enabled").checked;
+      const start = $("water-reminders-start").value;
+      const end = $("water-reminders-end").value;
+      const interval = Number($("water-reminders-interval").value);
+      const repeat = Number($("water-reminders-repeat").value);
+      if (enabled && (!start || !end || start >= end)) {
+        settingsFeedback(t("ui.the-end-time-must-be-after-the-start-time"), "error");
+        $("water-goal-form").querySelector('[data-for="water-reminders-end"]').focus();
+        return;
+      }
+      if (enabled && !(interval >= 15 && interval <= 240 && repeat >= 0 && repeat < interval)) {
+        settingsFeedback(t("ui.the-follow-up-must-come-before-the-next-reminder"), "error");
+        const repeatField = $("water-reminders-repeat");
+        repeatField.closest("details").open = true;
+        repeatField.focus();
+        return;
+      }
+      const saved = await saveSettings(event.submitter ?? $("water-goal-form").querySelector('[type="submit"]'), state => {
+        state.waterGoal = goal;
+        const previous = state.waterReminders ?? waterDefaults;
+        state.waterReminders = enabled ? { start, end, interval, repeat, pauseUntil: previous.pauseUntil, enabled }
+          : { ...previous, enabled: false };
+      }, t("ui.water-settings-saved"), true);
+      if (saved && !enabled) loadWaterSettings(getState());
+      updateWaterPause();
+    });
+  }
   function saveSnooze(control, minutes) {
     return saveSettings(control, state => { state.medicationSnoozeMinutes = minutes; }, t("ui.snooze-duration-saved"));
   }
@@ -340,28 +342,28 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
       await saveSnooze(event.submitter ?? $("snooze-form").querySelector('[type="submit"]'), minutes);
     });
   }
-  $("appointment-settings-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const start = $("appointment-reminders-start").value;
-    const interval = Number($("appointment-reminders-interval").value);
-    const zone = automaticClinicZone.checked ? null : clinicZonePicker.value;
-    if (!start || ![60, 120].includes(interval)) {
-      settingsFeedback(t("ui.check-the-reminder-start-time-and-interval"), "error");
-      return;
-    }
-    if (zone === undefined) {
-      settingsFeedback(t("ui.clinic-zone-choose-city"), "error");
-      $("clinic-zone-search").focus();
-      return;
-    }
-    await saveSettings(event.submitter ?? saveAppointmentSettings,
-      state => {
-        state.appointmentReminders = { start, interval };
-        if (zone) state.clinicTimeZone = zone;
-        else delete state.clinicTimeZone;
-      }, t("ui.appointment-settings-saved"), true);
-  });
   if (!renderPreferences) {
+    $("appointment-settings-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const start = $("appointment-reminders-start").value;
+      const interval = Number($("appointment-reminders-interval").value);
+      const zone = automaticClinicZone.checked ? null : clinicZonePicker.value;
+      if (!start || ![60, 120].includes(interval)) {
+        settingsFeedback(t("ui.check-the-reminder-start-time-and-interval"), "error");
+        return;
+      }
+      if (zone === undefined) {
+        settingsFeedback(t("ui.clinic-zone-choose-city"), "error");
+        $("clinic-zone-search").focus();
+        return;
+      }
+      await saveSettings(event.submitter ?? saveAppointmentSettings,
+        state => {
+          state.appointmentReminders = { start, interval };
+          if (zone) state.clinicTimeZone = zone;
+          else delete state.clinicTimeZone;
+        }, t("ui.appointment-settings-saved"), true);
+    });
     $("sleep-settings-form").addEventListener("submit", async event => {
       event.preventDefault();
       const enabled = $("sleep-enabled").checked;
@@ -426,7 +428,7 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
     selectSettings(notifications ? "notification-settings" : "");
     settings.showModal();
     fitSettings();
-    updateWaterPause();
+    if (!renderPreferences) updateWaterPause();
   }
 
   return open;

@@ -2,21 +2,21 @@ import { useRef, useState } from "react";
 import {
   doseId,
   timeText,
-} from "../../../../../web/public/medication/domain/care-index.js";
-import { saveMedicinePlan } from "../../../../../web/public/medication/domain/medicine-command.js";
-import { isLowStock } from "../../../../../web/public/medication/domain/medication-rules.js";
-import { nextPlannedDose } from "../../../../../web/public/medication/features/medicines/next-dose.js";
+} from "../../../product-assets/public/medication/domain/care-index.js";
+import { saveMedicinePlan } from "../../../product-assets/public/medication/domain/medicine-command.js";
+import { isLowStock } from "../../../product-assets/public/medication/domain/medication-rules.js";
+import { nextPlannedDose } from "../../../product-assets/public/medication/features/medicines/next-dose.js";
 import {
   amountText,
   doseUnit,
   quantity,
-} from "../../../../../web/public/medication/features/medicines/quantity.js";
+} from "../../../product-assets/public/medication/features/medicines/quantity.js";
 import {
   locale,
   localDigits,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { CareInputError } from "../../../../../web/public/medication/shared/ui/care-error.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import type { installDeletion } from "../DeleteConfirmation";
 import type { installPickers } from "../Pickers";
 import type { CareState, FamilyView } from "../product";

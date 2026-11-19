@@ -1,9 +1,9 @@
 import {
   weekIndex,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
-import type { calendarFormat } from "../../../../../web/public/medication/shared/ui/calendar-format.js";
-import type { createCareIndex } from "../../../../../web/public/medication/domain/care-index.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import type { calendarFormat } from "../../../product-assets/public/medication/shared/ui/calendar-format.js";
+import type { createCareIndex } from "../../../product-assets/public/medication/domain/care-index.js";
 import type { RenderDose } from "../medication/Medication";
 import type { installAppointments } from "../appointments/Appointments";
 import type { installRoutines } from "../routines/Routines";

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { isoDay } from "../../../../../web/public/medication/domain/care-index.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
 import {
   isRestoreMode,
   type RestoreTarget,
-} from "../../../../../web/public/medication/domain/restore-intent.js";
+} from "../../../product-assets/public/medication/domain/restore-intent.js";
 import { clearFeature, paintFeature } from "../renderer";
 import {
   clearDevice,

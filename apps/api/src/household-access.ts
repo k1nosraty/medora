@@ -2,9 +2,9 @@ import type { PoolClient } from "pg";
 import type { HouseholdCommand, CareCommit } from "@medora/contracts";
 import { commitCare } from "./care";
 import { applyFamilyChange } from "../../../web/src/family/care.mjs";
-import { sharedCare } from "../../../web/public/medication/domain/family.js";
-import { profileName } from "../../../web/public/medication/domain/profile.js";
-import { careDelta } from "../../../web/public/medication/domain/care-delta.js";
+import { sharedCare } from "../../web/product-assets/public/medication/domain/family.js";
+import { profileName } from "../../web/product-assets/public/medication/domain/profile.js";
+import { careDelta } from "../../web/product-assets/public/medication/domain/care-delta.js";
 
 type Policy = { sections: string[]; record: boolean; add: boolean };
 export class Denied extends Error {

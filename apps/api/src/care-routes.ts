@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { boundedCarePayload } from "../../../web/public/medication/domain/care-contract.js";
+import { boundedCarePayload } from "../../web/product-assets/public/medication/domain/care-contract.js";
 import { bodyLimit } from "hono/body-limit";
 import { careCommit } from "@medora/contracts";
 import { type CareService, InvalidCare } from "./care";

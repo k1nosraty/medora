@@ -1,10 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../browser/runner.mjs";
 import { createHmac, scryptSync } from "node:crypto";
 import { once } from "node:events";
-import { browserServer } from "./server.mjs";
+import { browserServer } from "../browser/server.mjs";
 import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
-import { Miniflare, convertV4MiniflareOptions } from "miniflare";
+import { build, Miniflare, convertV4MiniflareOptions } from "./workerd.mjs";
 
 test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
 const date = new Date(2026, 10, 18, 13, 30);
@@ -342,7 +341,7 @@ test.describe("React medication and dose journeys", () => {
 
 async function fixtureWorker() {
   const { outputFiles } = await build({
-    absWorkingDir: fileURLToPath(new URL("../", import.meta.url)),
+    absWorkingDir: fileURLToPath(new URL("../../web/", import.meta.url)),
     entryPoints: ["src/worker.mjs"],
     bundle: true,
     platform: "browser",
@@ -846,7 +845,7 @@ test("the React cabinet and history open an encrypted Android v1 backup", async 
     .locator("#android-backup-file")
     .setInputFiles(
       fileURLToPath(
-        new URL("../test/fixtures/android-medora-v1.medora", import.meta.url),
+        new URL("../../web/test/fixtures/android-medora-v1.medora", import.meta.url),
       ),
     );
   await page.locator("#android-backup-password").fill("MedoraInterop2026");

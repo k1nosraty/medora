@@ -1,7 +1,7 @@
 import {
   keepMonthFocus,
   monthLayout,
-} from "../../../../web/public/medication/shared/ui/month-layout.js";
+} from "../../product-assets/public/medication/shared/ui/month-layout.js";
 import { clearFeature, paintFeature } from "./renderer";
 
 type MonthOptions = Parameters<typeof monthLayout>[0];

@@ -1,10 +1,10 @@
-import { compilePhases, createCareIndex, doseId, scheduledRoutinesOn } from "../../public/medication/domain/care-index.js";
-import { dayMs, timezone, instantForWall, localWall } from "../../public/medication/domain/wall-clock.js";
-import { maxRoutines, routineComplete, routineLog } from "../../public/medication/domain/routine-plan.js";
-import * as engine from "../../public/medication/domain/medication-rules.js";
-import { emptyCareRecords } from "../../public/medication/domain/family.js";
-import { cycleIsEnabled } from "../../public/medication/domain/profile.js";
-import { validatePortable } from "../../public/medication/domain/care-records.js";
+import { compilePhases, createCareIndex, doseId, scheduledRoutinesOn } from "../../../apps/web/product-assets/public/medication/domain/care-index.js";
+import { dayMs, timezone, instantForWall, localWall } from "../../../apps/web/product-assets/public/medication/domain/wall-clock.js";
+import { maxRoutines, routineComplete, routineLog } from "../../../apps/web/product-assets/public/medication/domain/routine-plan.js";
+import * as engine from "../../../apps/web/product-assets/public/medication/domain/medication-rules.js";
+import { emptyCareRecords } from "../../../apps/web/product-assets/public/medication/domain/family.js";
+import { cycleIsEnabled } from "../../../apps/web/product-assets/public/medication/domain/profile.js";
+import { validatePortable } from "../../../apps/web/product-assets/public/medication/domain/care-records.js";
 
 export const idPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 export const clean = (value, max) => typeof value === "string" && value.length <= max && !/\p{Cc}/u.test(value) ? value.trim() : "";

@@ -1,7 +1,7 @@
 import { renderSleepChart, renderSleepHistory } from "./SleepHistory";
-import { equalCareValues } from "../../../../web/public/medication/domain/care-contract.js";
-import { localZone } from "../../../../web/public/medication/domain/care-plan.js";
-import { isoDay } from "../../../../web/public/medication/domain/care-index.js";
+import { equalCareValues } from "../../product-assets/public/medication/domain/care-contract.js";
+import { localZone } from "../../product-assets/public/medication/domain/care-plan.js";
+import { isoDay } from "../../product-assets/public/medication/domain/care-index.js";
 import {
   sleepConflicts,
   sleepDay,
@@ -10,21 +10,21 @@ import {
   sleepReport,
   sleepWall,
   validSleepRecord,
-} from "../../../../web/public/medication/domain/sleep.js";
+} from "../../product-assets/public/medication/domain/sleep.js";
 import {
   localDigits,
   locale,
   t,
   weekIndex,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
-import { CareInputError } from "../../../../web/public/medication/shared/ui/care-error.js";
-import { setPressed } from "../../../../web/public/medication/shared/ui/controls.js";
-import { sleepDuration } from "../../../../web/public/medication/features/sleep/presentation.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
+import { CareInputError } from "../../product-assets/public/medication/shared/ui/care-error.js";
+import { setPressed } from "../../product-assets/public/medication/shared/ui/controls.js";
+import { sleepDuration } from "../../product-assets/public/medication/features/sleep/presentation.js";
 import { SleepForm, type SleepRecord, type WakeDraft } from "./SleepForm";
 import { paintFeature } from "./renderer";
 import type { CareState } from "./product";
 import type { installDeletion } from "./DeleteConfirmation";
-import type { calendarFormat } from "../../../../web/public/medication/shared/ui/calendar-format.js";
+import type { calendarFormat } from "../../product-assets/public/medication/shared/ui/calendar-format.js";
 
 type Records = Record<string, SleepRecord>;
 interface Options {

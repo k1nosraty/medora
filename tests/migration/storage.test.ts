@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { expect, test } from "vitest";
-import { accessCare } from "../../web/public/medication/shared/storage.js";
+import { accessCare } from "../../apps/web/product-assets/public/medication/shared/storage.js";
 
 test("legacy full and day-scoped writes preserve extensions even after the last known day entry is removed", async () => {
   await accessCare();

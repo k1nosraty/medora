@@ -3,17 +3,17 @@ import { waterEntry, type CareCommit } from "@medora/contracts";
 import {
   applyCareDelta,
   careDelta,
-} from "../../../web/public/medication/domain/care-delta.js";
+} from "../../web/product-assets/public/medication/domain/care-delta.js";
 import {
   careSnapshotFits,
   validateCareRecords,
-} from "../../../web/public/medication/domain/care-records.js";
+} from "../../web/product-assets/public/medication/domain/care-records.js";
 import { digest } from "./auth";
 import {
   rotationContents,
   hasPrivateText,
-} from "../../../web/public/medication/domain/private-fields.js";
-import { equalCareValues } from "../../../web/public/medication/domain/care-contract.js";
+} from "../../web/product-assets/public/medication/domain/private-fields.js";
+import { equalCareValues } from "../../web/product-assets/public/medication/domain/care-contract.js";
 import { Conflict } from "./repository";
 
 type Row = { id: string; amount: number; day: number; time: string };

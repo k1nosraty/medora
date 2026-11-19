@@ -1,18 +1,18 @@
 import {codeMessage} from "./code-message.mjs";
 import {initializeEmailAccount} from "./schema.mjs";
-import { preserveCareExtensions } from "../../public/medication/domain/care-delta.js";
+import { preserveCareExtensions } from "../../../apps/web/product-assets/public/medication/domain/care-delta.js";
 import { legacyWritesFenced } from "../http/write-fence.mjs";
-import { equalCareValues } from "../../public/medication/domain/care-contract.js";
-import { rotationContents } from "../../public/medication/domain/private-fields.js";
+import { equalCareValues } from "../../../apps/web/product-assets/public/medication/domain/care-contract.js";
+import { rotationContents } from "../../../apps/web/product-assets/public/medication/domain/private-fields.js";
 import { codeKey, identityKey, passwordKey, passwordVersion, sessionKey, validAuthKeys } from "./keys.mjs";
 import { operations, logOperation } from "../operations/audit.mjs";
 import { DurableObject } from "cloudflare:workers";
 import { equal, hex, hmac, passwordProof, randomCode, sessionHash } from "./auth-crypto.mjs";
 import { applyFamilyChange } from "../family/care.mjs";
-import { profileName } from "../../public/medication/domain/profile.js";
-import { reminderCareProjection } from "../../public/medication/domain/care-plan.js";
+import { profileName } from "../../../apps/web/product-assets/public/medication/domain/profile.js";
+import { reminderCareProjection } from "../../../apps/web/product-assets/public/medication/domain/care-plan.js";
 import { smallJson } from "../http/validation.mjs";
-import { careSnapshotFits, careVersion, validateCareRecords } from "../../public/medication/domain/care-records.js";
+import { careSnapshotFits, careVersion, validateCareRecords } from "../../../apps/web/product-assets/public/medication/domain/care-records.js";
 
 const cookieName = "__Host-medora_session";
 const minute = 60_000;

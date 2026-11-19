@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./runner.mjs";
 
 async function open(page, { language = "fa", theme = "light", medicine = false, sleepEnabled, width = 390, height = 844 } = {}) {
   await page.setViewportSize({ width, height });
@@ -35,7 +35,7 @@ test("narrow English header fits including the invite badge", async ({ page }) =
   await expect(page.getByRole("button", { name: "Update app", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "FA, تغییر زبان به فارسی", exact: true })).toBeVisible();
   expect(await overflow()).toEqual([]);
-  await page.context().addCookies([{ name: "test-family", value: "1", url: "http://127.0.0.1:8872" }]);
+  await page.context().addCookies([{ name: "test-family", value: "1", url: new URL(page.url()).origin }]);
   await page.reload();
   await expect(page.locator("#open-care-inbox")).toBeVisible();
   for (const size of ["125%", "200%"]) {
@@ -479,8 +479,7 @@ test("the installed shell shows and records data offline", async ({ page, contex
   await expect(page.locator("#today-water-total")).not.toHaveText("۰");
 });
 
-test("family entry controls respect view, record and add permissions", async ({ page, context }) => {
-  const origin = "http://127.0.0.1:8872";
+test("family entry controls respect view, record and add permissions", async ({ page, context, baseURL: origin }) => {
   const group = "32100000-0000-4000-8000-000000000001";
   const target = "32100000-0000-4000-8000-000000000002";
   const setPolicy = value => context.addCookies([{ name: "test-family-policy", value, url: origin }]);
@@ -1170,6 +1169,9 @@ test("cycle daily log, past dates, estimate, print and privacy controls work in 
   const printed = await page.locator("#cycle-print-view").textContent();
   expect(printed).toContain("گرفتگی");
   expect(printed).not.toContain("Private note");
+  await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+  await expect(page.locator("#cycle-print-view")).toBeEmpty();
+  await expect(page.locator("body")).not.toHaveAttribute("data-cycle-print");
   await page.locator("#cycle-open-settings").click();
   await page.locator("#cycle-hide-today").check();
   await page.locator("#cycle-local-only").check();
@@ -1192,15 +1194,27 @@ test("cycle bulk history exports and restores as a separate encrypted file", asy
   await page.locator("#program-cycle").click();
   await page.getByText("Enter past periods", { exact: true }).click();
   await page.locator("#cycle-bulk-add").click();
-  await page.locator("#cycle-bulk-rows").evaluate(node => {
-    const pairs = [["2026-10-02", "2026-10-06"], ["2026-11-01", "2026-11-05"]];
-    [...node.children].forEach((row, index) => {
-      row.querySelector("[data-endpoint=start]").value = pairs[index][0];
-      row.querySelector("[data-endpoint=end]").value = pairs[index][1];
-    });
-  });
-  await page.locator("#cycle-bulk-form button[type=submit]").click();
+  const bulkRows = page.locator("#cycle-bulk-rows > .sleep-fields");
+  await expect(bulkRows).toHaveCount(2);
+  async function setRange(row, from, through) {
+    await row.evaluate((element, [first, last]) => {
+      for (const [endpoint, value] of [["start", first], ["end", last]]) {
+        const input = element.querySelector(`[data-endpoint=${endpoint}]`);
+        input.value = value;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }, [from, through]);
+  }
+  const submit = page.locator("#cycle-bulk-form button[type=submit]");
+  await setRange(bulkRows.nth(0), "2026-10-02", "2026-10-06");
+  await setRange(bulkRows.nth(1), "2026-10-06", "2026-10-09");
+  await submit.click();
+  await expect(page.locator("#cycle-bulk-error")).not.toBeEmpty();
+  await expect(page.locator("#cycle-history article")).toHaveCount(0);
+  await setRange(bulkRows.nth(1), "2026-11-01", "2026-11-05");
+  await submit.click();
   await expect(page.locator("#cycle-history article")).toHaveCount(2);
+  await expect(bulkRows).toHaveCount(1);
   await page.locator("#cycle-open-settings").click();
   await page.locator("#cycle-private-export").click();
   await page.locator("#cycle-backup-password").fill("separate-cycle-test-password");
@@ -1361,4 +1375,30 @@ test("React exports an encrypted Web archive and restores it in a fresh browser 
   } finally {
     await restored.close();
   }
+});
+
+test("water reminder preferences retain the saved schedule and pause across reopening", async ({ page }) => {
+  await open(page, { language: "en" });
+  const openPanel = async () => {
+    await page.locator('.header-tools [data-destination="settings"]').click();
+    await page.locator('[data-settings-panel="water-settings"]').click();
+  };
+  await openPanel();
+  await page.locator("#water-goal").fill("0");
+  await page.locator('#water-goal-form button[type="submit"]').click();
+  await expect(page.locator("#settings-status")).toHaveAttribute("data-state", "error");
+  await page.locator("#water-goal").fill("2200");
+  await page.locator("#water-reminders-enabled").check();
+  await page.locator("#water-reminders-interval").selectOption("120");
+  await page.locator('#water-goal-form button[type="submit"]').click();
+  await expect(page.locator("#water-pause-card")).toBeVisible();
+  await page.locator("#water-reminders-pause").click();
+  await expect(page.locator("#water-reminders-pause")).toHaveText("Resume reminders");
+  await page.reload();
+  await openPanel();
+  await expect(page.locator("#water-goal")).toHaveValue("2200");
+  await expect(page.locator("#water-reminders-interval")).toHaveValue("120");
+  await expect(page.locator("#water-reminders-pause")).toHaveText("Resume reminders");
+  await page.locator("#water-reminders-pause").click();
+  await expect(page.locator("#water-reminders-pause")).toHaveText("Pause for one hour");
 });

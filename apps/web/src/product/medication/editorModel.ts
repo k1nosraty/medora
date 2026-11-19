@@ -2,18 +2,18 @@ import {
   compilePhases,
   isoDay,
   timeText,
-} from "../../../../../web/public/medication/domain/care-index.js";
-import { clockMinute } from "../../../../../web/public/medication/domain/care-plan.js";
-import * as engine from "../../../../../web/public/medication/domain/medication-rules.js";
+} from "../../../product-assets/public/medication/domain/care-index.js";
+import { clockMinute } from "../../../product-assets/public/medication/domain/care-plan.js";
+import * as engine from "../../../product-assets/public/medication/domain/medication-rules.js";
 import {
   amountText,
   quantity,
-} from "../../../../../web/public/medication/features/medicines/quantity.js";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../../product-assets/public/medication/features/medicines/quantity.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import {
   dayNumber,
   today,
-} from "../../../../../web/public/medication/shared/ui/dates.js";
+} from "../../../product-assets/public/medication/shared/ui/dates.js";
 import { medicineColor } from "./MedicineArt";
 import type { MedicinePlan, MedicineTarget, Phase } from "./model";
 

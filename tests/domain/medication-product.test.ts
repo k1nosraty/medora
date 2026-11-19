@@ -3,9 +3,9 @@ import { expect, it } from "vitest";
 import {
   doseId,
   doseTime,
-} from "../../web/public/medication/domain/care-index.js";
-import { saveMedicinePlan } from "../../web/public/medication/domain/medicine-command.js";
-import { dayNumber } from "../../web/public/medication/shared/ui/dates.js";
+} from "../../apps/web/product-assets/public/medication/domain/care-index.js";
+import { saveMedicinePlan } from "../../apps/web/product-assets/public/medication/domain/medicine-command.js";
+import { dayNumber } from "../../apps/web/product-assets/public/medication/shared/ui/dates.js";
 import {
   deleteSchedule,
   recordDose,

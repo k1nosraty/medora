@@ -13,11 +13,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve, join, relative } from "node:path";
 import { compileWeb } from "../../../packages/web-build/compile.mjs";
 import { bundleWorkbox } from "./workbox.mjs";
-import fa from "../../../web/public/medication/shared/i18n/messages-fa.js";
-import en from "../../../web/public/medication/shared/i18n/messages-en.js";
+import fa from "../product-assets/public/medication/shared/i18n/messages-fa.js";
+import en from "../product-assets/public/medication/shared/i18n/messages-en.js";
 
 const app = fileURLToPath(new URL("../", import.meta.url));
-const source = resolve(app, "../../web/public");
+const source = resolve(app, "product-assets/public");
+const incumbent = resolve(app, "../../web");
 const output = resolve(app, "dist");
 const staging = await mkdtemp(join(app, ".product-"));
 const onboardingCopy = (messages) => ({
@@ -36,7 +37,6 @@ const components = new Map([
   ["medication/app/update.js", "updates.ts"],
   ["medication/features/today/view.js", "Today.tsx"],
   ["medication/features/cycle/overview.js", "CycleOverview.tsx"],
-  ["medication/features/sync/conflict-view.js", "SyncConflicts.tsx"],
   ["medication/app/week-strip.js", "DayWeek.tsx"],
   ["medication/shared/ui/month-grid.js", "MonthGrid.tsx"],
   ["medication/features/reports/stats.js", "ReportStats.tsx"],
@@ -52,6 +52,8 @@ const replacedModules = new Set([
   "medication/app/medora.js",
   "medication/app/navigation.js",
   "medication/features/account/dialog.js",
+  "medication/features/sync/controller.js",
+  "medication/features/sync/conflict-view.js",
   "medication/features/backups/dialog.js",
   "medication/features/sleep/controller.js",
   "medication/features/medicines/appearance.js",
@@ -72,8 +74,7 @@ const replacedModules = new Set([
   "medication/shared/ui/pickers.js",
 ]);
 try {
-  // The original public asset tree already defines the published surface, including
-  // unbundled modules used by design previews, legacy module URLs and the pilot.
+  // Keep the published URLs for installed clients and the separate browser tools.
   await cp(source, staging, {
     recursive: true,
     filter: async (path) => {
@@ -89,7 +90,7 @@ try {
     },
   });
   await compileWeb({
-    ui: resolve(app, "../../web/ui"),
+    ui: resolve(app, "product-assets/ui"),
     sourcePublic: pathToFileURL(source + "/"),
     publicDir: pathToFileURL(staging + "/"),
     messagesFa: fa,
@@ -99,12 +100,30 @@ try {
     htmlOverrides: {
       "layout/day-navigation.html": (
         await readFile(
-          join(app, "../../web/ui/layout/day-navigation.html"),
+          join(app, "product-assets/ui/layout/day-navigation.html"),
           "utf8",
         )
       ).replace(
         /(<section id="today-story"[^>]*>)[\s\S]*?<\/section>/,
         "$1</section>",
+      ),
+      "forms/account.html": (
+        await readFile(
+          join(app, "product-assets/ui/forms/account.html"),
+          "utf8",
+        )
+      ).replace(
+        /<div class="account-modes"[\s\S]*?(?=<p id="account-status")/,
+        '<div id="account-react" style="display:contents"></div>\n      ',
+      ),
+      "layout/cycle-tracking.html": (
+        await readFile(
+          join(app, "product-assets/ui/layout/cycle-tracking.html"),
+          "utf8",
+        )
+      ).replace(
+        /<details>\s*<summary>[^<]+<\/summary>\s*<form id="cycle-bulk-form"[\s\S]*?(?=<button id="cycle-open-settings")/,
+        '<div id="cycle-tools-react" style="display:contents"></div>\n          ',
       ),
       "screens/insights.html": '<div data-screen="insights" hidden></div>',
       "screens/medications.html": await readFile(
@@ -133,6 +152,10 @@ try {
         '<dialog id="routine-log-dialog" class="sheet routine-sheet" aria-labelledby="routine-log-title"></dialog>',
       "forms/medicine-phase.html": "",
       "forms/medicine-slot.html": "",
+      "forms/settings/appointment.html":
+        '<section id="appointment-settings" class="settings-panel" hidden></section>',
+      "forms/settings/water.html":
+        '<section id="water-settings" class="settings-panel water-panel" hidden></section>',
       "forms/settings/display.html":
         '<section id="display-settings" class="settings-panel" hidden></section>',
       "forms/settings/profile.html":
@@ -167,7 +190,15 @@ try {
             if (!metafile) return;
             const workingDir = build.initialOptions.absWorkingDir;
             const errors = Object.keys(metafile.inputs).flatMap((path) => {
-              const module = relative(source, resolve(workingDir, path));
+              const input = resolve(workingDir, path);
+              const oldSource = relative(incumbent, input);
+              if (oldSource && !oldSource.startsWith(".."))
+                return [
+                  {
+                    text: `Product bundle depends on incumbent source: ${oldSource}`,
+                  },
+                ];
+              const module = relative(source, input);
               return replacedModules.has(module)
                 ? [
                     {

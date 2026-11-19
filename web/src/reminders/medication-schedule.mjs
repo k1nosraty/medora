@@ -1,1 +1,1 @@
-export { nextCareReminder, nextMedicationReminder, validSchedule, reminderRequestLimit } from "../../public/medication/domain/reminder-schedule.js";
+export { nextCareReminder, nextMedicationReminder, validSchedule, reminderRequestLimit } from "../../../apps/web/product-assets/public/medication/domain/reminder-schedule.js";

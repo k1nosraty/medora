@@ -1,27 +1,22 @@
 import { equalCareValues } from "../../domain/care-contract.js";
-import { cycleEntries, cycleEstimate, cycleOn, cyclePatterns, cycleSymptoms, cycleTotals } from "../../domain/cycle.js";
+import { cycleEntries, cycleEstimate, cycleOn, cyclePatterns, cycleSymptoms } from "../../domain/cycle.js";
 import { isoDay } from "../../domain/care-index.js";
 import { cycleIsEnabled } from "../../domain/profile.js";
 import { CareInputError } from "../../shared/ui/care-error.js";
 import { dayNumber } from "../../shared/ui/dates.js";
 import { localDigits, locale, t } from "../../shared/i18n/locale.js";
-import messagesFa from "../../shared/i18n/messages-fa.js";
+import { cyclePrintReport, describeCycleDay as describeDay, mergeCyclePeriods } from "./tools.js";
 import { $, button, dayCardOptions, element } from "../../shared/ui/dom.js";
 
-const flowLabel = (flow, translate) => flow === "none" ? translate("ui.cycle-no-flow") :
-  flow === "spotting" ? translate("ui.cycle-spotting") : flow ? translate(`ui.cycle-flow-${flow}`) : "";
 const selectedDate = input => { try { return dayNumber(input); } catch { return NaN; } };
 const labelFor = key => t(`ui.cycle-${key}`);
 
-export function describeCycleDay(row, translate = t) {
-  return [flowLabel(row.flow, translate), ...Object.entries(row.symptoms ?? {}).map(([key, severity]) =>
-    translate(`ui.cycle-${key}`) + " (" + translate(`ui.cycle-strength-${severity}`) + ")"), row.tags, row.note].filter(Boolean);
-}
+export const describeCycleDay = (row, translate = t) => describeDay(row, translate);
 
 /** @type {((day: number) => void) | undefined} */
 const noDayEditor = undefined;
 
-export function installDailyCycle({ getState, getFamilyView, getDates, getIndex, mutate, today, actionDay, requestDeletion, refreshFields, openSettings, editCycle, openEditor = noDayEditor }) {
+export function installDailyCycle({ getState, getFamilyView, getDates, getIndex, mutate, today, actionDay, requestDeletion, refreshFields, openSettings, editCycle, openEditor = noDayEditor, reactTools = false }) {
   const dialog = $("cycle-day-dialog");
   const form = $("cycle-day-form");
   const symptoms = openEditor ? new Map() : new Map(cycleSymptoms.map(key => {
@@ -290,119 +285,86 @@ export function installDailyCycle({ getState, getFamilyView, getDates, getIndex,
       label.append(input, " " + item);
       return label;
     }));
-    if (!$("cycle-print-first").value) {
+    if (!reactTools && !$("cycle-print-first").value) {
       $("cycle-print-first").value = isoDay(now - 90);
       $("cycle-print-last").value = isoDay(now);
       refreshFields($("cycle-print-form"));
     }
   }
 
-  function addBulk() {
-    const rows = $("cycle-bulk-rows");
-    if (rows.children.length >= 24) return;
-    const row = element("div", "", "sleep-fields");
-    for (const endpoint of ["start", "end"]) {
-      const label = element("label", t(endpoint === "start" ? "ui.start-date" : "ui.end-date-optional"));
-      const date = element("input");
-      date.type = "date";
-      date.dataset.endpoint = endpoint;
-      date.max = isoDay(today());
-      label.append(date);
-      row.append(label);
-    }
-    rows.append(row);
-    refreshFields(row);
-  }
-  $("cycle-bulk-add").addEventListener("click", addBulk);
-  $("cycle-bulk-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    if (!personal()) return;
-    const error = $("cycle-bulk-error");
-    error.textContent = "";
-    const additions = [...$("cycle-bulk-rows").children].flatMap(row => {
-      const start = row.querySelector('[data-endpoint="start"]').value;
-      const end = row.querySelector('[data-endpoint="end"]').value;
-      return start || end ? [{ start: selectedDate(start), end: end ? selectedDate(end) : null }] : [];
-    });
-    const now = today();
-    if (!additions.length || additions.some(row => !Number.isInteger(row.start) || row.start > now ||
-      row.end !== null && (!Number.isInteger(row.end) || row.end < row.start || row.end > now))) {
-      error.textContent = t("ui.check-the-cycle-start-and-end-dates"); return;
-    }
-    if (await mutate(state => {
-      const rows = state.cycleRecords ??= {};
-      for (const row of additions) {
-        if (Object.hasOwn(rows, row.start) || Object.entries(rows).some(([start, other]) =>
-          Number(start) <= (row.end ?? row.start) && row.start <= (other.end ?? Number(start)))) {
-          throw new CareInputError(t("ui.cycle-possible-overlap"));
-        }
-        rows[row.start] = { end: row.end, flow: "" };
+  if (!reactTools) {
+    function addBulk() {
+      const rows = $("cycle-bulk-rows");
+      if (rows.children.length >= 24) return;
+      const row = element("div", "", "sleep-fields");
+      for (const endpoint of ["start", "end"]) {
+        const label = element("label", t(endpoint === "start" ? "ui.start-date" : "ui.end-date-optional"));
+        const date = element("input");
+        date.type = "date";
+        date.dataset.endpoint = endpoint;
+        date.max = isoDay(today());
+        label.append(date);
+        row.append(label);
       }
-    }, t("ui.cycle-saved"), true)) {
-      $("cycle-bulk-rows").replaceChildren();
-      addBulk();
-    } else error.textContent = $("status").textContent;
-  });
-  $("cycle-bulk-form").closest("details").addEventListener("toggle", event => {
-    if (event.target.open && !$("cycle-bulk-rows").children.length) addBulk();
-  });
+      rows.append(row);
+      refreshFields(row);
+    }
+    $("cycle-bulk-add").addEventListener("click", addBulk);
+    $("cycle-bulk-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      if (!personal()) return;
+      const error = $("cycle-bulk-error");
+      error.textContent = "";
+      const additions = [...$("cycle-bulk-rows").children].flatMap(row => {
+        const start = row.querySelector('[data-endpoint="start"]').value;
+        const end = row.querySelector('[data-endpoint="end"]').value;
+        return start || end ? [{ start: selectedDate(start), end: end ? selectedDate(end) : null }] : [];
+      });
+      const now = today();
+      if (!additions.length || additions.some(row => !Number.isInteger(row.start) || row.start > now ||
+        row.end !== null && (!Number.isInteger(row.end) || row.end < row.start || row.end > now))) {
+        error.textContent = t("ui.check-the-cycle-start-and-end-dates"); return;
+      }
+      if (await mutate(state => {
+        const rows = mergeCyclePeriods(state.cycleRecords ?? {}, additions);
+        if (!rows) throw new CareInputError(t("ui.cycle-possible-overlap"));
+        state.cycleRecords = rows;
+      }, t("ui.cycle-saved"), true)) {
+        $("cycle-bulk-rows").replaceChildren();
+        addBulk();
+      } else error.textContent = $("status").textContent;
+    });
+    $("cycle-bulk-form").closest("details").addEventListener("toggle", event => {
+      if (event.target.open && !$("cycle-bulk-rows").children.length) addBulk();
+    });
 
-  $("cycle-print-form").addEventListener("submit", event => {
-    event.preventDefault();
-    if (!personal()) return;
-    const first = selectedDate($("cycle-print-first").value), last = selectedDate($("cycle-print-last").value);
-    const error = $("cycle-print-error");
-    error.textContent = "";
-    if (!Number.isInteger(first) || !Number.isInteger(last) || first > last || last > today()) {
-      error.textContent = t("ui.check-the-cycle-start-and-end-dates");
-      return;
-    }
-    const state = getState();
-    const dateFormat = new Intl.DateTimeFormat("fa-IR", { calendar: "persian", timeZone: "UTC",
-      year: "numeric", month: "long", day: "numeric" });
-    const date = day => dateFormat.format(day * 86_400_000);
-    const digits = new Intl.NumberFormat("fa-IR").format;
-    const fa = (key, ...values) => messagesFa[key].replace(/\{(\d+)\}/g, (_, index) => values[index]);
-    const report = $("cycle-print-view");
-    const heading = element("h1", fa("ui.cycle-visit-report"));
-    const totals = cycleTotals(state.cycleRecords, first, last, state.cycleDays);
-    const selected = Object.entries(state.cycleDays ?? {}).filter(([day]) => Number(day) >= first && Number(day) <= last);
-    const summaries = [fa("ui.cycle-visit-period-count", digits(totals.starts)), fa("ui.cycle-visit-days-count", digits(totals.days))];
-    for (const [flow, label] of [["light", "ui.cycle-flow-light"], ["medium", "ui.cycle-flow-medium"], ["heavy", "ui.cycle-flow-heavy"], ["spotting", "ui.cycle-spotting"]]) {
-      const count = selected.filter(([, row]) => row.flow === flow).length;
-      if (count) summaries.push(fa(label) + " · " + digits(count));
-    }
-    if ($("cycle-print-symptoms").checked) for (const key of cycleSymptoms) {
-      const count = selected.filter(([, row]) => row.symptoms[key]).length;
-      if (count) summaries.push(fa(`ui.cycle-${key}`) + " · " + digits(count));
-    }
-    const detail = new Map();
-    for (const [day, row] of selected) {
-      const filtered = describeCycleDay({ ...row, symptoms: $("cycle-print-symptoms").checked ? row.symptoms : {},
-        note: $("cycle-print-notes").checked ? row.note : undefined, tags: $("cycle-print-notes").checked ? row.tags : undefined }, fa);
-      if (filtered.length) detail.set(Number(day), filtered);
-    }
-    if ($("cycle-print-meds").checked) for (const dose of Object.values(state.doses ?? {})) {
-      if (dose.status !== "taken" || dose.day < first || dose.day > last) continue;
-      const name = state.medicines[dose.medicineId]?.name ?? dose.name;
-      const entries = detail.get(dose.day) ?? [];
-      if (name && !entries.includes(name)) detail.set(dose.day, [...entries, name]);
-    }
-    const latest = [...detail].sort(([a], [b]) => b - a).slice(0, 10);
-    report.dir = "rtl";
-    report.lang = "fa";
-    report.replaceChildren(heading, element("p", date(first) + " – " + date(last)),
-      element("p", summaries.join(" · ")), ...cycleEntries(state.cycleRecords).filter(row => row.start <= last && (row.end ?? row.start) >= first)
-        .slice(0, 7).map(row => element("p", date(row.start) + (row.end === null ? "" : " – " + date(row.end)) +
-          ($("cycle-print-notes").checked && row.note ? " · " + row.note.slice(0, 110) : ""))),
-      ...latest.map(([day, values]) => element("p", date(day) + " · " + values.join("، ").slice(0, 160))));
-    document.body.dataset.cyclePrint = "";
-    window.addEventListener("afterprint", () => {
-      delete document.body.dataset.cyclePrint;
-      report.replaceChildren();
-    }, { once: true });
-    window.print();
-  });
+    $("cycle-print-form").addEventListener("submit", event => {
+      event.preventDefault();
+      if (!personal()) return;
+      const first = selectedDate($("cycle-print-first").value), last = selectedDate($("cycle-print-last").value);
+      const error = $("cycle-print-error");
+      error.textContent = "";
+      if (!Number.isInteger(first) || !Number.isInteger(last) || first > last || last > today()) {
+        error.textContent = t("ui.check-the-cycle-start-and-end-dates");
+        return;
+      }
+      const { title, lines } = cyclePrintReport(getState(), first, last, {
+        symptoms: $("cycle-print-symptoms").checked,
+        notes: $("cycle-print-notes").checked,
+        medicines: $("cycle-print-meds").checked
+      });
+      const report = $("cycle-print-view");
+      report.dir = "rtl";
+      report.lang = "fa";
+      report.replaceChildren(element("h1", title), ...lines.map(line => element("p", line)));
+      document.body.dataset.cyclePrint = "";
+      window.addEventListener("afterprint", () => {
+        delete document.body.dataset.cyclePrint;
+        report.replaceChildren();
+      }, { once: true });
+      window.print();
+    });
+  }
 
   return { open, paint, paintToday, close() { dialog.close(); } };
 }

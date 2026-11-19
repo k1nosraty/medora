@@ -22,7 +22,7 @@ MEDORA_TEST_DATABASE_URL="$ERASURE_FIXTURE_URL" node scripts/verification/rehear
 # Use the four fresh database variables from the handoff guide.
 node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
 node scripts/verification/visual-parity.mjs > dist/visual-parity.json
-node web/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
+node tests/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
 node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
 ```
 

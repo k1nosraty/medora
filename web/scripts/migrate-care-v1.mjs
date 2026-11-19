@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { link, readFile, unlink, open, stat } from "node:fs/promises";
-import { maxBackupBytes } from "../public/medication/shared/crypto/backup.js";
+import { maxBackupBytes } from "../../apps/web/product-assets/public/medication/shared/crypto/backup.js";
 
 const [mode, origin, file, ...flags] = process.argv.slice(2);
 const token = process.env.MEDORA_MIGRATION_TOKEN;

@@ -29,19 +29,22 @@ docker compose --env-file .local/dev.env -p medora-dev stop
 
 Compose حالت سازگاری را برای تمرین مسیر قدیمی هم ارائه می‌کند. برای حالت مستقل PostgreSQL با Workerd از پایگاه تازهٔ لوکال و تنظیم `portable.local.json` استفاده کنید. [راهنمای Cloudflare و اجرای لوکال](docs/CLOUDFLARE_DEPLOYMENT.md)
 
+برای اجرای مستقل رابط، وابستگی‌های workspace را نصب کنید و `pnpm --filter @medora/web dev` را بزنید. سپس مسیر `/medication/` را در آدرسی که Vite چاپ می‌کند باز کنید. عملکردهایی که به API نیاز دارند در استک کامل آزمایش می‌شوند. برای آزمون خودکار ساخت و اجرای رابط در نسخه‌ای که پوشهٔ `web/` در آن وجود ندارد، `node scripts/verification/frontend-independence.mjs` را اجرا کنید.
+
 برای توسعهٔ دفتر React به‌تنهایی، `pnpm --filter @medora/web dev:journal --host 127.0.0.1` را اجرا کنید و آدرسی را که Vite چاپ می‌کند باز کنید. در استک کامل، همین دفتر در `/journal/` قرار دارد.
 
 ## نقشهٔ مخزن
 
 | مسیر | مسئولیت |
 | --- | --- |
-| `apps/web/` | دفتر React و Dexie، بخش‌های پورت‌شدهٔ محصول و ساخت Vite |
+| `apps/web/` | محصول اصلی، دفتر React و Dexie و ساخت Vite |
 | `apps/api/src/` | برنامهٔ Hono، قواعد دسترسی، سرویس‌ها و اتصال PostgreSQL |
 | `apps/api/src/adapters/` | ورودی‌های Node و Workers و تنظیم اتصال |
 | `packages/` | قراردادهای API و قواعد مشترک |
-| `web/` | قالب و ظاهر مرجع، کنترل‌گرهای فعال مرورگر، Worker سازگاری و خواننده‌های نسخهٔ قدیم |
+| `apps/web/product-assets/` | پوسته، ترجمه، استایل و دارایی‌های مشترک، ماژول‌های مرورگر و ابزارهای مستقل |
+| `web/` | Worker سازگاری، ابزار ساخت نسخهٔ مرجع و آزمون‌ها و خواننده‌های تاریخی |
 | `migrations/server/` و `scripts/migration/` | تاریخچهٔ SQL دارای checksum و ابزارهای انتقال، پشتیبان و بازیابی |
-| `tests/`، `web/test/`، `web/browser/` و `scripts/verification/` | آزمون‌ها، داده‌های مصنوعی و تمرین‌های بازگشت |
+| `tests/`، `web/test/` و `scripts/verification/` | آزمون‌ها، داده‌های مصنوعی و تمرین‌های بازگشت |
 | `infrastructure/cloudflare/` و `infrastructure/docker/` | تنظیم Worker و استک Node و Caddy |
 | `branding/` و `docs/` | دارایی مرجع و مستندات توسعه و عملیات |
 

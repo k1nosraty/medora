@@ -1,40 +1,40 @@
 import { accountTransport } from "./accountTransport";
-import { showFeedback } from "../../../../web/public/medication/shared/ui/controls.js";
-import { CareInputError } from "../../../../web/public/medication/shared/ui/care-error.js";
+import { showFeedback } from "../../product-assets/public/medication/shared/ui/controls.js";
+import { CareInputError } from "../../product-assets/public/medication/shared/ui/care-error.js";
 import { installEntryActions } from "./entryActions";
-import { preserveFocus } from "../../../../web/public/medication/shared/ui/focus.js";
+import { preserveFocus } from "../../product-assets/public/medication/shared/ui/focus.js";
 import { routeFromLocation } from "./routes";
-import { installCareSync } from "../../../../web/public/medication/features/sync/controller.js";
+import { createCareSync } from "../../product-assets/public/medication/features/sync/service.js";
 import {
   language,
   localizeMarkup,
   selectLanguage,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
 import {
   accessCare,
   storageMessage,
-} from "../../../../web/public/medication/shared/storage.js";
+} from "../../product-assets/public/medication/shared/storage.js";
 import { installPickers } from "./Pickers";
 import {
   dayNumber,
   today,
-} from "../../../../web/public/medication/shared/ui/dates.js";
+} from "../../product-assets/public/medication/shared/ui/dates.js";
 import { installDeletion } from "./DeleteConfirmation";
-import { localZone } from "../../../../web/public/medication/domain/care-plan.js";
+import { localZone } from "../../product-assets/public/medication/domain/care-plan.js";
 import {
   compilePhases,
   createCareIndex,
   isoDay,
-} from "../../../../web/public/medication/domain/care-index.js";
-import * as engine from "../../../../web/public/medication/domain/medication-rules.js";
-import { validRoutineId } from "../../../../web/public/medication/domain/routine-plan.js";
-import { familySections } from "../../../../web/public/medication/domain/family.js";
+} from "../../product-assets/public/medication/domain/care-index.js";
+import * as engine from "../../product-assets/public/medication/domain/medication-rules.js";
+import { validRoutineId } from "../../product-assets/public/medication/domain/routine-plan.js";
+import { familySections } from "../../product-assets/public/medication/domain/family.js";
 import {
   changeReminderRevision,
   initializeReminders,
   syncReminders,
-} from "../../../../web/public/medication/features/reminders/controller.js";
+} from "../../product-assets/public/medication/features/reminders/controller.js";
 import { installMedication, type RenderDose } from "./medication/Medication";
 import type {
   FamilyDoseRecord,
@@ -42,8 +42,8 @@ import type {
   MedicineTarget,
 } from "./medication/model";
 import { renderFamilyDoseForm } from "./medication/FamilyDoseForm";
-import { installFamily } from "../../../../web/public/medication/features/family/panel.js";
-import { renderMemberHeader } from "../../../../web/public/medication/features/family/context.js";
+import { installFamily } from "../../product-assets/public/medication/features/family/panel.js";
+import { renderMemberHeader } from "../../product-assets/public/medication/features/family/context.js";
 import { installSupport, loadOperations, reportDailyOpen } from "./Operations";
 import { installRoutines } from "./routines/Routines";
 import { renderToday } from "./Today";
@@ -52,7 +52,7 @@ import { installNavigation } from "./navigation";
 import { refreshApp } from "./updates";
 import { finishIntro, hasStarted, showIntro } from "./Onboarding";
 import { initialCare } from "./initialCare";
-import { installSurfaceArt } from "../../../../web/public/medication/design/surfaces.js";
+import { installSurfaceArt } from "../../product-assets/public/medication/design/surfaces.js";
 import { showStorageRecovery } from "./StorageRecovery";
 import type { SleepRecord, WakeDraft } from "./SleepForm";
 import type { WaterEntry } from "./WaterEntries";
@@ -78,6 +78,14 @@ export type CareState = Omit<Parameters<typeof showIntro>[0], "water"> &
   VisitCare &
   RoutineCare & {
     water?: WaterEntry[];
+    waterReminders?: {
+      enabled: boolean;
+      start: string;
+      end: string;
+      interval: number;
+      repeat: number;
+      pauseUntil: number;
+    };
     reminders?: { revision?: number; enabled?: boolean };
     familyPlacement?: string;
     sleepCardSize?: string;
@@ -375,9 +383,8 @@ const medicines = installMedication({
   formatDay: dashboard.formatDay,
 });
 const { openEditor } = medicines;
-const accountSync = installCareSync({
+const accountSync = createCareSync({
   transport: accountTransport,
-  formatDay: dashboard.formatDay,
   reload: async (changed: boolean) => {
     await reload();
     if (changed) {
@@ -392,6 +399,8 @@ function openAccount() {
   accountDialog ??= import("./AccountDialog")
     .then(({ installAccount }) =>
       installAccount({
+        sync: accountSync,
+        formatDay: dashboard.formatDay,
         onSignIn: () => {
           void accountSync.refresh();
           accountSync.signedIn();

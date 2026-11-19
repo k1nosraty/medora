@@ -1,13 +1,13 @@
 import {
   artworkFilter,
   artworkPath,
-} from "../../../../../web/public/medication/design/three-dimensional.js";
+} from "../../../product-assets/public/medication/design/three-dimensional.js";
 import {
   appearanceColors,
   defaultMedicineColor,
   defaultMedicineIcon,
   medicineShapes,
-} from "../../../../../web/public/medication/features/medicines/appearance-options.js";
+} from "../../../product-assets/public/medication/features/medicines/appearance-options.js";
 
 export function medicineShape(shape?: string): keyof typeof medicineShapes {
   return shape && Object.hasOwn(medicineShapes, shape)

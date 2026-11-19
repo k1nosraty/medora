@@ -5,22 +5,26 @@ import {
   locale,
   selectLanguage,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { accentOf } from "../../../../../web/public/medication/styles/theme.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { accentOf } from "../../../product-assets/public/medication/styles/theme.js";
 import {
   ageAt,
   canEnableCycle,
   cycleIsEnabled,
   genders,
   validPersonalProfile,
-} from "../../../../../web/public/medication/domain/profile.js";
-import { familyPlacementOf } from "../../../../../web/public/medication/domain/family.js";
+} from "../../../product-assets/public/medication/domain/profile.js";
+import { familyPlacementOf } from "../../../product-assets/public/medication/domain/family.js";
 import {
   sleepDefaults,
   sleepIsEnabled,
   validSleepSettings,
-} from "../../../../../web/public/medication/domain/sleep.js";
+} from "../../../product-assets/public/medication/domain/sleep.js";
 import type { CareState } from "../product";
+import {
+  AppointmentPreferences,
+  WaterPreferences,
+} from "./ReminderPreferences";
 import { clearFeature, paintFeature } from "../renderer";
 
 export interface PersonalProfile {
@@ -31,7 +35,7 @@ export interface PersonalProfile {
   weightKg?: number;
 }
 
-interface PanelProps {
+export interface PanelProps {
   state: CareState;
   refreshFields(container: HTMLElement): void;
   reportError(message: string): void;
@@ -43,7 +47,7 @@ interface PanelProps {
   ): Promise<boolean>;
   invalidateDisplay(): void;
 }
-type PanelId = "display-settings" | "profile-settings" | "sleep-settings";
+type PanelId = keyof typeof components;
 
 function formSubmission(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
@@ -526,6 +530,8 @@ const components = {
   "display-settings": Display,
   "profile-settings": Profile,
   "sleep-settings": SleepPreferences,
+  "appointment-settings": AppointmentPreferences,
+  "water-settings": WaterPreferences,
 };
 export function renderPreferences(
   host: HTMLElement,

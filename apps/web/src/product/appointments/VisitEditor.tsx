@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { t } from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { searchKey } from "../../../../../web/public/medication/shared/ui/controls.js";
-import { timeZoneCity } from "../../../../../web/public/medication/shared/ui/time-zone-picker.js";
-import { appearanceColors } from "../../../../../web/public/medication/features/medicines/appearance-options.js";
+import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { searchKey } from "../../../product-assets/public/medication/shared/ui/controls.js";
+import { timeZoneCity } from "../../../product-assets/public/medication/shared/ui/time-zone-picker.js";
+import { appearanceColors } from "../../../product-assets/public/medication/features/medicines/appearance-options.js";
 import { Icon, PlanArtwork } from "../PlanCard";
 import { clearFeature, paintFeature } from "../renderer";
 import { categoryGroups, categoryLabel } from "./categories";

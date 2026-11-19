@@ -1,9 +1,9 @@
-import { applyCareDelta } from "../../public/medication/domain/care-delta.js";
-import { isRecoveryKeyId } from "../../public/medication/domain/private-fields.js";
+import { applyCareDelta } from "../../../apps/web/product-assets/public/medication/domain/care-delta.js";
+import { isRecoveryKeyId } from "../../../apps/web/product-assets/public/medication/domain/private-fields.js";
 import { careSession } from "../accounts/email-auth.mjs";
 import { smallJson } from "../http/validation.mjs";
-import { careSyncLimit, careVersion, portable, validateCareRecords } from "../../public/medication/domain/care-records.js";
-import { timezone } from "../../public/medication/domain/wall-clock.js";
+import { careSyncLimit, careVersion, portable, validateCareRecords } from "../../../apps/web/product-assets/public/medication/domain/care-records.js";
+import { timezone } from "../../../apps/web/product-assets/public/medication/domain/wall-clock.js";
 
 const privateHeaders = { "Cache-Control": "private, no-store", "X-Medora-Care-Delta": "1" };
 const reply = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { ...privateHeaders, ...headers } });

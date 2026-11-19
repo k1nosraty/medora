@@ -1,5 +1,5 @@
 import { paintFeature } from "./renderer";
-import { t } from "../../../../web/public/medication/shared/i18n/locale.js";
+import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
 
 export interface WaterEntry {
   id: string;

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./runner.mjs";
 
 test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
 test.use({ serviceWorkers: "block" });
@@ -27,7 +27,11 @@ for (const lang of ["fa", "en"]) {
       const { default: AxeBuilder } = await import("@axe-core/playwright");
       const unexpected = [];
       const replaced =
-        /\/medication\/features\/(?:appointments\/(?:editor|view)|routines\/(?:view|card)|backups\/dialog|cycle\/controller|reports\/(?:controller|view)|today\/story)\.js$/;
+        /\/medication\/features\/(?:appointments\/(?:editor|view)|routines\/(?:view|card)|backups\/dialog|cycle\/controller|reports\/(?:controller|view)|today\/story|sync\/(?:controller|conflict-view)|account\/dialog)\.js$/;
+      await page.route(/\/web\//, async (route) => {
+        unexpected.push(new URL(route.request().url()).pathname);
+        await route.abort();
+      });
       await page.route(replaced, async (route) => {
         unexpected.push(new URL(route.request().url()).pathname);
         await route.abort();

@@ -4,25 +4,26 @@ import {
   defaultCalendar,
   listSeparator,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
-import { setPressed } from "../../../../web/public/medication/shared/ui/controls.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
+import { setPressed } from "../../product-assets/public/medication/shared/ui/controls.js";
 import { installInsights } from "./insights/Insights";
-import { applyDisplay } from "../../../../web/public/medication/styles/display.js";
-import { installSettings } from "../../../../web/public/medication/features/settings/dialog.js";
+import { applyDisplay } from "../../product-assets/public/medication/styles/display.js";
+import { installSettings } from "../../product-assets/public/medication/features/settings/dialog.js";
 import { installAppointments } from "./appointments/Appointments";
 import { installWater } from "./waterController";
-import { calendarFormat } from "../../../../web/public/medication/shared/ui/calendar-format.js";
-import { isoDay as iso } from "../../../../web/public/medication/domain/care-index.js";
-import { cycleIsEnabled } from "../../../../web/public/medication/domain/profile.js";
-import { familyPlacementOf } from "../../../../web/public/medication/domain/family.js";
-import { sleepIsEnabled } from "../../../../web/public/medication/domain/sleep.js";
+import { calendarFormat } from "../../product-assets/public/medication/shared/ui/calendar-format.js";
+import { isoDay as iso } from "../../product-assets/public/medication/domain/care-index.js";
+import { cycleIsEnabled } from "../../product-assets/public/medication/domain/profile.js";
+import { familyPlacementOf } from "../../product-assets/public/medication/domain/family.js";
+import { sleepIsEnabled } from "../../product-assets/public/medication/domain/sleep.js";
 import { installSleep } from "./sleepController";
-import { installDailyCycle } from "../../../../web/public/medication/features/cycle/daily.js";
+import { installDailyCycle } from "../../product-assets/public/medication/features/cycle/daily.js";
 import { installCycle } from "./cycle/PeriodEditor";
 import { installCycleDayEditor } from "./cycle/DayEditor";
-import { refreshArtwork } from "../../../../web/public/medication/design/three-dimensional.js";
+import { installCycleTools } from "./cycle/CycleTools";
+import { refreshArtwork } from "../../product-assets/public/medication/design/three-dimensional.js";
 
-import type { createCareIndex } from "../../../../web/public/medication/domain/care-index.js";
+import type { createCareIndex } from "../../product-assets/public/medication/domain/care-index.js";
 import type { installDeletion } from "./DeleteConfirmation";
 import { renderMedicationSnooze } from "./medication/MedicationSnooze";
 import type { RenderDose } from "./medication/Medication";
@@ -198,7 +199,11 @@ export function installNavigation({
       if (screen === "sleep") sleep.focusDay(day);
     });
   });
+  const canUseCycle = () =>
+    !getFamilyView() && Boolean(getState() && cycleIsEnabled(getState()));
+  let cycleToolsInstalled = false;
   const cycleDaily = installDailyCycle({
+    reactTools: true,
     getState,
     getFamilyView,
     getDates: () => dates,
@@ -216,8 +221,7 @@ export function installNavigation({
       refreshFields,
       mutate,
       requestDeletion,
-      canOpen: () =>
-        !getFamilyView() && Boolean(getState() && cycleIsEnabled(getState())),
+      canOpen: canUseCycle,
     }),
     openSettings: () => {
       settings();
@@ -428,6 +432,16 @@ export function installNavigation({
         water.renderTodayWater(state, day, total, goal, progress);
       } else water.renderWater(day, index, total, goal, progress);
     } else if (screen === "cycle") {
+      if (canUseCycle() && !cycleToolsInstalled) {
+        installCycleTools($("cycle-tools-react"), $("cycle-print-view"), {
+          getState,
+          canUse: canUseCycle,
+          today,
+          refreshFields,
+          mutate,
+        });
+        cycleToolsInstalled = true;
+      }
       cycle.render(state);
       cycleDaily.paint(state);
     } else if (screen === "sleep") sleep.draw(state);

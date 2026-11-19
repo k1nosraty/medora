@@ -1,23 +1,23 @@
 import {
   cycleDataFields,
   cyclePreferenceFields,
-} from "../../../../web/public/medication/domain/cycle.js";
+} from "../../product-assets/public/medication/domain/cycle.js";
 import {
   readWebBackup,
   isWebBackup,
   writeWebBackup,
   validBackupPassword,
-} from "../../../../web/public/medication/features/backups/web-format.js";
-import { readAndroidBackup } from "../../../../web/public/medication/features/backups/android-format.js";
+} from "../../product-assets/public/medication/features/backups/web-format.js";
+import { readAndroidBackup } from "../../product-assets/public/medication/features/backups/android-format.js";
 import {
   decryptBackup,
   encryptBackup,
   hasBackupMagic,
   maxBackupBytes,
-} from "../../../../web/public/medication/shared/crypto/backup.js";
-import { validateCareRecords } from "../../../../web/public/medication/domain/care-records.js";
-import * as engine from "../../../../web/public/medication/domain/medication-rules.js";
-import { compilePhases } from "../../../../web/public/medication/domain/care-index.js";
+} from "../../product-assets/public/medication/shared/crypto/backup.js";
+import { validateCareRecords } from "../../product-assets/public/medication/domain/care-records.js";
+import * as engine from "../../product-assets/public/medication/domain/medication-rules.js";
+import { compilePhases } from "../../product-assets/public/medication/domain/care-index.js";
 import { archiveImage, DeviceArchive } from "./archive";
 import type { Journal } from "./journal";
 

@@ -1,20 +1,20 @@
 import {
   t,
   localDigits,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { appearanceColors } from "../../../../../web/public/medication/features/medicines/appearance-options.js";
-import { routineLabels } from "../../../../../web/public/medication/features/routines/catalog.js";
-import { clockMinute } from "../../../../../web/public/medication/domain/care-plan.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { appearanceColors } from "../../../product-assets/public/medication/features/medicines/appearance-options.js";
+import { routineLabels } from "../../../product-assets/public/medication/features/routines/catalog.js";
+import { clockMinute } from "../../../product-assets/public/medication/domain/care-plan.js";
 import {
   isoDay,
   scheduledRoutinesOn,
   timeText,
   trackSchedule,
-} from "../../../../../web/public/medication/domain/care-index.js";
-import { cycleRoutineOccurs } from "../../../../../web/public/medication/domain/cycle.js";
-import { dayMs } from "../../../../../web/public/medication/domain/wall-clock.js";
-import { integer } from "../../../../../web/public/medication/shared/ui/input-values.js";
-import { CareInputError } from "../../../../../web/public/medication/shared/ui/care-error.js";
+} from "../../../product-assets/public/medication/domain/care-index.js";
+import { cycleRoutineOccurs } from "../../../product-assets/public/medication/domain/cycle.js";
+import { dayMs } from "../../../product-assets/public/medication/domain/wall-clock.js";
+import { integer } from "../../../product-assets/public/medication/shared/ui/input-values.js";
+import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import {
   defaultRoutineColor,
   maxRoutineAmount,
@@ -24,7 +24,7 @@ import {
   routineLog,
   routineOccurs,
   routineWeekday,
-} from "../../../../../web/public/medication/domain/routine-plan.js";
+} from "../../../product-assets/public/medication/domain/routine-plan.js";
 
 export type RoutineMode = "done" | "quantity" | "steps";
 export interface RoutineResult {

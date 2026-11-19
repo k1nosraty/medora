@@ -6,7 +6,7 @@ import { resolve, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(process.argv[2] ?? fileURLToPath(new URL("../public/", import.meta.url)));
+const root = resolve(process.argv[2] ?? fileURLToPath(new URL("../../apps/web/dist/", import.meta.url)));
 const trials = Number(process.argv[3] ?? 3);
 const measureDashboard = process.argv[4] === "--dashboard";
 if (!Number.isSafeInteger(trials) || trials < 1) throw new Error("Supply a positive trial count");

@@ -3,7 +3,7 @@ import {
   listSeparator,
   localDigits,
   t,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
 import { useRef, useState, type FormEvent } from "react";
 import { paintFeature } from "./renderer";
 

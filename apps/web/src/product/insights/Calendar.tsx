@@ -2,16 +2,16 @@ import {
   listSeparator,
   locale,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { cycleIsEnabled } from "../../../../../web/public/medication/domain/profile.js";
-import { cycleForecast } from "../../../../../web/public/medication/domain/cycle.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
+import { cycleForecast } from "../../../product-assets/public/medication/domain/cycle.js";
 import {
   sleepDay,
   sleepIsEnabled,
   sleepMinutes,
-} from "../../../../../web/public/medication/domain/sleep.js";
-import { sleepDuration } from "../../../../../web/public/medication/features/sleep/presentation.js";
-import { clockMinute } from "../../../../../web/public/medication/domain/care-plan.js";
+} from "../../../product-assets/public/medication/domain/sleep.js";
+import { sleepDuration } from "../../../product-assets/public/medication/features/sleep/presentation.js";
+import { clockMinute } from "../../../product-assets/public/medication/domain/care-plan.js";
 import { renderMonthGrid } from "../MonthGrid";
 import { Icon, PlanArtwork, PlanDayCard, PlanOptions } from "../PlanCard";
 import { disposeCards, mountCard } from "../renderer";

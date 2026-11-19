@@ -1,11 +1,11 @@
 import { clearFeature, paintFeature } from "./renderer";
-import { element } from "../../../../web/public/medication/shared/ui/dom.js";
-import { cycleEstimate } from "../../../../web/public/medication/domain/cycle.js";
+import { element } from "../../product-assets/public/medication/shared/ui/dom.js";
+import { cycleEstimate } from "../../product-assets/public/medication/domain/cycle.js";
 import {
   localDigits,
   t,
   weekIndex,
-} from "../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../product-assets/public/medication/shared/i18n/locale.js";
 
 interface Entry {
   day: number;

@@ -1,17 +1,17 @@
-import { timeText } from "../../../../../web/public/medication/domain/care-index.js";
-import { clockMinute } from "../../../../../web/public/medication/domain/care-plan.js";
+import { timeText } from "../../../product-assets/public/medication/domain/care-index.js";
+import { clockMinute } from "../../../product-assets/public/medication/domain/care-plan.js";
 import {
   amountText,
   doseUnit,
-} from "../../../../../web/public/medication/features/medicines/quantity.js";
+} from "../../../product-assets/public/medication/features/medicines/quantity.js";
 import {
   localDigits,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import {
   dayNumber,
   today,
-} from "../../../../../web/public/medication/shared/ui/dates.js";
+} from "../../../product-assets/public/medication/shared/ui/dates.js";
 import type { installPickers } from "../Pickers";
 import {
   slotDraft,

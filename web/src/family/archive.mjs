@@ -4,7 +4,7 @@ const text = max => value => typeof value === "string" && value.length > 0 && va
 const int = value => Number.isSafeInteger(value) && value >= 0;
 const nullable = check => value => value === null || check(value);
 const oneOf = values => value => values.includes(value);
-import { familySections } from "../../public/medication/domain/family.js";
+import { familySections } from "../../../apps/web/product-assets/public/medication/domain/family.js";
 
 const policy = value => {
   if (typeof value !== "string" || value.length > 512) return false;

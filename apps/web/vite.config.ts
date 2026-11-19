@@ -24,12 +24,12 @@ export default defineConfig({
       async generateBundle(_, bundle) {
         const art: Record<string, string> = {
           "art/logo.svg": "../../branding/logo.svg",
-          "art/water.webp": "../../web/public/design/optical-glass/water.webp",
+          "art/water.webp": "./product-assets/public/design/optical-glass/water.webp",
           "art/today.webp":
-            "../../web/public/medication/assets/illustrations/today-noon.webp",
-          "icon-192.png": "../../web/public/medora-icon-192.png",
-          "icon-512.png": "../../web/public/medora-icon-512.png",
-          "FONT-LICENSE.txt": "../../web/public/FONT-LICENSE.txt",
+            "./product-assets/public/medication/assets/illustrations/today-noon.webp",
+          "icon-192.png": "./product-assets/public/medora-icon-192.png",
+          "icon-512.png": "./product-assets/public/medora-icon-512.png",
+          "FONT-LICENSE.txt": "./product-assets/public/FONT-LICENSE.txt",
         };
         const files = new Map<string, Buffer | string>();
         for (const [name, source] of Object.entries(art)) {

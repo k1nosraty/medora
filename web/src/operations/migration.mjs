@@ -1,6 +1,6 @@
 import { familyTableNames } from "../family/archive.mjs";
 import { familyStore } from "../family/routes.mjs";
-import { encryptBackup, decryptBackup, maxBackupBytes } from "../../public/medication/shared/crypto/backup.js";
+import { encryptBackup, decryptBackup, maxBackupBytes } from "../../../apps/web/product-assets/public/medication/shared/crypto/backup.js";
 import { smallJson } from "../http/validation.mjs";
 import { assertBackup, decodeMedia, digest, fingerprint, pushFingerprint, validate } from "./backup-validation.mjs";
 

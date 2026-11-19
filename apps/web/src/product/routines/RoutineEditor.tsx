@@ -2,10 +2,10 @@ import { useLayoutEffect, useRef, useState } from "react";
 import {
   language,
   t,
-} from "../../../../../web/public/medication/shared/i18n/locale.js";
-import { appearanceColors } from "../../../../../web/public/medication/features/medicines/appearance-options.js";
-import { routineCategories } from "../../../../../web/public/medication/features/routines/catalog.js";
-import { searchKey } from "../../../../../web/public/medication/shared/ui/controls.js";
+} from "../../../product-assets/public/medication/shared/i18n/locale.js";
+import { appearanceColors } from "../../../product-assets/public/medication/features/medicines/appearance-options.js";
+import { routineCategories } from "../../../product-assets/public/medication/features/routines/catalog.js";
+import { searchKey } from "../../../product-assets/public/medication/shared/ui/controls.js";
 import { Icon, PlanArtwork } from "../PlanCard";
 import { clearFeature, paintFeature } from "../renderer";
 import {
