@@ -92,6 +92,8 @@ Local Workerd exercised PostgreSQL through the Hyperdrive simulator, R2, schedul
 
 Validate the configuration locally with `node infrastructure/cloudflare/staging.mjs --check`. Add `--portable` for the standalone adapter. The check makes no network requests and leaves the filesystem unchanged. Omit `--check` to render a new private configuration file. Rendering refuses an existing output. Hosted execution requires separate owner approval and verified dedicated resource and secret references. The combined configuration targets medora-v2-staging on workers.dev with a one-minute cron. Test registration, verification mail, revocation, sync, backup, service worker upgrade, security headers and recovery on its actual HTTPS origin. Record the hosted Worker version, binding identities, checksums and aggregate results.
 
+Both rendered staging configurations pause push delivery by default. See the [staging validation report and runbook](STAGING-VALIDATION.md) for required access, current Free-tier limits and the hosted acceptance checks.
+
 ## Rollback and abort criteria
 
 - Before opening writes, retain the incumbent version ID, a consistent SQL dump, a verified object copy, all required secret version references, original namespace images and the authenticated source manifest. Preserve staged resources separately.
