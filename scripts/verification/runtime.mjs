@@ -3,6 +3,7 @@ import { randomUUID, randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { Client } from "pg";
 import { readFile } from "node:fs/promises";
+import { setTimeout as delay } from "node:timers/promises";
 import { passwordProof } from "../../apps/compat-worker/src/accounts/auth-crypto.mjs";
 import { fixtureDatabase } from "./fixture-database.mjs";
 
@@ -122,6 +123,32 @@ const archive = await saved.json();
 const restored = await request("backups/" + archive.id, { headers });
 assert.equal(restored.status, 200);
 assert.deepEqual(Buffer.from(await restored.arrayBuffer()), bytes);
+if (project) {
+  const database = (action) =>
+    execFileSync("docker", [
+      "compose", "--env-file", process.env.MEDORA_TEST_COMPOSE_ENV,
+      "-p", project, action, "postgres",
+    ], { stdio: "ignore" });
+  database("stop");
+  try {
+    assert.equal((await request("health")).status, 503, "health during PostgreSQL interruption");
+  } finally {
+    database("start");
+  }
+  for (let attempt = 0; attempt < 30; attempt++) {
+    if ((await request("health")).ok) break;
+    await delay(250);
+  }
+  assert.equal((await request("session", { headers })).status, 200, "existing session after PostgreSQL recovery");
+  const recovered = await request("backups/" + archive.id, { headers });
+  assert.equal(recovered.status, 200);
+  assert.deepEqual(Buffer.from(await recovered.arrayBuffer()), bytes);
+  assert.deepEqual(
+    (await (await request("changes", { headers })).json()).changes,
+    [{ ...op, cursor: 1 }],
+  );
+  console.log("Passed PostgreSQL interruption, readiness, and session, change and backup recovery.");
+}
 assert.equal(
   (await request("session", { method: "DELETE", headers })).status,
   204,
