@@ -212,7 +212,24 @@ medicationTest.describe("React medication and dose journeys", () => {
         await expect(dialog.locator("#editor-confirm")).toBeFocused();
       });
 
-      medicationTest(profile + " saves a styled schedule with dated and timed slots", async ({ page }) => {
+      medicationTest(profile + " edits optional schedule dates and restores focus after slot changes", async ({ page }) => {
+        await start(page, language, viewport);
+        const dialog = await openPlanEditor(page, name);
+        await dialog.locator("#editor-next").click();
+        const stage = dialog.locator(".phase").first();
+        await stage.locator('[data-for="end"]').click();
+        await page.locator("#picker-date-confirm").click();
+        await expect(stage.locator("input.end")).not.toHaveValue("");
+        await stage.locator('[data-for="end"]').click();
+        await page.locator("#picker-clear-date").click();
+        await expect(stage.locator("input.end")).toHaveValue("");
+        await stage.locator(".add-slot").click();
+        await expect(stage.locator('[data-for="time"]').last()).toBeFocused();
+        await stage.locator(".remove-slot").last().click();
+        await expect(stage.locator(".add-slot")).toBeFocused();
+      });
+
+      medicationTest(profile + " saves a styled schedule with a timed dose", async ({ page }) => {
         await start(page, language, viewport);
         const dialog = await openPlanEditor(page, name);
         await dialog.locator("#medicine-appearance").click();
@@ -222,22 +239,12 @@ medicationTest.describe("React medication and dose journeys", () => {
         await expect(dialog.locator("#medicine-appearance")).toBeFocused();
         await dialog.locator("#editor-next").click();
         const stage = dialog.locator(".phase").first();
-        await stage.locator('[data-for="end"]').click();
-        await page.locator("#picker-date-confirm").click();
-        await expect(stage.locator("input.end")).not.toHaveValue("");
-        await stage.locator('[data-for="end"]').click();
-        await page.locator("#picker-clear-date").click();
-        await expect(stage.locator("input.end")).toHaveValue("");
         await stage.locator('[data-for="time"]').click();
         await page.locator("#keyboard-hour").fill("09");
         await page.locator("#keyboard-minute").fill("30");
         await page.locator("#picker-time-confirm").click();
         await expect(stage.locator("input.time")).toHaveValue("09:30");
         await stage.locator('[data-dose-value="500"]').click();
-        await stage.locator(".add-slot").click();
-        await expect(stage.locator('[data-for="time"]').last()).toBeFocused();
-        await stage.locator(".remove-slot").last().click();
-        await expect(stage.locator(".add-slot")).toBeFocused();
         await stage.locator(".dose-unit-link").click();
         await expect(dialog.locator("#unit")).toBeFocused();
         await dialog.locator("#stock").fill(language === "fa" ? "۱۵" : "15");

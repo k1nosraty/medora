@@ -15,14 +15,18 @@ env:
   WRANGLER_SEND_METRICS: 'false'
 jobs:
   browser:
-    name: Browser · ${{ matrix.suite }} · ${{ matrix.engine }}
+    name: Browser · ${{ matrix.suite }} · ${{ matrix.engine }}${{ matrix.shard && format(' · {0}', matrix.shard) || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        suite: [product, incumbent]
-        engine: [chromium, webkit]
+        include:
+          - {suite: product, engine: chromium}
+          - {suite: product, engine: webkit, shard: '1/2'}
+          - {suite: product, engine: webkit, shard: '2/2'}
+          - {suite: incumbent, engine: chromium}
+          - {suite: incumbent, engine: webkit}
     steps:
       - uses: actions/checkout@v4
         with: {persist-credentials: false}
@@ -33,7 +37,7 @@ jobs:
       - if: matrix.suite == 'product'
         run: pnpm --filter @medora/web build
       - run: pnpm exec playwright install --with-deps ${{ matrix.engine }}
-      - run: pnpm "test:${{ matrix.suite }}" --project=${{ matrix.engine }} --reporter=list,github
+      - run: pnpm "test:${{ matrix.suite }}" --project=${{ matrix.engine }} --reporter=list,github ${{ matrix.shard && format('--shard={0}', matrix.shard) || '' }}
   frontend-independence:
     runs-on: ubuntu-latest
     timeout-minutes: 30
