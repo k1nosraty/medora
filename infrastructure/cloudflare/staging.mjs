@@ -24,6 +24,7 @@ if (
   ) ||
   !bucket ||
   bucket.length > 63 ||
+  /(?:^|-)(?:prod|production)(?:-|$)/.test(bucket) ||
   !/^medora-(?:staging(?:-[a-z0-9]+)*|(?:fixture|v2|portable)-staging)$/.test(bucket)
 )
   throw new Error(

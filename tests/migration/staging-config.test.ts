@@ -72,7 +72,7 @@ describe("offline staging configuration", () => {
   });
 
   it("rejects ambiguous bucket names and placeholder identifiers", () => {
-    for (const bucket of ["medora", "medora-production-staging", "medora-stagnant"]) {
+    for (const bucket of ["medora", "medora-production-staging", "medora-staging-prod", "medora-stagnant"]) {
       const result = run(["--portable", "--check"], { ...inputs, MEDORA_STAGE_BUCKET: bucket });
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("Supply dedicated staging");
