@@ -1,6 +1,7 @@
 import type { releaseNotifications } from "./release-notifications";
 import type { adminAccounts } from "./admin-accounts";
 import { smallJson } from "@medora/server-shared/http/validation";
+import { exportHeaders } from "@medora/server-shared/operations/export";
 import type { promotionService } from "./promotions";
 import { authenticatedOperations, publicOperations } from "./operations-routes";
 import type { operationService } from "./operations";
@@ -257,6 +258,7 @@ export function createApp(
       const profile = await store.profile(c.get("owner"));
       if (!profile || operations.role(profile.email) !== "admin")
         return c.json({ error: "forbidden" }, 403);
+      if (c.req.method === "HEAD") return c.body(null, 200, exportHeaders);
       return exportOperations(profile.email);
     });
   app.get("/api/v2/profile", async (c) => {

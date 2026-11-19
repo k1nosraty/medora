@@ -4,6 +4,8 @@ import { Pool } from "pg";
 import { repository } from "../../apps/api/src/repository";
 import { createApp } from "../../apps/api/src/app";
 import { digest, token } from "../../apps/api/src/auth";
+import { operationService } from "../../apps/api/src/operations";
+import { administrativeExport } from "../../apps/api/src/admin-export";
 const url = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
 describe.skipIf(!url)("session and encrypted archive boundaries", () => {
   const pool = new Pool({ connectionString: url }),
@@ -84,5 +86,40 @@ describe.skipIf(!url)("session and encrypted archive boundaries", () => {
     const limited = await req("families", "POST", 1);
     expect(limited.status).toBe(429);
     expect(limited.headers.get("Retry-After")).toBe("900");
+  });
+  it("authorizes administrative export metadata without starting or logging an export", async () => {
+    const admin = owners[0] + "@example.test";
+    const operations = operationService(pool, repo, { ADMIN_EMAIL: admin });
+    const exportApp = createApp(repo, async () => false, {
+      operations,
+      exportOperations: administrativeExport(pool, operations),
+    });
+    const url = domain + "/api/v2/admin/operations/export";
+    const read = (method: "HEAD" | "GET", who: number) =>
+      exportApp.request(url, {
+        method,
+        headers: { Cookie: "__Host-medora_v2=" + tokens[who] },
+      });
+    const audit = async () => {
+      const result = await pool.query<{ count: number }>(
+        "SELECT count(*)::int AS count FROM medora.operations_audit WHERE actor=$1 AND action='operations_exported'",
+        [admin],
+      );
+      return result.rows[0]!.count;
+    };
+    expect((await read("HEAD", 1)).status).toBe(403);
+    const head = await read("HEAD", 0);
+    expect(head.status).toBe(200);
+    expect(head.body).toBeNull();
+    expect(head.headers.get("Content-Type")).toBe("application/x-ndjson");
+    expect(head.headers.get("Cache-Control")).toContain("no-store");
+    expect(await audit()).toBe(0);
+
+    const download = await read("GET", 0);
+    expect(download.headers.get("Content-Disposition")).toBe(
+      head.headers.get("Content-Disposition"),
+    );
+    expect(await download.text()).toContain('"type":"end"');
+    expect(await audit()).toBe(1);
   });
 });

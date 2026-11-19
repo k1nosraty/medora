@@ -1,4 +1,10 @@
 const encoder = new TextEncoder();
+export const exportHeaders = {
+  "Content-Type": "application/x-ndjson",
+  "Cache-Control": "no-store",
+  "X-Content-Type-Options": "nosniff",
+  "Content-Disposition": 'attachment; filename="medora-server-data.ndjson"',
+};
 
 export function exportResponse({
   promotion,
@@ -77,14 +83,6 @@ export function exportResponse({
         }
       },
     }),
-    {
-      headers: {
-        "Content-Type": "application/x-ndjson",
-        "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
-        "Content-Disposition":
-          'attachment; filename="medora-server-data.ndjson"',
-      },
-    },
+    { headers: exportHeaders },
   );
 }

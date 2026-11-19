@@ -1,14 +1,27 @@
 import { activeAt } from "./http.mjs";
 export const chunkSize = 128 * 1024;
+const campaignKeys = ["campaigns", "promotion"];
+
+function campaignRows(values) {
+  const legacy = values.get("promotion");
+  return values.get("campaigns") || (legacy ? [legacy] : []);
+}
+
+async function mediaReferences(storage) {
+  const values = await storage.get([...campaignKeys, "assets", "preview"]);
+  return {
+    assets: values.get("assets") ?? [],
+    rows: campaignRows(values),
+    preview: values.get("preview"),
+  };
+}
+
 export class CampaignStore {
   constructor(storage) {
     this.storage = storage;
   }
   async campaigns(storage = this.storage) {
-    const campaigns = await storage.get("campaigns");
-    if (campaigns) return campaigns;
-    const legacy = await storage.get("promotion");
-    return legacy ? [legacy] : [];
+    return campaignRows(await storage.get(campaignKeys));
   }
 
   async current() {
@@ -124,16 +137,11 @@ export class CampaignStore {
 
   async library() {
     const storage = this.storage;
-    const [assets, rows, preview] = await Promise.all([
-      storage.get("assets"),
-      this.campaigns(),
-      storage.get("preview"),
-    ]);
-    const all = assets ?? [];
-    const metadata = all.length
-      ? await storage.get(all.map((asset) => "meta:" + asset.id))
+    const { assets, rows, preview } = await mediaReferences(storage);
+    const metadata = assets.length
+      ? await storage.get(assets.map((asset) => "meta:" + asset.id))
       : new Map();
-    return all.map((asset) => ({
+    return assets.map((asset) => ({
       ...asset,
       name: typeof asset.name === "string" ? asset.name : "",
       createdAt:
@@ -150,12 +158,8 @@ export class CampaignStore {
 
   removeMedia(id) {
     return this.storage.transaction(async (storage) => {
-      const [assets, rows, preview] = await Promise.all([
-        storage.get("assets"),
-        this.campaigns(storage),
-        storage.get("preview"),
-      ]);
-      const asset = assets?.find((entry) => entry.id === id);
+      const { assets, rows, preview } = await mediaReferences(storage);
+      const asset = assets.find((entry) => entry.id === id);
       if (!asset || rows.some((row) => row.mediaId === id)) return false;
       if (preview?.mediaId === id) await storage.delete("preview");
       await storage.delete([
