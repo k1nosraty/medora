@@ -14,7 +14,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:17.11-alpine
@@ -49,6 +49,7 @@ jobs:
           node infrastructure/cloudflare/staging.mjs --check
           node infrastructure/cloudflare/staging.mjs --portable --check
       - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm test:product --reporter=list,github
       - run: node scripts/verification/product-runtime.mjs
       - name: Exercise generation fencing and post-write rollback on a fresh database
         env:
@@ -95,8 +96,7 @@ jobs:
           done
           node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
       - run: pnpm test:compat
-      - run: pnpm test:incumbent
-      - run: pnpm test:product
+      - run: pnpm test:incumbent --reporter=list,github
       - run: node scripts/verification/visual-parity.mjs > dist/visual-parity.json
       - run: node tests/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
       - run: pnpm test:e2e

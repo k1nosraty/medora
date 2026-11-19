@@ -255,6 +255,8 @@ All data and services used here were synthetic loopback fixtures. The browser co
 | `pnpm test:handoff`, fixture runtime, Worker and Compose restore scripts | Two accounts replayed eight offline writes across Workerd and Node. Verified return after writes, outbox resumption, grants, sessions, Service Worker update and encrypted object reads. A separate Compose restore matched PostgreSQL rows and sequences and reopened the cataloged S3 object. |
 | Staging renderer with `--check`, both modes | Passed with synthetic references. Refused a production-shaped bucket name. No generated configuration, hosted access or deployment. |
 
+The first GitHub Actions run hit the 30-minute job limit during the product browser suite. Its partial output contained one failure at the Chromium restore position and did not include the failure details. The pinned product suite now runs before the longer rehearsals, with per-test output and live GitHub failure annotations. The job budget is 60 minutes. Browser test deadlines, assertions and comparison thresholds are unchanged. Local passes are recorded separately from hosted CI.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.
