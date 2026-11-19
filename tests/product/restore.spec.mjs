@@ -53,10 +53,13 @@ test("browser restore honors intent against the Worker and transfers private not
     let loseRotationAcknowledgement = false;
     let rejectStaleRotation = false;
     let loseReplacementAcknowledgement = false;
+    let pausedCareReads;
     let disabledReminder;
     const connect = page => page.route("**/api/**", async route => {
       const request = route.request();
       const { pathname, search } = new URL(request.url());
+      if (pathname === care && request.method() === "GET" && pausedCareReads)
+        await pausedCareReads;
       if (pathname === "/api/reminders" && request.method() === "PUT" &&
           request.headers().authorization === "Bearer synthetic-clearing-token") {
         disabledReminder = request.postDataJSON();
@@ -253,15 +256,28 @@ test("browser restore honors intent against the Worker and transfers private not
     await page.locator("#account-sync-enable").click();
     await expect.poll(async () => (await state(page)).accountCare?.restore).toBeUndefined();
     expect((await latest()).revision).toBe(beforeReplacement + 1);
-    // The two edits both start from the committed copy of the restored row.
+    // Prevent background sync from advancing the shared base between the two edits.
     const cloudEdit = { ...old, amount: 500 };
-    const snapshot = await latest();
-    const edited = await dispatch(care, "PUT", JSON.stringify({ ...snapshot, records: { ...snapshot.records, water: [cloudEdit] } }));
-    expect(edited.status).toBe(200);
-    await page.evaluate(async () => {
-      const { accessCare } = await import("/medication/shared/storage.js");
-      await accessCare(state => { state.water[0].amount = 700; });
-    });
+    await expect(page.locator("#account-sync-enable")).toBeEnabled();
+    const hold = Promise.withResolvers();
+    pausedCareReads = hold.promise;
+    try {
+      const snapshot = await latest();
+      const edited = await dispatch(care, "PUT", JSON.stringify({ ...snapshot, records: { ...snapshot.records, water: [cloudEdit] } }));
+      expect(edited.status).toBe(200);
+      await edited.arrayBuffer();
+      await page.evaluate(async () => {
+        const { accessCare } = await import("/medication/shared/storage.js");
+        await accessCare(state => { state.water[0].amount = 700; });
+      });
+      const staged = await state(page);
+      expect(staged.accountCare.revision).toBe(snapshot.revision);
+      expect(staged.accountCare.base.water).toEqual([old]);
+      expect(staged.water[0].amount).toBe(700);
+    } finally {
+      pausedCareReads = undefined;
+      hold.resolve();
+    }
     await page.locator("#account-sync-enable").click();
     await expect(page.locator("#account-sync-review")).toBeVisible();
     const comparison = page.locator("#account-sync-differences");

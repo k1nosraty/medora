@@ -257,6 +257,8 @@ All data and services used here were synthetic loopback fixtures. The browser co
 
 The first GitHub Actions run hit the 30-minute job limit during the product browser suite. Its partial output contained one failure at the Chromium restore position and did not include the failure details. The pinned product suite now runs before the longer rehearsals, with per-test output and live GitHub failure annotations. The job budget is 60 minutes. Browser test deadlines, assertions and comparison thresholds are unchanged. Local passes are recorded separately from hosted CI.
 
+A single-CPU Chromium rerun reproduced the hidden conflict review. The trace showed an automatic read advancing the common base to the new cloud revision before the fixture made the device edit. The restore test now holds browser care reads during the two synthetic edits, asserts both edits still share the original base, and releases the reads before checking the conflict choices. The application sync engine is unchanged. The corrected case passed five single-CPU Chromium repetitions and three WebKit repetitions.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.
