@@ -21,7 +21,7 @@ export function mountBackups(host: HTMLElement, operations: BackupOperations) {
   return () => clearFeature(host);
 }
 
-function BackupPanel(operations: BackupOperations) {
+export function BackupPanel(operations: BackupOperations) {
   const [notice, setNotice] = useState<Status>();
   return (
     <>

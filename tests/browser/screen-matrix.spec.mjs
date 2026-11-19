@@ -27,7 +27,7 @@ for (const lang of ["fa", "en"]) {
       const { default: AxeBuilder } = await import("@axe-core/playwright");
       const unexpected = [];
       const replaced =
-        /\/medication\/features\/(?:appointments\/(?:editor|view)|routines\/(?:view|card)|backups\/dialog|cycle\/controller|reports\/(?:controller|view)|today\/story|sync\/(?:controller|conflict-view)|account\/dialog)\.js$/;
+        /\/medication\/features\/(?:appointments\/(?:editor|view)|routines\/(?:view|card)|backups\/dialog|cycle\/(?:controller|daily|settings)|family\/(?:panel|context|fields)|reminders\/controller|settings\/dialog|reports\/(?:controller|view)|today\/story|sync\/(?:controller|conflict-view)|account\/dialog)\.js$/;
       await page.route(/\/web\//, async (route) => {
         unexpected.push(new URL(route.request().url()).pathname);
         await route.abort();

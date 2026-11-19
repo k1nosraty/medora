@@ -83,7 +83,8 @@ export function DoseContents({
     dose.planned === null
       ? ""
       : `${amountText(dose.planned)} ${doseUnit(unit, dose.planned)}`;
-  const scheduled = (view?.timeOf ?? doseTime)(dose.day, dose.minute);
+  const scheduled =
+    (view?.timeOf ?? doseTime)(dose.day, dose.minute) ?? Number.NaN;
   let recorded = dose.status
     ? doseStates[dose.status]
     : t(

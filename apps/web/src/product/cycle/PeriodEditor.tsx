@@ -4,8 +4,6 @@ import { isoDay } from "../../../product-assets/public/medication/domain/care-in
 import { dayNumber } from "../../../product-assets/public/medication/shared/ui/dates.js";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
-import { glassObject } from "../../../product-assets/public/medication/design/three-dimensional.js";
-import { mountDayCard } from "../../../product-assets/public/medication/shared/ui/day-card.js";
 import { installCycleOverview } from "../CycleOverview";
 import { clearFeature, paintFeature } from "../renderer";
 import { Icon, PlanArtwork } from "../PlanCard";
@@ -112,6 +110,8 @@ interface Options {
   ): Promise<boolean>;
   requestDeletion: ReturnType<typeof installDeletion>;
   refreshFields(host: HTMLElement): void;
+  add(): void;
+  logDay(): void;
   openCalendar(day: number): void;
 }
 
@@ -259,33 +259,10 @@ export function installCycle({
   mutate,
   requestDeletion,
   refreshFields,
+  add,
+  logDay,
   openCalendar,
 }: Options) {
-  const banner = mountDayCard(get("cycle-banner"), {
-    kind: "cycle",
-    label: t("ui.cycle"),
-    image: glassObject("cycle", "cycle"),
-    title: get("cycle-banner-title"),
-    featured: true,
-    time: undefined,
-    dateTime: undefined,
-    summary: undefined,
-  });
-  const latest = document.createElement("p");
-  latest.id = "cycle-latest";
-  const endStatus = document.createElement("p");
-  endStatus.id = "cycle-end-status";
-  endStatus.textContent = t("ui.cycle-end-missing");
-  endStatus.hidden = true;
-  const logEnd = document.createElement("button");
-  logEnd.id = "cycle-log-end";
-  logEnd.type = "button";
-  logEnd.className = "secondary";
-  logEnd.textContent = t("ui.cycle-log-end");
-  logEnd.hidden = true;
-  banner.details.append(latest, get("cycle-forecast"), endStatus);
-  banner.addActions(get("cycle-add"), logEnd, get("cycle-log-symptoms"));
-
   const dialog = get("cycle-dialog");
   if (!(dialog instanceof HTMLDialogElement))
     throw new Error("Cycle editor host missing");
@@ -358,6 +335,8 @@ export function installCycle({
     getDates,
     getFamilyView,
     openCalendar,
+    add,
+    logDay,
     edit(day, { end: focusEnd } = { end: false }) {
       open(day);
       if (focusEnd && editor.open)

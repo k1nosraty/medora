@@ -8,6 +8,7 @@ export function watchFamilyAccess({ request, changed, denied, today }) {
     timer = setTimeout(() => void check(), 15_000);
   }
 
+  /** @param {{feedback?: string, force?: boolean}} [options] */
   async function check({ feedback, force = false } = {}) {
     if (!selection) return;
     const { group, member, data, day } = selection;

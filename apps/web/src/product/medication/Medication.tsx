@@ -193,6 +193,34 @@ export function installMedication({
       failure,
     };
   }
+  function todayDose(
+    medicine: MedicinePlan | undefined,
+    dose: Dose,
+    featured: boolean,
+    focusStatus?: string,
+  ) {
+    return (
+      <article
+        {...doseCardAttributes(medicine, dose, featured)}
+        data-react-dose=""
+        data-day-state={
+          dose.status === "taken" || dose.status === "skipped"
+            ? "done"
+            : undefined
+        }
+      >
+        <DoseContents
+          {...doseProps(
+            medicine,
+            dose,
+            featured ? "featured" : "day",
+            focusStatus,
+          )}
+        />
+      </article>
+    );
+  }
+
   function renderDose(
     medicine: MedicinePlan | undefined,
     dose: Dose,
@@ -293,7 +321,7 @@ export function installMedication({
       ),
     );
   }
-  return { renderDose, renderMedications, openEditor, closeContext };
+  return { renderDose, todayDose, renderMedications, openEditor, closeContext };
 }
 
 export type RenderDose = ReturnType<typeof installMedication>["renderDose"];

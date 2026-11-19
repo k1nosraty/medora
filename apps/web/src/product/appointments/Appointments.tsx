@@ -390,14 +390,25 @@ export function installAppointments(options: VisitOptions) {
         time: local.instant,
         state: local.visit.completed ? ("done" as const) : ("pending" as const),
         resolvedAt: local.visit.resolvedAt,
-        render: (featured: boolean, focusStatus?: string) =>
-          visitCard(
-            local,
-            index.zone,
-            day <= today(),
-            featured ? "day-featured" : "day",
-            focusStatus,
-          ),
+        render: (featured: boolean, focusStatus?: string) => {
+          const variant = featured ? "day-featured" : "day";
+          return (
+            <article
+              {...cardAttributes(local, variant)}
+              data-react-card=""
+              data-focus-scope={`visit:${local.visit.id}`}
+              data-day-state={local.visit.completed ? "done" : undefined}
+            >
+              {contents(
+                local,
+                index.zone,
+                day <= today(),
+                variant,
+                focusStatus,
+              )}
+            </article>
+          );
+        },
       }));
   }
   function renderVisits(index: Index, day: number) {

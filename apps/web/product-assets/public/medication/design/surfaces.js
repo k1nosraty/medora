@@ -21,6 +21,7 @@ export function installSurfaceArt() {
     marker.replaceWith(art);
   }
   const settings = $("settings-dialog");
+  if (!$("settings-heading-art")) return;
   const renderHeading = () => {
     const panel = settings.dataset.panel;
     $("settings-heading-art").replaceChildren(panel === "sleep-settings"

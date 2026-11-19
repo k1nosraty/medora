@@ -1,14 +1,12 @@
 import { cycleOptionDefaults, cycleDataFields } from "../../domain/cycle.js";
 import { isoDay } from "../../domain/care-index.js";
-import { portable, validateCareRecords } from "../../domain/care-records.js";
 import { today } from "../../shared/ui/dates.js";
 import { $, element } from "../../shared/ui/dom.js";
 import { showFeedback } from "../../shared/ui/controls.js";
 import { t } from "../../shared/i18n/locale.js";
-import { decryptBackup, encryptBackup, maxBackupBytes } from "../../shared/crypto/backup.js";
+import { readCycleArchive, writeCycleArchive } from "./archive.js";
 
 const isoToday = () => isoDay(today());
-const cycleMagic = new TextEncoder().encode("MDORCYC1");
 
 export function installCycleSettings({ getState, saveSettings, refreshFields, mutate }) {
   const settings = $("cycle-settings-form");
@@ -93,18 +91,13 @@ export function installCycleSettings({ getState, saveSettings, refreshFields, mu
     submit.disabled = true;
     try {
       if (selected) {
-        if (selected.size > maxBackupBytes) throw new Error("size");
-        const archive = await decryptBackup(new Uint8Array(await selected.arrayBuffer()), password, cycleMagic);
-        const checked = validateCareRecords({ medicines: {}, doses: {}, water: [], visits: {}, routines: {}, routineLogs: {},
-          cycleRecords: archive.cycleRecords, cycleDays: archive.cycleDays, settings: {} });
+        const checked = await readCycleArchive(selected, password);
         const imported = await mutate(state => {
           for (const key of cycleDataFields) state[key] = { ...checked[key], ...state[key] };
         }, t("ui.cycle-backup-imported"), true);
         if (!imported) throw new Error("storage");
       } else {
-        const safe = portable(getState());
-        const data = Object.fromEntries(cycleDataFields.map(key => [key, safe[key] ?? {}]));
-        const bytes = await encryptBackup(data, password, cycleMagic);
+        const bytes = await writeCycleArchive(getState(), password);
         const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
         const link = element("a");
         link.href = url;

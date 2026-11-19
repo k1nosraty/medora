@@ -1,16 +1,25 @@
-import { useCallback, type KeyboardEvent } from "react";
-import { clearFeature, disposeCards, paintFeature } from "./renderer";
-import { type RenderDose } from "./medication/Medication";
+import {
+  cloneElement,
+  Fragment,
+  isValidElement,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
+import { paintFeature } from "./renderer";
+import { Icon, PlanArtwork } from "./PlanCard";
 import type { RoutineEntry } from "./routines/model";
 import type { Dose, MedicinePlan } from "./medication/model";
-import { glassObject } from "../../product-assets/public/medication/design/three-dimensional.js";
 import {
   localDigits,
   t,
 } from "../../product-assets/public/medication/shared/i18n/locale.js";
 import { routineComplete } from "../../product-assets/public/medication/domain/routine-plan.js";
 import { doseTime } from "../../product-assets/public/medication/domain/care-index.js";
-import { element } from "../../product-assets/public/medication/shared/ui/dom.js";
 
 interface TimelineEvent {
   key: string;
@@ -18,8 +27,7 @@ interface TimelineEvent {
   state: "done" | "pending" | "inactive";
   time: number | null;
   resolvedAt?: number | null | undefined;
-  render: (featured: boolean, focusStatus?: string) => HTMLElement;
-  reactDose?: boolean;
+  render: (featured: boolean, focusStatus?: string) => ReactNode;
 }
 
 interface Selection {
@@ -37,7 +45,7 @@ interface Care {
 }
 
 interface FamilyView {
-  timeOf?: (day: number, minute: number) => number;
+  timeOf?: (day: number, minute: number) => number | undefined;
   has: (scope: "water" | "doses") => boolean;
   canView: (section: "medications" | "appointments" | "routines") => boolean;
   synced: boolean;
@@ -49,7 +57,6 @@ function $<T extends HTMLElement = HTMLElement>(id: string) {
 
 const slotOf = (event: TimelineEvent) =>
   event.time == null ? null : Math.floor(event.time / 60_000);
-let selectedSlot: Selection | null;
 
 export function renderToday(
   care: Care,
@@ -59,7 +66,12 @@ export function renderToday(
   visits: TimelineEvent[],
   routines: RoutineEntry[],
   waterTotal: number,
-  renderDose: RenderDose,
+  renderDose: (
+    medicine: MedicinePlan | undefined,
+    dose: Dose,
+    featured: boolean,
+    status?: string,
+  ) => ReactNode,
   renderRoutine: (
     routine: RoutineEntry,
     day: number,
@@ -68,7 +80,7 @@ export function renderToday(
       featured: boolean;
       focusStatus?: string | undefined;
     },
-  ) => HTMLElement,
+  ) => ReactNode,
   view?: FamilyView | null,
 ) {
   const scheduledAt = view?.timeOf ?? doseTime;
@@ -90,11 +102,10 @@ export function renderToday(
       time:
         dose.status === "snoozed" && dose.snoozeUntil
           ? dose.snoozeUntil
-          : scheduledAt(dose.day, dose.minute),
+          : (scheduledAt(dose.day, dose.minute) ?? null),
       resolvedAt: dose.resolvedAt,
-      reactDose: true,
       render: (featured, focusStatus) =>
-        renderDose(medicine, dose, featured ? "featured" : "day", focusStatus),
+        renderDose(medicine, dose, featured, focusStatus),
     };
   });
   events.push(...visits);
@@ -108,7 +119,8 @@ export function renderToday(
         : plan && !plan.paused
           ? "pending"
           : "inactive",
-      time: entry.minute == null ? null : scheduledAt(day, entry.minute),
+      time:
+        entry.minute == null ? null : (scheduledAt(day, entry.minute) ?? null),
       resolvedAt: entry.resolvedAt,
       render: (featured, focusStatus) =>
         renderRoutine(entry, day, { dayCard: true, featured, focusStatus }),
@@ -148,30 +160,6 @@ export function renderToday(
     includeWater && waterTotal >= (care.waterGoal ?? 2000) ? 1 : 0;
   const resolved = done.length + waterResolved;
   const total = scheduled + waterItems;
-  const progress = $("today-count");
-  progress.hidden =
-    !total || day > today || (view?.has("doses") === false && daily.length > 0);
-  progress.textContent = t(
-    "ui.value-of-value-items-handled",
-    localDigits(resolved),
-    localDigits(total),
-  );
-  progress.style.setProperty(
-    "--day-progress",
-    total ? `${(100 * resolved) / total}%` : "0%",
-  );
-  const previousSlot = selectedSlot?.day === day ? selectedSlot : null;
-  const candidates = day === today ? pending : [];
-  const focused =
-    candidates.find(
-      (event) => previousSlot && slotOf(event) === previousSlot.slot,
-    ) ?? candidates[0];
-  const slot = focused ? slotOf(focused) : null;
-  const group =
-    slot === null ? [] : pending.filter((event) => slotOf(event) === slot);
-  const grouped =
-    group.length > 1 || (group.length > 0 && previousSlot?.slot === slot);
-  selectedSlot = null;
   const doseLabel =
     daily.length === 1
       ? t("ui.1-dose")
@@ -184,9 +172,6 @@ export function renderToday(
     routines.length === 1
       ? t("ui.1-routine")
       : t("ui.value-routines", localDigits(routines.length));
-  $("program-medications").textContent = doseLabel;
-  $("program-appointments").textContent = visitLabel;
-  $("program-routines").textContent = routineLabel;
   const labels = [
     [daily.length, doseLabel, "medications"],
     [visits.length, visitLabel, "appointments"],
@@ -206,236 +191,378 @@ export function renderToday(
           ? "هنوز سابقه‌ای از این حساب همگام نشده است."
           : "برای این روز برنامه‌ای ثبت نشده است.",
       );
-  const focus = $("today-focus");
-  const controls = $("day-focus-navigation");
-  disposeCards(focus);
-  clearFeature(focus);
-  if (group.length < 2) clearFeature(controls);
-  controls.hidden = group.length < 2;
-  if (grouped) {
-    const sameSlot = previousSlot !== null && previousSlot.slot === slot;
-    const previousIndex = sameSlot
-      ? group.findIndex((event) => event.key === previousSlot.key)
-      : -1;
-    const index =
-      previousIndex >= 0
-        ? previousIndex
-        : sameSlot && previousSlot.index < group.length
-          ? previousSlot.index
-          : 0;
-    selectedSlot = { day, slot, index, key: group[index]!.key };
-    renderGroup(focus, controls, group, selectedSlot);
-  } else if (focused) {
-    const heading =
-      focused.time == null || focused.time < now
-        ? t("ui.still-pending")
-        : t("ui.up-next");
-    focus.append(featuredCard(focused, heading));
-  } else if (day === today) {
-    const completed = total > 0 && resolved === total;
-    const title = completed
-      ? t("ui.today-s-plan-is-complete")
-      : total
-        ? t("ui.later-today")
-        : t("ui.plan-your-day");
-    const summary = completed
-      ? t("ui.everything-on-today-s-plan-has-been-logged")
-      : total
-        ? t(
-            "ui.value-items-left-on-today-s-plan",
-            localDigits(total - resolved),
-          )
-        : t(
-            view
-              ? "برای این روز برنامه‌ای ثبت نشده است."
-              : "ui.add-a-medicine-appointment-or-routine-to-your-plan",
-          );
-    const state = { completed, title, summary, add: !total && !view };
-    paintFeature(focus, <TodayState {...state} />);
+  paintFeature(
+    $("today-timeline-react"),
+    <Timeline
+      key={view ? "family" : "personal"}
+      day={day}
+      today={today}
+      now={now}
+      pending={pending}
+      inactive={inactive}
+      done={done}
+      resolved={resolved}
+      total={total}
+      hideCount={
+        !total ||
+        day > today ||
+        (view?.has("doses") === false && daily.length > 0)
+      }
+      family={Boolean(view)}
+    />,
+  );
+  return { storySummary, doseLabel, visitLabel, routineLabel };
+}
+
+interface TimelineProps {
+  day: number;
+  today: number;
+  now: number;
+  pending: TimelineEvent[];
+  inactive: TimelineEvent[];
+  done: TimelineEvent[];
+  resolved: number;
+  total: number;
+  hideCount: boolean;
+  family: boolean;
+}
+
+function Timeline({
+  day,
+  today,
+  now,
+  pending,
+  inactive,
+  done,
+  resolved,
+  total,
+  hideCount,
+  family,
+}: TimelineProps) {
+  const [selection, select] = useState<Selection | null>(null);
+  const [order, setOrder] = useState("default");
+  const [movement, setMovement] = useState(0);
+  const [drag, setDrag] = useState<number>();
+  const lastDot = useRef<number | undefined>(undefined);
+  const viewport = useRef<HTMLDivElement>(null);
+  const dots = useRef<HTMLDivElement>(null);
+  const gesture = useRef<{ id: number; x: number; y: number } | null>(null);
+  const rtl = document.documentElement.dir === "rtl";
+  const previous = rtl ? 1 : -1;
+  const previousSlot = selection?.day === day ? selection : null;
+  const candidates = day === today ? pending : [];
+  const focused =
+    candidates.find(
+      (event) => previousSlot && slotOf(event) === previousSlot.slot,
+    ) ?? candidates[0];
+  const slot = focused ? slotOf(focused) : null;
+  const group =
+    slot === null ? [] : pending.filter((event) => slotOf(event) === slot);
+  const grouped =
+    group.length > 1 || (group.length > 0 && previousSlot?.slot === slot);
+  const sameSlot = previousSlot !== null && previousSlot.slot === slot;
+  const previousIndex = sameSlot
+    ? group.findIndex((event) => event.key === previousSlot.key)
+    : -1;
+  const index =
+    previousIndex >= 0
+      ? previousIndex
+      : sameSlot && previousSlot.index < group.length
+        ? previousSlot.index
+        : 0;
+  const selected = grouped ? group[index] : undefined;
+
+  useLayoutEffect(() => {
+    const key = selected?.key;
+    if (
+      key &&
+      (!selection ||
+        selection.day !== day ||
+        selection.key !== key ||
+        selection.index !== index)
+    )
+      select({ day, slot, key, index });
+    else if (!key && selection) select(null);
+    const record = viewport.current?.querySelector<HTMLElement>(
+      ".care-record-action",
+    );
+    if (record) record.dataset.focusKey = "day-focus-record";
+    if (lastDot.current !== undefined) {
+      dots.current
+        ?.querySelector<HTMLElement>(
+          `[data-focus-key="day-focus-dot-${lastDot.current}"]`,
+        )
+        ?.focus({ preventScroll: true });
+      lastDot.current = undefined;
+    }
+  });
+
+  function change(option: number, focus = false) {
+    const event = group[option];
+    if (!event) return;
+    if (focus && option === index) return;
+    if (focus) lastDot.current = option;
+    setMovement(Math.sign(option - index));
+    select({ day, slot, key: event.key, index: option });
   }
-  focus.hidden = day !== today;
+
+  function endGesture(event: PointerEvent<HTMLDivElement>) {
+    const current = gesture.current;
+    if (current?.id !== event.pointerId) return;
+    gesture.current = null;
+    setDrag(undefined);
+    const dx = event.clientX - current.x,
+      dy = event.clientY - current.y;
+    if (
+      event.type === "pointerup" &&
+      Math.abs(dx) >= 45 &&
+      Math.abs(dx) > Math.abs(dy) * 1.25
+    )
+      change(index + Math.sign(dx) * previous);
+  }
+
   const queue = [
     ...pending.filter((event) => grouped || event !== focused),
     ...inactive,
   ];
-  const order = $<HTMLSelectElement>("timeline-order");
-  order.closest<HTMLElement>(".timeline-sort")!.hidden =
-    !queue.length && !done.length;
-  if (order.value !== "default") {
-    const direction = order.value === "latest" ? -1 : 1;
+  const handled = [...done];
+  if (order !== "default") {
+    const direction = order === "latest" ? -1 : 1;
     const compare = (a: TimelineEvent, b: TimelineEvent) =>
       a.time == null || b.time == null
         ? byTime(a, b)
         : direction * byTime(a, b);
     queue.sort(compare);
-    done.sort(compare);
+    handled.sort(compare);
   }
-  const cards = queue.map(timelineCard);
-  if (done.length) {
-    cards.push(
-      element("h4", t("ui.handled"), "day-queue-heading day-queue-done"),
-    );
-    for (const event of done) cards.push(timelineCard(event));
-  }
-  $("timeline-title").textContent =
-    focused && !grouped
-      ? t("ui.the-rest-of-the-day")
-      : t("ui.doses-appointments-and-routines");
-  $("doses").closest<HTMLElement>(".timeline")!.hidden =
-    day === today && !cards.length;
-  disposeCards($("doses"));
-  $("doses").replaceChildren(
-    ...(cards.length
-      ? cards
-      : [element("p", t("ui.nothing-planned-for-this-day"), "empty")]),
+  const hasQueue = queue.length > 0 || handled.length > 0;
+  const status = (time: number | null | undefined) =>
+    t(time == null || time < now ? "ui.still-pending" : "ui.up-next");
+  const isComplete = total > 0 && resolved === total;
+  const ordinary = focused && !grouped;
+  const options = group.map((event, option) => ({
+    key: event.key,
+    text:
+      event.title +
+      " · " +
+      t(
+        "ui.value-of-value",
+        localDigits(option + 1),
+        localDigits(group.length),
+      ),
+  }));
+  return (
+    <>
+      <div className="daily-main">
+        <div className="daily-heading">
+          <h2 id="day-title">{t("ui.daily-timeline")}</h2>
+          <output
+            id="today-count"
+            aria-label={t("ui.daily-plan-progress")}
+            hidden={hideCount}
+            style={
+              {
+                "--day-progress": total ? `${(100 * resolved) / total}%` : "0%",
+              } as CSSProperties
+            }
+          >
+            {t(
+              "ui.value-of-value-items-handled",
+              localDigits(resolved),
+              localDigits(total),
+            )}
+          </output>
+        </div>
+        <div id="today-focus" hidden={day !== today}>
+          {selected ? (
+            <div
+              className={`day-focus-viewport${group.length > 1 ? " day-focus-swipe" : ""}${drag !== undefined ? " day-focus-dragging" : ""}`}
+              style={
+                drag === undefined
+                  ? undefined
+                  : ({ "--day-focus-drag": `${drag}px` } as CSSProperties)
+              }
+              ref={viewport}
+              onPointerDown={(event) => {
+                if (
+                  group.length < 2 ||
+                  !event.isPrimary ||
+                  event.pointerType === "mouse" ||
+                  (event.target instanceof Element &&
+                    event.target.closest(
+                      "button, summary, input, select, textarea, a, .day-card-more[open]",
+                    ))
+                )
+                  return;
+                gesture.current = {
+                  id: event.pointerId,
+                  x: event.clientX,
+                  y: event.clientY,
+                };
+              }}
+              onPointerMove={(event) => {
+                const current = gesture.current;
+                if (current?.id !== event.pointerId) return;
+                const dx = event.clientX - current.x;
+                if (
+                  Math.abs(dx) <= Math.abs(event.clientY - current.y) ||
+                  Math.abs(dx) < 8
+                )
+                  return;
+                const limit = group[index + Math.sign(dx) * previous] ? 72 : 15;
+                setDrag(Math.max(-limit, Math.min(limit, dx * 0.65)));
+              }}
+              onPointerUp={endGesture}
+              onPointerCancel={endGesture}
+              onLostPointerCapture={endGesture}
+            >
+              <Featured
+                event={selected}
+                status={status(group[0]?.time)}
+                movement={rtl ? -movement : movement}
+              />
+            </div>
+          ) : focused ? (
+            <Featured
+              event={focused}
+              status={status(focused.time)}
+              movement={0}
+            />
+          ) : (
+            day === today && (
+              <TodayState
+                completed={isComplete}
+                add={!total && !family}
+                title={t(
+                  isComplete
+                    ? "ui.today-s-plan-is-complete"
+                    : total
+                      ? "ui.later-today"
+                      : "ui.plan-your-day",
+                )}
+                summary={
+                  isComplete
+                    ? t("ui.everything-on-today-s-plan-has-been-logged")
+                    : total
+                      ? t(
+                          "ui.value-items-left-on-today-s-plan",
+                          localDigits(total - resolved),
+                        )
+                      : t(
+                          family
+                            ? "برای این روز برنامه‌ای ثبت نشده است."
+                            : "ui.add-a-medicine-appointment-or-routine-to-your-plan",
+                        )
+                }
+              />
+            )
+          )}
+        </div>
+        <div
+          id="day-focus-navigation"
+          className="day-focus-controls"
+          role={group.length > 1 ? "group" : undefined}
+          hidden={group.length < 2}
+          aria-label={
+            group.length > 1
+              ? t(
+                  "ui.same-time-plans",
+                  t(
+                    "ui.value-of-value",
+                    localDigits(index + 1),
+                    localDigits(group.length),
+                  ),
+                )
+              : undefined
+          }
+          ref={dots}
+        >
+          {group.length > 1 && (
+            <FocusDots
+              options={options}
+              index={index}
+              select={(option) => change(option, true)}
+              previous={previous}
+            />
+          )}
+        </div>
+      </div>
+      <div className="daily-timeline">
+        <p id="future-schedule" className="quiet" hidden={day <= today}>
+          {t("ui.upcoming-schedule-you-can-log-doses-on-or-after-the-sched")}
+        </p>
+        <section
+          className="timeline"
+          aria-labelledby="timeline-title"
+          hidden={day === today && !hasQueue}
+        >
+          <div className="timeline-heading">
+            <h3 id="timeline-title">
+              {t(
+                ordinary
+                  ? "ui.the-rest-of-the-day"
+                  : "ui.doses-appointments-and-routines",
+              )}
+            </h3>
+            <label className="timeline-sort" hidden={!hasQueue}>
+              <Icon name="sort" />
+              <select
+                id="timeline-order"
+                aria-label={t("ui.sort-day-schedule")}
+                value={order}
+                onChange={(event) => setOrder(event.currentTarget.value)}
+              >
+                <option value="default">
+                  {t("ui.schedule-default-order")}
+                </option>
+                <option value="earliest">{t("ui.earliest-first")}</option>
+                <option value="latest">{t("ui.latest-first")}</option>
+              </select>
+            </label>
+          </div>
+          <div id="doses" className="compact-card-list">
+            {queue.map((event) => (
+              <Fragment key={event.key}>{event.render(false)}</Fragment>
+            ))}
+            {handled.length > 0 && (
+              <h4 className="day-queue-heading day-queue-done">
+                {t("ui.handled")}
+              </h4>
+            )}
+            {handled.map((event) => (
+              <Fragment key={event.key}>{event.render(false)}</Fragment>
+            ))}
+            {!hasQueue && (
+              <p className="empty">{t("ui.nothing-planned-for-this-day")}</p>
+            )}
+          </div>
+        </section>
+      </div>
+    </>
   );
-  return storySummary;
 }
 
-function timelineCard(event: TimelineEvent) {
-  const card = event.render(false);
-  card.dataset.focusScope = event.key;
-  if (event.state === "done") card.dataset.dayState = "done";
-  return card;
-}
-
-function renderGroup(
-  focus: HTMLElement,
-  controls: HTMLElement,
-  group: TimelineEvent[],
-  selection: Selection,
-) {
-  const viewport: HTMLDivElement = element("div", "", "day-focus-viewport");
-  focus.append(viewport);
-  const rtl = document.documentElement.dir === "rtl";
-  const swipeOffset = (dx: number) => Math.sign(dx) * (rtl ? 1 : -1);
-  const status = t(
-    (group[0]?.time ?? 0) < Date.now() ? "ui.still-pending" : "ui.up-next",
-  );
-
-  function show(index: number, source?: string) {
-    const event = group[index];
-    if (!event) return;
-    const offset = Math.sign(index - selection.index);
-    selection.index = index;
-    selection.key = event.key;
-    const card = featuredCard(event, status);
-    const record = card.querySelector<HTMLElement>(".care-record-action");
-    if (record) record.dataset.focusKey = "day-focus-record";
-    if (offset) {
-      card.style.setProperty(
-        "--day-focus-entry",
-        offset === (rtl ? 1 : -1) ? "-1.1rem" : "1.1rem",
-      );
-      card.classList.add("day-focus-enter");
-    }
-    if (group.length > 1) {
-      controls.setAttribute("role", "group");
-      controls.setAttribute(
-        "aria-label",
-        t(
-          "ui.same-time-plans",
-          t(
-            "ui.value-of-value",
-            localDigits(index + 1),
-            localDigits(group.length),
-          ),
-        ),
-      );
-      const select = (option: number) =>
-        show(option, "day-focus-dot-" + option);
-      const previous = rtl ? 1 : -1;
-      const options = group.map((event, option) => ({
-        key: event.key,
-        text:
-          event.title +
-          " · " +
-          t(
-            "ui.value-of-value",
-            localDigits(option + 1),
-            localDigits(group.length),
-          ),
-      }));
-      const dots = { options, index, select, previous };
-      paintFeature(controls, <FocusDots {...dots} />);
-    }
-    disposeCards(viewport);
-    viewport.replaceChildren(card);
-    if (source)
-      controls
-        .querySelector<HTMLElement>(`[data-focus-key="${source}"]`)
-        ?.focus({ preventScroll: true });
-  }
-  show(selection.index);
-  if (group.length < 2) return;
-  viewport.classList.add("day-focus-swipe");
-
-  let gesture: { id: number; x: number; y: number } | null;
-  viewport.addEventListener("pointerdown", (event) => {
-    if (
-      !event.isPrimary ||
-      event.pointerType === "mouse" ||
-      (event.target instanceof Element &&
-        event.target.closest(
-          "button, summary, input, select, textarea, a, .day-card-more[open]",
-        ))
-    )
-      return;
-    gesture = { id: event.pointerId, x: event.clientX, y: event.clientY };
+function Featured({
+  event,
+  status,
+  movement,
+}: {
+  event: TimelineEvent;
+  status: string;
+  movement: number;
+}) {
+  const content = event.render(true, status);
+  if (!isValidElement<{ className?: string; style?: CSSProperties }>(content))
+    return content;
+  if (!movement) return <Fragment key={event.key}>{content}</Fragment>;
+  return cloneElement(content, {
+    key: event.key,
+    className: content.props.className + " day-focus-enter",
+    style: {
+      ...content.props.style,
+      "--day-focus-entry": movement < 0 ? "-1.1rem" : "1.1rem",
+    } as CSSProperties,
   });
-  viewport.addEventListener("pointermove", (event) => {
-    if (gesture?.id !== event.pointerId) return;
-    const dx = event.clientX - gesture.x;
-    if (Math.abs(dx) <= Math.abs(event.clientY - gesture.y) || Math.abs(dx) < 8)
-      return;
-    const limit = group[selection.index + swipeOffset(dx)] ? 72 : 15;
-    viewport.classList.add("day-focus-dragging");
-    viewport.style.setProperty(
-      "--day-focus-drag",
-      `${Math.max(-limit, Math.min(limit, dx * 0.65))}px`,
-    );
-  });
-  function endGesture(event: PointerEvent) {
-    if (gesture?.id !== event.pointerId) return;
-    const dx = event.clientX - gesture.x;
-    const dy = event.clientY - gesture.y;
-    gesture = null;
-    viewport.classList.remove("day-focus-dragging");
-    viewport.style.removeProperty("--day-focus-drag");
-    if (
-      event.type === "pointerup" &&
-      Math.abs(dx) >= 45 &&
-      Math.abs(dx) > Math.abs(dy) * 1.25
-    ) {
-      show(selection.index + swipeOffset(dx));
-    }
-  }
-  viewport.addEventListener("pointerup", endGesture);
-  viewport.addEventListener("pointercancel", endGesture);
-  viewport.addEventListener("lostpointercapture", endGesture);
-}
-
-function featuredCard(event: TimelineEvent, status: string) {
-  const card = event.render(true, status);
-  if (event.reactDose || card.hasAttribute("data-react-card")) return card;
-  card.dataset.focusScope = event.key;
-  const media = element("div", "", "day-focus-media");
-  const art = card.querySelector(".day-card-art")!;
-  art.before(media);
-  media.append(art);
-  const content = card.querySelector(".day-card-content")!;
-  media.append(content.querySelector(".day-card-kind")!);
-  const context = element("div", "", "day-focus-context");
-  const time = content.querySelector("time");
-  if (time) context.append(time);
-  context.append(element("span", status, "day-focus-status"));
-  content.prepend(context);
-  const copy = element("div", "", "day-focus-copy");
-  const actions = card.querySelector(".day-card-actions");
-  content.before(copy);
-  copy.append(content);
-  if (actions) copy.append(actions);
-  return card;
 }
 
 function byTime(a: TimelineEvent, b: TimelineEvent) {
@@ -451,14 +578,6 @@ interface TodayStateProps {
 }
 
 function TodayState({ completed, title, summary, add }: TodayStateProps) {
-  const attachArt = useCallback(
-    (host: HTMLSpanElement | null) => {
-      host?.replaceChildren(
-        glassObject(completed ? "complete" : "control-calendar", "image"),
-      );
-    },
-    [completed],
-  );
   return (
     <div className="today-state" data-complete={String(completed)}>
       <div>
@@ -470,7 +589,9 @@ function TodayState({ completed, title, summary, add }: TodayStateProps) {
           </button>
         )}
       </div>
-      <span className="today-state-art" aria-hidden="true" ref={attachArt} />
+      <span className="today-state-art" aria-hidden="true">
+        <PlanArtwork id={completed ? "complete" : "control-calendar"} />
+      </span>
     </div>
   );
 }

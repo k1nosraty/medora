@@ -296,7 +296,7 @@ try {
   );
   assert.doesNotMatch(
     candidateMarkup,
-    /<template id="(?:phase|slot)-template"|<form id="(?:editor|snooze-form|visit-editor|routine-form|routine-log-form|cycle-form|cycle-day-form|cycle-bulk-form|cycle-print-form|profile-form|display-form|sleep-settings-form|android-restore|web-backup-export)"/,
+    /<template id="(?:(?:phase|slot)-template|family-share-template)"|<form id="(?:editor|snooze-form|visit-editor|routine-form|routine-log-form|cycle-form|cycle-day-form|cycle-bulk-form|cycle-print-form|profile-form|display-form|sleep-settings-form|android-restore|web-backup-export)"/,
   );
   const shell = (markup) =>
     markup
@@ -305,11 +305,48 @@ try {
         '<div id="account-react" style="display:contents"></div>\n      ',
       )
       .replace(
+        /<button[^>]+id="open-care-inbox"[\s\S]*?<\/button>/,
+        '<span id="care-inbox-react" style="display:contents"></span>',
+      )
+      .replace(
+        /^ *(<div id="family-context"[^>]*>)[\s\S]*?(?=\s*<section id="today-story")/m,
+        "      $1</div>\n            ",
+      )
+      .replace(
+        /^ *(<section[^>]+id="(?:today-programs|today-water|today-sleep|cycle-today-card|cycle-companion-card)"[^>]*>)[\s\S]*?<\/section>/gm,
+        "        $1</section>",
+      )
+      .replace(
+        /<div class="daily-main"[^>]*>[\s\S]*?(?= *<div id="today-family-bottom")/,
+        '<div id="today-timeline-react" style="display:contents"></div>\n        ',
+      )
+      .replace(
+        /<section id="today-reminders"[\s\S]*?<\/section>/,
+        '<div id="today-reminders-react" style="display:contents"></div>',
+      )
+      .replace(
+        /<div id="today-(water|cycle)-feedback"[\s\S]*?<\/div>/g,
+        '<div id="$1-feedback-react" style="display:contents"></div>',
+      )
+      .replace(/^ *<div id="cycle-overview-react" hidden><\/div>\n/m, "")
+      .replace(
+        /(<section (?:id="cycle-(?:banner|calendar|trend|records)"|class="cycle-panel" id="cycle-tracking")[^>]*>)[\s\S]*?<\/section>/g,
+        "$1</section>",
+      )
+      .replace(
+        /<details id="cycle-preparation"[\s\S]*?<\/details>/,
+        '<div id="cycle-preparation-react" style="display:contents"></div>',
+      )
+      .replace(
         /<details>\s*<summary><!--msg:ui\.cycle-bulk-->[^<]+<\/summary>\s*<form id="cycle-bulk-form"[\s\S]*?(?=<button id="cycle-open-settings")/,
         '<div id="cycle-tools-react" style="display:contents"></div>\n          ',
       )
       .replace(
-        /^ *(<dialog id="(?:medication-dialog|medicine-details|appearance-dialog|visit-dialog|visit-category-dialog|routine-editor|routine-category-dialog|routine-log-dialog|cycle-dialog|cycle-day-dialog)"[^>]*>)[\s\S]*?<\/dialog>/gm,
+        /<button id="cycle-open-settings"[^>]+>[\s\S]*?<\/button>/,
+        '<div id="cycle-settings-link-react" style="display:contents"></div>',
+      )
+      .replace(
+        /^ *(<dialog id="(?:family-dialog|quick-dialog|settings-dialog|cycle-backup-dialog|medication-dialog|medicine-details|appearance-dialog|visit-dialog|visit-category-dialog|routine-editor|routine-category-dialog|routine-log-dialog|cycle-dialog|cycle-day-dialog)"[^>]*>)[\s\S]*?<\/dialog>/gm,
         "  $1</dialog>",
       )
       .replace(
@@ -321,6 +358,10 @@ try {
         '      <div data-screen="insights" hidden></div>',
       )
       .replace(
+        /(<div id="day-controls"[^>]*>)\s*<div class="day-toolbar"[\s\S]*?<button[^>]+id="next-day"[\s\S]*?<\/button>\s*<\/div>/,
+        '$1\n        <input id="day" type="date" hidden>\n        <div id="day-tools-react" style="display:contents"></div>\n      </div>',
+      )
+      .replace(
         /(<section id="today-story"[^>]*>)[\s\S]*?<\/section>/,
         "$1</section>",
       )
@@ -329,7 +370,7 @@ try {
         "$1></div>",
       )
       .replace(
-        /^ *<template id="(?:phase|slot)-template">[\s\S]*?<\/template>\n|^ +\n/gm,
+        /^ *<template id="(?:(?:phase|slot)-template|family-share-template)">[\s\S]*?<\/template>\n|^ +\n/gm,
         "",
       )
       .replace(

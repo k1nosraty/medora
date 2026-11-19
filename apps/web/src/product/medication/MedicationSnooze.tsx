@@ -26,7 +26,7 @@ export function renderMedicationSnooze(
   );
 }
 
-function MedicationSnooze({ minutes, save, invalid }: SnoozeOptions) {
+export function MedicationSnooze({ minutes, save, invalid }: SnoozeOptions) {
   const [preset, setPreset] = useState(
     presets.find(([value]) => Number(value) === minutes)?.[0] ?? "custom",
   );

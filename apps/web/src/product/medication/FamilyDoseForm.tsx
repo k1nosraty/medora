@@ -25,7 +25,7 @@ export function renderFamilyDoseForm(
   return () => clearFeature(host);
 }
 
-function FamilyDoseForm({
+export function FamilyDoseForm({
   title,
   member,
   dose,

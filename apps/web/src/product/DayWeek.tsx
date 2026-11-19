@@ -1,6 +1,4 @@
-import { paintFeature } from "./renderer";
-
-interface Day {
+export interface WeekDay {
   value: number;
   number: string;
   weekday: string;
@@ -8,11 +6,11 @@ interface Day {
   selected: boolean;
   today: boolean;
 }
-function DayWeek({
+export function DayWeek({
   days,
   choose,
 }: {
-  days: Day[];
+  days: WeekDay[];
   choose: (day: number) => void;
 }) {
   return days.map((day) => (
@@ -29,11 +27,4 @@ function DayWeek({
       {day.number} <span>{day.weekday}</span>
     </button>
   ));
-}
-export function renderWeek(
-  host: HTMLElement,
-  days: Day[],
-  choose: (day: number) => void,
-) {
-  paintFeature(host, <DayWeek days={days} choose={choose} />);
 }

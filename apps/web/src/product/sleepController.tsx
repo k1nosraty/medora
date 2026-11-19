@@ -1,3 +1,4 @@
+import { TodaySleep } from "./TodaySleep";
 import { renderSleepChart, renderSleepHistory } from "./SleepHistory";
 import { equalCareValues } from "../../product-assets/public/medication/domain/care-contract.js";
 import { localZone } from "../../product-assets/public/medication/domain/care-plan.js";
@@ -121,80 +122,72 @@ export function installSleep({
     );
   }
 
-  for (const [start, wake, manual] of [
-    ["sleep-start-now", "sleep-wake-now", "sleep-manual"],
-    ["today-sleep-start", "today-sleep-wake", "today-sleep-manual"],
-  ] as const) {
-    const startControl = $<HTMLButtonElement>(start);
-    const wakeControl = $<HTMLButtonElement>(wake);
-    startControl.addEventListener("click", async () => {
-      const control = startControl;
-      if (pending(getState()?.sleepRecords)) return;
-      control.disabled = true;
-      try {
-        if (
-          await save({
-            start: Date.now(),
-            end: null,
-            zone: localZone() ?? "UTC",
-            kind: "main",
-            quality: "",
-          })
-        )
-          $(wake).focus();
-      } finally {
-        control.disabled = false;
-      }
-    });
-    wakeControl.addEventListener("click", async () => {
-      const openRecord = pending(getState()?.sleepRecords);
-      const now = Date.now();
-      const control = wakeControl;
-      control.disabled = true;
-      try {
-        if (openRecord) {
-          if (
-            (await save(
-              { ...openRecord[1], end: now },
-              openRecord[0],
-              openRecord[1],
-            )) &&
-            wake === "today-sleep-wake"
-          )
-            $(start).focus();
-        } else {
-          const draft = { at: now, zone: localZone() ?? "UTC" };
-          if (
-            await mutate((state) => {
-              state.sleepDraftWake = draft;
-            }, t("ui.sleep-wake-saved"))
-          )
-            open(undefined, draft);
-        }
-      } finally {
-        control.disabled = false;
-      }
-    });
-    $(manual).addEventListener("click", () => {
-      if (manual === "today-sleep-manual" && actionDay() < today()) {
-        open(undefined, undefined, actionDay());
-        return;
-      }
-      const state = getState();
-      const active = pending(state?.sleepRecords);
-      open(active?.[0], active ? undefined : state?.sleepDraftWake);
+  async function startSleep() {
+    if (getFamilyView() || pending(getState()?.sleepRecords)) return false;
+    return save({
+      start: Date.now(),
+      end: null,
+      zone: localZone() ?? "UTC",
+      kind: "main",
+      quality: "",
     });
   }
+
+  async function wakeSleep() {
+    if (getFamilyView()) return false;
+    const openRecord = pending(getState()?.sleepRecords);
+    const now = Date.now();
+    if (openRecord)
+      return save({ ...openRecord[1], end: now }, openRecord[0], openRecord[1]);
+    const draft = { at: now, zone: localZone() ?? "UTC" };
+    if (
+      await mutate((state) => {
+        state.sleepDraftWake = draft;
+      }, t("ui.sleep-wake-saved"))
+    )
+      open(undefined, draft);
+    return false;
+  }
+
+  function manualSleep(past = false) {
+    if (past && actionDay() < today()) {
+      open(undefined, undefined, actionDay());
+      return;
+    }
+    const state = getState();
+    const active = pending(state?.sleepRecords);
+    open(active?.[0], active ? undefined : state?.sleepDraftWake);
+  }
+
+  const startControl = $<HTMLButtonElement>("sleep-start-now");
+  const wakeControl = $<HTMLButtonElement>("sleep-wake-now");
+  startControl.addEventListener("click", async () => {
+    startControl.disabled = true;
+    try {
+      if (await startSleep()) wakeControl.focus();
+    } finally {
+      startControl.disabled = false;
+    }
+  });
+  wakeControl.addEventListener("click", async () => {
+    wakeControl.disabled = true;
+    try {
+      await wakeSleep();
+    } finally {
+      wakeControl.disabled = false;
+    }
+  });
+  $("sleep-manual").addEventListener("click", () => manualSleep());
 
   function paintToday(
     state: CareState,
     day: number,
     visible: boolean,
     compact: boolean,
+    history: () => void,
   ) {
-    $("today-sleep").hidden = !visible || compact;
-    if (!visible) return;
-    const active = day === today() ? pending(state.sleepRecords) : null;
+    const now = today();
+    const active = day === now ? pending(state.sleepRecords) : null;
     const last = completed(state.sleepRecords).find(
       ([, row]) => sleepDay(row) === day,
     )?.[1];
@@ -203,10 +196,6 @@ export function installSleep({
       : last
         ? sleepDuration(sleepMinutes(last))
         : "";
-    if (compact) {
-      $("program-sleep-summary").textContent = summary;
-      return;
-    }
     const detail = active
       ? t("ui.sleep-since", timeOf(active[1].start, active[1].zone))
       : last
@@ -216,17 +205,25 @@ export function installSleep({
             timeOf(last.end, last.zone),
           )
         : "";
-    $("today-sleep-detail").textContent =
-      [summary, detail].filter(Boolean).join(" · ") || t("ui.not-logged");
-    const personal = !getFamilyView();
-    const quick = personal && day === today();
-    $("today-sleep-start").hidden = !quick || Boolean(active);
-    $("today-sleep-wake").hidden = !quick || !active;
-    $("today-sleep-manual").hidden = !personal || day > today();
-    $("today-sleep-manual").textContent = t(
-      quick && !active && state.sleepDraftWake
-        ? "ui.sleep-finish-draft"
-        : "ui.sleep-log",
+    const host = $("today-sleep");
+    paintFeature(
+      host,
+      <TodaySleep
+        host={host}
+        day={day}
+        today={now}
+        visible={visible}
+        compact={compact}
+        personal={!getFamilyView()}
+        active={Boolean(active)}
+        summary={summary}
+        detail={detail}
+        draft={state.sleepDraftWake}
+        start={startSleep}
+        wake={wakeSleep}
+        manual={() => manualSleep(true)}
+        history={history}
+      />,
     );
   }
 

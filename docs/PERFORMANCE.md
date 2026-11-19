@@ -105,3 +105,19 @@ The loopback comparison starts at `eb063ce`. Each build ran three cold Chromium 
 | All canonical JS chunks, raw / gzip | 909,647 / 257,651 bytes | 927,588 / 263,013 bytes |
 
 Reproduce with `node tests/browser/measure.mjs apps/web/dist 3 --dashboard` and `node tests/browser/measure-medication.mjs <baseline-assets> apps/web/dist`. The six-second threshold applies to the welcome-button marker. The distinct dashboard path still exceeds seven seconds in this network profile. Route-specific splitting, physical-device startup and hosted latency remain open.
+
+### Family, notifications, Today, Settings and Cycle ownership
+
+Three cold Chromium trials per build used the same 390 × 844 viewport, 160 ms latency, 200 kB/s down, 75 kB/s up and blocked service workers. Both builds were produced locally from their source. The tracked markers and launch script match the previous comparison.
+
+| Median measurement | `8052d1a` | Candidate |
+| --- | ---: | ---: |
+| Usable welcome button | 4,485 ms | 4,492 ms |
+| Focused dashboard after immediate click | 7,222 ms | 7,113 ms |
+| Requests at onboarding readiness | 19 | 19 |
+| Bytes transferred at onboarding readiness | 750,709 | 716,731 |
+| Static offline shell files and bytes | 40 / 1,582,167 | 40 / 1,562,876 |
+
+The warm medication comparison used 24 plans and the same network conditions. Navigation through the next frame measured 30 to 37 ms, details 17 to 16 ms, and dose commit 26 to 27 ms across three trials per build. These actions made zero network requests. Total canonical JavaScript measured 927,588 to 942,274 raw bytes and 263,013 to 263,278 gzip bytes.
+
+Reproduce with `node tests/browser/measure.mjs apps/web/dist 3 --dashboard`. The median remains within the six-second onboarding budget. Physical-device and hosted performance remain release gates.

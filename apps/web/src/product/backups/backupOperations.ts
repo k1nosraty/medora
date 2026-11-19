@@ -1,6 +1,6 @@
 import { accessCare } from "../../../product-assets/public/medication/shared/storage.js";
 import { portable } from "../../../product-assets/public/medication/domain/care-records.js";
-import { changeReminderRevision } from "../../../product-assets/public/medication/features/reminders/controller.js";
+import { changeReminderRevision } from "../../../product-assets/public/medication/features/reminders/service.js";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import { localZone } from "../../../product-assets/public/medication/domain/care-plan.js";

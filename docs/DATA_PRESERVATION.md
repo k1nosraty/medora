@@ -10,6 +10,8 @@ Appointment and routine React forms use the same canonical IndexedDB write trans
 
 Account and sync presentation moved to React over the existing care sync service. Care storage, private-field handling, acknowledgement logic, sync revisions and owner selection keep their existing contracts. Clinic-zone and water reminder preferences save through the same update path and retain the original keys. Cycle bulk inserts retain their day-keyed records and reject the entire batch on overlap. Visit print renders selected categories through the existing date range and privacy rules and clears the print contents when printing ends.
 
+The final UI slice shares the family API route, grant projection and idempotent operation logic with the compatibility app. A member change or permission reduction invalidates open delegated editors and clears the previous owner's rendered timeline and Cycle data. Device notification registration and local preference writes go through the same serialized push service. Family and reminder revisions and the encrypted Cycle archive identifier `MDORCYC1` retain their existing formats. The Cycle import validates the archive and merges by recorded day with current local entries taking precedence.
+
 ## Preserve the public origin
 
 Keep the exact frontend scheme, host and port, the service-worker scope and the relative `/api` URLs. Update the upstream behind that origin when the backend moves. This keeps IndexedDB, cache, the installed PWA and the `__Host-` authentication cookie attached to the same site. Opening a different frontend origin creates a separate browser storage namespace. A different public API origin would require a new authentication and CORS design. A raw origin change cannot transfer browser data.
@@ -24,7 +26,7 @@ Keep the same closed-browser push keys and signing versions. A provider migratio
 - A stale document version causes a conflict or retry. The canonical client retains unknown values through the merge on supported records and keeps local-only fields on the device. The archive copier treats unknown stores, fields and supported structured values as source data.
 - A client that still sends the unversioned API remains fenced during and after the switch. Update the application at the same origin to use the v2 routes, then retry sync. Its local IndexedDB history stays available throughout.
 - Multiple tabs share IndexedDB. Browser write transactions and the server's per-owner revision check protect committed data. Complete cross-tab coverage for every editor is still open.
-- The service workers version static caches separately from IndexedDB. The journal's interrupted-update test checks the previous offline shell and a subsequent retry. Both service workers bundle Workbox routing locally for static assets. They retain their existing atomic shell installation and cache lifetimes. API traffic stays on the network. The canonical app retains its original IndexedDB implementation. The primary React port remains open. The separate Dexie journal uses its own namespace.
+- The service workers version static caches separately from IndexedDB. The journal's interrupted-update test checks the previous offline shell and a subsequent retry. Both service workers bundle Workbox routing locally for static assets. They retain their existing atomic shell installation and cache lifetimes. API traffic stays on the network. The canonical app retains its original IndexedDB implementation. The separate Dexie journal uses its own namespace.
 
 ## Evidence
 

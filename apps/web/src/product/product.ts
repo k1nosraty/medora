@@ -33,21 +33,16 @@ import { familySections } from "../../product-assets/public/medication/domain/fa
 import {
   changeReminderRevision,
   initializeReminders,
+  reminderView,
   syncReminders,
-} from "../../product-assets/public/medication/features/reminders/controller.js";
+} from "../../product-assets/public/medication/features/reminders/service.js";
 import { installMedication, type RenderDose } from "./medication/Medication";
-import type {
-  FamilyDoseRecord,
-  MedicationCare,
-  MedicineTarget,
-} from "./medication/model";
-import { renderFamilyDoseForm } from "./medication/FamilyDoseForm";
-import { installFamily } from "../../product-assets/public/medication/features/family/panel.js";
-import { renderMemberHeader } from "../../product-assets/public/medication/features/family/context.js";
+import type { FamilyDoseRecord, MedicationCare } from "./medication/model";
+import { installFamilyDialog } from "./family/FamilyDialog";
+import { showFamilyNotice } from "./family/FamilyNotice";
 import { installSupport, loadOperations, reportDailyOpen } from "./Operations";
 import { installRoutines } from "./routines/Routines";
 import { renderToday } from "./Today";
-import { mountBackups } from "./backups/BackupPanel";
 import { installNavigation } from "./navigation";
 import { refreshApp } from "./updates";
 import { finishIntro, hasStarted, showIntro } from "./Onboarding";
@@ -56,15 +51,10 @@ import { installSurfaceArt } from "../../product-assets/public/medication/design
 import { showStorageRecovery } from "./StorageRecovery";
 import type { SleepRecord, WakeDraft } from "./SleepForm";
 import type { WaterEntry } from "./WaterEntries";
-import type { WaterTarget } from "./WaterLogForm";
-import type {
-  RoutineCare,
-  RoutineTarget,
-  RoutineEntry,
-} from "./routines/model";
-import type { CyclePeriod, CycleTarget } from "./cycle/PeriodEditor";
+import type { RoutineCare, RoutineEntry } from "./routines/model";
+import type { CyclePeriod } from "./cycle/PeriodEditor";
 import type { CycleDayLabel } from "./cycleLabels";
-import type { VisitCare, VisitTarget } from "./appointments/model";
+import type { VisitCare } from "./appointments/model";
 import type { PersonalProfile } from "./settings/Preferences";
 import { disposeCards } from "./renderer";
 
@@ -90,7 +80,16 @@ export type CareState = Omit<Parameters<typeof showIntro>[0], "water"> &
     familyPlacement?: string;
     sleepCardSize?: string;
     cycleCardSize?: string;
-    cycleOptions?: { hideToday?: boolean; minute?: number };
+    cycleOptions?: {
+      hideToday?: boolean;
+      minute?: number | null;
+      routines?: string[];
+      since?: number;
+    };
+    cycleChecklist?: string[];
+    cycleSupport?: string;
+    cycleFollowup?: { estimate: number; until: number | null };
+    cyclePreparation?: { estimate: number; items: string[] };
     sleepSettings?: {
       bedtime?: string;
       wake?: string;
@@ -100,6 +99,7 @@ export type CareState = Omit<Parameters<typeof showIntro>[0], "water"> &
     };
     sleepEnabled?: boolean;
     personalProfile?: PersonalProfile;
+    accountCare?: { enabled?: boolean };
     gender?: string;
     cycleEnabled?: boolean;
     theme?: string;
@@ -117,12 +117,14 @@ type EntryFamilyView = NonNullable<
 >;
 export interface FamilyView extends EntryFamilyView {
   member: { id: string };
-  group: { id: string };
+  group: { id: string; name: string };
+  name: string;
+  profile: (() => void) | null;
   today: number;
   zone: string;
   firstName: string;
   state: CareState;
-  timeOf(day: number, minute: number): number;
+  timeOf(day: number, minute: number): number | undefined;
   has(section: string): boolean;
   canRecord(
     kind: "water" | "cycle" | "medicine" | "visit" | "routine",
@@ -148,7 +150,6 @@ export interface FamilyView extends EntryFamilyView {
 
 localizeMarkup({ keep: $("welcome-screen") });
 installSurfaceArt();
-installSupport();
 let care: CareState | undefined;
 let busy = false;
 let familyView: FamilyView | null = null;
@@ -159,7 +160,6 @@ const update = $<HTMLButtonElement>("update-app");
 const dayField = $<HTMLInputElement>("day");
 const updateStatus = $("app-update-status");
 let updateStatusTimer: ReturnType<typeof setTimeout> | undefined;
-let familyNoticeTimer: ReturnType<typeof setTimeout> | undefined;
 update.addEventListener("click", async () => {
   clearTimeout(updateStatusTimer);
   if (busy) {
@@ -248,7 +248,16 @@ function currentIndex() {
   if (indexedState !== state || indexedDay !== day || careIndex.zone !== zone) {
     indexedState = state;
     indexedDay = day;
-    careIndex = createCareIndex(state, engine, zone, day, familyView?.timeOf);
+    const projected = familyView;
+    careIndex = createCareIndex(
+      state,
+      engine,
+      zone,
+      day,
+      projected
+        ? (date, minute) => projected.timeOf(date, minute) ?? Number.NaN
+        : undefined,
+    );
   }
   return careIndex;
 }
@@ -272,11 +281,11 @@ function paint() {
       dashboard.dayVisits(index, day),
       entries,
       index.waterTotal(day),
-      medicines.renderDose,
-      routines.card,
+      medicines.todayDose,
+      routines.todayCard,
       familyView,
     );
-    dashboard.renderTodayHeader(day, summary);
+    dashboard.renderTodayHeader(day, summary.storySummary);
   }
 }
 
@@ -302,7 +311,6 @@ async function reload() {
 }
 
 dayField.addEventListener("change", render);
-$("timeline-order").addEventListener("change", render);
 
 const nextLanguage = language === "fa" ? "en" : "fa";
 for (const control of document.querySelectorAll<HTMLElement>(
@@ -337,8 +345,8 @@ const selectedDay = () =>
 const requestDeletion = installDeletion(mutate);
 const dashboard = installNavigation({
   getState: viewState,
-  getIndex: currentIndex,
   selectedDay,
+  openDate: () => pickers.openMainDate(),
   today: viewToday,
   getFamilyView,
   getPersonalState: getState,
@@ -348,20 +356,20 @@ const dashboard = installNavigation({
   renderDose: (...args: Parameters<RenderDose>) =>
     medicines.renderDose(...args),
   disposeDoseCards: disposeCards,
-  renderBackup: (host) =>
-    mountBackups(host, {
-      mutate,
-      validatePhases: (phases) =>
-        engine.validMedicationPhases(compilePhases(engine, phases)),
-      prepareRestore: (mode) => accountSync.prepareRestore(mode),
-      clearRecovery: () => accountSync.clearRecovery(),
-    }),
+  backup: {
+    mutate,
+    validatePhases: (phases) =>
+      engine.validMedicationPhases(compilePhases(engine, phases)),
+    prepareRestore: (mode) => accountSync.prepareRestore(mode),
+    clearRecovery: () => accountSync.clearRecovery(),
+  },
   closeMedicationContext: () => medicines.closeContext(),
   refreshFields: (container: HTMLElement) => pickers.refresh(container),
   renderRoutine: (
     ...args: Parameters<ReturnType<typeof installRoutines>["card"]>
   ) => routines.card(...args),
 });
+installSupport();
 const pickers = installPickers({ selectedDay, today: viewToday, dashboard });
 const routines = installRoutines({
   getState: viewState,
@@ -434,20 +442,11 @@ function openAccount() {
 for (const control of document.querySelectorAll("[data-open-account]")) {
   control.addEventListener("click", () => void openAccount());
 }
-const family = installFamily({
-  renderMedicineRecord: renderFamilyDoseForm,
+const family = installFamilyDialog({
   getState,
   openAccount,
-  actionDay: dashboard.actionDay,
   getFamilyView,
-  openPlan: (
-    kind: "medicine" | "visit" | "routine" | "water" | "cycle",
-    target: WaterTarget &
-      MedicineTarget &
-      VisitTarget &
-      RoutineTarget &
-      CycleTarget,
-  ) => {
+  openPlan: (kind, target) => {
     const open = {
       medicine: openEditor,
       visit: dashboard.openVisit,
@@ -469,27 +468,17 @@ const family = installFamily({
       previous.state !== view.state &&
       familySections.some((key) => previous.has(key) && !view.has(key));
     familyView = view;
-    renderMemberHeader(view);
+    $("app").toggleAttribute("data-family-member", Boolean(view));
     if (changed || narrowed) dashboard.changeContext();
     else if (view && !view.canView(dashboard.screen())) dashboard.show("today");
     else render();
     if (changed || feedback) {
-      clearTimeout(familyNoticeTimer);
-      const notice = $("family-notice");
-      notice.textContent = feedback;
-      notice.hidden = !feedback;
-      if (view && feedback)
-        familyNoticeTimer = setTimeout(() => {
-          notice.hidden = true;
-        }, 3500);
+      showFamilyNotice(feedback, view ? 3500 : undefined);
       $("status").textContent = "";
     }
   },
   openProfile: () => {
-    dashboard.show("settings");
-    document
-      .querySelector<HTMLElement>('[data-settings-panel="profile-settings"]')!
-      .click();
+    dashboard.openSettings(false, "profile-settings");
   },
 });
 dashboard.setEntryAction(
@@ -508,7 +497,6 @@ dashboard.setEntryAction(
         });
     },
     addWater: dashboard.addWater,
-    quickWater: dashboard.quickAddWater,
     familyWater: family.quickWater,
   }),
 );
@@ -590,6 +578,13 @@ try {
     .catch(() => {});
   family.openInvitation();
   void family.refreshGroup();
+  window.addEventListener(
+    "online",
+    () =>
+      void (reminderView().canEnable
+        ? syncReminders(true)
+        : initializeReminders()),
+  );
   void initializeReminders();
 } catch (error) {
   $("welcome-screen").hidden = true;

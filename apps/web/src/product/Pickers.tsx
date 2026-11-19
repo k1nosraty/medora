@@ -161,11 +161,11 @@ export function installPickers({ today, selectedDay, dashboard }: Options) {
     dateSheet.close();
     onPickDate?.(null);
   });
-  $("pick-day").addEventListener("click", () =>
+  function openMainDate() {
     openDate(selectedDay(), dashboard.dateLimit(), (day) => {
       if (day !== null) dashboard.chooseDay(day);
-    }),
-  );
+    });
+  }
 
   function openTime(field: HTMLInputElement) {
     paintFeature(
@@ -253,6 +253,7 @@ export function installPickers({ today, selectedDay, dashboard }: Options) {
 
   return {
     refresh,
+    openMainDate,
     chooseDate: (day: number, select: (day: number) => void) =>
       openDate(day, Infinity, (picked) => {
         if (picked !== null) select(picked);

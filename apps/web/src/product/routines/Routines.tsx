@@ -457,6 +457,19 @@ export function installRoutines({
     );
   }
 
+  function todayCard(entry: RoutineEntry, day: number, options: CardOptions) {
+    return (
+      <article
+        {...cardAttributes(entry, day, options)}
+        data-react-card=""
+        data-focus-scope={`routine:${entry.id}`}
+        data-day-state={routineComplete(entry) ? "done" : undefined}
+      >
+        {contents(entry, day, options)}
+      </article>
+    );
+  }
+
   let filter = "today";
   let historyLimit = 14;
   const controls = [
@@ -556,5 +569,5 @@ export function installRoutines({
       rows.length ? rows : <p className="empty">{empty}</p>,
     );
   }
-  return { openEditor, openReminder, renderPanel, card };
+  return { openEditor, openReminder, renderPanel, card, todayCard };
 }

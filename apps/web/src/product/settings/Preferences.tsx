@@ -47,7 +47,7 @@ export interface PanelProps {
   ): Promise<boolean>;
   invalidateDisplay(): void;
 }
-type PanelId = keyof typeof components;
+export type PreferencePanel = keyof typeof components;
 
 function formSubmission(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
@@ -526,7 +526,7 @@ function SleepPreferences({
   );
 }
 
-const components = {
+export const components = {
   "display-settings": Display,
   "profile-settings": Profile,
   "sleep-settings": SleepPreferences,
@@ -535,7 +535,7 @@ const components = {
 };
 export function renderPreferences(
   host: HTMLElement,
-  panel: PanelId,
+  panel: PreferencePanel,
   props: PanelProps,
 ) {
   const Panel = components[panel];

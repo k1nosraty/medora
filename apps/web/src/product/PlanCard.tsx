@@ -15,11 +15,13 @@ export function PlanArtwork({
   color,
   fallback,
   className,
+  eager = false,
 }: {
   id: string;
   color?: string | undefined;
   fallback?: string | undefined;
   className?: string;
+  eager?: boolean;
 }) {
   return (
     <img
@@ -31,7 +33,7 @@ export function PlanArtwork({
       data-art={id}
       data-art-color={color}
       decoding="async"
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
       onError={(event) => {
         if (!fallback) return;
         const image = event.currentTarget;

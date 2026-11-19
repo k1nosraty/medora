@@ -136,6 +136,25 @@ The earlier English mobile medication editor differed at 81 pixels by one channe
 
 Synthetic device and Workerd cases exercised IndexedDB v1–v3 medication and dose edits with extensions, reconnect and lost acknowledgement, private recovery key rotation, encrypted Android and Web archives, and the separate encrypted Cycle archive. The production reconciliation gate still requires a complete authorized source snapshot, independent census, relevant key-version references and the backup corpus. The workspace contains synthetic evidence. The gate is **BLOCKED** and release stays **NOT READY**.
 
+## Final React ownership verification
+
+The starting checkout on `codex/medora-2-full-rebuild` was clean at `8052d1a`. A fresh checkout without the root `web/` directory passed its frozen install, frontend build and 110 baseline browser checks. The ownership changes replaced the incumbent Family, notification, Settings and Cycle controllers in the canonical graph. The remaining Today card factories now render their shared React card contents directly. The family and device protocol cases use isolated loopback fixtures. Their settings and family dialogs passed additional scoped Axe scans in both browser engines.
+
+| Verification | Completed result |
+| --- | --- |
+| `pnpm typecheck`, `pnpm lint`, `pnpm build` | Passed typecheck, lint and frontend and API production builds. Both local Worker bundles completed. |
+| `pnpm test` after migrating an isolated PostgreSQL fixture | 23 tests passed across 14 files. |
+| `pnpm test:compat` | 44 compatibility tests and 13 care tests passed. The closed-client alarm fixture completed. |
+| `pnpm test:product --project=chromium` and `--project=webkit` | 68 cases per engine passed, including the Family and device notification action fixtures, eight-route Persian and English desktop and mobile Axe matrix, encrypted restore and lost-acknowledgement recovery. A focused rerun added Axe assertions for the open Family and device settings dialogs and passed two cases per engine. |
+| `node scripts/verification/frontend-independence.mjs --offline` | 57 cases per engine, 114 total, passed after a frozen install and production build with all of `web/` physically absent. The route matrix recorded zero forbidden requests. Both engines updated the worker and matched the original IndexedDB records after an offline reload. |
+| `npm --prefix web run test:browser` | 41 incumbent cases per engine passed. 54 candidate-only cases were skipped as configured. |
+| `pnpm test:e2e` and `node scripts/verification/pwa-update.mjs` | Nine Journal cases per engine passed. The interrupted install, old-shell offline recovery, update retry and journal persistence checks completed. |
+| `pnpm test:handoff` | Synthetic Workerd/R2 and Node/S3 protocol fixture passed reconciliation of 48 tables, 9 sequences, 273 constraints and one independently decrypted backup object. Two accounts kept their sessions, directional access and eight offline changes. Reverse recovery after writes, failed copy recovery, writer drain, outbox resumption and worker update completed. |
+
+The full reference visual run completed 160 exact layout comparisons, checked 1,244 design assets and produced zero candidate Axe violations in 64 samples. It recorded 155 exact captures, two verified reference paint variants and three strict WebKit screenshot mismatches. An isolated WebKit rerun matched 78 of 80 captures exactly and one through the existing reference-paint check. The remaining English desktop medication appearance capture differed at 243 pixels by at most one channel level. A fresh build of starting commit `8052d1a` produced byte-identical original and candidate images for that failing pair and the English mobile medication schedule pair. The original combined run also found a Persian desktop appearance difference at 118 pixels, which matched exactly on the rerun. The visual comparison thresholds and incumbent reference commit are unchanged. The frontend acceptance status remains **INCOMPLETE** while the strict visual command exits unsuccessfully.
+
+Historical IndexedDB versions 1–3, encrypted Android and Web archive restore, separate Cycle archive import and export, and family revocation were exercised with synthetic fixtures. Device enrolment, permission denial, retry, private notification details and provider response were independently modeled by the browser fixture. Physical device delivery and a complete authorized source reconciliation remain separate release gates. See [performance](PERFORMANCE.md#family-notifications-today-settings-and-cycle-ownership) for the comparable cold benchmark.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

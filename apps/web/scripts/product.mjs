@@ -32,7 +32,7 @@ const onboardingCopy = (messages) => ({
 const components = new Map([
   ["medication/app/onboarding.js", "Onboarding.tsx"],
   ["medication/app/routes.js", "routes.ts"],
-  ["medication/app/day-navigation.js", "dayNavigation.ts"],
+  ["medication/app/day-navigation.js", "dayNavigation.tsx"],
   ["medication/app/entry-actions.js", "entryActions.ts"],
   ["medication/app/update.js", "updates.ts"],
   ["medication/features/today/view.js", "Today.tsx"],
@@ -52,6 +52,14 @@ const replacedModules = new Set([
   "medication/app/medora.js",
   "medication/app/navigation.js",
   "medication/features/account/dialog.js",
+  "medication/features/family/panel.js",
+  "medication/features/family/context.js",
+  "medication/features/family/fields.js",
+  "medication/features/settings/dialog.js",
+  "medication/features/reminders/controller.js",
+  "medication/features/cycle/settings.js",
+  "medication/features/cycle/daily.js",
+  "medication/shared/ui/day-card.js",
   "medication/features/sync/controller.js",
   "medication/features/sync/conflict-view.js",
   "medication/features/backups/dialog.js",
@@ -103,10 +111,15 @@ try {
           join(app, "product-assets/ui/layout/day-navigation.html"),
           "utf8",
         )
-      ).replace(
-        /(<section id="today-story"[^>]*>)[\s\S]*?<\/section>/,
-        "$1</section>",
-      ),
+      )
+        .replace(
+          /(<section id="today-story"[^>]*>)[\s\S]*?<\/section>/,
+          "$1</section>",
+        )
+        .replace(
+          /(<div id="day-controls"[^>]*>)[\s\S]*$/,
+          '$1\n        <input id="day" type="date" hidden>\n        <div id="day-tools-react" style="display:contents"></div>\n      </div>\n',
+        ),
       "forms/account.html": (
         await readFile(
           join(app, "product-assets/ui/forms/account.html"),
@@ -116,15 +129,89 @@ try {
         /<div class="account-modes"[\s\S]*?(?=<p id="account-status")/,
         '<div id="account-react" style="display:contents"></div>\n      ',
       ),
+      "forms/quick-add.html":
+        '<dialog id="quick-dialog" class="sheet add-sheet" aria-labelledby="quick-title"></dialog>',
+      "forms/family.html":
+        '<dialog id="family-dialog" class="sheet shared-panel" aria-labelledby="family-title"></dialog>',
+      "layout/family-context.html":
+        '<div id="family-context" class="family-context" hidden></div>',
+      "layout/header.html": (
+        await readFile(
+          join(app, "product-assets/ui/layout/header.html"),
+          "utf8",
+        )
+      ).replace(
+        /<button[^>]+id="open-care-inbox"[\s\S]*?<\/button>/,
+        '<span id="care-inbox-react" style="display:contents"></span>',
+      ),
+      "layout/program-cards.html":
+        '<section id="today-programs" aria-label="{{msg:ui.care-shortcuts}}"></section>',
+      "layout/today-sleep.html":
+        '<section class="today-tracker program-sleep" id="today-sleep" aria-labelledby="today-sleep-label" hidden></section>',
+      "layout/today-water.html":
+        '<section id="today-water" class="today-tracker water program-water" aria-labelledby="today-water-label"></section>',
+      "layout/water-feedback.html":
+        '<div id="water-feedback-react" style="display:contents"></div>',
+      "layout/cycle-today.html":
+        '<section class="today-tracker program-cycle" id="cycle-today-card" aria-labelledby="cycle-today-label" hidden></section>',
       "layout/cycle-tracking.html": (
         await readFile(
           join(app, "product-assets/ui/layout/cycle-tracking.html"),
           "utf8",
         )
-      ).replace(
-        /<details>\s*<summary>[^<]+<\/summary>\s*<form id="cycle-bulk-form"[\s\S]*?(?=<button id="cycle-open-settings")/,
-        '<div id="cycle-tools-react" style="display:contents"></div>\n          ',
-      ),
+      )
+        .replace(
+          /(<section class="cycle-panel" id="cycle-tracking">)[\s\S]*?<\/section>/,
+          "$1</section>",
+        )
+        .replace(
+          /<details id="cycle-preparation"[\s\S]*?<\/details>/,
+          '<div id="cycle-preparation-react" style="display:contents"></div>',
+        )
+        .replace(
+          /<details>\s*<summary>[^<]+<\/summary>\s*<form id="cycle-bulk-form"[\s\S]*?(?=<button id="cycle-open-settings")/,
+          '<div id="cycle-tools-react" style="display:contents"></div>\n          ',
+        )
+        .replace(
+          /<button id="cycle-open-settings"[^>]+>[\s\S]*?<\/button>/,
+          '<div id="cycle-settings-link-react" style="display:contents"></div>',
+        ),
+      "screens/cycle.html": (
+        await readFile(
+          join(app, "product-assets/ui/screens/cycle.html"),
+          "utf8",
+        )
+      )
+        .replace(
+          /(<div data-screen="cycle" hidden>)/,
+          '$1\n        <div id="cycle-overview-react" hidden></div>',
+        )
+        .replace(
+          /(<section id="cycle-(?:banner|calendar|trend|records)"[^>]*>)[\s\S]*?<\/section>/g,
+          "$1</section>",
+        ),
+      "screens/today.html": (
+        await readFile(
+          join(app, "product-assets/ui/screens/today.html"),
+          "utf8",
+        )
+      )
+        .replace(
+          /(<section class="cycle-panel program-cycle" id="cycle-companion-card"[^>]*>)[\s\S]*?<\/section>/,
+          "$1</section>",
+        )
+        .replace(
+          /<section id="today-reminders"[\s\S]*?<\/section>/,
+          '<div id="today-reminders-react" style="display:contents"></div>',
+        )
+        .replace(
+          /<div class="daily-main"[^>]*>[\s\S]*?(?= *<div id="today-family-bottom")/,
+          '<div id="today-timeline-react" style="display:contents"></div>\n        ',
+        )
+        .replace(
+          /<div id="today-cycle-feedback"[\s\S]*?<\/div>/,
+          '<div id="cycle-feedback-react" style="display:contents"></div>',
+        ),
       "screens/insights.html": '<div data-screen="insights" hidden></div>',
       "screens/medications.html": await readFile(
         join(app, "src/product/medication/screen.html"),
@@ -152,18 +239,10 @@ try {
         '<dialog id="routine-log-dialog" class="sheet routine-sheet" aria-labelledby="routine-log-title"></dialog>',
       "forms/medicine-phase.html": "",
       "forms/medicine-slot.html": "",
-      "forms/settings/appointment.html":
-        '<section id="appointment-settings" class="settings-panel" hidden></section>',
-      "forms/settings/water.html":
-        '<section id="water-settings" class="settings-panel water-panel" hidden></section>',
-      "forms/settings/display.html":
-        '<section id="display-settings" class="settings-panel" hidden></section>',
-      "forms/settings/profile.html":
-        '<section id="profile-settings" class="settings-panel" hidden></section>',
-      "forms/settings/sleep.html":
-        '<section id="sleep-settings" class="settings-panel health-settings" hidden></section>',
-      "forms/settings/backup.html":
-        '<section id="backup-settings" class="settings-panel" hidden></section>',
+      "forms/settings.html":
+        '<dialog id="settings-dialog" class="settings-dialog shared-panel" aria-labelledby="settings-title"></dialog>',
+      "forms/cycle-backup.html":
+        '<dialog id="cycle-backup-dialog" class="sheet add-sheet" aria-labelledby="cycle-backup-title"></dialog>',
       "forms/settings/snooze.html":
         '<section id="snooze-settings" class="settings-panel" hidden></section>',
     },

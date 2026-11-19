@@ -1,5 +1,7 @@
+import { useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Icon, PlanArtwork } from "./PlanCard";
 import { clearFeature, paintFeature } from "./renderer";
-import { element } from "../../product-assets/public/medication/shared/ui/dom.js";
 import { cycleEstimate } from "../../product-assets/public/medication/domain/cycle.js";
 import {
   localDigits,
@@ -21,6 +23,7 @@ type Point = { day: number; value: number };
 interface FamilyView {
   canView: (screen: "insights") => boolean;
   authorName: (entry: Entry) => string;
+  canRecord(kind: "cycle"): boolean;
 }
 interface OverviewOptions {
   today: () => number;
@@ -33,6 +36,8 @@ interface OverviewOptions {
   getFamilyView: () => FamilyView | null;
   openCalendar: (day: number) => void;
   edit: (day: number, options?: { end: boolean }) => void;
+  add(): void;
+  logDay(): void;
   remove: (day: number) => void;
 }
 
@@ -51,28 +56,66 @@ const flowLabels = {
   heavy: "ui.cycle-flow-heavy",
 };
 
-export function installCycleOverview({
+export function installCycleOverview(options: OverviewOptions) {
+  const host = $("cycle-overview-react");
+  return {
+    render(records: Records) {
+      paintFeature(host, <CycleOverview {...options} records={records} />);
+    },
+    reset() {
+      clearFeature(host);
+      $("cycle-calendar").hidden =
+        $("cycle-records").hidden =
+        $("cycle-trend").hidden =
+          true;
+    },
+  };
+}
+
+function CycleOverview({
   today,
   getDates,
   getFamilyView,
   openCalendar,
   edit,
+  add,
+  logDay,
   remove,
-}: OverviewOptions) {
-  const previousWeek = $<HTMLButtonElement>("cycle-previous-week");
-  const nextWeek = $<HTMLButtonElement>("cycle-next-week");
-  const metrics = [
-    ...document.querySelectorAll<HTMLButtonElement>("[data-cycle-metric]"),
-  ].map((control) => ({
-    control,
-    metric: control.dataset.cycleMetric as Metric,
-  }));
-  let week: number | undefined;
-  let historyPaint = 0;
-  let metric: Metric = "interval";
-  let entries: Entry[] = [];
-  let forecast: ReturnType<typeof cycleEstimate> | undefined;
-  let series: Record<Metric, Point[]> = { interval: [], duration: [] };
+  records,
+}: OverviewOptions & { records: Records }) {
+  const [selection, setSelection] = useState<number>();
+  const [requestedMetric, setMetric] = useState<Metric>("interval");
+  const previousWeek = useRef<HTMLButtonElement>(null);
+  const nextWeek = useRef<HTMLButtonElement>(null);
+  const reactivate = useRef(false);
+  const now = today();
+  const view = getFamilyView();
+  const dates = getDates();
+  const entries = Object.entries(records)
+    .map(([day, record]) => ({ ...record, day: Number(day) }))
+    .sort((a, b) => b.day - a.day);
+  const latest = entries[0];
+  const first = weekStart(entries.at(-1)?.day ?? now);
+  const forecast = cycleEstimate(records);
+  const current = forecast && forecast.last >= now ? forecast : null;
+  const last = weekStart(
+    Math.max(now, latest?.day ?? now, forecast?.last ?? now),
+  );
+  const week = Math.max(first, Math.min(last, selection ?? weekStart(now)));
+  const series: Record<Metric, Point[]> = {
+    interval: entries
+      .slice(0, -1)
+      .map(({ day }, index) => ({ day, value: day - entries[index + 1]!.day })),
+    duration: entries.flatMap(({ day, end }) =>
+      end == null ? [] : [{ day, value: end - day + 1 }],
+    ),
+  };
+  const metrics = (["interval", "duration"] as const).filter(
+    (metric) => series[metric].length >= 2,
+  );
+  const metric = metrics.includes(requestedMetric)
+    ? requestedMetric
+    : (metrics[0] ?? "interval");
 
   function showRecord(day: number) {
     const card = $("cycle-entry-" + day);
@@ -80,98 +123,86 @@ export function installCycleOverview({
     card?.scrollIntoView({ block: "center" });
   }
 
-  function paintWeek() {
-    const now = today();
-    const { shortDate, formatDay, dayNumber } = getDates();
-    const earliest = entries.at(-1);
-    const latest = entries[0];
-    if (!earliest || !latest) return;
-    const first = weekStart(earliest.day);
-    const last = weekStart(Math.max(now, latest.day, forecast?.last ?? now));
-    week = Math.max(first, Math.min(last, week ?? weekStart(now)));
-    previousWeek.disabled = week === first;
-    nextWeek.disabled = week === last;
-    $("cycle-week-label").textContent = t(
-      "ui.cycle-date-range",
-      shortDate(week),
-      shortDate(week + 6),
-    );
-    const days = Array.from({ length: 7 }, (_, offset): WeekCell => {
-      const day = week! + offset;
-      const entry = entries.find(
-        (item) => item.day <= day && day <= (item.end ?? item.day),
-      );
-      const mark = entry
-        ? "recorded"
-        : forecast &&
-            day >= now &&
-            day >= forecast.first &&
-            day <= forecast.last
-          ? "forecast"
-          : "";
-      const state =
-        mark === "recorded"
-          ? "ui.logged-cycle"
-          : mark === "forecast"
-            ? "ui.estimated-cycle-start"
-            : null;
-      return {
-        day,
-        mark,
-        date: dayNumber(day),
-        current: day === now,
-        label: state
-          ? `${formatDay(day, true)} · ${t(state)}`
-          : formatDay(day, true),
-        choose: entry && (() => showRecord(entry.day)),
-      };
-    });
-    const host = $("cycle-days");
-    paintFeature(host, <CycleWeek days={days} />);
-    const view = getFamilyView();
-    $("cycle-full-calendar").hidden = Boolean(
-      view && !view.canView("insights"),
-    );
-  }
+  useLayoutEffect(() => {
+    if (!reactivate.current) return;
+    reactivate.current = false;
+    if (previousWeek.current?.disabled) nextWeek.current?.focus();
+    else if (nextWeek.current?.disabled) previousWeek.current?.focus();
+  }, [week]);
 
-  function paintTrend() {
-    const visible = metrics.filter(({ metric }) => series[metric].length >= 2);
-    $("cycle-trend").hidden = visible.length === 0;
-    if (!visible.length) {
-      clearFeature($("cycle-bars"));
-      return;
-    }
-    if (!visible.some((item) => item.metric === metric))
-      metric = visible[0]!.metric;
-    for (const item of metrics) {
-      item.control.hidden = !visible.includes(item);
-      item.control.setAttribute("aria-pressed", String(item.metric === metric));
-    }
-    const points = series[metric].slice(0, 6).reverse();
-    const scale = Math.max(...points.map((point) => point.value));
-    const { shortDate, formatDay } = getDates();
-    const bars = points.map(({ day, value }) => ({
-      key: `cycle-bar-${metric}-${day}`,
-      label: formatDay(day) + " · " + dayCount(value),
-      amount: dayCount(value),
-      date: shortDate(day),
-      height: `${(100 * value) / scale}%`,
-      choose: () => showRecord(day),
-    }));
-    const host = $("cycle-bars");
-    paintFeature(host, <CycleTrend bars={bars} />);
+  function shift(days: number) {
+    reactivate.current = true;
+    setSelection(week + days);
   }
-
-  function historyRow(entry: Entry, view: FamilyView | null): HistoryRow {
+  const days = Array.from({ length: 7 }, (_, offset): WeekCell => {
+    const day = week + offset;
+    const entry = entries.find(
+      (item) => item.day <= day && day <= (item.end ?? item.day),
+    );
+    const mark = entry
+      ? "recorded"
+      : forecast && day >= now && day >= forecast.first && day <= forecast.last
+        ? "forecast"
+        : "";
+    const label = dates.formatDay(day, true);
+    return {
+      day,
+      mark,
+      date: dates.dayNumber(day),
+      current: day === now,
+      label: mark
+        ? label +
+          " · " +
+          t(
+            mark === "recorded"
+              ? "ui.logged-cycle"
+              : "ui.estimated-cycle-start",
+          )
+        : label,
+      choose: entry && (() => showRecord(entry.day)),
+    };
+  });
+  const points = series[metric].slice(0, 6).reverse();
+  const scale = Math.max(...points.map((point) => point.value));
+  const bars = points.map(({ day, value }) => ({
+    key: `cycle-bar-${metric}-${day}`,
+    label: dates.formatDay(day) + " · " + dayCount(value),
+    amount: dayCount(value),
+    date: dates.shortDate(day),
+    height: `${(100 * value) / scale}%`,
+    choose: () => showRecord(day),
+  }));
+  const range =
+    current &&
+    (current.first === current.last
+      ? t("ui.estimated-cycle-date", dates.formatDay(current.last))
+      : t(
+          "ui.estimated-value-to-value",
+          dates.year(current.first) === dates.year(current.last)
+            ? dates.shortDate(current.first)
+            : dates.formatDay(current.first),
+          dates.formatDay(current.last),
+        ));
+  useLayoutEffect(() => {
+    const banner = $("cycle-banner");
+    banner.classList.add("day-card");
+    banner.dataset.cardKind = "cycle";
+    banner.dataset.featured = "";
+    $("cycle-calendar").hidden = $("cycle-records").hidden = !latest;
+    $("cycle-trend").hidden = !metrics.length;
+  }, [latest, metrics.length]);
+  const missingEnd = latest && latest.end == null;
+  const rows = entries.map((entry): HistoryRow => {
     const { day, end, flow, note, sharedNote, recordedBy } = entry;
-    const { formatDay, shortDate, year } = getDates();
     const date =
       end == null || end === day
-        ? formatDay(day)
+        ? dates.formatDay(day)
         : t(
             "ui.cycle-date-range",
-            year(day) === year(end) ? shortDate(day) : formatDay(day),
-            formatDay(end),
+            dates.year(day) === dates.year(end)
+              ? dates.shortDate(day)
+              : dates.formatDay(day),
+            dates.formatDay(end),
           );
     return {
       id: "cycle-entry-" + day,
@@ -188,130 +219,205 @@ export function installCycleOverview({
         ? undefined
         : { edit: () => edit(day), remove: () => remove(day) },
     };
-  }
-
-  function render(records: Records) {
-    const now = today();
-    const view = getFamilyView();
-    entries = Object.entries(records)
-      .map(([day, record]) => ({ ...record, day: Number(day) }))
-      .sort((a, b) => b.day - a.day);
-    forecast = cycleEstimate(records);
-    const latest = entries[0];
-    const hasEstimate = Boolean(forecast && forecast.last >= now);
-    $("cycle-banner-title").textContent = t(
-      hasEstimate ? "ui.next-cycle-start" : "ui.menstrual-cycle",
-    );
-    $("cycle-add").textContent = t(
-      latest ? "ui.log-period-start" : "ui.cycle-first-start",
-    );
-    const dates = getDates();
-    $("cycle-latest").textContent = latest
-      ? t("ui.cycle-last-start", dates.formatDay(latest.day))
-      : "";
-    const estimate = $("cycle-forecast");
-    if (forecast && hasEstimate) {
-      const first =
-        dates.year(forecast.first) === dates.year(forecast.last)
-          ? dates.shortDate(forecast.first)
-          : dates.formatDay(forecast.first);
-      const last = dates.formatDay(forecast.last);
-      const range =
-        forecast.first === forecast.last
-          ? t("ui.estimated-cycle-date", last)
-          : t("ui.estimated-value-to-value", first, last);
-      estimate.replaceChildren(
-        element("strong", range, "cycle-estimate-range"),
-        element(
-          "span",
-          t("ui.cycle-estimate-samples", localDigits(forecast.samples)),
-          "cycle-estimate-context",
-        ),
-      );
-      if (forecast.uncertain)
-        estimate.append(
-          element(
-            "span",
-            t("ui.cycle-estimate-uncertain"),
-            "cycle-estimate-context",
-          ),
-        );
-    } else {
-      estimate.textContent = t(
-        !latest
-          ? "ui.no-cycles-logged-yet"
-          : !forecast
-            ? "ui.an-estimate-appears-after-you-log-three-start-dates"
-            : "ui.log-a-new-start-date-to-update-the-estimate",
-      );
-    }
-    const missingEnd = latest?.end == null && Boolean(latest);
-    $("cycle-end-status").hidden = !missingEnd;
-    $("cycle-log-end").hidden = !missingEnd || Boolean(view);
-    $("cycle-log-symptoms").hidden = Boolean(view);
-    $("cycle-calendar").hidden = $("cycle-records").hidden = !latest;
-    const history = $("cycle-history");
-    const rows = entries.map((entry) => historyRow(entry, view));
-    paintFeature(history, <CycleHistory key={++historyPaint} rows={rows} />);
-    series = {
-      interval: entries
-        .slice(0, -1)
-        .map(({ day }, i) => ({ day, value: day - entries[i + 1]!.day })),
-      duration: entries
-        .filter(({ end }) => end != null)
-        .map(({ day, end }) => ({ day, value: end! - day + 1 })),
-    };
-    if (latest) paintWeek();
-    paintTrend();
-  }
-
-  for (const [control, step] of [
-    [previousWeek, -7],
-    [nextWeek, 7],
-  ] as const) {
-    control.addEventListener("click", () => {
-      if (week === undefined) return;
-      week += step;
-      paintWeek();
-      if (control.disabled)
-        (control === previousWeek ? nextWeek : previousWeek).focus();
-    });
-  }
-  for (const item of metrics)
-    item.control.addEventListener("click", () => {
-      metric = item.metric;
-      paintTrend();
-    });
-  $("cycle-full-calendar").addEventListener("click", () => {
-    const now = today();
-    if (week !== undefined) openCalendar(weekStart(now) === week ? now : week);
   });
-  $("cycle-log-end").addEventListener("click", () => {
-    if (!getFamilyView() && entries[0]) edit(entries[0].day, { end: true });
-  });
-
-  return {
-    render,
-    reset() {
-      week = undefined;
-      metric = "interval";
-      entries = [];
-      forecast = undefined;
-      series = { interval: [], duration: [] };
-      for (const id of ["cycle-latest", "cycle-forecast", "cycle-week-label"])
-        $(id).replaceChildren();
-      for (const id of ["cycle-days", "cycle-bars", "cycle-history"])
-        clearFeature($(id));
-      for (const id of [
-        "cycle-calendar",
-        "cycle-end-status",
-        "cycle-log-end",
-        "cycle-records",
-        "cycle-trend",
-      ])
-        $(id).hidden = true;
-    },
-  };
+  return (
+    <>
+      {createPortal(
+        <>
+          <div className="day-card-art" aria-hidden="true">
+            <PlanArtwork id="cycle" />
+          </div>
+          <div className="day-card-content">
+            <small className="day-card-kind">{t("ui.cycle")}</small>
+            <h2 id="cycle-banner-title" className="day-card-title">
+              {t(current ? "ui.next-cycle-start" : "ui.menstrual-cycle")}
+            </h2>
+            <div className="day-card-details">
+              <p id="cycle-latest">
+                {latest &&
+                  t("ui.cycle-last-start", dates.formatDay(latest.day))}
+              </p>
+              <p id="cycle-forecast" aria-live="polite">
+                {current ? (
+                  <>
+                    <strong className="cycle-estimate-range">{range}</strong>
+                    <span className="cycle-estimate-context">
+                      {t(
+                        "ui.cycle-estimate-samples",
+                        localDigits(current.samples),
+                      )}
+                    </span>
+                    {current.uncertain && (
+                      <span className="cycle-estimate-context">
+                        {t("ui.cycle-estimate-uncertain")}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  t(
+                    !latest
+                      ? "ui.no-cycles-logged-yet"
+                      : !forecast
+                        ? "ui.an-estimate-appears-after-you-log-three-start-dates"
+                        : "ui.log-a-new-start-date-to-update-the-estimate",
+                  )
+                )}
+              </p>
+              <p id="cycle-end-status" hidden={!missingEnd}>
+                {t("ui.cycle-end-missing")}
+              </p>
+            </div>
+          </div>
+          <div className="day-card-actions">
+            <button
+              id="cycle-add"
+              className="primary-action"
+              type="button"
+              hidden={view?.canRecord("cycle") === false}
+              onClick={(event) => {
+                event.stopPropagation();
+                add();
+              }}
+            >
+              {t(latest ? "ui.log-period-start" : "ui.cycle-first-start")}
+            </button>
+            <button
+              id="cycle-log-end"
+              className="secondary"
+              type="button"
+              hidden={!missingEnd || Boolean(view)}
+              onClick={() => {
+                if (!view && latest) edit(latest.day, { end: true });
+              }}
+            >
+              {t("ui.cycle-log-end")}
+            </button>
+            <button
+              id="cycle-log-symptoms"
+              className="secondary"
+              type="button"
+              data-cycle-log=""
+              hidden={Boolean(view)}
+              onClick={logDay}
+            >
+              {t("ui.cycle-day-log")}
+            </button>
+          </div>
+        </>,
+        $("cycle-banner"),
+      )}
+      {createPortal(
+        <>
+          <div className="cycle-panel-heading">
+            <h2 id="cycle-calendar-title">{t("ui.calendar")}</h2>
+            <button
+              id="cycle-full-calendar"
+              className="text-button"
+              type="button"
+              hidden={view?.canView("insights") === false}
+              onClick={() => openCalendar(weekStart(now) === week ? now : week)}
+            >
+              {t("ui.cycle-full-calendar")}
+            </button>
+          </div>
+          <div className="cycle-week-heading">
+            <button
+              id="cycle-previous-week"
+              data-date-arrow="previous"
+              className="icon-button"
+              type="button"
+              aria-label={t("ui.cycle-previous-week")}
+              ref={previousWeek}
+              disabled={week === first}
+              onClick={() => shift(-7)}
+            >
+              <Icon name="expand" />
+            </button>
+            <p id="cycle-week-label" aria-live="polite">
+              {latest &&
+                t(
+                  "ui.cycle-date-range",
+                  dates.shortDate(week),
+                  dates.shortDate(week + 6),
+                )}
+            </p>
+            <button
+              id="cycle-next-week"
+              data-date-arrow="next"
+              className="icon-button"
+              type="button"
+              aria-label={t("ui.cycle-next-week")}
+              ref={nextWeek}
+              disabled={week === last}
+              onClick={() => shift(7)}
+            >
+              <Icon name="expand" />
+            </button>
+          </div>
+          <div id="cycle-days" className="cycle-days">
+            {latest && <CycleWeek days={days} />}
+          </div>
+          <ul className="cycle-calendar-key">
+            <li>
+              <span data-cycle-mark="recorded" aria-hidden="true" />
+              {t("ui.logged-cycle")}
+            </li>
+            <li>
+              <span data-cycle-mark="forecast" aria-hidden="true" />
+              {t("ui.estimated-cycle-start")}
+            </li>
+          </ul>
+        </>,
+        $("cycle-calendar"),
+      )}
+      {createPortal(
+        <>
+          <h2 id="cycle-trend-title">{t("ui.cycle-recent-trend")}</h2>
+          <div
+            className="cycle-metrics"
+            role="group"
+            aria-labelledby="cycle-trend-title"
+          >
+            <button
+              type="button"
+              className="secondary"
+              data-cycle-metric="interval"
+              aria-pressed={metric === "interval"}
+              hidden={!metrics.includes("interval")}
+              onClick={() => setMetric("interval")}
+            >
+              {t("ui.cycle-start-interval")}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              data-cycle-metric="duration"
+              aria-pressed={metric === "duration"}
+              hidden={!metrics.includes("duration")}
+              onClick={() => setMetric("duration")}
+            >
+              {t("ui.cycle-period-duration")}
+            </button>
+          </div>
+          <ol id="cycle-bars" className="cycle-bars" aria-live="polite">
+            {metrics.length > 0 && <CycleTrend bars={bars} />}
+          </ol>
+        </>,
+        $("cycle-trend"),
+      )}
+      {createPortal(
+        <>
+          <h2 id="cycle-history-title" tabIndex={-1}>
+            {t("ui.cycle-history")}
+          </h2>
+          <div id="cycle-history">
+            <CycleHistory rows={rows} />
+          </div>
+        </>,
+        $("cycle-records"),
+      )}
+    </>
+  );
 }
 
 interface WeekCell {

@@ -4,11 +4,12 @@ import {
   t,
 } from "../../product-assets/public/medication/shared/i18n/locale.js";
 import { waterGoalReached } from "../../product-assets/public/medication/domain/care-plan.js";
-import { changeReminderRevision } from "../../product-assets/public/medication/features/reminders/controller.js";
+import { changeReminderRevision } from "../../product-assets/public/medication/features/reminders/service.js";
 import { localClock } from "../../product-assets/public/medication/shared/ui/input-values.js";
 import { renderEntries, type WaterEntry } from "./WaterEntries";
 import { WaterLogForm, type WaterTarget } from "./WaterLogForm";
 import { paintFeature } from "./renderer";
+import { TodayWater, type TodayWaterProps } from "./TodayWater";
 
 interface WaterState {
   water?: WaterEntry[];
@@ -22,7 +23,6 @@ interface WaterView {
 }
 
 interface Options {
-  getState(): WaterState;
   selectedDay(): number;
   today(): number;
   actionDay(): number;
@@ -43,13 +43,11 @@ function $<T extends HTMLElement = HTMLElement>(id: string) {
 }
 
 const numbers = new Intl.NumberFormat(locale);
-const percent = new Intl.NumberFormat(locale, { style: "percent" });
 function clockText(value: string) {
   return value.replace(/\d/g, (digit) => numbers.format(Number(digit)));
 }
 
 export function installWater({
-  getState,
   selectedDay,
   today,
   actionDay,
@@ -61,21 +59,6 @@ export function installWater({
 }: Options) {
   const dialog = $<HTMLDialogElement>("water-dialog");
   let formKey = 0;
-  let quickWaterEntry: WaterEntry | null = null;
-  let quickWaterTimer: ReturnType<typeof setTimeout> | undefined;
-
-  function dismissQuickFeedback() {
-    clearTimeout(quickWaterTimer);
-    quickWaterEntry = null;
-    $("today-water-feedback").hidden = true;
-  }
-
-  function expireQuickFeedback() {
-    if ($("today-water-feedback").contains(document.activeElement)) {
-      quickWaterTimer = setTimeout(expireQuickFeedback, 2000);
-    } else dismissQuickFeedback();
-  }
-
   function mutateWater(
     change: (state: WaterState) => void,
     success: string,
@@ -125,64 +108,6 @@ export function installWater({
     );
     return saved ? entry : null;
   }
-  function findQuickWater(state: WaterState, entry: WaterEntry) {
-    return state.water?.find(
-      (record) =>
-        record.id === entry.id &&
-        record.amount === entry.amount &&
-        record.day === entry.day &&
-        record.time === entry.time,
-    );
-  }
-  function renderQuickWaterFeedback(state: WaterState, day: number) {
-    if (quickWaterEntry && !findQuickWater(state, quickWaterEntry))
-      quickWaterEntry = null;
-    $("today-water-feedback").hidden = quickWaterEntry?.day !== day;
-  }
-  const quickWaterButton = $<HTMLButtonElement>("today-water-quick");
-  async function quickAddWater() {
-    if (quickWaterButton.disabled || selectedDay() !== today()) return;
-    quickWaterButton.disabled = true;
-    try {
-      const entry = await addWater(250);
-      if (!entry) return;
-      quickWaterEntry = entry;
-      $("today-water-message").textContent = t(
-        "ui.logged-value-ml",
-        numbers.format(entry.amount),
-      );
-      renderQuickWaterFeedback(getState(), selectedDay());
-      clearTimeout(quickWaterTimer);
-      quickWaterTimer = setTimeout(expireQuickFeedback, 6000);
-    } finally {
-      quickWaterButton.disabled = false;
-    }
-  }
-  $("today-water-dismiss").addEventListener("click", () => {
-    dismissQuickFeedback();
-    renderQuickWaterFeedback(getState(), selectedDay());
-    quickWaterButton.focus({ preventScroll: true });
-  });
-  $("today-water-undo").addEventListener("click", async () => {
-    const entry = quickWaterEntry;
-    if (!entry) return;
-    if (
-      await mutateWater(
-        (state) => {
-          const record = findQuickWater(state, entry);
-          if (!record)
-            throw new CareInputError(
-              t("ui.this-entry-has-changed-or-been-removed"),
-            );
-          state.water = state.water!.filter((item) => item.id !== entry.id);
-        },
-        t("ui.water-entry-undone"),
-        entry.day,
-      )
-    )
-      quickWaterButton.focus({ preventScroll: true });
-  });
-
   function openWater(
     entry?: WaterEntry | null,
     target?: WaterTarget | null,
@@ -217,28 +142,28 @@ export function installWater({
     total: number,
     goal: number,
     progress: number,
+    handlers: Pick<TodayWaterProps, "open" | "logFamily" | "history">,
   ) {
-    const future = day > today();
+    const host = $("today-water");
     const view = getFamilyView();
-    $("today-water").hidden = future || view?.has("water") === false;
-    $("today-water").querySelector<HTMLElement>("[data-open-water]")!.hidden =
-      view?.canRecord("water", day) === false;
-    $("future-schedule").hidden = !future;
-    $("open-water-history").hidden = future;
-    $("today-water-label").textContent =
-      day === today()
-        ? t("ui.todays-water")
-        : t("ui.water-intake-for-this-day");
-    $("today-water-total").textContent = numbers.format(total);
-    $("today-water-goal").textContent = numbers.format(goal);
-    $<HTMLProgressElement>("today-water-progress").value = progress;
-    $("today-water-percent").textContent = percent.format(progress);
-    $("today-water").toggleAttribute("data-goal-reached", total >= goal);
-    quickWaterButton.hidden =
-      day !== today() || view?.canRecord("water", day) === false;
-    if (view) $("today-water-feedback").hidden = true;
-    else renderQuickWaterFeedback(state, day);
-    fillGlass("today-water", progress);
+    paintFeature(
+      host,
+      <TodayWater
+        {...handlers}
+        host={host}
+        state={state}
+        day={day}
+        today={today()}
+        total={total}
+        goal={goal}
+        progress={progress}
+        family={Boolean(view)}
+        visible={view?.has("water") !== false}
+        canRecord={view?.canRecord("water", day) !== false}
+        addWater={addWater}
+        mutateWater={mutateWater}
+      />,
+    );
   }
 
   function renderWater(
@@ -287,5 +212,5 @@ export function installWater({
     });
   }
 
-  return { openWater, addWater, quickAddWater, renderTodayWater, renderWater };
+  return { openWater, addWater, renderTodayWater, renderWater };
 }

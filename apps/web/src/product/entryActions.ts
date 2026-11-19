@@ -8,35 +8,34 @@ const triggers = {
 };
 const selector = Object.values(triggers).join(", ");
 
-type Kind = keyof typeof triggers;
+export type EntryKind = keyof typeof triggers;
+type Kind = EntryKind;
 interface FamilyView {
   canRecord: (kind: "water" | "cycle", day: number) => boolean;
   record: (action: { kind: "water" | "cycle"; day: number }) => void;
   canAdd: (kind: Kind) => boolean;
   add: (kind: Kind, day: number) => void;
 }
-interface EntryActions {
-  currentView: () => FamilyView | null;
+interface EntryActions<View extends FamilyView> {
+  currentView: () => View | null;
   currentDay: () => number;
   open: (kind: Kind, control: HTMLElement | undefined) => void;
   addWater: (amount: number, day: number) => unknown;
-  quickWater: () => unknown;
   familyWater: (
-    view: FamilyView,
+    view: View,
     day: number,
     amount: number,
     control: HTMLElement | undefined,
   ) => unknown;
 }
 
-export function installEntryActions({
+export function installEntryActions<View extends FamilyView>({
   currentView,
   currentDay,
   open,
   addWater,
-  quickWater,
   familyWater,
-}: EntryActions) {
+}: EntryActions<View>) {
   const quick = document.querySelector<HTMLDialogElement>("#quick-dialog")!;
 
   function entry(kind: Kind, control?: HTMLElement) {
@@ -52,8 +51,7 @@ export function installEntryActions({
         else view.record({ kind, day });
       } else if (view.canAdd(kind)) view.add(kind, day);
     } else if (kind === "water" && amount) {
-      if (todayWater) void quickWater();
-      else void addWater(amount, day);
+      void addWater(amount, day);
     } else open(kind, control);
   }
 
