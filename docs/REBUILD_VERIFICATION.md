@@ -224,7 +224,11 @@ Starting from `4b4f4ee`, Linux WebKit 27.2 reproduced the timeout with three fre
 
 Reminder setup now reads the browser subscription only when an enrollment token is stored. Devices without an enrollment still initialize the notification controls, and subscription creation begins from the existing Enable gesture. The corrected build passed five consecutive Caddy runs with the Service Worker enabled, including an offline Insights reload in each run. An additional diagnostic confirmed the successful push configuration response and zero subscription reads on first visit. The strengthened notification regression failed on the starting build because it performed one read before enrollment. It passed in both test browsers with the fix and confirmed that subscription reads still occur after enrollment. Ten focused product cases and all 57 compatibility and care cases passed. The compatibility alarm verification and the production build, typecheck, and lint passed.
 
-Native Safari verification remains outstanding. The Linux reproduction establishes the startup trigger in the tested WebKit environment. An isolated HTTPS fixture is available for the device test, which still needs a connected iPhone and a trusted test origin. The iPhone browser tab and the installed web app can take different push setup paths. Preserve **NOT READY** pending device verification and the separate source reconciliation gate.
+### Native iPhone Safari result
+
+On 2026-11-19, the tester confirmed that Reports opened online and offline in a native Safari tab on an iPhone. The isolated HTTPS Caddy fixture served the corrected build from `599679b`. At 16:20:09 Tehran time, the corrected origin logged a `204` diagnostic with `secure=true`, `controlled=true`, `shell=true`, and `ios=true`. This confirms a secure context, page control by the medication Service Worker, and the presence of the shell cache. The offline result comes from the tester's observation because an offline view does not reach Caddy.
+
+The iPhone requests reached the corrected origin. The access log contains no iPhone request for `?view=insights` or to the previous-build origin, so it does not establish direct-link timing or a prior-build comparison. macOS Safari and the iPhone Home Screen app remain untested. The iPhone Safari tab result passes. Release remains **NOT READY**, with the separate source reconciliation gate still open.
 
 ## Outstanding release evidence
 
