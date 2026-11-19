@@ -41,7 +41,9 @@ if (
   config.hyperdrive[0].binding !== "HYPERDRIVE" ||
   config.r2_buckets?.length !== 1 ||
   config.r2_buckets[0].binding !== "BACKUPS" ||
-  config.durable_objects?.bindings.some((binding) => binding.script_name || binding.environment)
+  config.durable_objects?.bindings.some((binding) => "script_name" in binding || "environment" in binding) ||
+  config.migrations?.some((migration) =>
+    Object.keys(migration).some((key) => key !== "tag" && key !== "new_sqlite_classes"))
 )
   throw Error("The staging configuration must use only its own bindings and workers.dev");
 config.name = portable ? "medora-portable-staging" : "medora-v2-staging";

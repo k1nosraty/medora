@@ -92,4 +92,15 @@ describe("offline staging configuration", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("must use only its own bindings");
   });
+
+  it("rejects a bridge migration that would transfer an existing Worker class", async () => {
+    const template = join(dir, "local.json");
+    const config = JSON.parse(await readFile(template, "utf8"));
+    config.migrations.push({
+      tag: "unsafe-transfer",
+      transferred_classes: [{ from: "Family", from_script: "unrelated-fixture", to: "Families" }],
+    });
+    await writeFile(template, JSON.stringify(config));
+    expect(run(["--check"]).stderr).toContain("must use only its own bindings");
+  });
 });
