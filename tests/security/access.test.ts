@@ -1,9 +1,10 @@
+import { fixtureDatabase } from "../../scripts/verification/fixture-database.mjs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { repository } from "../../apps/api/src/repository";
 import { createApp } from "../../apps/api/src/app";
 import { digest, token } from "../../apps/api/src/auth";
-const url = process.env.MEDORA_TEST_DATABASE_URL;
+const url = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
 describe.skipIf(!url)("session and encrypted archive boundaries", () => {
   const pool = new Pool({ connectionString: url }),
     repo = repository(pool),

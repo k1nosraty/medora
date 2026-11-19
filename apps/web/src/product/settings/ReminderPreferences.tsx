@@ -9,7 +9,7 @@ import {
   appointmentDefaults,
   localZone,
   waterDefaults,
-} from "../../../product-assets/public/medication/domain/care-plan.js";
+} from "@medora/domain/browser/care-plan";
 import {
   locale,
   t,

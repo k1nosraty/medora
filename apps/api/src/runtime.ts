@@ -58,15 +58,17 @@ export function createRuntime(
     app,
     async tick() {
       if ((await store.productWriter()) === "frozen") return;
-      const jobs = await Promise.allSettled([
-        identity?.drain(),
-        operations.maintenance(),
-        removeBackupObjects(pool, storage),
-        reminders?.tick(),
-        release?.tick(),
-      ]);
-      if (jobs.some(({ status }) => status === "rejected"))
-        console.warn("background_job_deferred");
+      const jobs = {
+        identity_mail: identity?.drain(),
+        operations_maintenance: operations.maintenance(),
+        backup_cleanup: removeBackupObjects(pool, storage),
+        reminders: reminders?.tick(),
+        release_notifications: release?.tick(),
+      };
+      await Promise.all(Object.entries(jobs).map(async ([job, running]) => {
+        try { await running; }
+        catch { console.warn("background_job_deferred", job); }
+      }));
     },
   };
 }

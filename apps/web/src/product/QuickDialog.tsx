@@ -2,7 +2,7 @@ import { Icon, PlanArtwork } from "./PlanCard";
 import { paintFeature } from "./renderer";
 import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
 import type { EntryKind } from "./entryActions";
-import type { FamilyView } from "./product";
+import type { FamilyView } from "./productState";
 
 const kinds = [
   ["medicine", "ui.add-medicine", "bottle"],

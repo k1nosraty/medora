@@ -4,12 +4,12 @@ import {
   doseId,
   doseTime,
   trackSchedule,
-} from "../../../product-assets/public/medication/domain/care-index.js";
+} from "@medora/domain/browser/care-index";
 import {
   localZone,
   minuteMs,
-} from "../../../product-assets/public/medication/domain/care-plan.js";
-import * as engine from "../../../product-assets/public/medication/domain/medication-rules.js";
+} from "@medora/domain/browser/care-plan";
+import * as engine from "@medora/domain/browser/medication-rules";
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 

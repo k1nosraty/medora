@@ -17,20 +17,20 @@ import {
   appointmentDefaults,
   localZone,
   waterDefaults,
-} from "../../../product-assets/public/medication/domain/care-plan.js";
+} from "@medora/domain/browser/care-plan";
 import { timeZoneCity } from "../../../product-assets/public/medication/shared/ui/time-zone-picker.js";
 import {
   accentOf,
   accentLabel,
 } from "../../../product-assets/public/medication/styles/theme.js";
-import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
-import { sleepIsEnabled } from "../../../product-assets/public/medication/domain/sleep.js";
+import { cycleIsEnabled } from "@medora/domain/browser/profile";
+import { sleepIsEnabled } from "@medora/domain/browser/sleep";
 import { fitDialogToViewport } from "../../../product-assets/public/medication/shared/ui/dom.js";
 import { BackupPanel } from "../backups/BackupPanel";
 import type { BackupOperations } from "../backups/backupOperations";
 import { MedicationSnooze } from "../medication/MedicationSnooze";
 import { Icon, PlanArtwork } from "../PlanCard";
-import type { CareState } from "../product";
+import type { CareState } from "../productState";
 import { paintFeature } from "../renderer";
 import { CyclePreferences, type MutateSettings } from "./CyclePreferences";
 import { DeviceNotifications, NotificationBadge } from "./DeviceNotifications";

@@ -3,16 +3,20 @@ import {
   t,
 } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import type { calendarFormat } from "../../../product-assets/public/medication/shared/ui/calendar-format.js";
-import type { createCareIndex } from "../../../product-assets/public/medication/domain/care-index.js";
+import type { createCareIndex } from "@medora/domain/browser/care-index";
 import type { RenderDose } from "../medication/Medication";
 import type { installAppointments } from "../appointments/Appointments";
 import type { installRoutines } from "../routines/Routines";
-import type { CareState, FamilyView } from "../product";
+import type { CareState, FamilyView } from "../productState";
 import { clearMonthGrid } from "../MonthGrid";
 import { Icon } from "../PlanCard";
 import { clearFeature, disposeCards, paintFeature } from "../renderer";
 import { CalendarShell, paintCalendar } from "./Calendar";
-import { Reports, clearWaterChart, type Period } from "./Reports";
+import { lazy, Suspense } from "react";
+import { clearWaterChart } from "../WaterChart";
+import type { Period } from "./Reports";
+
+const Reports = lazy(async () => ({ default: (await import("./Reports")).Reports }));
 
 type Section = "calendar" | "reports";
 interface FeatureCalls {
@@ -163,19 +167,21 @@ export function installInsights({
         first = dates.monthStart(first - 1);
     paintFeature(
       get("reports-panel"),
-      <Reports
-        first={first}
-        last={last}
-        period={period}
-        dates={dates}
-        state={state}
-        index={index}
-        view={view}
-        change={(value) => {
-          period = value;
-          render();
-        }}
-      />,
+      <Suspense fallback={<p role="status">{t("ui.loading-medora")}</p>}>
+        <Reports
+          first={first}
+          last={last}
+          period={period}
+          dates={dates}
+          state={state}
+          index={index}
+          view={view}
+          change={(value) => {
+            period = value;
+            render();
+          }}
+        />
+      </Suspense>,
     );
     timer = setTimeout(render, 60_000 - (Date.now() % 60_000));
   }

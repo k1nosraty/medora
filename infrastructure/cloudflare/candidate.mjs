@@ -1,4 +1,4 @@
-import product from "../../web/src/worker.mjs";
+import product from "../../apps/compat-worker/src/worker.mjs";
 import journal from "../../apps/api/src/adapters/worker.ts";
 
 export {
@@ -9,7 +9,7 @@ export {
   Operations,
   Promotions,
   PushPilot,
-} from "../../web/src/worker.mjs";
+} from "../../apps/compat-worker/src/worker.mjs";
 
 export default {
   fetch(request, env, ctx) {

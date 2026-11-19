@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, PlanArtwork } from "./PlanCard";
 import { clearFeature, paintFeature } from "./renderer";
-import { cycleEstimate } from "../../product-assets/public/medication/domain/cycle.js";
+import { cycleEstimate } from "@medora/domain/browser/cycle";
 import {
   localDigits,
   t,

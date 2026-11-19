@@ -3,13 +3,13 @@ import {
   appointmentOffsets,
   appointmentReminders,
   appointmentDefaults,
-} from "../../../product-assets/public/medication/domain/care-plan.js";
+} from "@medora/domain/browser/care-plan";
 import {
   dayMs,
   timezone,
   localWall,
-} from "../../../product-assets/public/medication/domain/wall-clock.js";
-import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
+} from "@medora/domain/browser/wall-clock";
+import { isoDay } from "@medora/domain/browser/care-index";
 import {
   t,
   localDigits,

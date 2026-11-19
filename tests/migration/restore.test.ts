@@ -1,12 +1,12 @@
 import "fake-indexeddb/auto";
 import { expect, it } from "vitest";
 import { readFile } from "node:fs/promises";
-import { DeviceArchive } from "../../apps/web/src/storage/archive";
-import { restoreFile } from "../../apps/web/src/storage/backup";
+import { DeviceArchive } from "../../apps/web/src/journal/storage/archive";
+import { restoreFile } from "../../apps/web/src/journal/storage/backup";
 it("restores the real Android fixture, retains its encrypted original and reconciles device rows", async () => {
   const bytes = await readFile(
     new URL(
-      "../../web/test/fixtures/android-medora-v1.medora",
+      "../compatibility/fixtures/android-medora-v1.medora",
       import.meta.url,
     ),
   );
@@ -32,9 +32,9 @@ it("restores the real Android fixture, retains its encrypted original and reconc
   db.close();
 });
 
-import { Journal } from "../../apps/web/src/storage/journal";
-import { exportProfile } from "../../apps/web/src/storage/backup";
-import { importProfile } from "../../apps/web/src/storage/profiles";
+import { Journal } from "../../apps/web/src/journal/storage/journal";
+import { exportProfile } from "../../apps/web/src/journal/storage/backup";
+import { importProfile } from "../../apps/web/src/journal/storage/profiles";
 it("respects device-only cycle care in account backups and round trips a separate cycle archive", async () => {
   const journal = new Journal("privacy-" + crypto.randomUUID()),
     archive = new DeviceArchive("images-" + crypto.randomUUID());

@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { equalCareValues } from "../../apps/web/product-assets/public/medication/domain/care-contract.js";
+import { equalCareValues } from "../../packages/domain/src/browser/care-contract.js";
 const tables = {
   families: ["family_groups", ["id"]],
   family_members: ["family_members", ["id"]],

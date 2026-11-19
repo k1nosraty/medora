@@ -1,6 +1,6 @@
 import { expect, test } from "./runner.mjs";
 import { readFile } from "node:fs/promises";
-import { decryptBackup } from "../../apps/web/product-assets/public/medication/shared/crypto/backup.js";
+import { decryptBackup } from "../../packages/domain/src/crypto/backup.js";
 
 test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
 test.use({ serviceWorkers: "block" });

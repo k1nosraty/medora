@@ -22,7 +22,7 @@ const env = {
 };
 let worker, closed;
 async function start(fenced = false) {
-  worker = spawn(process.execPath, ["web/scripts/fixture-service.mjs"], {
+  worker = spawn(process.execPath, ["apps/compat-worker/scripts/fixture-service.mjs"], {
     stdio: "ignore",
     env: { ...env, MEDORA_LEGACY_WRITES_FENCED: String(fenced) },
   });

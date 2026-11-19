@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
-import { exportResponse } from "../../../web/src/operations/export.mjs";
-import { CampaignStore } from "../../../web/src/promotions/campaigns.mjs";
+import { exportResponse } from "@medora/server-shared/operations/export";
+import { CampaignStore } from "@medora/server-shared/promotions/campaigns";
 import { PromotionStorage } from "./promotion-storage";
 import type { operationService } from "./operations";
 

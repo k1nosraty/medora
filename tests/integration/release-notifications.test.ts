@@ -1,10 +1,11 @@
+import { fixtureDatabase } from "../../scripts/verification/fixture-database.mjs";
 import { Pool } from "pg";
 import { expect, it, vi } from "vitest";
 import { repository } from "../../apps/api/src/repository";
 import { operationService } from "../../apps/api/src/operations";
 import { releaseNotifications } from "../../apps/api/src/release-notifications";
 
-const database = process.env.MEDORA_TEST_DATABASE_URL;
+const database = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
 it.skipIf(!database)(
   "retries release delivery and remembers an acknowledged device across workers",
   async () => {
@@ -53,7 +54,10 @@ it.skipIf(!database)(
           ],
         );
       }
-      expect(await service.publish()).toBe("queued");
+      expect(await service.status()).toBe("pending");
+      expect(await service.status()).toBe("pending");
+      await service.tick();
+      expect(await service.status()).toBe("queued");
       await ready();
       await service.tick();
       expect(send).toHaveBeenCalledTimes(2);
@@ -83,7 +87,7 @@ it.skipIf(!database)(
           )
         ).rows[0].sent,
       ).toBe(version);
-      expect(await service.publish()).toBe("complete");
+      expect(await service.status()).toBe("complete");
       await competing.tick();
       expect(send).toHaveBeenCalledTimes(3);
     } finally {

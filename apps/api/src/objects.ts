@@ -42,13 +42,15 @@ export function s3Storage(
   const base = endpoint.replace(/\/$/, "") + "/" + encodeURIComponent(bucket);
   const url = (key: string) =>
     base + "/" + key.split("/").map(encodeURIComponent).join("/");
+  const request = (target: string | URL, options?: RequestInit) =>
+    client.fetch(target, { ...options, redirect: "error", signal: AbortSignal.timeout(10_000) });
   return {
     async *listKeys() {
       const query = new URL(base);
       query.searchParams.set("list-type", "2");
       query.searchParams.set("encoding-type", "url");
       while (true) {
-        const response = await client.fetch(query, { redirect: "error" });
+        const response = await request(query);
         if (!response.ok) throw Error("bucket_inventory_unavailable");
         const xml = await response.text();
         if (!xml.includes("<ListBucketResult"))
@@ -82,22 +84,22 @@ export function s3Storage(
       }
     },
     async initialize() {
-      const head = await client.fetch(base, { method: "HEAD" });
+      const head = await request(base, { method: "HEAD" });
       if (head.ok) return;
       if (head.status !== 404) throw new Error("bucket_unavailable");
-      const r = await client.fetch(base, { method: "PUT" });
+      const r = await request(base, { method: "PUT" });
       if (!r.ok && r.status !== 409) throw new Error("bucket_create");
     },
     async put(key, bytes) {
-      const r = await client.fetch(url(key), { method: "PUT", body: bytes });
+      const r = await request(url(key), { method: "PUT", body: bytes });
       if (!r.ok) throw new Error("object_write");
     },
     async delete(key) {
-      const r = await client.fetch(url(key), { method: "DELETE" });
+      const r = await request(url(key), { method: "DELETE" });
       if (!r.ok && r.status !== 404) throw Error("object_delete");
     },
     async get(key) {
-      const r = await client.fetch(url(key));
+      const r = await request(url(key));
       if (r.status === 404) return null;
       if (!r.ok) throw new Error("object_read");
       return r.arrayBuffer();

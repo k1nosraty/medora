@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import {
   doseTime,
   timeText,
-} from "../../../product-assets/public/medication/domain/care-index.js";
+} from "@medora/domain/browser/care-index";
 import {
   amountText,
   doseUnit,
@@ -14,7 +14,7 @@ import {
   localDigits,
   t,
 } from "../../../product-assets/public/medication/shared/i18n/locale.js";
-import type { FamilyView } from "../product";
+import type { FamilyView } from "../productState";
 import { MedicineArt, medicineColor } from "./MedicineArt";
 import {
   doseStates,
@@ -305,7 +305,7 @@ export function DoseContents({
           }
         >
           {featured && <Icon name="check" />}
-          {t("ثبت مصرف")}
+          {t("ui.log-dose")}
         </button>
       );
     }

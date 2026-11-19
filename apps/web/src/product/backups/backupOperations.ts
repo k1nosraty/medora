@@ -1,14 +1,14 @@
 import { accessCare } from "../../../product-assets/public/medication/shared/storage.js";
-import { portable } from "../../../product-assets/public/medication/domain/care-records.js";
+import { portable } from "@medora/domain/browser/care-records";
 import { changeReminderRevision } from "../../../product-assets/public/medication/features/reminders/service.js";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
-import { localZone } from "../../../product-assets/public/medication/domain/care-plan.js";
+import { localZone } from "@medora/domain/browser/care-plan";
 import type {
   RestoreMode,
   RestoreTarget,
-} from "../../../product-assets/public/medication/domain/restore-intent.js";
-import type { CareState } from "../product";
+} from "@medora/domain/browser/restore-intent";
+import type { CareState } from "../productState";
 
 export type ValidatePhases = (phases: unknown) => boolean;
 type RecoveryCopy = ReturnType<typeof portable>;
@@ -53,7 +53,7 @@ export async function readBackup(
   validate: ValidatePhases,
 ) {
   const { maxBackupBytes } =
-    await import("../../../product-assets/public/medication/shared/crypto/backup.js");
+    await import("@medora/domain/crypto/backup");
   if (file.size > maxBackupBytes) throw new Error("backup_too_large");
   const bytes = new Uint8Array(await file.arrayBuffer());
   const format =

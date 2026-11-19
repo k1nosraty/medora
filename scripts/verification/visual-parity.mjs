@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium, webkit, expect } from "@playwright/test";
+import { accessibilityScenes, evidenceVersion, visualCase, visualProfiles } from "./evidence.mjs";
 
 const engineArg = process.argv
   .find((arg) => arg.startsWith("--engine="))
@@ -33,6 +34,7 @@ let compared = 0;
 const accessibility = [];
 const rendererControls = [];
 const visualMismatches = [];
+const cases = [];
 const webkitModalScenes = new Set([
   "medicine-details",
   "medicine-editor",
@@ -266,7 +268,7 @@ try {
   execFileSync("git", ["archive", "--output", archive, reference, "web"]);
   execFileSync("tar", ["-xf", archive, "-C", scratch]);
   await symlink(
-    resolve("web/node_modules"),
+    resolve("node_modules"),
     join(scratch, "web/node_modules"),
     "dir",
   );
@@ -422,12 +424,7 @@ try {
       sceneOrigins.map(() => engine.launch(options)),
     );
     browsers.push(...instances);
-    for (const [lang, theme, width, height] of [
-      ["fa", "light", 390, 844],
-      ["fa", "dark", 1280, 850],
-      ["en", "light", 390, 844],
-      ["en", "dark", 1280, 850],
-    ]) {
+    for (const [lang, theme, width, height] of visualProfiles) {
       const contexts = await Promise.all(
         instances.map((browser) =>
           browser.newContext({
@@ -600,18 +597,12 @@ try {
               width,
               name,
             });
-          if (
-            [
-              "onboarding",
-              "today",
-              "edit-water",
-              "medicine-cabinet",
-              "medicine-details",
-              "medicine-editor",
-              "medicine-schedule",
-              "medicine-appearance",
-            ].includes(name)
-          ) {
+          cases.push({
+            id: visualCase(engine.name(), lang, width, name),
+            layout: true,
+            capture: before.equals(after) ? "exact" : method ? "verified-renderer" : "mismatch",
+          });
+          if (accessibilityScenes.includes(name)) {
             const signatures = await Promise.all(
               pages.slice(0, 2).map(async (page) => {
                 const audit = await new AxeBuilder({ page })
@@ -626,15 +617,18 @@ try {
                   .sort();
               }),
             );
+            const added = signatures[1].filter((issue) => !signatures[0].includes(issue));
             assert.deepEqual(
-              signatures[1].filter((issue) => !signatures[0].includes(issue)),
+              added,
               [],
               engine.name() + " " + name + " new accessibility violation",
             );
             accessibility.push({
               engine: engine.name(),
               lang,
+              width,
               screen: name,
+              newViolations: added.length,
               original: signatures[0].length,
               candidate: signatures[1].length,
             });
@@ -891,6 +885,8 @@ try {
     }
   }
   const report = {
+    schemaVersion: evidenceVersion,
+    cases,
     reference,
     identicalDesignFiles: stable.filter((path) => path !== "design/index.html")
       .length,

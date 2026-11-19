@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState, type FormEvent } from "react";
 import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
-import type { CareState } from "./product";
+import type { CareState } from "./productState";
 import { paintFeature } from "./renderer";
 
 interface Deletion {

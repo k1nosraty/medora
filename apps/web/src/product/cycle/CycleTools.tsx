@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
-import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
+import { isoDay } from "@medora/domain/browser/care-index";
 import {
   cyclePrintReport,
   mergeCyclePeriods,
@@ -8,7 +8,7 @@ import {
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import { paintFeature } from "../renderer";
-import type { CareState } from "../product";
+import type { CareState } from "../productState";
 import { CycleDateField, readCycleDate } from "./PeriodEditor";
 
 interface Options {

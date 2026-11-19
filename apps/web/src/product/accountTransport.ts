@@ -1,4 +1,4 @@
-import { careDelta } from "../../product-assets/public/medication/domain/care-delta.js";
+import { careDelta } from "@medora/domain/browser/care-delta";
 
 // Only the candidate negotiates the new writer. An installed legacy client has
 // no route to PostgreSQL. A transition away from a writer requires a fresh page.
@@ -36,9 +36,13 @@ async function selectWriter(): Promise<Writer> {
     }
     throw Error("Writer unavailable");
   }
-  const mode = await res.json();
-  if (mode.writer === "frozen" || mode.writer === "postgres") return mode;
-  if (mode.writer === "legacy") return mode;
+  const mode: unknown = await res.json();
+  if (typeof mode === "object" && mode !== null && "writer" in mode &&
+      (mode.writer === "frozen" || mode.writer === "postgres" || mode.writer === "legacy")) {
+    const registration = "registrationAvailable" in mode ? mode.registrationAvailable : undefined;
+    if (registration === undefined) return { writer: mode.writer };
+    if (typeof registration === "boolean") return { writer: mode.writer, registrationAvailable: registration };
+  }
   throw Error("Unknown writer");
 }
 const request = (path: string, body: unknown, options: RequestInit = {}) =>

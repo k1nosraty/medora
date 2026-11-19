@@ -1,6 +1,6 @@
 import type { releaseNotifications } from "./release-notifications";
 import type { adminAccounts } from "./admin-accounts";
-import { smallJson } from "../../../web/src/http/validation.mjs";
+import { smallJson } from "@medora/server-shared/http/validation";
 import type { promotionService } from "./promotions";
 import { authenticatedOperations, publicOperations } from "./operations-routes";
 import type { operationService } from "./operations";
@@ -158,7 +158,7 @@ export function createApp(
       return c.json({ error: "not_found" }, 404);
     return c.json({
       version: release.version,
-      status: await release.publish(),
+      status: await release.status(),
     });
   });
   async function requestOwner(c: Parameters<typeof getCookie>[0]) {

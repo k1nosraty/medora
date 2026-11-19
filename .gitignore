@@ -6,7 +6,7 @@ Desktop.ini
 *.medbackup
 *.medbackup.*.partial
 *.medora
-!web/test/fixtures/android-medora-v1.medora
+!tests/compatibility/fixtures/android-medora-v1.medora
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
@@ -30,4 +30,9 @@ dist/
 /infrastructure/cloudflare/.staging.generated.json
 
 /apps/web/.product-*/
+/web/.pilot-secrets.json
+/web/.wrangler.staging.local.jsonc
+/web/public/
+/web/test-results/
+/web/playwright-report/
 /.local/

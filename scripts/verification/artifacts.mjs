@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { verifyCoverage } from "./evidence.mjs";
 async function inventory(root, base = root) {
   const result = [];
   for (const e of (await readdir(base, { withFileTypes: true })).sort((a, b) =>
@@ -21,6 +22,7 @@ async function inventory(root, base = root) {
   return result;
 }
 const worker = process.argv[2];
+const evidenceDir = process.argv[3] ?? "dist";
 if (!worker || !(await stat(worker)).isDirectory())
   throw Error("Supply the local Worker output directory");
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
@@ -34,6 +36,7 @@ for (const entry of [
   "apps/web/dist/manifest.webmanifest",
   "apps/api/dist/server.mjs",
   join(worker, "candidate.js"),
+  join(worker, "portable.js"),
 ]) {
   const info = await stat(entry);
   if (!info.isFile() || info.size === 0)
@@ -49,7 +52,7 @@ const evidenceFiles = [
 ];
 const evidence = await Promise.all(
   evidenceFiles.map(async (name) => {
-    const bytes = await readFile(join("dist", name));
+    const bytes = await readFile(join(evidenceDir, name));
     return {
       name,
       report: JSON.parse(bytes),
@@ -59,6 +62,7 @@ const evidence = await Promise.all(
 );
 const [reconciled, refused, erased, handoff, visual, performance] =
   evidence.map((entry) => entry.report);
+verifyCoverage(handoff, visual);
 if (
   reconciled.source !== "synthetic Workerd" ||
   !reconciled.reconciled ||
@@ -79,7 +83,6 @@ if (
   !reconciled.operationsReplayed ||
   !reconciled.campaignMediaReplayed ||
   handoff.accounts !== 2 ||
-  handoff.offlineWrites !== 4 ||
   handoff.objects !== 1 ||
   !handoff.sessionsPreserved ||
   !handoff.grantPreserved ||
@@ -94,9 +97,6 @@ if (
   !refused.unsupportedMutation?.recoveryPublicationBlocked ||
   !refused.unsupportedMutation?.pendingPasswordReset ||
   !visual.identicalDocumentMarkup ||
-  visual.identicalViewportCaptures !== 104 ||
-  visual.identicalVisibleLayouts !== 104 ||
-  visual.accessibility?.length !== 24 ||
   performance.trials?.length !== 3
 )
   throw Error("Incomplete candidate fixture evidence");

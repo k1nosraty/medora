@@ -7,7 +7,7 @@ import {
 import { DayWeek, type WeekDay } from "./DayWeek";
 import { paintFeature } from "./renderer";
 import { Icon } from "./PlanCard";
-import { isoDay as iso } from "../../product-assets/public/medication/domain/care-index.js";
+import { isoDay as iso } from "@medora/domain/browser/care-index";
 
 interface DayNavigationOptions {
   root: HTMLElement;

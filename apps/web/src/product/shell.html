@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f3fa">
+  <meta name="medora-release" content="{{version}}">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/medora-icon-192.png">
+  <link rel="stylesheet" href="{{app-style}}">
+  <link rel="modulepreload" href="/medication/app/medora.js">
+  <title>مدورا</title>
+  <script type="module" src="/medication/bootstrap.js"></script>
+</head>
+<body class="medora" data-finish="glass">
+  <!-- include assets/icons/library.html -->
+  <!-- include layout/onboarding.html -->
+    <header class="app-bar">
+    <div class="app-bar-inner">
+      <div class="brand-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></div>
+      <button id="screen-back" type="button" class="icon-button" aria-label="{{msg:ui.back}}" hidden><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+      <span class="wordmark">{{msg:ui.medora}}</span>
+      <div class="header-tools">
+        <button type="button" class="icon-button language-switch" data-language-switch lang="en" aria-label="{{msg:ui.switch-to-english}}"><svg aria-hidden="true"><use href="#i-globe"/></svg><span>EN</span></button>
+        <button type="button" class="icon-button" id="update-app" aria-label="{{msg:ui.update-app}}" title="{{msg:ui.update-app}}"><svg aria-hidden="true"><use href="#i-refresh"/></svg></button>
+        <span id="care-inbox-react" class="layout-contents"></span>
+        <button type="button" class="icon-button" id="open-account" data-open-account aria-label="{{msg:ui.account}}"><svg aria-hidden="true"><use href="#i-user"/></svg></button>
+        <button type="button" class="icon-button" data-destination="settings" aria-label="{{msg:ui.settings}}"><svg aria-hidden="true"><use href="#i-settings"/></svg></button>
+      </div>
+    </div>
+    <p id="app-update-status" role="status"></p>
+  </header>
+  <main class="app-content" id="care-main">
+    <p id="boot-status" role="status">{{msg:ui.loading-medora}}</p>
+    <button id="boot-retry" type="button" hidden>{{msg:ui.reload}}</button>
+    <details id="boot-recovery" hidden>
+      <summary>{{msg:ui.storage-export-recovery}}</summary>
+      <p>{{msg:ui.storage-recovery-description}}</p>
+      <form id="boot-recovery-form">
+        <label>{{msg:ui.backup-password}} <input id="boot-recovery-password" type="password" minlength="15" maxlength="128" autocomplete="new-password" required></label>
+        <button type="submit">{{msg:ui.storage-export-recovery}}</button>
+      </form>
+      <p id="boot-recovery-status" role="status"></p>
+    </details>
+    <div id="app" hidden>
+      <div class="page-heading"><h1 id="screen-title" tabindex="-1">{{msg:ui.today}}</h1><p id="header-date"></p></div>
+      <div id="family-context" class="family-context" hidden></div>
+            <section id="today-story" class="today-story" aria-labelledby="story-title"></section>
+      <div id="today-dates" data-day-host="today"></div>
+      <div id="day-controls" class="day-controls">
+        <input id="day" type="date" hidden>
+        <div id="day-tools-react" class="layout-contents"></div>
+      </div>
+      <aside id="service-notice" class="feature" hidden><strong></strong><p dir="auto"></p></aside>
+            <div data-screen="today" class="daily-sheet">
+        <section id="today-programs" aria-label="{{msg:ui.care-shortcuts}}"></section>
+        <section class="today-tracker program-sleep" id="today-sleep" aria-labelledby="today-sleep-label" hidden></section>
+        <section class="today-tracker program-cycle" id="cycle-today-card" aria-labelledby="cycle-today-label" hidden></section>
+        <section id="today-water" class="today-tracker water program-water" aria-labelledby="today-water-label"></section>
+        <section class="cycle-panel program-cycle" id="cycle-companion-card" hidden></section>
+        <div id="today-timeline-react" class="layout-contents"></div>
+                <div id="today-family-bottom"></div>
+        <div id="today-reminders-react" class="layout-contents"></div>
+        <aside id="today-promotion" class="feature" aria-labelledby="today-promotion-label" hidden>
+          <p id="today-promotion-label" class="quiet">{{msg:ui.sponsored-message}}</p>
+          <p id="today-promotion-title" dir="auto"></p>
+          <div class="buttons">
+            <button id="today-promotion-open" type="button" class="secondary" aria-haspopup="dialog">{{msg:ui.promotion-open}}</button>
+            <button id="today-promotion-dismiss" type="button" class="text-button">{{msg:ui.promotion-dismiss}}</button>
+          </div>
+        </aside>
+        <div class="tracker-feedback-stack">
+          <div id="water-feedback-react" class="layout-contents"></div>
+          <div id="cycle-feedback-react" class="layout-contents"></div>
+        </div>
+      </div>
+      <!-- include screens/medications.html -->
+      <!-- include screens/appointments.html -->
+      <!-- include screens/routines.html -->
+      <!-- include screens/water.html -->
+            <div data-screen="cycle" hidden>
+        <div id="cycle-overview-react" hidden></div>
+        <section id="cycle-banner" class="program-cycle program-banner-surface" aria-labelledby="cycle-banner-title"></section>
+        <section id="cycle-calendar" class="cycle-panel" aria-labelledby="cycle-calendar-title" hidden></section>
+        <section id="cycle-trend" class="cycle-panel" aria-labelledby="cycle-trend-title" hidden></section>
+        <section id="cycle-records" class="cycle-panel cycle-history" aria-labelledby="cycle-history-title" hidden></section>
+                <section class="cycle-panel" id="cycle-tracking"></section>
+        <section class="cycle-panel" id="cycle-personal-tools">
+          <div id="cycle-preparation-react" class="layout-contents"></div>
+          <div id="cycle-tools-react" class="layout-contents"></div>
+          <div id="cycle-settings-link-react" class="layout-contents"></div>
+        </section>
+      </div>
+      <!-- include screens/sleep.html -->
+      <div data-screen="insights" hidden></div>
+      <p id="family-notice" role="status" hidden></p>
+      <p id="status" class="app-status" role="status"></p>
+    </div>
+    <!-- Keep viewport-fixed navigation outside the query container for older WebKit. -->
+    <!-- include layout/dock.html -->
+  </main>
+  <dialog id="quick-dialog" class="sheet add-sheet" aria-labelledby="quick-title"></dialog>
+  <dialog id="routine-editor" class="sheet add-sheet routine-sheet" aria-labelledby="routine-editor-title"></dialog>
+  <dialog id="routine-category-dialog" class="sheet choice-sheet routine-sheet" aria-labelledby="routine-category-title"></dialog>
+  <dialog id="routine-log-dialog" class="sheet routine-sheet" aria-labelledby="routine-log-title"></dialog>
+  <!-- include forms/water-log.html -->
+  <dialog id="cycle-dialog" class="sheet add-sheet" aria-labelledby="cycle-title"></dialog>
+  <dialog id="cycle-day-dialog" class="sheet add-sheet" aria-labelledby="cycle-day-title"></dialog>
+  <dialog id="cycle-backup-dialog" class="sheet add-sheet" aria-labelledby="cycle-backup-title"></dialog>
+  <article id="cycle-print-view" aria-hidden="true"></article>
+  <!-- include forms/sleep.html -->
+  <dialog id="medication-dialog" class="sheet add-sheet" aria-labelledby="editor-title"></dialog>
+  <dialog id="appearance-dialog" class="sheet" aria-labelledby="appearance-title"></dialog>
+  <dialog id="medicine-details" class="sheet" aria-labelledby="medicine-details-title"></dialog>
+  <dialog id="visit-dialog" class="sheet add-sheet" aria-labelledby="visit-form-title"></dialog>
+  <dialog id="visit-category-dialog" class="sheet choice-sheet" aria-labelledby="visit-category-title"></dialog>
+  <!-- include forms/confirm-delete.html -->
+    <dialog id="account-dialog" class="sheet shared-panel" aria-labelledby="account-title">
+    <header class="account-cover">
+      <span class="account-mark"><svg aria-hidden="true"><use href="#i-mark"/></svg></span>
+      <button type="button" class="icon-button" data-close="account-dialog" aria-label="{{msg:ui.close}}" autofocus><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      <h2 id="account-title">{{msg:ui.medora-account}}</h2>
+      <p id="account-intro">{{msg:ui.enter-your-username-and-password-to-sign-in}}</p>
+    </header>
+    <div class="account-content">
+      <div id="account-react" class="layout-contents"></div>
+      <p id="account-status" class="quiet" role="status"></p>
+      <footer class="account-footer">
+        <button type="button" id="account-dismiss" class="text-button" data-close="account-dialog">{{msg:ui.continue-as-guest}}</button>
+        <p class="quiet" id="account-local-note">{{msg:ui.your-schedule-and-records-stay-on-this-device}}</p>
+      </footer>
+    </div>
+  </dialog>
+  <dialog id="family-dialog" class="sheet shared-panel" aria-labelledby="family-title"></dialog>
+  <!-- include forms/promotion.html -->
+  <!-- include forms/support.html -->
+  <dialog id="settings-dialog" class="settings-dialog shared-panel" aria-labelledby="settings-title"></dialog>
+  <!-- include forms/date-picker.html -->
+  <!-- include forms/time-picker.html -->
+</body>
+</html>

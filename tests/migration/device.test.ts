@@ -4,11 +4,11 @@ import {
   captureLegacy,
   legacyName,
   type Image,
-} from "../../apps/web/src/storage/legacy";
+} from "../../apps/web/src/journal/storage/legacy";
 import {
   DeviceArchive,
   archiveImage,
-} from "../../apps/web/src/storage/archive";
+} from "../../apps/web/src/journal/storage/archive";
 
 it("captures all object stores without upgrading a historical database", async () => {
   const r = indexedDB.open(legacyName, 1);

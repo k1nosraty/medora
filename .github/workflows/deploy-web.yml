@@ -19,27 +19,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
+          node-version: '24.18.0'
+          cache: pnpm
       - name: Install and test the web app
-        working-directory: web
         run: |
-          npm ci
-          npm run typecheck
-          npm audit --audit-level=high
-          npm test
-          npm run test:care
-          npm run test:alarms
+          pnpm install --frozen-lockfile
+          pnpm --filter @medora/compat-worker run typecheck
+          pnpm audit --audit-level=high
+          pnpm --filter @medora/compat-worker test
+          pnpm --filter @medora/compat-worker run test:care
+          pnpm --filter @medora/compat-worker run test:alarms
       - name: Verify Chromium and WebKit flows
-        working-directory: web
         run: |
-          npx playwright install --with-deps chromium webkit
-          npm run test:browser -- --reporter=list
+          pnpm exec playwright install --with-deps chromium webkit
+          pnpm test:incumbent --reporter=list
       - name: Publish to Cloudflare Workers
-        working-directory: web
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -48,9 +45,9 @@ jobs:
             echo "::error::Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to the repository's Actions secrets."
             exit 1
           fi
-          npm run deploy -- --keep-vars --tag "$GITHUB_SHA" --var "MEDORA_RELEASE:$GITHUB_SHA"
-      - name: Queue the published release notification
+          pnpm --filter @medora/compat-worker run deploy --keep-vars --tag "$GITHUB_SHA" --var "MEDORA_RELEASE:$GITHUB_SHA"
+      - name: Check the scheduled release notification
         run: |
           curl --fail-with-body --silent --show-error --retry 5 --retry-all-errors --retry-delay 4 --max-time 20 \
             "https://medorapp.ir/api/operations/release?version=$GITHUB_SHA" |
-            jq -e --arg version "$GITHUB_SHA" '.version == $version and (.status == "queued" or .status == "complete")'
+            jq -e --arg version "$GITHUB_SHA" '.version == $version and (.status == "pending" or .status == "queued" or .status == "complete" or .status == "paused")'

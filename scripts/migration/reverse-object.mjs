@@ -1,12 +1,12 @@
-import { initializeEmailAccount } from "../../web/src/accounts/schema.mjs";
+import { initializeEmailAccount } from "../../apps/compat-worker/src/accounts/schema.mjs";
 export { HouseholdRecovery } from "./reverse-family-object.mjs";
 import { DurableObject } from "cloudflare:workers";
-import { applyCareDelta } from "../../apps/web/product-assets/public/medication/domain/care-delta.js";
-import { equalCareValues } from "../../apps/web/product-assets/public/medication/domain/care-contract.js";
+import { applyCareDelta } from "../../packages/domain/src/browser/care-delta.js";
+import { equalCareValues } from "../../packages/domain/src/browser/care-contract.js";
 import {
   validateCareRecords,
   careSnapshotFits,
-} from "../../apps/web/product-assets/public/medication/domain/care-records.js";
+} from "../../packages/domain/src/browser/care-records.js";
 
 export class CredentialRecovery extends DurableObject {
   replay(entries, deleted) {

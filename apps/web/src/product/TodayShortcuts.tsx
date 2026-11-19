@@ -7,7 +7,7 @@ import {
   reminderView,
   watchReminders,
 } from "../../product-assets/public/medication/features/reminders/service.js";
-import type { CareState, FamilyView } from "./product";
+import type { CareState, FamilyView } from "./productState";
 import { PlanArtwork } from "./PlanCard";
 import { paintFeature } from "./renderer";
 import type { Screen } from "./routes";

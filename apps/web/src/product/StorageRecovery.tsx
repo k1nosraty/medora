@@ -14,7 +14,7 @@ function StorageRecovery() {
     setStatus("");
     try {
       const [{ encryptBackup }, { readCareRecovery }] = await Promise.all([
-        import("../../product-assets/public/medication/shared/crypto/backup.js"),
+        import("@medora/domain/crypto/backup"),
         import("../../product-assets/public/medication/shared/storage.js"),
       ]);
       const bytes = await encryptBackup(

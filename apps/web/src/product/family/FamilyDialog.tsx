@@ -2,21 +2,17 @@ import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { watchFamilyAccess } from "../../../product-assets/public/medication/features/family/access.js";
 import { familyRequest } from "../../../product-assets/public/medication/features/family/api.js";
 import { sharedContext } from "../../../product-assets/public/medication/features/family/projection.js";
-import { quickActions } from "../../../product-assets/public/medication/features/family/quick-action.js";
-import { profileName } from "../../../product-assets/public/medication/domain/profile.js";
-import {
-  localWall,
-  timezone,
-} from "../../../product-assets/public/medication/domain/wall-clock.js";
+import { profileName } from "@medora/domain/browser/profile";
 import { fitDialogToViewport } from "../../../product-assets/public/medication/shared/ui/dom.js";
 import {
   language,
   t,
 } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import { FamilyDoseForm } from "../medication/FamilyDoseForm";
-import { showFamilyNotice } from "./FamilyNotice";
+import { installDelegatedCare, sameOwner, type OpenFamilyPlan } from "./delegatedCare";
+import { pollFamilyView, readFamilyView, type SharedCare } from "./familyApi";
 import { Icon } from "../PlanCard";
-import type { CareState, FamilyView } from "../product";
+import type { CareState, FamilyView } from "../productState";
 import { paintFeature } from "../renderer";
 import {
   Avatar,
@@ -36,10 +32,8 @@ import {
   type Invitation,
   type Member,
   type Overview,
-  type Policy,
   type Run,
 } from "./FamilyViews";
-import type { PersonalProfile } from "../settings/Preferences";
 
 const errors: Record<string, string> = {
   sign_in: "برای همکاری خانوادگی وارد حساب شوید.",
@@ -58,37 +52,19 @@ const unavailable = "ارتباط با خانواده برقرار نشد. دو�
 const saveFailure = "ذخیره انجام نشد. دوباره تلاش کنید.";
 const inviteHash = /^#family-invite=([a-f0-9-]{36})$/;
 const groupPreference = "medora-family-active-group";
-const clockFor = (zone: string) =>
-  new Date(localWall(Date.now(), timezone(zone))).toISOString().slice(11, 16);
 const reason = (value: unknown) =>
   value instanceof Error ? value.message : "unavailable";
 const $ = (id: string) => document.getElementById(id)!;
 
 type Kind = Parameters<FamilyView["canRecord"]>[0];
 type Delegated = Extract<Parameters<FamilyView["record"]>[0], { id: string }>;
-interface SharedCare {
-  records: CareState & { profile?: PersonalProfile & { gender?: string } };
-  policy: Policy;
-  synced: boolean;
-  zone: string;
-  revision: number;
-}
 interface Options {
   openAccount(): Promise<void>;
   openProfile(): void;
   getState(): CareState | undefined;
   getFamilyView(): FamilyView | null;
   setFamilyView(view: FamilyView | null, feedback?: string): void;
-  openPlan(
-    kind: Kind,
-    target: {
-      name: string;
-      day: number;
-      zone: string;
-      time?: string;
-      save(values: object): Promise<void>;
-    },
-  ): void;
+  openPlan: OpenFamilyPlan;
 }
 type Page = {
   title: string;
@@ -176,7 +152,6 @@ export function installFamilyDialog({
   let generation = 0;
   let overview: Overview | null = null;
   let overviewRequest = 0;
-  let editorOperation: string | undefined;
   let recovery = false;
   let invite = inviteHash.exec(location.hash)?.[1];
   let storage: Storage | undefined;
@@ -187,22 +162,14 @@ export function installFamilyDialog({
   } catch {
     storage = undefined;
   }
-  const waterActions = quickActions(storage ? { storage } : {});
   const groupInView = () =>
     overview?.groups.find((group) => group.id === activeGroup) ??
     overview?.groups[0];
   const personalName = () =>
     getState()?.personalProfile?.firstName || overview?.label || t("ui.me");
   const active = (request: number) => dialog.open && request === generation;
-  const sameOwner = (
-    view: FamilyView | null,
-    group: string,
-    member: string,
-  ): view is FamilyView =>
-    view?.group.id === group && view?.member.id === member;
-
   const access = watchFamilyAccess({
-    request: familyRequest,
+    request: pollFamilyView,
     today: () => getFamilyView()?.today,
     denied: (error: unknown) => leave(t(errors[reason(error)] ?? unavailable)),
     changed: (
@@ -218,6 +185,17 @@ export function installFamilyDialog({
       }
       enter(group, member, data, notice);
     },
+  });
+
+  const delegated = installDelegatedCare({
+    storage,
+    getFamilyView,
+    openPlan,
+    closeDialog: () => { if (dialog.open) dialog.close(); },
+    closeEditors: closeFamilyEditors,
+    onSaved: saved,
+    onForbidden: () => leave(t(errors.forbidden)),
+    errorMessage: (error) => t(errors[reason(error)] ?? saveFailure),
   });
 
   function paint() {
@@ -778,7 +756,7 @@ export function installFamilyDialog({
             caption="دعوت به گروه"
           />
           <label>
-            {t("ایمیل")}
+            {t("ui.email")}
             <input
               type="email"
               name="email"
@@ -933,7 +911,7 @@ export function installFamilyDialog({
     $("family-title").focus({ preventScroll: true });
   }
   function closeFamilyEditors() {
-    editorOperation = undefined;
+    delegated.cancel();
     if (getFamilyView() && quick.open) quick.close();
     for (const editor of document.querySelectorAll<HTMLDialogElement>(
       "dialog[data-family-editor][open]",
@@ -970,13 +948,13 @@ export function installFamilyDialog({
         )
           return;
         if (details.kind === "water" || details.kind === "cycle")
-          openFor(current, details.kind, details.day, "record");
+          delegated.openFor(current, details.kind, details.day, "record");
         else if ("id" in details) recordFor(current, details);
       },
       add: (kind: Kind, day: number) => {
         const current = getFamilyView();
         if (sameOwner(current, group.id, member.id) && current.canAdd(kind))
-          openFor(current, kind, Math.max(day, current.today), "add");
+          delegated.openFor(current, kind, Math.max(day, current.today), "add");
       },
       profile: () => {
         const current = getFamilyView();
@@ -999,7 +977,7 @@ export function installFamilyDialog({
   async function showCare(group: Group, member: Member) {
     const request = generation;
     message("در حال ارتباط…");
-    const data: SharedCare = await familyRequest("view", {
+    const data = await readFamilyView({
       group: group.id,
       target: member.id,
     });
@@ -1011,45 +989,10 @@ export function installFamilyDialog({
     $("family-home").focus({ preventScroll: true });
   }
 
-  async function saved(notice: string, view: FamilyView) {
+  async function saved(notice: string, view: FamilyView, close = true) {
     if (!sameOwner(getFamilyView(), view.group.id, view.member.id)) return;
-    if (dialog.open) dialog.close();
+    if (close && dialog.open) dialog.close();
     await access.check({ feedback: t(notice), force: true });
-  }
-
-  async function quickWater(
-    view: FamilyView,
-    day: number,
-    amount: number,
-    control: HTMLElement | undefined,
-  ) {
-    if (!view.canRecord("water", day)) return;
-    const key = JSON.stringify([view.group.id, view.member.id, day, amount]);
-    const attempt = waterActions.start(key, () => clockFor(view.zone));
-    if (!attempt) return;
-    if (control instanceof HTMLButtonElement) control.disabled = true;
-    let confirmed = false;
-    try {
-      await familyRequest("record", {
-        group: view.group.id,
-        target: view.member.id,
-        operation: attempt.operation,
-        kind: "water",
-        day,
-        amount,
-        time: attempt.time,
-      });
-      confirmed = true;
-      if (sameOwner(getFamilyView(), view.group.id, view.member.id))
-        await access.check({ feedback: t("ui.water-logged"), force: true });
-    } catch (error) {
-      if (!sameOwner(getFamilyView(), view.group.id, view.member.id)) return;
-      if (reason(error) === "forbidden") leave(t(errors.forbidden));
-      else showFamilyNotice(t(errors[reason(error)] ?? saveFailure));
-    } finally {
-      waterActions.finish(key, confirmed);
-      if (control instanceof HTMLButtonElement) control.disabled = false;
-    }
   }
 
   function recordFor(view: FamilyView, details: Delegated) {
@@ -1143,55 +1086,6 @@ export function installFamilyDialog({
     );
   }
 
-  function openFor(
-    view: FamilyView,
-    kind: Kind,
-    day: number,
-    action: "record" | "add",
-  ) {
-    const { group, member } = view;
-    const operation = crypto.randomUUID();
-    if (dialog.open) dialog.close();
-    editorOperation = operation;
-    openPlan(kind, {
-      name: view.name,
-      day,
-      zone: view.zone,
-      ...(kind === "water" && { time: clockFor(view.zone) }),
-      save: async (values) => {
-        const current = getFamilyView();
-        const date =
-          "day" in values && typeof values.day === "number" ? values.day : day;
-        if (
-          !sameOwner(current, group.id, member.id) ||
-          !(action === "record"
-            ? current.canRecord(kind, date)
-            : current.canAdd(kind))
-        )
-          throw new Error(t(errors.forbidden));
-        try {
-          await familyRequest(action, {
-            group: group.id,
-            target: member.id,
-            operation,
-            kind,
-            ...(action === "record" ? values : { plan: values }),
-          });
-        } catch (error) {
-          if (reason(error) === "forbidden" && editorOperation === operation)
-            leave(t(errors.forbidden));
-          throw new Error(t(errors[reason(error)] ?? saveFailure));
-        }
-        if (editorOperation !== operation) return;
-        closeFamilyEditors();
-        await saved(
-          action === "record" ? "ثبت انجام شد." : "برنامه اضافه شد.",
-          view,
-        );
-      },
-    });
-  }
-
   async function open() {
     openPage("گروه‌ها و اعضا", null);
     message("در حال ارتباط…");
@@ -1277,7 +1171,7 @@ export function installFamilyDialog({
   paintContext();
   return {
     leave,
-    quickWater,
+    quickWater: delegated.quickWater,
     refreshGroup: () => refreshGroup().catch(() => undefined),
     openInvitation: () => {
       if (invite || recovery) void open();

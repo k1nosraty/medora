@@ -5,9 +5,9 @@ import {
   cycleEstimate,
   cycleOn,
   cyclePatterns,
-} from "../../../product-assets/public/medication/domain/cycle.js";
-import { equalCareValues } from "../../../product-assets/public/medication/domain/care-contract.js";
-import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
+} from "@medora/domain/browser/cycle";
+import { equalCareValues } from "@medora/domain/browser/care-contract";
+import { cycleIsEnabled } from "@medora/domain/browser/profile";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import {
   localDigits,
@@ -15,9 +15,9 @@ import {
   t,
 } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import type { calendarFormat } from "../../../product-assets/public/medication/shared/ui/calendar-format.js";
-import type { createCareIndex } from "../../../product-assets/public/medication/domain/care-index.js";
+import type { createCareIndex } from "@medora/domain/browser/care-index";
 import { Icon, PlanArtwork, PlanOptions } from "../PlanCard";
-import type { CareState } from "../product";
+import type { CareState } from "../productState";
 import { paintFeature } from "../renderer";
 import { describeCycleDay } from "../cycleLabels";
 import type { MutateSettings } from "../settings/CyclePreferences";

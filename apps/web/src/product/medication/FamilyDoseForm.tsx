@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { artworkPath } from "../../../product-assets/public/medication/design/three-dimensional.js";
-import { quantityFromText } from "../../../product-assets/public/medication/domain/medication-rules.js";
+import { quantityFromText } from "@medora/domain/browser/medication-rules";
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import { clearFeature, paintFeature } from "../renderer";
 import type { FamilyDoseRecord } from "./model";
@@ -88,7 +88,7 @@ export function FamilyDoseForm({
         {t("ui.your-name-will-be-attached-to-the-entry")}
       </p>
       <label>
-        {t("وضعیت مصرف")}
+        {t("ui.dose-outcome")}
         <select
           name="status"
           value={taken ? "taken" : "skipped"}

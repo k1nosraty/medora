@@ -1,3 +1,4 @@
+import { fixtureDatabase } from "../../scripts/verification/fixture-database.mjs";
 import { expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
@@ -11,7 +12,8 @@ import {
   importObjects,
 } from "../../scripts/migration/object-archive.mjs";
 
-it.skipIf(!process.env.MEDORA_TEST_DATABASE_URL)(
+const database = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
+it.skipIf(!database)(
   "round-trips a seven-namespace census through PostgreSQL, resumes partial import and rejects divergent ciphertext",
   async () => {
     const tmp = await mkdtemp(join(tmpdir(), "medora-fixture-"));
@@ -21,7 +23,7 @@ it.skipIf(!process.env.MEDORA_TEST_DATABASE_URL)(
     const census: Record<string, string[]> = {};
     const key = randomBytes(32);
     const db = new Client({
-      connectionString: process.env.MEDORA_TEST_DATABASE_URL,
+      connectionString: database,
     });
     await db.connect();
     try {

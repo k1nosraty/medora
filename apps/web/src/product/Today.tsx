@@ -18,8 +18,8 @@ import {
   localDigits,
   t,
 } from "../../product-assets/public/medication/shared/i18n/locale.js";
-import { routineComplete } from "../../product-assets/public/medication/domain/routine-plan.js";
-import { doseTime } from "../../product-assets/public/medication/domain/care-index.js";
+import { routineComplete } from "@medora/domain/browser/routine-plan";
+import { doseTime } from "@medora/domain/browser/care-index";
 
 interface TimelineEvent {
   key: string;

@@ -9,14 +9,14 @@ import {
   verifyOperationalWrites,
 } from "./operations-cutover.mjs";
 import { fixturePush, verifyReminderWrites } from "./reminder-cutover.mjs";
-import { hmac } from "../../web/src/accounts/auth-crypto.mjs";
+import { hmac } from "../../apps/compat-worker/src/accounts/auth-crypto.mjs";
 import { withLocalWorker } from "./local-worker.mjs";
 import { fixtureMailbox } from "./mailbox.mjs";
 import { readdir, lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { verifyHouseholdWrites } from "./household-post-write.mjs";
 import { verifyProductBrowser } from "./product-browser.mjs";
-import { careDelta } from "../../apps/web/product-assets/public/medication/domain/care-delta.js";
+import { careDelta } from "../../packages/domain/src/browser/care-delta.js";
 import {
   importRecoveryKey,
   openPrivateCare,

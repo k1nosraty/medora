@@ -1,5 +1,5 @@
-import { codeMessage } from "../../../web/src/accounts/code-message.mjs";
-import { invitationMessage } from "../../../web/src/family/invitation-message.mjs";
+import { codeMessage } from "@medora/server-shared/accounts/code-message";
+import { invitationMessage } from "@medora/server-shared/family/invitation-message";
 import type { Delivery, IdentitySettings } from "./identity";
 import { passwordKeys } from "./settings";
 export interface MailEnv {

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "types": []
+  },
+  "files": [
+    "../../packages/domain/src/browser/restore-intent.js",
+    "../../packages/domain/src/browser/care-contract.js",
+    "../../packages/domain/src/browser/subscription-id.js",
+    "../../packages/domain/src/browser/private-fields.js",
+    "../web/product-assets/public/medication/features/sync/private-care.js",
+    "../web/product-assets/public/medication/features/family/quick-action.js",
+    "src/accounts/keys.mjs",
+    "../../packages/server-shared/src/http/validation.mjs"
+  ]
+}

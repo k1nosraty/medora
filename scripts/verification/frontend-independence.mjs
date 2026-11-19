@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -10,9 +10,11 @@ const original = execFileSync("git", ["ls-files", "-z"], {
   cwd: root,
   encoding: "utf8",
 }).split("\0");
-const files = original.filter((file) => file && !file.startsWith("web/"));
+const files = original.filter((file) => file && !file.startsWith("apps/compat-worker/") && !file.startsWith("web/"));
 const absent = () =>
-  assert.rejects(stat(join(fixture, "web")), { code: "ENOENT" });
+  Promise.all(["web", "apps/compat-worker"].map((path) =>
+    assert.rejects(stat(join(fixture, path)), { code: "ENOENT" }),
+  ));
 
 function pnpm(...args) {
   execFileSync("pnpm", args, {
@@ -31,7 +33,7 @@ try {
     files.map(async (file) => {
       const destination = join(fixture, file);
       await mkdir(dirname(destination), { recursive: true });
-      await copyFile(join(root, file), destination);
+      await cp(join(root, file), destination, { verbatimSymlinks: true });
     }),
   );
   await absent();
@@ -46,7 +48,7 @@ try {
   );
   await absent();
   console.log(
-    "Frontend build and standalone browser suite passed with web/ physically absent.",
+    "Frontend build and standalone browser suite passed with both compatibility source paths physically absent.",
   );
 } finally {
   await rm(fixture, { recursive: true, force: true });

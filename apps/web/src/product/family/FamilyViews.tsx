@@ -8,12 +8,12 @@ import {
 import {
   groupIconOf,
   groupIcons,
-} from "../../../product-assets/public/medication/domain/group-icons.js";
+} from "@medora/domain/browser/group-icons";
 import {
   allFamilySections,
   familySections,
-} from "../../../product-assets/public/medication/domain/family.js";
-import { ageAt } from "../../../product-assets/public/medication/domain/profile.js";
+} from "@medora/domain/browser/family";
+import { ageAt } from "@medora/domain/browser/profile";
 import {
   localDigits,
   locale,
@@ -22,7 +22,7 @@ import {
 import { searchKey } from "../../../product-assets/public/medication/shared/ui/controls.js";
 import { sectionLabels } from "../../../product-assets/public/medication/features/family/labels.js";
 import { Icon, PlanArtwork } from "../PlanCard";
-import type { FamilyView } from "../product";
+import type { FamilyView } from "../productState";
 import type { PersonalProfile } from "../settings/Preferences";
 
 export type Scope = keyof typeof sectionLabels;

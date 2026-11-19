@@ -3,7 +3,7 @@ import {
   locale,
   t,
 } from "../../product-assets/public/medication/shared/i18n/locale.js";
-import { waterGoalReached } from "../../product-assets/public/medication/domain/care-plan.js";
+import { waterGoalReached } from "@medora/domain/browser/care-plan";
 import { changeReminderRevision } from "../../product-assets/public/medication/features/reminders/service.js";
 import { localClock } from "../../product-assets/public/medication/shared/ui/input-values.js";
 import { renderEntries, type WaterEntry } from "./WaterEntries";

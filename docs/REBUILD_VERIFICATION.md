@@ -163,6 +163,29 @@ The web service was rebuilt on the existing loopback stack at `127.0.0.1:8808`. 
 
 All 69 Chromium product cases passed in the combined run. After the new regression test distinguished WebKit's native select styling from application style violations, the focused rerun passed in both engines and the WebKit project completed with 69 passes.
 
+## Repository audit follow-up
+
+The audited starting checkout was `ea90f73` on `codex/medora-2-full-rebuild`. The compatibility Worker and test fixtures moved into the pnpm workspace. Shared browser rules, backup crypto and server helpers moved to their respective packages. The primary product keeps its own shell and the Journal keeps a separate entry. The old root `web/` has no tracked files. Existing ignored local state stayed in place.
+
+| Verification | Completed result |
+| --- | --- |
+| `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm build` and `bundle-worker.mjs` | Frozen installation, frontend and Node production builds, and both the combined and portable Worker bundles completed. |
+| `pnpm test` with a dedicated loopback PostgreSQL database | 26 tests passed across 16 files. Included all 940 generated image hashes, evidence contract checks, fixture-target refusal, and the read-only release endpoint. Reapplying migration verified all 20 checksums. |
+| `pnpm test:compat` and `node scripts/verification/product-runtime.mjs` | 44 compatibility tests, 13 care tests, alarm behavior and the standalone Workerd product runtime. |
+| `pnpm test:incumbent` | 41 cases per engine passed. 60 candidate-only cases were skipped as configured. |
+| `pnpm test:product` | 71 cases per engine passed. Included historical IndexedDB v1–v3, the encrypted Android archive, delegated dose retry, access revocation, the lost Workerd acknowledgement, and the route matrix. An earlier parallel run hit a trace-output collision in teardown. Each suite now has its own output directory. |
+| `node scripts/verification/frontend-independence.mjs --offline` | Frozen install from the populated store, production frontend build and 60 cases per engine passed with both `web/` and `apps/compat-worker/` physically absent. Included the RTL/LTR route matrix, zero forbidden legacy requests, offline IndexedDB edits, encrypted Web backup and service-worker upgrade. |
+| `node scripts/verification/visual-parity.mjs` | 160 exact layouts and captures, zero remaining mismatches, and zero candidate violations in 64 Axe samples. Compared 1,243 identical public design files and one verified gallery markup change. |
+| `pnpm test:e2e` and `node scripts/verification/pwa-update.mjs` | Nine Journal cases per engine passed. Interrupted upgrade, old-shell offline recovery, update retry and Journal persistence passed. |
+| `node scripts/verification/rehearse.mjs` in all three modes | Reconciled the mapped synthetic source, verified rollback after writes, blocked unsupported reverse publication and recovered deferred cleanup of the erased fixture account. |
+| `pnpm test:handoff` | 48 tables, nine sequences and 109 constraints matched in this PostgreSQL 17 fixture. Two accounts replayed eight named offline writes, retained sessions and the family grant, and independently decrypted the transferred backup. The test verified reverse recovery after writes, writer drain, failed object-copy recovery, outbox resume and two-tab worker upgrade. |
+| Isolated Compose, `runtime.mjs`, `accounts.mjs`, `worker.mjs` and `restore-compose.sh` | Loopback Node/Caddy and Workerd passed PostgreSQL, R2/S3, identity, scheduled mail and family grant workflows. The restore verified database rows, sequences and one encrypted object. Used a new Compose project and left the original local stack independent. |
+| `pnpm audit --prod --audit-level high` | No known advisories were reported for the installed production graph at verification time. |
+
+The visual fixture independently compares the incumbent design. Its normalized water chart uses the historical two-row control for that comparison. The product test and direct loopback screenshots also exercise the actual single-row control in Persian RTL and English LTR, verify a single labelled select between the two date arrows and test day, week, month and year navigation. The compiled artwork and its public URLs are byte-identical for all 940 activity colors.
+
+Release status now reads the configured version. Only scheduled work queues a notification. Synthetic receipts and provider doubles cover retry and replay. The source snapshot, independent namespace census, authorized key-version references and historical backup corpus remain required. Source reconciliation is **BLOCKED** and production is **NOT READY**.
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

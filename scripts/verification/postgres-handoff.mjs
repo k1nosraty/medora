@@ -23,10 +23,12 @@ import { fixtureMailbox } from "./mailbox.mjs";
 import { bundleWorker } from "./bundle-worker.mjs";
 import { normalizePrivateCare } from "../../apps/web/product-assets/public/medication/features/sync/private-care.js";
 import { withLocalWorker } from "./local-worker.mjs";
+import { evidenceVersion, handoffAccounts, offlineCase, offlineOperations } from "./evidence.mjs";
+import { fixtureDatabase } from "./fixture-database.mjs";
 import {
   decryptBackup,
   encryptBackup,
-} from "../../apps/web/product-assets/public/medication/shared/crypto/backup.js";
+} from "../../packages/domain/src/crypto/backup.js";
 
 const [source, target, aborted, recoveryDb] = [
   "MEDORA_HANDOFF_SOURCE",
@@ -34,17 +36,14 @@ const [source, target, aborted, recoveryDb] = [
   "MEDORA_HANDOFF_ABORTED",
   "MEDORA_HANDOFF_RECOVERY",
 ].map((name) => {
-  const db = new URL(process.env[name] ?? "");
-  if (
-    !["127.0.0.1", "localhost"].includes(db.hostname) ||
-    !/^\/medora_[a-z0-9_]+$/.test(db.pathname)
-  )
+  const db = fixtureDatabase(process.env[name]);
+  if (!db)
     throw Error("Four fresh loopback fixture databases are required");
-  return db.href;
+  return new URL(db).href;
 });
 assert.equal(new Set([source, target, aborted, recoveryDb]).size, 4);
 const require = createRequire(
-  new URL("../../web/package.json", import.meta.url),
+  import.meta.url,
 );
 
 const { Miniflare, convertV4MiniflareOptions } = require("miniflare");
@@ -633,6 +632,7 @@ try {
   upstream = "node";
   await failsValidation(people[0]);
   assert.equal(await writer(), "postgres");
+  const offlineCases = [];
   for (const [index, person] of people.entries()) {
     const queued = await readLocal(person.page, "water");
     const response = person.page.waitForResponse(
@@ -657,6 +657,10 @@ try {
       (await person.context.request.get(origin + "/api/v2/profile")).status(),
       200,
     );
+    offlineCases.push(...offlineOperations.map((operation) => ({
+      id: offlineCase(handoffAccounts[index], operation),
+      replayed: true,
+    })));
   }
   await expect
     .poll(
@@ -757,7 +761,9 @@ try {
       target: "local Node",
       ...report,
       accounts: 2,
-      offlineWrites: 8,
+      schemaVersion: evidenceVersion,
+      offlineCases,
+      offlineWrites: offlineCases.length,
       medicationPlansAndDosesPreserved: true,
       sameOrigin: true,
       sessionsPreserved: true,

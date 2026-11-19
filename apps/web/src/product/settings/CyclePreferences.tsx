@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
+import { isoDay } from "@medora/domain/browser/care-index";
 import {
   readCycleArchive,
   writeCycleArchive,
@@ -8,7 +8,7 @@ import {
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import { today } from "../../../product-assets/public/medication/shared/ui/dates.js";
 import { Icon } from "../PlanCard";
-import type { CareState } from "../product";
+import type { CareState } from "../productState";
 import type { PanelProps } from "./Preferences";
 
 export type Change = (state: CareState) => void;

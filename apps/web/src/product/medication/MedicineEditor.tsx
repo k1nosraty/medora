@@ -8,7 +8,7 @@ import {
   appearanceColors,
   medicineShapes,
 } from "../../../product-assets/public/medication/features/medicines/appearance-options.js";
-import { timeText } from "../../../product-assets/public/medication/domain/care-index.js";
+import { timeText } from "@medora/domain/browser/care-index";
 import {
   listSeparator,
   localDigits,

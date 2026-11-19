@@ -1,7 +1,7 @@
 import type { Pool, PoolClient } from "pg";
-import { pilotConfig } from "../../../web/src/http/validation.mjs";
-import { portablePush } from "../../../web/src/reminders/push.mjs";
-import { sendReleaseNotice } from "../../../web/src/reminders/release.mjs";
+import { pilotConfig } from "@medora/server-shared/http/validation";
+import { portablePush } from "@medora/server-shared/reminders/push";
+import { sendReleaseNotice } from "@medora/server-shared/reminders/release";
 import type { PushEnv } from "./reminders";
 import { withReminder } from "./reminder-storage";
 import type { Repository } from "./repository";
@@ -78,7 +78,15 @@ export function releaseNotifications(
   }
   return {
     version,
-    publish,
+    async status() {
+      if (paused()) return "paused";
+      const { rows: [row] } = await pool.query<{ batch: Batch | null }>(
+        "SELECT batch FROM medora.release_batches WHERE singleton",
+      );
+      return row?.batch?.version === version
+        ? row.batch.done ? "complete" : "queued"
+        : "pending";
+    },
     async tick() {
       if (paused() || (await repo.productWriter()) !== "postgres") return;
       const phase = await publish();

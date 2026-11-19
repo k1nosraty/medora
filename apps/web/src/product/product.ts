@@ -1,6 +1,7 @@
+import type { CareState, FamilyView } from "./productState";
 import { accountTransport } from "./accountTransport";
 import { showFeedback } from "../../product-assets/public/medication/shared/ui/controls.js";
-import { CareInputError } from "../../product-assets/public/medication/shared/ui/care-error.js";
+import { createCareMutation } from "./careMutation";
 import { installEntryActions } from "./entryActions";
 import { preserveFocus } from "../../product-assets/public/medication/shared/ui/focus.js";
 import { routeFromLocation } from "./routes";
@@ -21,15 +22,15 @@ import {
   today,
 } from "../../product-assets/public/medication/shared/ui/dates.js";
 import { installDeletion } from "./DeleteConfirmation";
-import { localZone } from "../../product-assets/public/medication/domain/care-plan.js";
+import { localZone } from "@medora/domain/browser/care-plan";
 import {
   compilePhases,
   createCareIndex,
   isoDay,
-} from "../../product-assets/public/medication/domain/care-index.js";
-import * as engine from "../../product-assets/public/medication/domain/medication-rules.js";
-import { validRoutineId } from "../../product-assets/public/medication/domain/routine-plan.js";
-import { familySections } from "../../product-assets/public/medication/domain/family.js";
+} from "@medora/domain/browser/care-index";
+import * as engine from "@medora/domain/browser/medication-rules";
+import { validRoutineId } from "@medora/domain/browser/routine-plan";
+import { familySections } from "@medora/domain/browser/family";
 import {
   changeReminderRevision,
   initializeReminders,
@@ -37,7 +38,6 @@ import {
   syncReminders,
 } from "../../product-assets/public/medication/features/reminders/service.js";
 import { installMedication, type RenderDose } from "./medication/Medication";
-import type { FamilyDoseRecord, MedicationCare } from "./medication/model";
 import { installFamilyDialog } from "./family/FamilyDialog";
 import { showFamilyNotice } from "./family/FamilyNotice";
 import { installSupport, loadOperations, reportDailyOpen } from "./Operations";
@@ -49,109 +49,15 @@ import { finishIntro, hasStarted, showIntro } from "./Onboarding";
 import { initialCare } from "./initialCare";
 import { installSurfaceArt } from "../../product-assets/public/medication/design/surfaces.js";
 import { showStorageRecovery } from "./StorageRecovery";
-import type { SleepRecord, WakeDraft } from "./SleepForm";
-import type { WaterEntry } from "./WaterEntries";
-import type { RoutineCare, RoutineEntry } from "./routines/model";
-import type { CyclePeriod } from "./cycle/PeriodEditor";
-import type { CycleDayLabel } from "./cycleLabels";
-import type { VisitCare } from "./appointments/model";
-import type { PersonalProfile } from "./settings/Preferences";
 import { disposeCards } from "./renderer";
 
 function $<T extends HTMLElement = HTMLElement>(id: string) {
   return document.getElementById(id)! as T;
 }
 
-export type CareState = Omit<Parameters<typeof showIntro>[0], "water"> &
-  Parameters<typeof renderToday>[0] &
-  MedicationCare &
-  VisitCare &
-  RoutineCare & {
-    water?: WaterEntry[];
-    waterReminders?: {
-      enabled: boolean;
-      start: string;
-      end: string;
-      interval: number;
-      repeat: number;
-      pauseUntil: number;
-    };
-    reminders?: { revision?: number; enabled?: boolean };
-    familyPlacement?: string;
-    sleepCardSize?: string;
-    cycleCardSize?: string;
-    cycleOptions?: {
-      hideToday?: boolean;
-      minute?: number | null;
-      routines?: string[];
-      since?: number;
-    };
-    cycleChecklist?: string[];
-    cycleSupport?: string;
-    cycleFollowup?: { estimate: number; until: number | null };
-    cyclePreparation?: { estimate: number; items: string[] };
-    sleepSettings?: {
-      bedtime?: string;
-      wake?: string;
-      goal?: number;
-      mask?: number;
-      paused?: boolean;
-    };
-    sleepEnabled?: boolean;
-    personalProfile?: PersonalProfile;
-    accountCare?: { enabled?: boolean };
-    gender?: string;
-    cycleEnabled?: boolean;
-    theme?: string;
-    accent?: string;
-    sleepRecords?: Record<string, SleepRecord>;
-    sleepDraftWake?: WakeDraft;
-    cycleLocalOnly?: boolean;
-    cycleRecords?: Record<number, CyclePeriod>;
-    cycleDays?: Record<number, CycleDayLabel>;
-    cycleCompanionEstimate?: { first: number; last: number };
-    cycleCompanionMessage?: string;
-  };
-type EntryFamilyView = NonNullable<
-  ReturnType<Parameters<typeof installEntryActions>[0]["currentView"]>
->;
-export interface FamilyView extends EntryFamilyView {
-  member: { id: string };
-  group: { id: string; name: string };
-  name: string;
-  profile: (() => void) | null;
-  today: number;
-  zone: string;
-  firstName: string;
-  state: CareState;
-  timeOf(day: number, minute: number): number | undefined;
-  has(section: string): boolean;
-  canRecord(
-    kind: "water" | "cycle" | "medicine" | "visit" | "routine",
-    day?: number,
-  ): boolean;
-  record(
-    action:
-      | FamilyDoseRecord
-      | { kind: "water" | "cycle"; day: number }
-      | { kind: "visit"; day: number; id: string; title: string }
-      | {
-          kind: "routine";
-          day: number;
-          id: string;
-          title: string;
-          routine: RoutineEntry;
-        },
-  ): void;
-  authorName(entry: { recordedBy?: string }): string;
-  canView(section: string): boolean;
-  synced: boolean;
-}
-
 localizeMarkup({ keep: $("welcome-screen") });
 installSurfaceArt();
 let care: CareState | undefined;
-let busy = false;
 let familyView: FamilyView | null = null;
 const getFamilyView = () => familyView;
 const viewToday = () => familyView?.today ?? today();
@@ -162,7 +68,7 @@ const updateStatus = $("app-update-status");
 let updateStatusTimer: ReturnType<typeof setTimeout> | undefined;
 update.addEventListener("click", async () => {
   clearTimeout(updateStatusTimer);
-  if (busy) {
+  if (isSaving()) {
     updateStatus.textContent = t("ui.try-again-after-your-changes-are-saved");
     return;
   }
@@ -175,7 +81,7 @@ update.addEventListener("click", async () => {
   try {
     if (
       (await refreshApp({
-        canReload: () => !busy && !document.querySelector("dialog[open]"),
+        canReload: () => !isSaving() && !document.querySelector("dialog[open]"),
       })) === false
     ) {
       updateStatus.textContent = t("ui.medora-is-up-to-date");
@@ -193,49 +99,15 @@ update.addEventListener("click", async () => {
   }
 });
 const getState = () => care;
-async function mutate(
-  change: (state: CareState) => void,
-  success: string,
-  scheduleChanged = false,
-  day?: number,
-) {
-  if (busy || familyView) return false;
-  busy = true;
-  $("app").setAttribute("aria-busy", "true");
-  let needsSync = false;
-  try {
-    care = await accessCare(
-      (state: CareState) => {
-        const revision = state.reminders?.revision;
-        change(state);
-        if (scheduleChanged) changeReminderRevision(state);
-        needsSync = state.reminders?.revision !== revision;
-      },
-      { snapshot: care, day },
-    );
-  } catch (error) {
-    showFeedback(
-      $("status"),
-      error instanceof CareInputError
-        ? error.message
-        : t(storageMessage(error, "ui.could-not-save-try-again")),
-      "error",
-    );
-    return false;
-  } finally {
-    busy = false;
-    $("app").removeAttribute("aria-busy");
-  }
-  if (needsSync) void syncReminders(false, care);
-  accountSync.schedule();
-  try {
-    render();
-    showFeedback($("status"), success, "success");
-  } catch {
-    showFeedback($("status"), t("ui.saved-refresh-view"));
-  }
-  return true;
-}
+const { mutate, isSaving } = createCareMutation({
+  root: $("app"),
+  status: $("status"),
+  getState,
+  setState: (next) => { care = next; },
+  canWrite: () => !familyView,
+  scheduleSync: () => accountSync.schedule(),
+  render,
+});
 
 let indexedState: CareState | undefined;
 let indexedDay: number | undefined;
@@ -294,11 +166,11 @@ function render() {
 }
 
 async function reload() {
-  if (busy) return;
+  if (isSaving()) return;
   const snapshot = care;
   try {
     const latest = await accessCare(undefined, { snapshot });
-    if (busy || care !== snapshot || latest === snapshot) return;
+    if (isSaving() || care !== snapshot || latest === snapshot) return;
     care = latest;
     render();
   } catch (error) {

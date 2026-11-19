@@ -1,10 +1,23 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { emitArtworkPalettes } from "./artwork-palettes.mjs";
 
 const include =
   /(?:<!-- include ([\w./-]+)(?: (\{[^\n]*\}))? -->|\/\* include ([\w./-]+) \*\/)/g;
+
+export async function copyWebResources(publicDir) {
+  const web = new URL("../../apps/web/", import.meta.url);
+  const domain = new URL("../domain/src/", import.meta.url);
+  await Promise.all([
+    ...["admin", "pilot", "design"].map((name) => cp(new URL(`tools/${name}/`, web), new URL(`${name}/`, publicDir), { recursive: true })),
+    cp(new URL("tools/pilot.js", web), new URL("pilot.js", publicDir)),
+    cp(new URL("browser/", domain), new URL("medication/domain/", publicDir), { recursive: true }),
+    cp(new URL("crypto/", domain), new URL("medication/shared/crypto/", publicDir), { recursive: true }),
+    emitArtworkPalettes(new URL("product-assets/artwork-palettes/", web), new URL("design/optical-glass/", publicDir)),
+  ]);
+}
 
 async function render(ui, file, parents = [], parameters = {}, overrides = {}) {
   const path = resolve(ui, file);

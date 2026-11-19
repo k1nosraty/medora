@@ -341,7 +341,7 @@ test.describe("React medication and dose journeys", () => {
 
 async function fixtureWorker() {
   const { outputFiles } = await build({
-    absWorkingDir: fileURLToPath(new URL("../../web/", import.meta.url)),
+    absWorkingDir: fileURLToPath(new URL("../../apps/compat-worker/", import.meta.url)),
     entryPoints: ["src/worker.mjs"],
     bundle: true,
     platform: "browser",
@@ -845,7 +845,7 @@ test("the React cabinet and history open an encrypted Android v1 backup", async 
     .locator("#android-backup-file")
     .setInputFiles(
       fileURLToPath(
-        new URL("../../web/test/fixtures/android-medora-v1.medora", import.meta.url),
+        new URL("../compatibility/fixtures/android-medora-v1.medora", import.meta.url),
       ),
     );
   await page.locator("#android-backup-password").fill("MedoraInterop2026");

@@ -1,13 +1,15 @@
+import { fixtureDatabase } from "../../scripts/verification/fixture-database.mjs";
 import { expect, it } from "vitest";
 import { Pool } from "pg";
 import { randomUUID } from "node:crypto";
 import { familyService } from "../../apps/api/src/family";
 import { repository } from "../../apps/api/src/repository";
-it.skipIf(!process.env.MEDORA_TEST_DATABASE_URL)(
+const database = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
+it.skipIf(!database)(
   "scopes invitations, directional water grants, household reads and revocation",
   async () => {
     const pool = new Pool({
-      connectionString: process.env.MEDORA_TEST_DATABASE_URL,
+      connectionString: database,
     });
     const family = familyService(pool),
       repo = repository(pool),

@@ -2,7 +2,7 @@
 
 The canonical product route is `/medication/`. The React and Dexie journal at `/journal/` is a separate device archive and incremental-sync client with its own interface and storage.
 
-`apps/web/src/product` owns the TypeScript entry, startup, routing, writer-aware account transport and migrated React features. `apps/web/product-assets/ui` contains the remaining HTML shell and the shared CSS, icon and service-worker source. `apps/web/product-assets/public` contains fonts, translations, artwork, shared browser modules and the separately served tools. Both frontend builds use these sources and the compiler in `packages/web-build`. The incumbent npm build writes its own generated output into `web/public`.
+`apps/web/src/product` owns the TypeScript entry, startup, routing, writer-aware account transport and migrated React features. `apps/web/src/product/shell.html` owns the canonical shell. `apps/web/product-assets/ui` contains shared mount points, CSS, icon and service-worker source. `apps/web/product-assets/public` contains fonts, translations, artwork and shared browser modules. Separately served browser tools live in `apps/web/tools`. Both frontend builds use these sources and the compiler in `packages/web-build`. The compatibility workspace package writes its own generated output into `apps/compat-worker/public`.
 
 The canonical esbuild guard rejects inputs from the root `web/` directory and the superseded controller list. Some public module URLs still serve installed clients, design-gallery interactions and historical recovery. Their names and public scopes remain stable.
 
@@ -12,7 +12,7 @@ The canonical esbuild guard rejects inputs from the root `web/` directory and th
 - **Active primary UI.** The TypeScript entry mounts React for Family, device notification settings, Today, Settings and Cycle. Native dialog and section elements serve as mount points. The application router, picker integration and IndexedDB transaction adapter coordinate those roots.
 - **Shared application services.** Family permissions and time-zone projection use `family/{api,access,projection,quick-action}.js`. Device registration, local private-detail preferences and delivery check use `reminders/service.js`. Account synchronization, IndexedDB, backup codecs, medication rules, Cycle estimates and date calculations remain shared. `cycle/archive.js` retains the existing encrypted private format.
 - **Historical and independent UI.** The published incumbent controller URLs and HTML source serve the compatibility build and design gallery. The main esbuild graph rejects the superseded Family, reminder, Settings and Cycle controller modules. The browser matrix also rejects their HTTP requests. Independent administration, pilot, campaign review and Journal keep their separate entry points.
-- **Server runtime.** The portable Node and Workerd APIs remain PostgreSQL-backed. The combined candidate Worker still integrates the native compatibility backend in `web/src`. The client build and browser fixture are independent of that server package.
+- **Server runtime.** The portable Node and Workerd APIs remain PostgreSQL-backed. The combined candidate Worker still integrates the native compatibility backend in `apps/compat-worker/src`. Both backends import shared services from `packages/server-shared`. The client build and browser fixture are independent of that server package.
 
 ### Migration inventory
 
@@ -65,13 +65,13 @@ The medication build excludes the old editor, view and appearance controllers by
 
 | Path | Current use |
 | --- | --- |
-| `web/src`, `web/wrangler.jsonc` | Native compatibility API, archive and operation recovery, alarm implementations and runtime configuration. Selected server modules also support the portable API. |
-| `web/scripts`, `web/test` | Incumbent build, synthetic fixtures, historical format readers, verification, and backup or rollback tools. |
-| `web/public` | Ignored output recreated by the compatibility build. The primary app has no build or browser dependency on this generated output. |
-| `web/package.json`, lockfile, JS and Playwright configs | Compatibility tools and test configuration. Native Workerd browser tests live in `tests/product`. |
+| `apps/compat-worker/` | Native compatibility API, archive and operation recovery, alarm implementations and runtime configuration. |
+| `scripts/migration/`, `tests/compatibility/` | Historical archive readers, independent fixtures, and compatibility regression tests. |
+| `apps/compat-worker/public` | Ignored output recreated by the compatibility build. |
+| `tests/browser`, `tests/product` | Browser verification and native Workerd fixtures. Both builds install from the root lockfile. |
 | `apps/web/product-assets` | Shared artwork, styles, page mount points, browser services and historical controller sources for the incumbent and gallery at stable public URLs. |
 
-The source move retires the tracked `web/ui` and `web/public` copies. Whole-tree deletion would remove the native backend, historical archive tools and compatibility fixtures.
+The Git tree contains no files under the old root `web/` path. Existing developers may still have ignored state or secrets under that path. The tools, recovery code and fixtures above remain available.
 
 ## Separately served tools
 
@@ -85,6 +85,6 @@ The source move retires the tracked `web/ui` and `web/public` copies. Whole-tree
 
 ## Current verification boundary
 
-`node scripts/verification/frontend-independence.mjs` installs dependencies from the workspace lockfile in a temporary copy without the root `web/` tree, builds the primary frontend and runs its standalone browser suite against the production output with a synthetic API. Use `--offline` with a populated pnpm cache. The screen matrix aborts and records requests for the replaced controller URLs and any `/web/` path. Full Workerd-backed product and handoff tests use separate local fixtures.
+`node scripts/verification/frontend-independence.mjs` installs dependencies from the workspace lockfile in a temporary copy without the root `web/` tree or the separate `apps/compat-worker/` workspace package, builds the primary frontend and runs its standalone browser suite against the production output with a synthetic API. Use `--offline` with a populated pnpm cache. The screen matrix aborts and records requests for the replaced controller URLs and any `/web/` path. Full Workerd-backed product and handoff tests use separate local fixtures.
 
-The ownership boundary is the canonical `/medication/` entry. UI rendering and interaction in the newly ported workflows use React. Shared Web APIs, routing and storage adapters keep their native responsibilities. The compatibility server and reference client remain independent of this entry. The frontend acceptance status is **INCOMPLETE** because the strict WebKit reference screenshot gate remains open. See [rebuild verification](REBUILD_VERIFICATION.md) and [performance](PERFORMANCE.md) for results. Production release remains **NOT READY**.
+The ownership boundary is the canonical `/medication/` entry. Its workflow rendering and interaction use React. Native APIs still handle dialogs, focus, IndexedDB and service-worker lifecycle. Reports load on demand. Personal writes go through the care mutation coordinator. Family delegated writes keep their permission checks, operation identifiers and retry behavior. The last full visual run passed all profiles in Chromium and WebKit. See [rebuild verification](REBUILD_VERIFICATION.md) and [performance](PERFORMANCE.md) for the scope of the synthetic results. Production release remains **NOT READY**.

@@ -1,0 +1,29 @@
+{
+  "name": "@medora/compat-worker",
+  "version": "0.5.0-preview",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "scripts": {
+    "build": "node scripts/build-web.mjs",
+    "dev": "pnpm run build && wrangler dev",
+    "deploy": "pnpm run build && wrangler deploy",
+    "pilot:secrets": "node scripts/pilot-secrets.mjs",
+    "test": "pnpm run build && node --test ../../tests/compatibility/*.test.mjs",
+    "typecheck": "tsc -p jsconfig.json",
+    "test:care": "node --test scripts/care-engine.check.mjs",
+    "test:alarms": "node scripts/reminder-alarm.check.mjs",
+    "test:browser": "pnpm -w run test:incumbent"
+  },
+  "dependencies": {
+    "@medora/server-shared": "workspace:*",
+    "@medora/domain": "workspace:*",
+    "@block65/webcrypto-web-push": "2.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "workbox-routing": "7.3.0"
+  }
+}

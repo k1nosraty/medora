@@ -43,7 +43,7 @@ export async function withLocalWorker(
     CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: db.href,
   };
   const worker = spawn(
-    "web/node_modules/.bin/wrangler",
+    "node_modules/.bin/wrangler",
     [
       "dev",
       "--local",

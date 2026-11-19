@@ -12,21 +12,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm audit --audit-level=high
-      - run: npm test
-      - run: npm run test:care
-      - run: npm run test:alarms
-      - run: npx playwright install --with-deps chromium webkit
-      - run: npm run test:browser
+          node-version: '24.18.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @medora/compat-worker run typecheck
+      - run: pnpm audit --audit-level=high
+      - run: pnpm --filter @medora/compat-worker test
+      - run: pnpm --filter @medora/compat-worker run test:care
+      - run: pnpm --filter @medora/compat-worker run test:alarms
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm test:incumbent

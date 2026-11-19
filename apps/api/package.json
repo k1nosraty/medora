@@ -12,7 +12,9 @@
     "aws4fetch": "^1.0.20",
     "drizzle-orm": "^0.45",
     "hono": "^4",
-    "pg": "^8"
+    "pg": "^8",
+    "@medora/server-shared": "workspace:*",
+    "@medora/domain": "workspace:*"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

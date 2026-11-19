@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
-import { CampaignStore } from "../../../web/src/promotions/campaigns.mjs";
-import { routePromotions } from "../../../web/src/promotions/http.mjs";
+import { CampaignStore } from "@medora/server-shared/promotions/campaigns";
+import { routePromotions } from "@medora/server-shared/promotions/http";
 import type { operationService, OperationsEnv } from "./operations";
 import type { Repository } from "./repository";
 import { PromotionStorage } from "./promotion-storage";

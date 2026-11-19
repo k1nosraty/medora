@@ -1,14 +1,14 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
-import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
+import { isoDay } from "@medora/domain/browser/care-index";
 import { dayNumber } from "../../../product-assets/public/medication/shared/ui/dates.js";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
-import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
+import { cycleIsEnabled } from "@medora/domain/browser/profile";
 import { installCycleOverview } from "../CycleOverview";
 import { clearFeature, paintFeature } from "../renderer";
 import { Icon, PlanArtwork } from "../PlanCard";
 import type { installDeletion } from "../DeleteConfirmation";
-import type { CareState, FamilyView } from "../product";
+import type { CareState, FamilyView } from "../productState";
 
 export interface CyclePeriod {
   end?: number | null;

@@ -1,0 +1,10 @@
+{
+  "name": "@medora/domain",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./browser/*": "./src/browser/*.js",
+    "./crypto/*": "./src/crypto/*.js",
+    "./*": "./src/*.ts"
+  }
+}

@@ -1,13 +1,13 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
-import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
-import { cycleSymptoms } from "../../../product-assets/public/medication/domain/cycle.js";
-import { equalCareValues } from "../../../product-assets/public/medication/domain/care-contract.js";
-import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
+import { isoDay } from "@medora/domain/browser/care-index";
+import { cycleSymptoms } from "@medora/domain/browser/cycle";
+import { equalCareValues } from "@medora/domain/browser/care-contract";
+import { cycleIsEnabled } from "@medora/domain/browser/profile";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import { describeCycleDay, type CycleDayLabel } from "../cycleLabels";
 import { clearFeature, paintFeature } from "../renderer";
-import type { CareState } from "../product";
+import type { CareState } from "../productState";
 import type { installDeletion } from "../DeleteConfirmation";
 import {
   CycleDateField,

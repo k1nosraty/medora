@@ -2,7 +2,7 @@
 
 At base 5ee5e47, three cold Chromium runs at 390 × 844 simulated 160 ms latency, 200 kB/s download and 75 kB/s upload, with service workers blocked. The median time until the onboarding control became usable was 5,995 ms with 24 requests and 1,097,905 transferred bytes. Maximum of three was 5,999 ms. The generated offline shell listed 35 files totalling 1,316,425 bytes. The largest measured response was the main JS bundle at 261,105 transferred bytes.
 
-Reproduce with `npm --prefix web run build && node tests/browser/measure.mjs web/public 3`. For system Chromium set MEDORA_CHROMIUM to its executable. Usable time is an application marker. LCP, INP, CLS, TTFB, route transitions and large-list timings require separate instrumentation. Compare the same feature, device, cache state and payload before claiming an improvement.
+Reproduce with `pnpm --filter @medora/compat-worker build && node tests/browser/measure.mjs apps/compat-worker/public 3`. For system Chromium set MEDORA_CHROMIUM to its executable. Usable time is an application marker. LCP, INP, CLS, TTFB, route transitions and large-list timings require separate instrumentation. Compare the same feature, device, cache state and payload before claiming an improvement.
 
 Baseline functional browser suite passed all 80 cases across Chromium and WebKit in 2.2 minutes.
 
@@ -121,3 +121,21 @@ Three cold Chromium trials per build used the same 390 × 844 viewport, 160 ms l
 The warm medication comparison used 24 plans and the same network conditions. Navigation through the next frame measured 30 to 37 ms, details 17 to 16 ms, and dose commit 26 to 27 ms across three trials per build. These actions made zero network requests. Total canonical JavaScript measured 927,588 to 942,274 raw bytes and 263,013 to 263,278 gzip bytes.
 
 Reproduce with `node tests/browser/measure.mjs apps/web/dist 3 --dashboard`. The median remains within the six-second onboarding budget. Physical-device and hosted performance remain release gates.
+
+### Repository audit follow-up
+
+The starting commit `ea90f73` and the audited candidate were built from source. Both ran three cold Chromium trials at 390 × 844 with 160 ms latency, 200 kB/s down, 75 kB/s up and blocked service workers. Reports load after the Reports tab is opened. The service worker includes the additional chunks for offline navigation.
+
+| Median measurement | `ea90f73` | Candidate |
+| --- | ---: | ---: |
+| Usable welcome button | 4,494 ms | 4,503 ms |
+| Focused dashboard after immediate click | 7,141 ms | 7,110 ms |
+| Requests at welcome readiness | 20 | 20 |
+| Bytes at welcome readiness | 717,686 | 717,680 |
+| Static offline shell files and bytes | 41 / 1,563,670 | 45 / 1,566,536 |
+| Warm medication navigation through next paint | 26 ms | 31 ms |
+| Warm medication details through next paint | 18 ms | 16 ms |
+| Warm dose commit through next paint | 27 ms | 26 ms |
+| Total canonical JavaScript, raw / gzip | 942,341 / 263,288 B | 945,213 / 265,973 B |
+
+The welcome marker remains within its 6,000 ms budget. The dashboard uses a different marker and still takes about 7.1 seconds on this profile. The warm test used 24 synthetic plans. The three medication actions made zero resource requests in both builds. Reproduce with `node tests/browser/measure.mjs <assets> 3 --dashboard` and `node tests/browser/measure-medication.mjs <baseline-assets> <candidate-assets>`. The activity palette change saves 4,604,460 bytes of checked-in source and preserves installed image bytes and requests.

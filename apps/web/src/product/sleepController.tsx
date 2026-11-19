@@ -1,8 +1,8 @@
 import { TodaySleep } from "./TodaySleep";
 import { renderSleepChart, renderSleepHistory } from "./SleepHistory";
-import { equalCareValues } from "../../product-assets/public/medication/domain/care-contract.js";
-import { localZone } from "../../product-assets/public/medication/domain/care-plan.js";
-import { isoDay } from "../../product-assets/public/medication/domain/care-index.js";
+import { equalCareValues } from "@medora/domain/browser/care-contract";
+import { localZone } from "@medora/domain/browser/care-plan";
+import { isoDay } from "@medora/domain/browser/care-index";
 import {
   sleepConflicts,
   sleepDay,
@@ -11,7 +11,7 @@ import {
   sleepReport,
   sleepWall,
   validSleepRecord,
-} from "../../product-assets/public/medication/domain/sleep.js";
+} from "@medora/domain/browser/sleep";
 import {
   localDigits,
   locale,
@@ -23,7 +23,7 @@ import { setPressed } from "../../product-assets/public/medication/shared/ui/con
 import { sleepDuration } from "../../product-assets/public/medication/features/sleep/presentation.js";
 import { SleepForm, type SleepRecord, type WakeDraft } from "./SleepForm";
 import { paintFeature } from "./renderer";
-import type { CareState } from "./product";
+import type { CareState } from "./productState";
 import type { installDeletion } from "./DeleteConfirmation";
 import type { calendarFormat } from "../../product-assets/public/medication/shared/ui/calendar-format.js";
 

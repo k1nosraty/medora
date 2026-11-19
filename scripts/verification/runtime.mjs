@@ -3,7 +3,8 @@ import { randomUUID, randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { Client } from "pg";
 import { readFile } from "node:fs/promises";
-import { passwordProof } from "../../web/src/accounts/auth-crypto.mjs";
+import { passwordProof } from "../../apps/compat-worker/src/accounts/auth-crypto.mjs";
+import { fixtureDatabase } from "./fixture-database.mjs";
 
 const origin = new URL(process.argv[2]);
 if (
@@ -11,12 +12,9 @@ if (
   origin.protocol !== "http:"
 )
   throw new Error("Runtime rehearsal requires an isolated loopback origin");
-const dbUrl = process.env.MEDORA_TEST_DATABASE_URL;
+const dbUrl = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
 const project = process.env.MEDORA_TEST_COMPOSE_PROJECT;
-if (
-  !dbUrl === !project ||
-  (dbUrl && !["127.0.0.1", "localhost"].includes(new URL(dbUrl).hostname))
-)
+if (Boolean(dbUrl) === Boolean(project))
   throw Error("Choose one isolated database target");
 const id = randomUUID(),
   username = id.replaceAll("-", ""),
@@ -98,7 +96,7 @@ assert.deepEqual(
   [{ ...op, cursor: 1 }],
 );
 const bytes = await readFile(
-  new URL("../../web/test/fixtures/android-medora-v1.medora", import.meta.url),
+  new URL("../../tests/compatibility/fixtures/android-medora-v1.medora", import.meta.url),
 );
 const saved = await request("backups", {
   method: "POST",

@@ -6,11 +6,11 @@ import {
 import {
   isoDay,
   type createCareIndex,
-} from "../../../product-assets/public/medication/domain/care-index.js";
+} from "@medora/domain/browser/care-index";
 import { timeZoneCity } from "../../../product-assets/public/medication/shared/ui/time-zone-picker.js";
 import { Icon, PlanDayCard, PlanOptions } from "../PlanCard";
 import { clearFeature, mountCard, paintFeature } from "../renderer";
-import type { CareState, FamilyView } from "../product";
+import type { CareState, FamilyView } from "../productState";
 import type { installDeletion } from "../DeleteConfirmation";
 import { categoryLabel, categoryOf } from "./categories";
 import {

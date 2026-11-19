@@ -3,21 +3,21 @@ import {
   locale,
   t,
 } from "../../../product-assets/public/medication/shared/i18n/locale.js";
-import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
-import { cycleForecast } from "../../../product-assets/public/medication/domain/cycle.js";
+import { cycleIsEnabled } from "@medora/domain/browser/profile";
+import { cycleForecast } from "@medora/domain/browser/cycle";
 import {
   sleepDay,
   sleepIsEnabled,
   sleepMinutes,
-} from "../../../product-assets/public/medication/domain/sleep.js";
+} from "@medora/domain/browser/sleep";
 import { sleepDuration } from "../../../product-assets/public/medication/features/sleep/presentation.js";
-import { clockMinute } from "../../../product-assets/public/medication/domain/care-plan.js";
+import { clockMinute } from "@medora/domain/browser/care-plan";
 import { renderMonthGrid } from "../MonthGrid";
 import { Icon, PlanArtwork, PlanDayCard, PlanOptions } from "../PlanCard";
 import { disposeCards, mountCard } from "../renderer";
 import { describeCycleDay } from "../cycleLabels";
 import type { CalendarInput } from "./Insights";
-import type { CareState } from "../product";
+import type { CareState } from "../productState";
 
 export function CalendarShell({
   shift,

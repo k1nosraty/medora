@@ -1,3 +1,4 @@
+import { fixtureDatabase } from "../../scripts/verification/fixture-database.mjs";
 import { expect, it } from "vitest";
 import { Pool } from "pg";
 import { randomUUID } from "node:crypto";
@@ -6,11 +7,12 @@ import { repository } from "../../apps/api/src/repository";
 import { verifier } from "../../apps/api/src/password";
 import { createApp } from "../../apps/api/src/app";
 
-it.skipIf(!process.env.MEDORA_TEST_DATABASE_URL)(
+const database = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
+it.skipIf(!database)(
   "verifies registration, retries mail delivery, resets a password and revokes existing sessions",
   async () => {
     const pool = new Pool({
-      connectionString: process.env.MEDORA_TEST_DATABASE_URL,
+      connectionString: database,
     });
     const settings = {
       passwordKey: "1".repeat(64),

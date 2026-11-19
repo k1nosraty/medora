@@ -3,8 +3,8 @@ import { expect, it } from "vitest";
 import {
   doseId,
   doseTime,
-} from "../../apps/web/product-assets/public/medication/domain/care-index.js";
-import { saveMedicinePlan } from "../../apps/web/product-assets/public/medication/domain/medicine-command.js";
+} from "../../packages/domain/src/browser/care-index.js";
+import { saveMedicinePlan } from "../../packages/domain/src/browser/medicine-command.js";
 import { dayNumber } from "../../apps/web/product-assets/public/medication/shared/ui/dates.js";
 import {
   deleteSchedule,

@@ -29,7 +29,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '24.18.0', cache: pnpm}
       - run: pnpm install --frozen-lockfile
-      - run: npm ci --prefix web
       - run: pnpm audit --prod --audit-level=high
       - run: pnpm typecheck && pnpm lint
       - run: pnpm db:migrate && pnpm db:migrate
@@ -75,13 +74,17 @@ jobs:
           done
           node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
       - run: pnpm test:compat
-      - run: npm --prefix web run test:browser
+      - run: pnpm test:incumbent
       - run: pnpm test:product
       - run: node scripts/verification/visual-parity.mjs > dist/visual-parity.json
       - run: node tests/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
       - run: pnpm test:e2e
       - run: node scripts/verification/pwa-update.mjs
-      - run: node scripts/verification/bundle-worker.mjs infrastructure/cloudflare/candidate.mjs dist/worker/candidate.js
+      - run: node scripts/verification/frontend-independence.mjs --offline
+      - name: Build both Worker adapters
+        run: |
+          node scripts/verification/bundle-worker.mjs infrastructure/cloudflare/candidate.mjs dist/worker/candidate.js
+          node scripts/verification/bundle-worker.mjs apps/api/src/adapters/worker.ts dist/worker/portable.js
       - name: Exercise standalone storage, Node and reverse proxy
         run: |
           config="$RUNNER_TEMP/medora-fixture.env"

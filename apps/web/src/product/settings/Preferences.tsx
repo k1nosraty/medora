@@ -13,14 +13,14 @@ import {
   cycleIsEnabled,
   genders,
   validPersonalProfile,
-} from "../../../product-assets/public/medication/domain/profile.js";
-import { familyPlacementOf } from "../../../product-assets/public/medication/domain/family.js";
+} from "@medora/domain/browser/profile";
+import { familyPlacementOf } from "@medora/domain/browser/family";
 import {
   sleepDefaults,
   sleepIsEnabled,
   validSleepSettings,
-} from "../../../product-assets/public/medication/domain/sleep.js";
-import type { CareState } from "../product";
+} from "@medora/domain/browser/sleep";
+import type { CareState } from "../productState";
 import {
   AppointmentPreferences,
   WaterPreferences,

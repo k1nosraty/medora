@@ -11,11 +11,12 @@
     "lint": "eslint \"*.config.ts\" \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"tests/**/*.{ts,tsx}\" --max-warnings=0",
     "test": "vitest run",
     "build": "pnpm --filter @medora/web build && pnpm --filter @medora/api build",
-    "test:compat": "npm --prefix web run typecheck && npm --prefix web test && npm --prefix web run test:care && npm --prefix web run test:alarms",
-    "test:product": "MEDORA_PUBLIC_DIR=\"$PWD/apps/web/dist\" playwright test --config web/playwright.config.mjs",
+    "test:compat": "pnpm --filter @medora/compat-worker run typecheck && pnpm --filter @medora/compat-worker test && pnpm --filter @medora/compat-worker run test:care && pnpm --filter @medora/compat-worker run test:alarms",
+    "test:product": "playwright test --config tests/browser/product.config.mjs",
     "test:e2e": "playwright test",
     "test:handoff": "node scripts/verification/postgres-handoff.mjs",
-    "db:migrate": "node scripts/migration/apply.mjs"
+    "db:migrate": "node scripts/migration/apply.mjs",
+    "test:incumbent": "pnpm --filter @medora/compat-worker build && MEDORA_INCUMBENT_BROWSER=1 playwright test --config tests/browser/product.config.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4",
@@ -35,7 +36,11 @@
     "react-router-dom": "^7.18.5",
     "typescript": "5.9.3",
     "typescript-eslint": "^8",
-    "vitest": "^4"
+    "vitest": "^4",
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261104.0-beta",
+    "wrangler": "4.158.0",
+    "workbox-routing": "7.3.0"
   },
   "dependencies": {
     "pg": "^8"

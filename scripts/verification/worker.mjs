@@ -2,10 +2,11 @@ import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { withLocalWorker } from "./local-worker.mjs";
-const db = new URL(process.env.MEDORA_TEST_DATABASE_URL ?? "invalid");
+import { fixtureDatabase } from "./fixture-database.mjs";
+const db = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
 const mail = new URL(process.argv[2] ?? "invalid");
 if (
-  !["localhost", "127.0.0.1"].includes(db.hostname) ||
+  !db ||
   mail.hostname !== "127.0.0.1" ||
   mail.protocol !== "http:"
 )
@@ -26,7 +27,7 @@ async function run(args) {
   if (code !== 0) throw Error("Fixture check failed in " + args[0]);
 }
 await withLocalWorker(
-  db.href,
+  db,
   port,
   {
     MEDORA_PASSWORD_KEYS: passwordKeys,

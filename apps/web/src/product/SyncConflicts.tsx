@@ -1,5 +1,5 @@
 import { dayNumber } from "../../product-assets/public/medication/shared/ui/dates.js";
-import { timeText } from "../../product-assets/public/medication/domain/care-index.js";
+import { timeText } from "@medora/domain/browser/care-index";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
   listSeparator,

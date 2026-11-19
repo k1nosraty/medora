@@ -8,6 +8,7 @@ import {
   restoreBackupCatalog,
 } from "../migration/backup-recovery.mjs";
 import { fixtureObjects } from "./fixture-objects.mjs";
+import { fixtureDatabase } from "./fixture-database.mjs";
 
 export async function verifyRecoveredCatalog(
   source,
@@ -17,9 +18,7 @@ export async function verifyRecoveredCatalog(
   owner,
   digest,
 ) {
-  const db = new URL(url);
-  if (!["127.0.0.1", "localhost"].includes(db.hostname))
-    throw Error("Loopback catalog fixture required");
+  const db = new URL(fixtureDatabase(url));
   const name = "medora_catalog_fixture_" + randomBytes(8).toString("hex");
   await source.query("CREATE DATABASE " + name);
   db.pathname = "/" + name;

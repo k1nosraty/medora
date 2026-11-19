@@ -10,7 +10,6 @@
 
 ```sh
 pnpm install --frozen-lockfile
-npm ci --prefix web
 pnpm build
 mkdir -p .local
 node scripts/verification/local-env.mjs .local/dev.env
@@ -40,11 +39,11 @@ Compose حالت سازگاری را برای تمرین مسیر قدیمی ه�
 | `apps/web/` | محصول اصلی، دفتر React و Dexie و ساخت Vite |
 | `apps/api/src/` | برنامهٔ Hono، قواعد دسترسی، سرویس‌ها و اتصال PostgreSQL |
 | `apps/api/src/adapters/` | ورودی‌های Node و Workers و تنظیم اتصال |
-| `packages/` | قراردادهای API و قواعد مشترک |
-| `apps/web/product-assets/` | پوسته، ترجمه، استایل و دارایی‌های مشترک، ماژول‌های مرورگر و ابزارهای مستقل |
-| `web/` | Worker سازگاری، ابزار ساخت نسخهٔ مرجع و آزمون‌ها و خواننده‌های تاریخی |
+| `packages/` | قراردادهای API، قواعد دامنه، سرویس‌های مشترک سرور و ابزار ساخت رابط |
+| `apps/web/product-assets/` و `apps/web/tools/` | ترجمه، استایل، دارایی‌ها، ماژول‌های مرورگر و ابزارهای مستقل مدیریت، پایلوت و گالری |
+| `apps/compat-worker/` | Worker سازگاری، آلارم‌های قدیمی و ساخت نسخهٔ مرجع |
 | `migrations/server/` و `scripts/migration/` | تاریخچهٔ SQL دارای checksum و ابزارهای انتقال، پشتیبان و بازیابی |
-| `tests/`، `web/test/` و `scripts/verification/` | آزمون‌ها، داده‌های مصنوعی و تمرین‌های بازگشت |
+| `tests/` و `scripts/verification/` | آزمون‌ها، داده‌های مصنوعی و تمرین‌های بازگشت |
 | `infrastructure/cloudflare/` و `infrastructure/docker/` | تنظیم Worker و استک Node و Caddy |
 | `branding/` و `docs/` | دارایی مرجع و مستندات توسعه و عملیات |
 
@@ -60,15 +59,15 @@ pnpm test
 pnpm test:compat
 pnpm test:e2e
 pnpm test:product
-npm --prefix web run test:browser
+pnpm test:incumbent
 ```
 
-برای آزمون‌های PostgreSQL، `MEDORA_TEST_DATABASE_URL` باید به پایگاه آزمایشی جدا اشاره کند. پیش از اجرا با `DATABASE_URL` همان پایگاه، `pnpm db:migrate` را اجرا کنید. آزمون‌های وابسته به PostgreSQL بدون اتصال آزمایشی کنار گذاشته می‌شوند. آزمون‌های Playwright را بعد از ساخت اجرا کنید. `pnpm test:product` محصول بازسازی‌شده و دستور آخر محصول سازگاری را باز می‌کند. تمرین مهاجرت، بازیابی و توقف نوشتن به پایگاه‌های تازه نیاز دارد. [گزارش و دامنهٔ آزمون‌ها](docs/REBUILD_VERIFICATION.md)
+برای آزمون‌های PostgreSQL، `MEDORA_TEST_DATABASE_URL` باید به پایگاه آزمایشی جدا روی loopback با نامی مانند `medora_fixture` اشاره کند. پیش از اجرا با `DATABASE_URL` همان پایگاه، `pnpm db:migrate` را اجرا کنید. آزمون‌های وابسته به PostgreSQL بدون اتصال آزمایشی کنار گذاشته می‌شوند. آزمون‌های Playwright را بعد از ساخت اجرا کنید. `pnpm test:product` محصول بازسازی‌شده و دستور آخر محصول سازگاری را باز می‌کند. تمرین مهاجرت، بازیابی و توقف نوشتن به پایگاه‌های تازه نیاز دارد. [گزارش و دامنهٔ آزمون‌ها](docs/REBUILD_VERIFICATION.md)
 
 ## راهنماهای اصلی
 
 - [معماری](docs/ARCHITECTURE.md) و [حفظ داده‌های دستگاه](docs/DATA_PRESERVATION.md)
 - [مهاجرت و پشتیبان](docs/MIGRATION.md) و [بازگشت](docs/ROLLBACK.md)
 - [Cloudflare](docs/CLOUDFLARE_DEPLOYMENT.md)، [VPS](docs/VPS_DEPLOYMENT.md) و [معیارهای انتشار](docs/DEPLOYMENT.md)
-- [نقشهٔ نسخهٔ سازگاری](web/README.md) و [طراحی و دارایی‌ها](docs/DESIGN_SYSTEM.md)
+- [نقشهٔ نسخهٔ سازگاری](apps/compat-worker/README.md) و [طراحی و دارایی‌ها](docs/DESIGN_SYSTEM.md)
 - [وضعیت انتقال رابط به React و TypeScript](docs/FRONTEND_PORT.md)

@@ -2,9 +2,9 @@ import { useRef, useState } from "react";
 import {
   doseId,
   timeText,
-} from "../../../product-assets/public/medication/domain/care-index.js";
-import { saveMedicinePlan } from "../../../product-assets/public/medication/domain/medicine-command.js";
-import { isLowStock } from "../../../product-assets/public/medication/domain/medication-rules.js";
+} from "@medora/domain/browser/care-index";
+import { saveMedicinePlan } from "@medora/domain/browser/medicine-command";
+import { isLowStock } from "@medora/domain/browser/medication-rules";
 import { nextPlannedDose } from "../../../product-assets/public/medication/features/medicines/next-dose.js";
 import {
   amountText,
@@ -19,7 +19,7 @@ import {
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import type { installDeletion } from "../DeleteConfirmation";
 import type { installPickers } from "../Pickers";
-import type { CareState, FamilyView } from "../product";
+import type { CareState, FamilyView } from "../productState";
 import { clearFeature, paintFeature } from "../renderer";
 import { DoseContents, doseCardAttributes, type DoseVariant } from "./DoseCard";
 import { MedicineArt, medicineColor } from "./MedicineArt";

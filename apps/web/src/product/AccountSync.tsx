@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
-import { localZone } from "../../product-assets/public/medication/domain/care-plan.js";
+import { localZone } from "@medora/domain/browser/care-plan";
 import type { createCareSync } from "../../product-assets/public/medication/features/sync/service.js";
 import { TimeZoneChoices } from "./settings/TimeZoneChoices";
 import { SyncConflictReview } from "./SyncConflicts";

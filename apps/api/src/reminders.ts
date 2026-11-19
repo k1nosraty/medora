@@ -1,10 +1,10 @@
 import type { operationService } from "./operations";
 import type { Pool, PoolClient } from "pg";
-import { ReminderDevice } from "../../../web/src/reminders/device.mjs";
-import { routeReminders } from "../../../web/src/reminders/routes.mjs";
-import { portablePush } from "../../../web/src/reminders/push.mjs";
-import { reminderCareProjection } from "../../web/product-assets/public/medication/domain/care-plan.js";
-import { pilotConfig } from "../../../web/src/http/validation.mjs";
+import { ReminderDevice } from "@medora/server-shared/reminders/device";
+import { routeReminders } from "@medora/server-shared/reminders/routes";
+import { portablePush } from "@medora/server-shared/reminders/push";
+import { reminderCareProjection } from "@medora/domain/browser/care-plan";
+import { pilotConfig } from "@medora/server-shared/http/validation";
 import type { Repository } from "./repository";
 import { withReminder } from "./reminder-storage";
 

@@ -4,7 +4,15 @@ export interface Ticket {
   id: string;
   status: "open" | "closed";
   message: string;
-  reply?: string;
+  reply?: string | null;
+}
+
+function isTicket(value: unknown): value is Ticket {
+  return typeof value === "object" && value !== null &&
+    "id" in value && typeof value.id === "string" &&
+    "message" in value && typeof value.message === "string" &&
+    "status" in value && (value.status === "open" || value.status === "closed") &&
+    (!("reply" in value) || value.reply === null || typeof value.reply === "string");
 }
 
 export async function readTickets(
@@ -16,8 +24,10 @@ export async function readTickets(
   });
   if (response.status === 401) return null;
   if (!response.ok) throw Error("Support unavailable");
-  const body: { tickets: Ticket[] } = await response.json();
-  if (!Array.isArray(body.tickets)) throw Error("Invalid support response");
+  const body: unknown = await response.json();
+  if (typeof body !== "object" || body === null || !("tickets" in body) ||
+      !Array.isArray(body.tickets) || !body.tickets.every(isTicket))
+    throw Error("Invalid support response");
   return body.tickets;
 }
 

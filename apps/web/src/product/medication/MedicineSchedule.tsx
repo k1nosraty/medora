@@ -1,5 +1,5 @@
-import { timeText } from "../../../product-assets/public/medication/domain/care-index.js";
-import { clockMinute } from "../../../product-assets/public/medication/domain/care-plan.js";
+import { timeText } from "@medora/domain/browser/care-index";
+import { clockMinute } from "@medora/domain/browser/care-plan";
 import {
   amountText,
   doseUnit,

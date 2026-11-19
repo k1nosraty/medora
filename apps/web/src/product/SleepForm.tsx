@@ -5,7 +5,7 @@ import {
   sleepMinutes,
   sleepWall,
   validSleepRecord,
-} from "../../product-assets/public/medication/domain/sleep.js";
+} from "@medora/domain/browser/sleep";
 import { sleepDuration } from "../../product-assets/public/medication/features/sleep/presentation.js";
 
 export interface SleepRecord {

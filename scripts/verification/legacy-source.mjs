@@ -5,15 +5,15 @@ import {
 } from "../../apps/web/product-assets/public/medication/features/sync/private-care.js";
 // Generates a stopped, synthetic local Workerd copy and an independent inventory.
 import assert from "node:assert/strict";
-import { sessionHash } from "../../web/src/accounts/auth-crypto.mjs";
+import { sessionHash } from "../../apps/compat-worker/src/accounts/auth-crypto.mjs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { passwordProof } from "../../web/src/accounts/auth-crypto.mjs";
+import { passwordProof } from "../../apps/compat-worker/src/accounts/auth-crypto.mjs";
 const require = createRequire(
-  new URL("../../web/package.json", import.meta.url),
+  import.meta.url,
 );
 const { build } = require("esbuild"),
   { Miniflare, convertV4MiniflareOptions } = require("miniflare");
@@ -22,7 +22,7 @@ if (!output) throw new Error("Supply a fresh private fixture directory");
 const verification = process.argv[3];
 const fenced = process.argv[4] === "fenced";
 if (!verification) await mkdir(output, { mode: 0o700 });
-const root = fileURLToPath(new URL("../../web/", import.meta.url));
+const root = fileURLToPath(new URL("../../apps/compat-worker/", import.meta.url));
 const classes = [
   "EmailAccount",
   "Credentials",

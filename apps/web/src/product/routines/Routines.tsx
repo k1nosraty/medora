@@ -8,11 +8,11 @@ import {
   doseTime,
   timeText,
   type createCareIndex,
-} from "../../../product-assets/public/medication/domain/care-index.js";
-import { routineComplete } from "../../../product-assets/public/medication/domain/routine-plan.js";
+} from "@medora/domain/browser/care-index";
+import { routineComplete } from "@medora/domain/browser/routine-plan";
 import { fitDialogToViewport } from "../../../product-assets/public/medication/shared/ui/dom.js";
 import { setPressed } from "../../../product-assets/public/medication/shared/ui/controls.js";
-import type { CareState, FamilyView } from "../product";
+import type { CareState, FamilyView } from "../productState";
 import type { installDeletion } from "../DeleteConfirmation";
 import { PlanDayCard, PlanOptions, Icon } from "../PlanCard";
 import { clearFeature, mountCard, paintFeature } from "../renderer";

@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { expect, it } from "vitest";
-import { Journal } from "../../apps/web/src/storage/journal";
+import { Journal } from "../../apps/web/src/journal/storage/journal";
 it("retains a pending write across restart and a conflicting pull, then applies its own receipt atomically", async () => {
   const name = "queue-" + crypto.randomUUID();
   let db = new Journal(name);

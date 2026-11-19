@@ -6,12 +6,13 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { fixtureDatabase } from "./fixture-database.mjs";
 const unmapped = process.argv[2] === "--unmapped";
 const eraseImported = process.argv[2] === "--erase-imported";
 if (process.argv.length !== (unmapped || eraseImported ? 3 : 2))
   throw Error("Unknown rehearsal mode");
-const url = process.env.MEDORA_TEST_DATABASE_URL;
-if (!url || !["localhost", "127.0.0.1"].includes(new URL(url).hostname))
+const url = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
+if (!url)
   throw Error(
     "A fresh isolated loopback PostgreSQL fixture database is required",
   );

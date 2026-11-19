@@ -4,15 +4,15 @@ import {
 } from "../../../product-assets/public/medication/shared/i18n/locale.js";
 import { appearanceColors } from "../../../product-assets/public/medication/features/medicines/appearance-options.js";
 import { routineLabels } from "../../../product-assets/public/medication/features/routines/catalog.js";
-import { clockMinute } from "../../../product-assets/public/medication/domain/care-plan.js";
+import { clockMinute } from "@medora/domain/browser/care-plan";
 import {
   isoDay,
   scheduledRoutinesOn,
   timeText,
   trackSchedule,
-} from "../../../product-assets/public/medication/domain/care-index.js";
-import { cycleRoutineOccurs } from "../../../product-assets/public/medication/domain/cycle.js";
-import { dayMs } from "../../../product-assets/public/medication/domain/wall-clock.js";
+} from "@medora/domain/browser/care-index";
+import { cycleRoutineOccurs } from "@medora/domain/browser/cycle";
+import { dayMs } from "@medora/domain/browser/wall-clock";
 import { integer } from "../../../product-assets/public/medication/shared/ui/input-values.js";
 import { CareInputError } from "../../../product-assets/public/medication/shared/ui/care-error.js";
 import {
@@ -24,7 +24,7 @@ import {
   routineLog,
   routineOccurs,
   routineWeekday,
-} from "../../../product-assets/public/medication/domain/routine-plan.js";
+} from "@medora/domain/browser/routine-plan";
 
 export type RoutineMode = "done" | "quantity" | "steps";
 export interface RoutineResult {

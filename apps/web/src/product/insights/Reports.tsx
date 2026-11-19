@@ -3,18 +3,18 @@ import {
   locale,
   t,
 } from "../../../product-assets/public/medication/shared/i18n/locale.js";
-import { cycleIsEnabled } from "../../../product-assets/public/medication/domain/profile.js";
-import { cycleTotals } from "../../../product-assets/public/medication/domain/cycle.js";
+import { cycleIsEnabled } from "@medora/domain/browser/profile";
+import { cycleTotals } from "@medora/domain/browser/cycle";
 import {
   sleepIsEnabled,
   sleepReport,
-} from "../../../product-assets/public/medication/domain/sleep.js";
+} from "@medora/domain/browser/sleep";
 import { sleepDuration } from "../../../product-assets/public/medication/features/sleep/presentation.js";
 import type { calendarFormat } from "../../../product-assets/public/medication/shared/ui/calendar-format.js";
-import type { createCareIndex } from "../../../product-assets/public/medication/domain/care-index.js";
+import type { createCareIndex } from "@medora/domain/browser/care-index";
 import { Icon, PlanArtwork } from "../PlanCard";
-import { renderWaterChart, clearWaterChart } from "../WaterChart";
-import type { CareState, FamilyView } from "../product";
+import { renderWaterChart } from "../WaterChart";
+import type { CareState, FamilyView } from "../productState";
 
 export type Period = "week" | "month" | "year";
 type StatsRow = [label: string, value: string, tone?: "done" | "partial"];
@@ -502,4 +502,3 @@ export function Reports({
     </>
   );
 }
-export { clearWaterChart };

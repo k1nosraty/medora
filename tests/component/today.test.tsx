@@ -4,9 +4,9 @@ import { expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Today from "../../apps/web/src/features/Today";
-import { words } from "../../apps/web/src/i18n";
-import { AppContext } from "../../apps/web/src/context";
+import Today from "../../apps/web/src/journal/features/Today";
+import { words } from "../../apps/web/src/journal/i18n";
+import { AppContext } from "../../apps/web/src/journal/context";
 it("exposes local water totals and named navigation in Persian", async () => {
   const ctx = {
     t: words.fa,

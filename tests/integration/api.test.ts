@@ -1,12 +1,13 @@
+import { fixtureDatabase } from "../../scripts/verification/fixture-database.mjs";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import { Pool } from "pg";
 import { randomUUID } from "node:crypto";
-import { passwordProof } from "../../web/src/accounts/auth-crypto.mjs";
+import { passwordProof } from "../../apps/compat-worker/src/accounts/auth-crypto.mjs";
 import { createApp } from "../../apps/api/src/app";
 import { repository } from "../../apps/api/src/repository";
 import { verifier } from "../../apps/api/src/password";
 
-const url = process.env.MEDORA_TEST_DATABASE_URL;
+const url = fixtureDatabase(process.env.MEDORA_TEST_DATABASE_URL);
 describe.skipIf(!url)("PostgreSQL incremental care", () => {
   const pool = new Pool({ connectionString: url });
   const store = repository(pool);

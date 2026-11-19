@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const { build } = createRequire(
-  new URL("../../web/package.json", import.meta.url),
+  import.meta.url,
 )("esbuild");
 
 export async function bundleWorker(entry) {

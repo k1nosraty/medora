@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { isoDay } from "../../product-assets/public/medication/domain/care-index.js";
+import { isoDay } from "@medora/domain/browser/care-index";
 import {
   localDigits,
   t,
 } from "../../product-assets/public/medication/shared/i18n/locale.js";
-import { dayMs } from "../../product-assets/public/medication/domain/wall-clock.js";
+import { dayMs } from "@medora/domain/browser/wall-clock";
 import {
   integer,
   localClock,

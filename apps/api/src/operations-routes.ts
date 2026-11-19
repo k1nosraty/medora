@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { smallJson } from "../../../web/src/http/validation.mjs";
+import { smallJson } from "@medora/server-shared/http/validation";
 import type { operationService } from "./operations";
 
 const clean = (value: unknown, max: number) =>

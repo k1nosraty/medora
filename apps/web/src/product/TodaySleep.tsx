@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { t } from "../../product-assets/public/medication/shared/i18n/locale.js";
-import type { CareState } from "./product";
+import type { CareState } from "./productState";
 
 export interface TodaySleepOptions {
   host: HTMLElement;

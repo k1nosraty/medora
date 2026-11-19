@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { householdCommand } from "@medora/contracts";
-import { boundedCarePayload } from "../../web/product-assets/public/medication/domain/care-contract.js";
+import { boundedCarePayload } from "@medora/domain/browser/care-contract";
 import { householdService } from "./household";
 export type InviteDelivery = (
   email: string,

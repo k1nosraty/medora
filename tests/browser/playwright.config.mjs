@@ -8,6 +8,7 @@ const server = fileURLToPath(new URL("./server.mjs", import.meta.url));
 
 export default defineConfig({
   testDir: ".",
+  outputDir: "../../test-results/standalone",
   workers: 1,
   use: { baseURL: url, trace: "retain-on-failure" },
   projects: [

@@ -6,15 +6,15 @@ The owner requires separate explicit approval for every push or deployment, incl
 
 ## Candidate identity and verification
 
-Build from a clean candidate checkout with Node 24.18.0, pnpm 10.32.1 and the pinned Wrangler installed under web/. The generated release-manifest.json identifies the exact Git commit and branch and records the size and SHA-256 of every web, API and Worker output. These files are reproducible verification inputs for this candidate. Freeze a new manifest when code, bindings or build inputs change.
+Build from a clean candidate checkout with Node 24.18.0, pnpm 10.32.1 and Wrangler pinned in the root pnpm workspace. The generated release-manifest.json identifies the exact Git commit and branch and records the size and SHA-256 of every web, API and Worker output. These files are reproducible verification inputs for this candidate. Freeze a new manifest when code, bindings or build inputs change.
 
 ```sh
 pnpm install --frozen-lockfile
-npm ci --prefix web
 pnpm typecheck && pnpm lint
 pnpm build
 mkdir -p dist
 node scripts/verification/bundle-worker.mjs infrastructure/cloudflare/candidate.mjs dist/worker/candidate.js
+node scripts/verification/bundle-worker.mjs apps/api/src/adapters/worker.ts dist/worker/portable.js
 # Supply a separate fresh loopback fixture database for each drill.
 MEDORA_TEST_DATABASE_URL="$MAPPED_FIXTURE_URL" node scripts/verification/rehearse.mjs > dist/reconciliation.json
 MEDORA_TEST_DATABASE_URL="$UNMAPPED_FIXTURE_URL" node scripts/verification/rehearse.mjs --unmapped > dist/recovery-refusal.json
@@ -26,7 +26,7 @@ node tests/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
 node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
 ```
 
-The static app is in apps/web/dist, the portable Node server is apps/api/dist/server.mjs and the local Worker bundle is in dist/worker. The local Worker configuration has no production routes and declares seven separate local Durable Object bindings.
+The static app is in apps/web/dist, the portable Node server is apps/api/dist/server.mjs and the local Worker bundle is in dist/worker. The release status endpoint only reads the selected version. Its scheduled job queues notifications on the eligible runtime. The local Worker configuration has no production routes and declares seven separate local Durable Object bindings.
 
 ## Isolated database and migration
 

@@ -15,7 +15,8 @@
     "react": "^19",
     "react-dom": "^19",
     "react-hook-form": "^7",
-    "react-router-dom": "^7"
+    "react-router-dom": "^7",
+    "@medora/domain": "workspace:*"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

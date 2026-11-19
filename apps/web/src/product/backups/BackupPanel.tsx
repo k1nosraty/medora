@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { t } from "../../../product-assets/public/medication/shared/i18n/locale.js";
-import { isoDay } from "../../../product-assets/public/medication/domain/care-index.js";
+import { isoDay } from "@medora/domain/browser/care-index";
 import {
   isRestoreMode,
   type RestoreTarget,
-} from "../../../product-assets/public/medication/domain/restore-intent.js";
+} from "@medora/domain/browser/restore-intent";
 import { clearFeature, paintFeature } from "../renderer";
 import {
   clearDevice,

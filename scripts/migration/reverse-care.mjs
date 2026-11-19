@@ -21,7 +21,7 @@ import { createRequire } from "node:module";
 import { restoreCopy, readManifest } from "./object-archive.mjs";
 import { operation } from "../../packages/contracts/src/index.ts";
 const require = createRequire(
-  new URL("../../web/package.json", import.meta.url),
+  import.meta.url,
 );
 const { Miniflare, convertV4MiniflareOptions } = require("miniflare");
 const { build } = require("esbuild");

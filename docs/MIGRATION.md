@@ -27,7 +27,7 @@ Set MEDORA_ARCHIVE_KEY_FILE for all three object commands and DATABASE_URL for t
 
 ## Logical Durable Object archives
 
-The incumbent Worker also supports logical encrypted archives through `/api/migration`. Use `web/scripts/migrate-care.mjs` for `MEDSRV02` and `web/scripts/migrate-care-v1.mjs` for `MEDSRV01`. Each reader has a `verify` command that accepts an isolated compatibility Worker origin and archive path. Pass a dedicated migration token and the archive's password via `MEDORA_MIGRATION_TOKEN` and `MEDORA_BACKUP_PASSWORD`. Keep the archive and its credentials private. Logical archive verification covers the records and format the exporter enumerates. Complete namespace reconciliation requires the independent census described above.
+The incumbent Worker also supports logical encrypted archives through `/api/migration`. Use `scripts/migration/migrate-care.mjs` for `MEDSRV02` and `scripts/migration/migrate-care-v1.mjs` for `MEDSRV01`. Each reader has a `verify` command that accepts an isolated compatibility Worker origin and archive path. Pass a dedicated migration token and the archive's password via `MEDORA_MIGRATION_TOKEN` and `MEDORA_BACKUP_PASSWORD`. Keep the archive and its credentials private. Logical archive verification covers the records and format the exporter enumerates. Complete namespace reconciliation requires the independent census described above.
 
 ## Evidence scope
 
