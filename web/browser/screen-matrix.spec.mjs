@@ -22,9 +22,16 @@ for (const lang of ["fa", "en"]) {
   for (const [layout, viewport] of Object.entries(viewports)) {
     test(`${lang} ${layout} product screens fit the viewport and pass Axe`, async ({
       page,
-    }) => {
+    }, testInfo) => {
       test.setTimeout(90_000);
       const { default: AxeBuilder } = await import("@axe-core/playwright");
+      const unexpected = [];
+      const replaced =
+        /\/medication\/features\/(?:appointments\/(?:editor|view)|routines\/(?:view|card)|backups\/dialog|cycle\/controller|reports\/(?:controller|view)|today\/story)\.js$/;
+      await page.route(replaced, async (route) => {
+        unexpected.push(new URL(route.request().url()).pathname);
+        await route.abort();
+      });
       await page.setViewportSize(viewport);
       await page.goto("/medication/");
       await expect(page.locator("#welcome-start")).toBeVisible();
@@ -69,8 +76,28 @@ for (const lang of ["fa", "en"]) {
               targets: nodes.map(({ target }) => target),
             })),
           ).toEqual([]);
+          if (process.env.MEDORA_CAPTURE_PRODUCT)
+            await page.screenshot({
+              path: testInfo.outputPath(screen + ".png"),
+              animations: "disabled",
+            });
         });
       }
+      await page.locator('[data-insight="reports"]').click();
+      await expect(page.locator("#reports-panel")).toBeVisible();
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      if (process.env.MEDORA_CAPTURE_PRODUCT)
+        await page.screenshot({
+          path: testInfo.outputPath("reports.png"),
+          animations: "disabled",
+        });
+      expect(unexpected).toEqual([]);
     });
   }
 }

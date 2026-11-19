@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(process.argv[2] ?? fileURLToPath(new URL("../public/", import.meta.url)));
 const trials = Number(process.argv[3] ?? 3);
+const measureDashboard = process.argv[4] === "--dashboard";
 if (!Number.isSafeInteger(trials) || trials < 1) throw new Error("Supply a positive trial count");
 const port = 8873;
 const origin = `http://127.0.0.1:${port}`;
@@ -43,8 +44,14 @@ try {
     await page.goto(origin + "/medication/", { waitUntil: "commit" });
     await page.locator("#welcome-start").waitFor({ state: "visible" });
     const ready = await page.evaluate(() => Math.round(performance.now()));
-    measurements.push({ usableMs: ready, requests, transferBytes: bytes,
-      largest: completed.sort((a, b) => b.bytes - a.bytes).slice(0, 4) });
+    const measurement = { usableMs: ready, requests, transferBytes: bytes,
+      largest: completed.sort((a, b) => b.bytes - a.bytes).slice(0, 4) };
+    if (measureDashboard) {
+      await page.locator("#welcome-start").click();
+      await page.waitForFunction(() => document.activeElement === document.getElementById("screen-title"));
+      measurement.dashboardMs = await page.evaluate(() => Math.round(performance.now()));
+    }
+    measurements.push(measurement);
     await context.close();
   }
   const worker = await readFile(join(root, "medication/sw.js"), "utf8");
@@ -54,7 +61,8 @@ try {
     measurements.map(trial => trial[field]).sort((a, b) => a - b)[Math.ceil(trials * fraction) - 1];
   console.log(JSON.stringify({ root, network: "160 ms, 200 kB/s down, 75 kB/s up", trials: measurements,
     median: { usableMs: percentile("usableMs", 0.5), requests: percentile("requests", 0.5),
-      transferBytes: percentile("transferBytes", 0.5) }, p95: { usableMs: percentile("usableMs", 0.95) },
+      transferBytes: percentile("transferBytes", 0.5),
+      ...(measureDashboard && { dashboardMs: percentile("dashboardMs", 0.5) }) }, p95: { usableMs: percentile("usableMs", 0.95) },
     shell: { requests: shell.length, bytes: paths.reduce((sum, file) => sum + file.size, 0) } }, null, 2));
 } finally {
   await browser?.close();

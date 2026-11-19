@@ -36,7 +36,7 @@ export function searchField(input, label) {
   return field;
 }
 
-function searchKey(text) {
+export function searchKey(text) {
   return text.normalize("NFKC").toLocaleLowerCase(locale).replaceAll("ي", "ی").replaceAll("ك", "ک")
     .replace(/[\p{M}\p{P}\p{Z}\u200c\u200d]/gu, "");
 }

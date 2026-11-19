@@ -18,7 +18,14 @@ function clockText(value) { return value.replace(/\d/g, digit => numbers.format(
  * save: (control: HTMLButtonElement, minutes: number) => Promise<boolean>, invalid: () => void}) => void) | undefined} */
 const noSnoozeRenderer = undefined;
 
-export function installSettings({ getState, mutate, refreshFields, renderSnooze = noSnoozeRenderer }) {
+/** @type {((host: HTMLElement) => () => void) | undefined} */
+const noBackupRenderer = undefined;
+/** @type {typeof import("../../../../../apps/web/src/product/settings/Preferences.js").renderPreferences | undefined} */
+const noPreferencesRenderer = undefined;
+const preferencePanels = new Set(["display-settings", "profile-settings", "sleep-settings"]);
+
+export function installSettings({ getState, mutate, refreshFields, renderSnooze = noSnoozeRenderer,
+  renderBackup = noBackupRenderer, renderPreferences = noPreferencesRenderer }) {
   const settingsPanels = {
     "profile-settings": [t("ui.profile"), t("ui.personal-information-and-cycle")],
     "display-settings": [t("ui.appearance-and-language"), t("ui.theme-calendar-and-app-language")],
@@ -32,7 +39,7 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
   };
   const settings = $("settings-dialog");
   const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
-  const sleepDays = Array.from({ length: 7 }, (_, index) => {
+  const sleepDays = renderPreferences ? [] : Array.from({ length: 7 }, (_, index) => {
     const day = (index + (language === "fa" ? 6 : 0)) % 7;
     const input = element("input");
     input.type = "checkbox";
@@ -44,6 +51,16 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
   });
   const settingsLinks = [...settings.querySelectorAll("[data-settings-panel]")];
   const loadedSettings = new Set();
+  let releaseBackup;
+  function resetBackup() {
+    if (renderBackup) {
+      releaseBackup?.();
+      releaseBackup = undefined;
+    } else {
+      $("android-restore").reset();
+      $("web-backup-export").reset();
+    }
+  }
   let settingsSession = 0;
   let settingsHomeScroll = 0;
   const fitSettings = fitDialogToViewport(settings);
@@ -64,7 +81,7 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
     const age = ageAt($("profile-birth-date").value, new Date());
     $("profile-age").textContent = age === null ? "—" : t("ui.value-years-old", numbers.format(age));
   }
-  $("profile-birth-date").addEventListener("input", updateProfileAge);
+  if (!renderPreferences) $("profile-birth-date").addEventListener("input", updateProfileAge);
   function updateCycleControl() {
     cycle.disabled = !canEnableCycle({ gender: gender.value });
     if (cycle.disabled) cycle.checked = false;
@@ -112,6 +129,12 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
     refreshFields($("water-goal-form"));
   }
   function loadSettings(panel, data) {
+    if (renderPreferences && preferencePanels.has(panel)) {
+      renderPreferences($(panel), panel, { state: data, refreshFields, save: saveSettings,
+        reportError: message => settingsFeedback(message, "error"),
+        invalidateDisplay: () => loadedSettings.delete("display-settings") });
+      return;
+    }
     if (panel === "display-settings") {
       $("calendar-setting").value = data.calendar ?? defaultCalendar;
       $("display-form").elements.theme.value = data.theme ?? "system";
@@ -170,10 +193,7 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
     }
   }
   function selectSettings(panel = "") {
-    if (settings.dataset.panel === "backup-settings" && panel !== "backup-settings") {
-      $("android-restore").reset();
-      $("web-backup-export").reset();
-    }
+    if (settings.dataset.panel === "backup-settings" && panel !== "backup-settings") resetBackup();
     settings.dataset.panel = panel;
     saveAppointmentSettings.hidden = panel !== "appointment-settings";
     $("settings-back").hidden = !panel;
@@ -189,6 +209,8 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
       loadSettings(panel, data);
       loadedSettings.add(panel);
     }
+    if (panel === "backup-settings" && renderBackup && !releaseBackup)
+      releaseBackup = renderBackup($("backup-settings"));
     if (panel === "water-settings") updateWaterPause();
     $("settings-content").scrollTop = panel ? 0 : settingsHomeScroll;
   }
@@ -211,8 +233,7 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
     backToSettings();
   });
   settings.addEventListener("close", () => {
-    $("android-restore").reset();
-    $("web-backup-export").reset();
+    if (!settings.open) resetBackup();
     clearTimeout(waterPauseTimer);
   });
   settings.addEventListener("input", () => settingsFeedback());
@@ -340,59 +361,61 @@ export function installSettings({ getState, mutate, refreshFields, renderSnooze 
         else delete state.clinicTimeZone;
       }, t("ui.appointment-settings-saved"), true);
   });
-  $("sleep-settings-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const enabled = $("sleep-enabled").checked;
-    const cardSize = $("sleep-card-size").value;
-    const mask = sleepDays.reduce((value, input) => value | (input.checked ? Number(input.value) : 0), 0);
-    const settings = { goal: Number($("sleep-goal").value) * 60, mask,
-      bedtime: $("sleep-reminder-bed").value, wake: $("sleep-reminder-wake").value, paused: $("sleep-reminder-pause").checked };
-    if (!validSleepSettings(settings)) {
-      settingsFeedback(t("ui.sleep-check-settings"), "error");
-      return;
-    }
-    await saveSettings(event.submitter, state => {
-      state.sleepEnabled = enabled;
-      state.sleepCardSize = cardSize;
-      state.sleepSettings = settings;
-    }, t("ui.sleep-settings-saved"), true);
-  });
-  $("display-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const theme = event.currentTarget.elements.theme.value;
-    const accent = event.currentTarget.elements.accent.value;
-    const familyPlacement = familyPlacementOf($("settings-family-placement").value);
-    const selectedCalendar = $("calendar-setting").value;
-    const nextLanguage = $("app-language").value;
-    if (await saveSettings(event.submitter ?? $("display-form").querySelector('[type="submit"]'),
-      state => {
-        state.theme = theme;
-        state.accent = accentOf(accent, cycleIsEnabled(state));
-        state.calendar = selectedCalendar;
-        state.familyPlacement = familyPlacement;
-      }, t("ui.display-settings-saved"))) selectLanguage(nextLanguage);
-  });
-  gender.addEventListener("change", updateCycleControl);
-  $("profile-form").addEventListener("submit", async event => {
-    event.preventDefault();
-    const profile = Object.fromEntries(Object.entries(profileInputs).flatMap(([key, id]) => {
-      const input = $(id);
-      const value = input.value.trim();
-      return value ? [[key, input.type === "number" ? input.valueAsNumber : value]] : [];
-    }));
-    if (!validPersonalProfile(profile)) {
-      settingsFeedback(t("ui.check-your-name-date-of-birth-height-and-weight"), "error");
-      return;
-    }
-    const selectedGender = genders.includes(gender.value) ? gender.value : "";
-    const enabled = cycle.checked && canEnableCycle({ gender: selectedGender });
-    await saveSettings(event.submitter ?? $("profile-form").querySelector('[type="submit"]'), state => {
-      state.personalProfile = profile;
-      state.gender = selectedGender;
-      state.cycleEnabled = enabled;
-      loadedSettings.delete("display-settings");
-    }, t("ui.profile-saved"), true);
-  });
+  if (!renderPreferences) {
+    $("sleep-settings-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const enabled = $("sleep-enabled").checked;
+      const cardSize = $("sleep-card-size").value;
+      const mask = sleepDays.reduce((value, input) => value | (input.checked ? Number(input.value) : 0), 0);
+      const settings = { goal: Number($("sleep-goal").value) * 60, mask,
+        bedtime: $("sleep-reminder-bed").value, wake: $("sleep-reminder-wake").value, paused: $("sleep-reminder-pause").checked };
+      if (!validSleepSettings(settings)) {
+        settingsFeedback(t("ui.sleep-check-settings"), "error");
+        return;
+      }
+      await saveSettings(event.submitter, state => {
+        state.sleepEnabled = enabled;
+        state.sleepCardSize = cardSize;
+        state.sleepSettings = settings;
+      }, t("ui.sleep-settings-saved"), true);
+    });
+    $("display-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const theme = event.currentTarget.elements.theme.value;
+      const accent = event.currentTarget.elements.accent.value;
+      const familyPlacement = familyPlacementOf($("settings-family-placement").value);
+      const selectedCalendar = $("calendar-setting").value;
+      const nextLanguage = $("app-language").value;
+      if (await saveSettings(event.submitter ?? $("display-form").querySelector('[type="submit"]'),
+        state => {
+          state.theme = theme;
+          state.accent = accentOf(accent, cycleIsEnabled(state));
+          state.calendar = selectedCalendar;
+          state.familyPlacement = familyPlacement;
+        }, t("ui.display-settings-saved"))) selectLanguage(nextLanguage);
+    });
+    gender.addEventListener("change", updateCycleControl);
+    $("profile-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const profile = Object.fromEntries(Object.entries(profileInputs).flatMap(([key, id]) => {
+        const input = $(id);
+        const value = input.value.trim();
+        return value ? [[key, input.type === "number" ? input.valueAsNumber : value]] : [];
+      }));
+      if (!validPersonalProfile(profile)) {
+        settingsFeedback(t("ui.check-your-name-date-of-birth-height-and-weight"), "error");
+        return;
+      }
+      const selectedGender = genders.includes(gender.value) ? gender.value : "";
+      const enabled = cycle.checked && canEnableCycle({ gender: selectedGender });
+      await saveSettings(event.submitter ?? $("profile-form").querySelector('[type="submit"]'), state => {
+        state.personalProfile = profile;
+        state.gender = selectedGender;
+        state.cycleEnabled = enabled;
+        loadedSettings.delete("display-settings");
+      }, t("ui.profile-saved"), true);
+    });
+  }
 
   const loadCycle = installCycleSettings({ getState, saveSettings, refreshFields, mutate });
 

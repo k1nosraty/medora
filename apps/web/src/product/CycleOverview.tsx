@@ -10,7 +10,7 @@ import {
 interface Entry {
   day: number;
   end?: number | null;
-  flow?: keyof typeof flowLabels;
+  flow?: keyof typeof flowLabels | "";
   note?: string;
   sharedNote?: string;
   recordedBy?: string;
@@ -28,7 +28,7 @@ interface OverviewOptions {
     shortDate: (day: number) => string;
     dayNumber: (day: number) => string;
     formatDay: (day: number, full?: boolean) => string;
-    year: (day: number) => number;
+    year: (day: number) => string;
   };
   getFamilyView: () => FamilyView | null;
   openCalendar: (day: number) => void;

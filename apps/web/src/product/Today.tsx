@@ -1,6 +1,7 @@
 import { useCallback, type KeyboardEvent } from "react";
-import { clearFeature, paintFeature } from "./renderer";
-import { disposeDoseCards, type RenderDose } from "./medication/Medication";
+import { clearFeature, disposeCards, paintFeature } from "./renderer";
+import { type RenderDose } from "./medication/Medication";
+import type { RoutineEntry } from "./routines/model";
 import type { Dose, MedicinePlan } from "./medication/model";
 import { glassObject } from "../../../../web/public/medication/design/three-dimensional.js";
 import {
@@ -26,13 +27,6 @@ interface Selection {
   slot: number | null;
   index: number;
   key: string;
-}
-
-interface Routine {
-  id: string;
-  name: string;
-  minute?: number | null;
-  resolvedAt?: number;
 }
 
 interface Care {
@@ -63,13 +57,17 @@ export function renderToday(
   today: number,
   daily: Dose[],
   visits: TimelineEvent[],
-  routines: Routine[],
+  routines: RoutineEntry[],
   waterTotal: number,
   renderDose: RenderDose,
   renderRoutine: (
-    routine: Routine,
+    routine: RoutineEntry,
     day: number,
-    options: { dayCard: true; featured: boolean },
+    options: {
+      dayCard: true;
+      featured: boolean;
+      focusStatus?: string | undefined;
+    },
   ) => HTMLElement,
   view?: FamilyView | null,
 ) {
@@ -112,8 +110,8 @@ export function renderToday(
           : "inactive",
       time: entry.minute == null ? null : scheduledAt(day, entry.minute),
       resolvedAt: entry.resolvedAt,
-      render: (featured) =>
-        renderRoutine(entry, day, { dayCard: true, featured }),
+      render: (featured, focusStatus) =>
+        renderRoutine(entry, day, { dayCard: true, featured, focusStatus }),
     });
   }
 
@@ -194,7 +192,7 @@ export function renderToday(
     [visits.length, visitLabel, "appointments"],
     [routines.length, routineLabel, "routines"],
   ] as const;
-  $("story-summary").textContent = labels.some(([count]) => count)
+  const storySummary = labels.some(([count]) => count)
     ? labels
         .filter(([count, , section]) =>
           view
@@ -210,7 +208,7 @@ export function renderToday(
       );
   const focus = $("today-focus");
   const controls = $("day-focus-navigation");
-  disposeDoseCards(focus);
+  disposeCards(focus);
   clearFeature(focus);
   if (group.length < 2) clearFeature(controls);
   controls.hidden = group.length < 2;
@@ -285,12 +283,13 @@ export function renderToday(
       : t("ui.doses-appointments-and-routines");
   $("doses").closest<HTMLElement>(".timeline")!.hidden =
     day === today && !cards.length;
-  disposeDoseCards($("doses"));
+  disposeCards($("doses"));
   $("doses").replaceChildren(
     ...(cards.length
       ? cards
       : [element("p", t("ui.nothing-planned-for-this-day"), "empty")]),
   );
+  return storySummary;
 }
 
 function timelineCard(event: TimelineEvent) {
@@ -360,7 +359,7 @@ function renderGroup(
       const dots = { options, index, select, previous };
       paintFeature(controls, <FocusDots {...dots} />);
     }
-    disposeDoseCards(viewport);
+    disposeCards(viewport);
     viewport.replaceChildren(card);
     if (source)
       controls
@@ -418,7 +417,7 @@ function renderGroup(
 
 function featuredCard(event: TimelineEvent, status: string) {
   const card = event.render(true, status);
-  if (event.reactDose) return card;
+  if (event.reactDose || card.hasAttribute("data-react-card")) return card;
   card.dataset.focusScope = event.key;
   const media = element("div", "", "day-focus-media");
   const art = card.querySelector(".day-card-art")!;

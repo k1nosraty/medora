@@ -35,11 +35,7 @@ import {
   initializeReminders,
   syncReminders,
 } from "../../../../web/public/medication/features/reminders/controller.js";
-import {
-  installMedication,
-  disposeDoseCards,
-  type RenderDose,
-} from "./medication/Medication";
+import { installMedication, type RenderDose } from "./medication/Medication";
 import type {
   FamilyDoseRecord,
   MedicationCare,
@@ -49,10 +45,9 @@ import { renderFamilyDoseForm } from "./medication/FamilyDoseForm";
 import { installFamily } from "../../../../web/public/medication/features/family/panel.js";
 import { renderMemberHeader } from "../../../../web/public/medication/features/family/context.js";
 import { installSupport, loadOperations, reportDailyOpen } from "./Operations";
-import { installRoutines } from "../../../../web/public/medication/features/routines/view.js";
+import { installRoutines } from "./routines/Routines";
 import { renderToday } from "./Today";
-import { installTodayStory } from "../../../../web/public/medication/features/today/story.js";
-import { installBackupRestore } from "../../../../web/public/medication/features/backups/dialog.js";
+import { mountBackups } from "./backups/BackupPanel";
 import { installNavigation } from "./navigation";
 import { refreshApp } from "./updates";
 import { finishIntro, hasStarted, showIntro } from "./Onboarding";
@@ -62,6 +57,16 @@ import { showStorageRecovery } from "./StorageRecovery";
 import type { SleepRecord, WakeDraft } from "./SleepForm";
 import type { WaterEntry } from "./WaterEntries";
 import type { WaterTarget } from "./WaterLogForm";
+import type {
+  RoutineCare,
+  RoutineTarget,
+  RoutineEntry,
+} from "./routines/model";
+import type { CyclePeriod, CycleTarget } from "./cycle/PeriodEditor";
+import type { CycleDayLabel } from "./cycleLabels";
+import type { VisitCare, VisitTarget } from "./appointments/model";
+import type { PersonalProfile } from "./settings/Preferences";
+import { disposeCards } from "./renderer";
 
 function $<T extends HTMLElement = HTMLElement>(id: string) {
   return document.getElementById(id)! as T;
@@ -69,17 +74,33 @@ function $<T extends HTMLElement = HTMLElement>(id: string) {
 
 export type CareState = Omit<Parameters<typeof showIntro>[0], "water"> &
   Parameters<typeof renderToday>[0] &
-  MedicationCare & {
+  MedicationCare &
+  VisitCare &
+  RoutineCare & {
     water?: WaterEntry[];
     reminders?: { revision?: number; enabled?: boolean };
     familyPlacement?: string;
     sleepCardSize?: string;
     cycleCardSize?: string;
     cycleOptions?: { hideToday?: boolean; minute?: number };
-    sleepSettings?: { bedtime?: string; wake?: string; goal?: number };
+    sleepSettings?: {
+      bedtime?: string;
+      wake?: string;
+      goal?: number;
+      mask?: number;
+      paused?: boolean;
+    };
+    sleepEnabled?: boolean;
+    personalProfile?: PersonalProfile;
+    gender?: string;
+    cycleEnabled?: boolean;
+    theme?: string;
+    accent?: string;
     sleepRecords?: Record<string, SleepRecord>;
     sleepDraftWake?: WakeDraft;
     cycleLocalOnly?: boolean;
+    cycleRecords?: Record<number, CyclePeriod>;
+    cycleDays?: Record<number, CycleDayLabel>;
     cycleCompanionEstimate?: { first: number; last: number };
     cycleCompanionMessage?: string;
   };
@@ -95,9 +116,22 @@ export interface FamilyView extends EntryFamilyView {
   state: CareState;
   timeOf(day: number, minute: number): number;
   has(section: string): boolean;
-  canRecord(kind: "water" | "cycle" | "medicine", day?: number): boolean;
+  canRecord(
+    kind: "water" | "cycle" | "medicine" | "visit" | "routine",
+    day?: number,
+  ): boolean;
   record(
-    action: FamilyDoseRecord | { kind: "water" | "cycle"; day: number },
+    action:
+      | FamilyDoseRecord
+      | { kind: "water" | "cycle"; day: number }
+      | { kind: "visit"; day: number; id: string; title: string }
+      | {
+          kind: "routine";
+          day: number;
+          id: string;
+          title: string;
+          routine: RoutineEntry;
+        },
   ): void;
   authorName(entry: { recordedBy?: string }): string;
   canView(section: string): boolean;
@@ -106,7 +140,6 @@ export interface FamilyView extends EntryFamilyView {
 
 localizeMarkup({ keep: $("welcome-screen") });
 installSurfaceArt();
-installTodayStory($("today-story"));
 installSupport();
 let care: CareState | undefined;
 let busy = false;
@@ -223,7 +256,7 @@ function paint() {
   else if (screen === "routines") routines.renderPanel(state, index, day);
   else if (screen === "today") {
     const entries = index.routinesOn(day);
-    renderToday(
+    const summary = renderToday(
       state,
       day,
       viewToday(),
@@ -235,6 +268,7 @@ function paint() {
       routines.card,
       familyView,
     );
+    dashboard.renderTodayHeader(day, summary);
   }
 }
 
@@ -305,7 +339,15 @@ const dashboard = installNavigation({
   requestDeletion,
   renderDose: (...args: Parameters<RenderDose>) =>
     medicines.renderDose(...args),
-  disposeDoseCards,
+  disposeDoseCards: disposeCards,
+  renderBackup: (host) =>
+    mountBackups(host, {
+      mutate,
+      validatePhases: (phases) =>
+        engine.validMedicationPhases(compilePhases(engine, phases)),
+      prepareRestore: (mode) => accountSync.prepareRestore(mode),
+      clearRecovery: () => accountSync.clearRecovery(),
+    }),
   closeMedicationContext: () => medicines.closeContext(),
   refreshFields: (container: HTMLElement) => pickers.refresh(container),
   renderRoutine: (
@@ -391,7 +433,11 @@ const family = installFamily({
   getFamilyView,
   openPlan: (
     kind: "medicine" | "visit" | "routine" | "water" | "cycle",
-    target: WaterTarget & MedicineTarget & { zone: string },
+    target: WaterTarget &
+      MedicineTarget &
+      VisitTarget &
+      RoutineTarget &
+      CycleTarget,
   ) => {
     const open = {
       medicine: openEditor,
@@ -472,16 +518,6 @@ document.querySelector(".app-bar")!.addEventListener(
 const params = new URLSearchParams(location.search);
 const view = params.get("view");
 if (view === "account") void openAccount();
-
-installBackupRestore(
-  mutate,
-  (phases: unknown) =>
-    engine.validMedicationPhases(compilePhases(engine, phases)),
-  {
-    prepareRestore: accountSync.prepareRestore,
-    clearRecovery: accountSync.clearRecovery,
-  },
-);
 
 try {
   const initial = await initialCare;

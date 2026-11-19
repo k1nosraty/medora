@@ -80,6 +80,38 @@ A focused Chromium visual run matched 28 exact medication screenshots and their 
 
 The two-account PostgreSQL handoff passed with eight offline writes, including two plans and two dose logs. It retained the plans and doses across the service-worker update, compared them after Node replay and checked them again after transfer back to Workerd. The synthetic fixture also retained its sessions and encrypted object. The [medication benchmark](PERFORMANCE.md#medication-and-dose-phase) measured a 4,989 ms onboarding median and no resource requests during the three measured medication interactions.
 
+## Appointments, routines and shared frontend work
+
+This pass started at `676c472` on `codex/medora-2-full-rebuild`. Product React now owns appointment and routine editor and card workflows, the calendar and reports, the Today story, period and daily cycle forms, backup and restore, and the display, profile and sleep preference forms. The [migration inventory](FRONTEND_PORT.md) records the remaining family, sync, notification, settings and cycle dependencies.
+
+| Local command | Result |
+| --- | --- |
+| `pnpm typecheck`, `pnpm lint`, `pnpm build` | Strict TypeScript, ESLint, Vite, canonical product and Node API builds passed. |
+| `node scripts/verification/bundle-worker.mjs infrastructure/cloudflare/candidate.mjs <fixture-output>` and `node scripts/verification/bundle-worker.mjs apps/api/src/adapters/worker.ts <fixture-output>` | Both local Worker bundles completed. |
+| `pnpm db:migrate` and `pnpm test` with a fresh loopback PostgreSQL database | 23 tests in 14 files passed, including PostgreSQL integration and device migration fixtures. |
+| `pnpm test:compat` | Legacy JS typecheck, 44 Node tests, 13 care checks and the encrypted Web Push alarm drill passed. |
+| `pnpm test:product --project=chromium` using the product Playwright config | 63 passed. The screen matrix checked all eight routes plus the reports panel in both languages and viewport sizes. |
+| `pnpm test:product --project=webkit` using the product Playwright config | 63 passed. The same screens and Axe matrix completed in WebKit. |
+| `pnpm test:product --grep 'exports an encrypted Web archive'` | One focused test passed in each engine. The React form downloaded a Web archive and restored it in a fresh browser profile. |
+| `npm --prefix web run test:browser` | 80 incumbent checks passed and 46 candidate-only checks were skipped. |
+| `pnpm test:e2e` | 18 journal browser tests passed across Chromium and WebKit. The journal store was tested separately. |
+| `node scripts/verification/pwa-update.mjs` | Interrupted journal shell update, old offline shell, upgrade retry and persisted data passed. |
+| `pnpm test:handoff` | Four loopback PostgreSQL databases, local Workerd/R2 and Node/S3 fixture. 48 tables, nine sequence positions, 109 constraints and one independently decrypted object reconciled. Two accounts retained eight offline medication, dose and water writes, sessions, family grants and the outbox job. The service worker updated, two tabs reopened, an injected copy failure recovered, and migration reversed after new writes. |
+| `node scripts/verification/visual-parity.mjs --engine=chromium` | 1,244 static design files matched. All 80 layouts and screenshots matched exactly. 32 comparison Axe checks reported no new violations. |
+| `node scripts/verification/visual-parity.mjs --engine=webkit` | The latest complete matrix had 80 matching layouts, 75 exact screenshots, one verified renderer variant and four flagged captures. All 32 comparison Axe checks reported no new violations. A subsequent diagnostic matched one of the four flagged captures to an incumbent renderer pattern. |
+
+The product uses `web/playwright.config.mjs`, one worker and a loopback asset server. WebKit uses the iPhone 13 preset, with viewport overrides in the matrix. The Chromium tests used the installed system Chrome. The product exercised historical IndexedDB v1–3 reads and edits, offline visit edits and attendance with preserved fields, offline routine completion, quantity and checklist logging, encrypted Android v1 restore, lost Workerd acknowledgement, user sessions and delegated writes. The branch continues to use the same API contracts, IndexedDB, crypto and worker scopes.
+
+The isolated build used the workspace dependency tree without `web/node_modules`, `web/package.json` or `web/scripts`. In the same fixture directory, builds with and without the nine replaced appointment, routine, backup, cycle period, report and Today story controllers produced byte-identical canonical HTML, bundles and service worker. The product screen matrix also aborts dynamic requests to these controllers. Serving the fixture with those files physically absent passed 14 focused browser checks across both engines, including offline appointment and routine writes, the encrypted Web archive round trip, and the bilingual Axe screen matrix. The probe retained the shared templates, locale, styles and assets under `web/`. A separate fresh build with the entire directory absent failed to resolve `care-plan.js` and the journal font.
+
+WebKit 27.2 produced different paints with identical layout. The English mobile details backdrop matched the same two exact RGB digests in the candidate and an unchanged incumbent control. The comparison requires exact RGBA equality outside the affected area. English desktop details and editor also reproduced exact full-viewport per-channel difference digests in independent incumbent runs. The latest browser run accepted the 3,886-pixel desktop details case. Its 2,055-pixel desktop editor difference matched the header-only portion of the independently observed 4,949-pixel incumbent difference, with exact equality outside that portion. The final matcher was checked directly against both editor patterns and the other known renderer captures. The version, viewport and scene restrictions remain in place.
+
+The latest complete browser run still flagged the English mobile editor (81 pixels), English mobile schedule (78 pixels) and English desktop schedule (2,824 pixels). Each had at most a one-level difference per RGB channel. Their exact difference patterns remain unverified. The validator exits with a failure for those captures, and a fresh full matrix with the final editor matcher has not been recorded.
+
+The production release gate still requires reconciliation against a complete authorized source snapshot. The exact visual and handoff counts in the archive manifest script also need to be reconciled with the expanded fixtures. No release archive was generated in this pass.
+
+The cold onboarding median was 4,541 ms versus 5,087 ms on a new baseline. In a separate run the focused dashboard median after an immediate click was 7,289 ms versus 7,555 ms. See the [performance measurements](PERFORMANCE.md#appointments-routines-and-shared-frontend-migration).
+
 ## Outstanding release evidence
 
 - A complete authorized source snapshot, independent namespace census, key-version references and historical backup corpus. Device upgrades and fixture reconciliation do not demonstrate coverage of real accounts, provider registrations or pending jobs.

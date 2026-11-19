@@ -2,7 +2,7 @@
 
 ## Frontend-only changes
 
-An approved rollback of the frontend assets must preserve the public origin, `/medication/` service-worker scope and existing IndexedDB namespace. Use the verified previous asset set as a unit so its scripts, styles and cache manifest agree. Rehearse interrupted updates and offline operations locally before considering a release rollback. The onboarding and sleep React changes use the existing schema and write contracts.
+An approved rollback of the frontend assets must preserve the public origin, `/medication/` service-worker scope and existing IndexedDB namespace. Use the verified previous asset set as a unit so its scripts, styles and cache manifest agree. Rehearse interrupted updates and offline operations locally before considering a release rollback. The React appointments, routine, period and preference editors and the backup panel use the existing schema and write contracts. Keep pending restore acknowledgements and device sync metadata intact during rollback.
 
 ## PostgreSQL and object storage handoff
 

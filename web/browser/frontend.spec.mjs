@@ -1218,3 +1218,147 @@ test("cycle bulk history exports and restores as a separate encrypted file", asy
   await expect(page.locator("#cycle-backup-dialog")).toBeHidden();
   await expect(page.locator("#cycle-history article")).toHaveCount(2);
 });
+
+test("React appointments and routines write offline and retain historical fields after reload", async ({ page, context }) => {
+  test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
+  await open(page, { language: "en" });
+  await page.evaluate(async () => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { today } = await import("/medication/shared/ui/dates.js");
+    await accessCare(state => {
+      state.visits = { historical: {
+        id: "historical", name: "Fixture visit", day: today(), time: "08:00",
+        zone: Intl.DateTimeFormat().resolvedOptions().timeZone, fixtureExtra: { version: 1 },
+      } };
+    });
+    await navigator.serviceWorker.ready;
+  });
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await page.reload();
+  await context.setOffline(true);
+  try {
+    await page.locator("#program-appointments").click();
+    const visit = page.locator("#visits article").filter({ hasText: "Fixture visit" });
+    await visit.locator("summary").click();
+    await visit.getByRole("button", { name: "Edit", exact: true }).click();
+    await page.locator("#visit-name").fill("Fixture visit edited offline");
+    await page.locator("#visit-editor button[type=submit]").click();
+    await expect(page.locator("#visit-dialog")).toBeHidden();
+    await expect(visit).toContainText("edited offline");
+    await visit.locator(".care-record-action").click();
+    await expect(visit).toContainText("Attended");
+    await page.reload();
+    await expect(visit).toContainText("Attended");
+    const saved = await page.evaluate(() => new Promise((resolve, reject) => {
+      const open = indexedDB.open("medora-medication-prototype");
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const transaction = db.transaction("care");
+        const read = transaction.objectStore("care").get("state");
+        transaction.oncomplete = () => {
+          db.close();
+          resolve(read.result.settings.visits.historical);
+        };
+        transaction.onerror = () => {
+          db.close();
+          reject(transaction.error);
+        };
+      };
+    }));
+    expect(saved).toMatchObject({
+      id: "historical", name: "Fixture visit edited offline", completed: true, fixtureExtra: { version: 1 },
+    });
+
+    await page.locator("#screen-back").click();
+    await page.locator("#program-routines").click();
+    await page.locator("#routine-add").click();
+    await page.locator("#routine-name").fill("Fixture routine offline");
+    await page.locator("#routine-save").click();
+    const routine = page.locator("#routine-list article").filter({ hasText: "Fixture routine offline" });
+    await expect(routine).toBeVisible();
+    await routine.locator(".care-record-action").click();
+    await expect(routine).toHaveAttribute("data-complete", "true");
+    await page.reload();
+    await expect(routine).toHaveAttribute("data-complete", "true");
+    await expect(routine).toHaveCount(1);
+  } finally {
+    await context.setOffline(false);
+  }
+});
+
+test("React routine quantity and checklist entries retain partial and completed progress", async ({ page }) => {
+  test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
+  await open(page, { language: "en", width: 390 });
+  await page.locator("#program-routines").click();
+  async function addRoutine(name, mode, fill) {
+    await page.locator("#routine-add").click();
+    await page.locator("#routine-name").fill(name);
+    await page.locator("#routine-options > summary").click();
+    await page.locator("#routine-mode").selectOption(mode);
+    await fill();
+    await page.locator("#routine-save").click();
+    await expect(page.locator("#routine-editor")).toBeHidden();
+    return page.locator("#routine-list article").filter({ hasText: name });
+  }
+  const quantity = await addRoutine("Quantity fixture", "quantity", async () => {
+    await page.locator("#routine-save").click();
+    await expect(page.locator("#routine-editor-status")).not.toBeEmpty();
+    await page.locator("#routine-target").fill("8");
+    await page.locator("#routine-unit").fill("pages");
+  });
+  await quantity.locator(".care-record-action").click();
+  await page.locator("#routine-amount").fill("3");
+  await page.locator("#routine-log-save").click();
+  await expect(quantity).toContainText("3 of 8");
+  await expect(quantity).toHaveAttribute("data-complete", "false");
+
+  const steps = await addRoutine("Checklist fixture", "steps", () =>
+    page.locator("#routine-steps").fill("First sample step\nSecond sample step"));
+  await steps.locator(".care-record-action").click();
+  await page.getByLabel("First sample step").check();
+  await page.getByLabel("Second sample step").check();
+  await page.locator("#routine-log-save").click();
+  await expect(steps).toHaveAttribute("data-complete", "true");
+  await page.reload();
+  await expect(quantity).toContainText("3 of 8");
+  await expect(steps).toHaveAttribute("data-complete", "true");
+});
+
+test("React exports an encrypted Web archive and restores it in a fresh browser profile", async ({ page, browser }, testInfo) => {
+  test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
+  const password = "synthetic Web archive test";
+  const backupPanel = async page => {
+    await page.locator('.header-tools [data-destination="settings"]').click();
+    await page.locator('[data-settings-panel="backup-settings"]').click();
+  };
+  await open(page, { language: "en" });
+  await page.locator("#today-water-quick").click();
+  await backupPanel(page);
+  await page.locator("#web-backup-password").fill(password);
+  await page.locator("#web-backup-confirm").fill(password);
+  await page.locator("#web-backup-export button[type=submit]").click();
+  const link = page.locator("#web-backup-download");
+  await expect(link).toBeFocused();
+  const event = page.waitForEvent("download");
+  await link.click();
+  const download = await event;
+  expect(download.suggestedFilename()).toMatch(/^medora-web-.*\.medora$/);
+  const restored = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+  try {
+    const fresh = await restored.newPage();
+    await open(fresh, { language: "en" });
+    await backupPanel(fresh);
+    await fresh.locator("#android-backup-file").setInputFiles(await download.path());
+    await fresh.locator("#android-backup-password").fill(password);
+    await fresh.locator("#android-backup-confirm").check();
+    await fresh.locator("#android-restore-submit").click();
+    await expect(fresh.locator("#android-restore-status")).toHaveAttribute("data-state", "success");
+    await fresh.reload();
+    await fresh.goto("/medication/?view=water");
+    await expect(fresh.locator("#water-entries .entry-row")).toHaveCount(1);
+    await expect(fresh.locator("#water-entries .entry-row").first()).toContainText("250");
+  } finally {
+    await restored.close();
+  }
+});

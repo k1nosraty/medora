@@ -52,8 +52,17 @@ const replacedModules = new Set([
   "medication/app/medora.js",
   "medication/app/navigation.js",
   "medication/features/account/dialog.js",
+  "medication/features/backups/dialog.js",
   "medication/features/sleep/controller.js",
   "medication/features/medicines/appearance.js",
+  "medication/features/appointments/editor.js",
+  "medication/features/appointments/view.js",
+  "medication/features/routines/view.js",
+  "medication/features/routines/card.js",
+  "medication/features/reports/controller.js",
+  "medication/features/cycle/controller.js",
+  "medication/features/today/story.js",
+  "medication/features/reports/view.js",
   "medication/features/medicines/editor.js",
   "medication/features/medicines/view.js",
   "medication/features/promotions/dialog.js",
@@ -88,6 +97,16 @@ try {
     esbuild,
     bundleWorkbox,
     htmlOverrides: {
+      "layout/day-navigation.html": (
+        await readFile(
+          join(app, "../../web/ui/layout/day-navigation.html"),
+          "utf8",
+        )
+      ).replace(
+        /(<section id="today-story"[^>]*>)[\s\S]*?<\/section>/,
+        "$1</section>",
+      ),
+      "screens/insights.html": '<div data-screen="insights" hidden></div>',
       "screens/medications.html": await readFile(
         join(app, "src/product/medication/screen.html"),
         "utf8",
@@ -98,8 +117,30 @@ try {
         '<dialog id="appearance-dialog" class="sheet" aria-labelledby="appearance-title"></dialog>',
       "forms/medicine-details.html":
         '<dialog id="medicine-details" class="sheet" aria-labelledby="medicine-details-title"></dialog>',
+      "forms/cycle-day.html":
+        '<dialog id="cycle-day-dialog" class="sheet add-sheet" aria-labelledby="cycle-day-title"></dialog>',
+      "forms/cycle.html":
+        '<dialog id="cycle-dialog" class="sheet add-sheet" aria-labelledby="cycle-title"></dialog>',
+      "forms/appointment-editor.html":
+        '<dialog id="visit-dialog" class="sheet add-sheet" aria-labelledby="visit-form-title"></dialog>',
+      "forms/appointment-category.html":
+        '<dialog id="visit-category-dialog" class="sheet choice-sheet" aria-labelledby="visit-category-title"></dialog>',
+      "forms/routine-editor.html":
+        '<dialog id="routine-editor" class="sheet add-sheet routine-sheet" aria-labelledby="routine-editor-title"></dialog>',
+      "forms/routine-category.html":
+        '<dialog id="routine-category-dialog" class="sheet choice-sheet routine-sheet" aria-labelledby="routine-category-title"></dialog>',
+      "forms/routine-log.html":
+        '<dialog id="routine-log-dialog" class="sheet routine-sheet" aria-labelledby="routine-log-title"></dialog>',
       "forms/medicine-phase.html": "",
       "forms/medicine-slot.html": "",
+      "forms/settings/display.html":
+        '<section id="display-settings" class="settings-panel" hidden></section>',
+      "forms/settings/profile.html":
+        '<section id="profile-settings" class="settings-panel" hidden></section>',
+      "forms/settings/sleep.html":
+        '<section id="sleep-settings" class="settings-panel health-settings" hidden></section>',
+      "forms/settings/backup.html":
+        '<section id="backup-settings" class="settings-panel" hidden></section>',
       "forms/settings/snooze.html":
         '<section id="snooze-settings" class="settings-panel" hidden></section>',
     },

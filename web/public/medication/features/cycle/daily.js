@@ -18,10 +18,13 @@ export function describeCycleDay(row, translate = t) {
     translate(`ui.cycle-${key}`) + " (" + translate(`ui.cycle-strength-${severity}`) + ")"), row.tags, row.note].filter(Boolean);
 }
 
-export function installDailyCycle({ getState, getFamilyView, getDates, getIndex, mutate, today, actionDay, requestDeletion, refreshFields, openSettings, editCycle }) {
+/** @type {((day: number) => void) | undefined} */
+const noDayEditor = undefined;
+
+export function installDailyCycle({ getState, getFamilyView, getDates, getIndex, mutate, today, actionDay, requestDeletion, refreshFields, openSettings, editCycle, openEditor = noDayEditor }) {
   const dialog = $("cycle-day-dialog");
   const form = $("cycle-day-form");
-  const symptoms = new Map(cycleSymptoms.map(key => {
+  const symptoms = openEditor ? new Map() : new Map(cycleSymptoms.map(key => {
     const label = element("label", labelFor(key));
     const select = element("select");
     select.add(new Option(t("ui.not-selected"), ""));
@@ -35,6 +38,7 @@ export function installDailyCycle({ getState, getFamilyView, getDates, getIndex,
 
   function open(day = actionDay()) {
     if (!personal() || day > today()) return;
+    if (openEditor) return openEditor(day);
     editing = day;
     const daily = getState().cycleDays ?? {};
     const previous = original = daily[day];
@@ -53,32 +57,34 @@ export function installDailyCycle({ getState, getFamilyView, getDates, getIndex,
     dialog.showModal();
   }
 
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    const day = selectedDate($("cycle-day-date").value);
-    const row = { flow: $("cycle-day-flow").value, symptoms: Object.fromEntries([...symptoms].filter(([, control]) => control.select.value)
-      .map(([key, control]) => [key, Number(control.select.value)])),
-      tags: $("cycle-day-tags").value.trim(), note: $("cycle-day-note").value.trim() };
-    if (!Number.isInteger(day) || day > today() || !describeCycleDay(row).length) {
-      $("cycle-day-error").textContent = t("ui.cycle-days-required");
-      return;
-    }
-    if (await mutate(state => {
-      if (!cycleIsEnabled(state)) throw new CareInputError(t("ui.cycle-is-turned-off"));
-      const rows = state.cycleDays ??= {};
-      if (!equalCareValues(rows[editing], original)) throw new CareInputError(t("ui.cycle-entry-changed"));
-      if (day !== editing && Object.hasOwn(rows, day)) throw new CareInputError(t("ui.a-cycle-is-already-logged-for-that-date"));
-      if (editing !== day) delete rows[editing];
-      rows[day] = row;
-    }, t("ui.cycle-days-saved"))) dialog.close();
-    else $("cycle-day-error").textContent = $("status").textContent;
-  });
-  $("cycle-day-delete").addEventListener("click", () => {
-    dialog.close();
-    const day = editing;
-    requestDeletion({ title: t("ui.delete-this-cycle-entry"), message: getDates().formatDay(day), success: t("ui.cycle-entry-deleted"),
-      change: state => { delete state.cycleDays?.[day]; } });
-  });
+  if (!openEditor) {
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const day = selectedDate($("cycle-day-date").value);
+      const row = { flow: $("cycle-day-flow").value, symptoms: Object.fromEntries([...symptoms].filter(([, control]) => control.select.value)
+        .map(([key, control]) => [key, Number(control.select.value)])),
+        tags: $("cycle-day-tags").value.trim(), note: $("cycle-day-note").value.trim() };
+      if (!Number.isInteger(day) || day > today() || !describeCycleDay(row).length) {
+        $("cycle-day-error").textContent = t("ui.cycle-days-required");
+        return;
+      }
+      if (await mutate(state => {
+        if (!cycleIsEnabled(state)) throw new CareInputError(t("ui.cycle-is-turned-off"));
+        const rows = state.cycleDays ??= {};
+        if (!equalCareValues(rows[editing], original)) throw new CareInputError(t("ui.cycle-entry-changed"));
+        if (day !== editing && Object.hasOwn(rows, day)) throw new CareInputError(t("ui.a-cycle-is-already-logged-for-that-date"));
+        if (editing !== day) delete rows[editing];
+        rows[day] = row;
+      }, t("ui.cycle-days-saved"))) dialog.close();
+      else $("cycle-day-error").textContent = $("status").textContent;
+    });
+    $("cycle-day-delete").addEventListener("click", () => {
+      dialog.close();
+      const day = editing;
+      requestDeletion({ title: t("ui.delete-this-cycle-entry"), message: getDates().formatDay(day), success: t("ui.cycle-entry-deleted"),
+        change: state => { delete state.cycleDays?.[day]; } });
+    });
+  }
   for (const control of document.querySelectorAll("[data-cycle-log]")) control.addEventListener("click", () => open(Math.min(actionDay(), today())));
   $("cycle-open-settings").addEventListener("click", openSettings);
 

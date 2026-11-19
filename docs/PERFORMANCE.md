@@ -66,3 +66,23 @@ The medication benchmark kept the same network and viewport. It used a ready das
 | All canonical JS chunks, raw / gzip | 841,893 / 240,890 bytes | 860,133 / 245,583 bytes |
 
 Run `node web/browser/measure.mjs apps/web/dist 3` for onboarding and `node web/browser/measure-medication.mjs <baseline-assets> apps/web/dist` for the interaction comparison. Set `MEDORA_CHROMIUM` to the system executable if needed. Physical-device, hosted, and large-history observations remain open.
+
+### Appointments, routines and shared frontend migration
+
+Three fresh Chromium contexts per build repeated the same 390 × 844 loopback benchmark. Network settings were 160 ms latency, 200 kB/s download and 75 kB/s upload. Service workers were blocked. Onboarding readiness still means the first visible start control.
+
+| Median measurement | Fresh `676c472` baseline | Rebuild candidate |
+| --- | ---: | ---: |
+| Usable onboarding | 5,087 ms | 4,541 ms |
+| Requests at onboarding readiness | 21 | 19 |
+| Bytes at onboarding readiness | 867,816 | 770,738 |
+| Static shell files and bytes | 40 / 1,581,968 | 40 / 1,584,255 |
+| Medication navigation with 24 synthetic plans, through next frame | 34 ms | 36 ms |
+| Medication details, through next frame | 16 ms | 16 ms |
+| Dose commit and status, through next frame | 42 ms | 26 ms |
+| Resource requests during those three medication interactions | 0 | 0 |
+| Total canonical JS, raw / gzip | 860,133 / 245,583 bytes | 909,647 / 257,651 bytes |
+
+`node web/browser/measure.mjs apps/web/dist 3` measured onboarding. `node web/browser/measure-medication.mjs <baseline-assets> apps/web/dist` measured the three warm interactions. A separate run used the same throttle and clicked immediately after the welcome control appeared. With `--dashboard` added to the onboarding command, the three-trial median from navigation to the focused dashboard moved from 7,555 ms to 7,289 ms. Larger routine and appointment histories and physical devices remain open.
+
+A separate unthrottled loopback fixture used 120 synthetic appointments at 390 × 844 with the service worker enabled. In three fresh Chromium contexts the warm first-page route through the next frame moved from 67 to 53 ms. The cached offline reload until the first 20 cards were ready moved from 111 to 93 ms. These browser timings exclude physical-device and hosted latency.

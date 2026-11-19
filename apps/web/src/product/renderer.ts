@@ -17,3 +17,23 @@ export function clearFeature(host: HTMLElement) {
   }
   host.replaceChildren();
 }
+
+export function mountCard(
+  attributes: Record<string, string | undefined>,
+  view: ReactNode,
+) {
+  const article = document.createElement("article");
+  article.dataset.reactCard = "";
+  for (const [key, value] of Object.entries(attributes))
+    if (value !== undefined)
+      article.setAttribute(key === "className" ? "class" : key, value);
+  paintFeature(article, view);
+  return article;
+}
+
+export function disposeCards(host: HTMLElement) {
+  for (const card of host.querySelectorAll<HTMLElement>(
+    "[data-react-card], [data-react-dose]",
+  ))
+    clearFeature(card);
+}

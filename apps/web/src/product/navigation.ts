@@ -6,10 +6,10 @@ import {
   t,
 } from "../../../../web/public/medication/shared/i18n/locale.js";
 import { setPressed } from "../../../../web/public/medication/shared/ui/controls.js";
-import { installInsights } from "../../../../web/public/medication/features/reports/controller.js";
+import { installInsights } from "./insights/Insights";
 import { applyDisplay } from "../../../../web/public/medication/styles/display.js";
 import { installSettings } from "../../../../web/public/medication/features/settings/dialog.js";
-import { installAppointments } from "../../../../web/public/medication/features/appointments/editor.js";
+import { installAppointments } from "./appointments/Appointments";
 import { installWater } from "./waterController";
 import { calendarFormat } from "../../../../web/public/medication/shared/ui/calendar-format.js";
 import { isoDay as iso } from "../../../../web/public/medication/domain/care-index.js";
@@ -18,16 +18,19 @@ import { familyPlacementOf } from "../../../../web/public/medication/domain/fami
 import { sleepIsEnabled } from "../../../../web/public/medication/domain/sleep.js";
 import { installSleep } from "./sleepController";
 import { installDailyCycle } from "../../../../web/public/medication/features/cycle/daily.js";
-import { installCycle } from "../../../../web/public/medication/features/cycle/controller.js";
+import { installCycle } from "./cycle/PeriodEditor";
+import { installCycleDayEditor } from "./cycle/DayEditor";
 import { refreshArtwork } from "../../../../web/public/medication/design/three-dimensional.js";
 
 import type { createCareIndex } from "../../../../web/public/medication/domain/care-index.js";
 import type { installDeletion } from "./DeleteConfirmation";
 import { renderMedicationSnooze } from "./medication/MedicationSnooze";
 import type { RenderDose } from "./medication/Medication";
-import type { installRoutines } from "../../../../web/public/medication/features/routines/view.js";
+import type { installRoutines } from "./routines/Routines";
 import type { CareState, FamilyView } from "./product";
 import { clearFeature } from "./renderer";
+import { renderPreferences } from "./settings/Preferences";
+import { renderStory } from "./TodayStory";
 
 function $<T extends HTMLElement = HTMLElement>(id: string) {
   return document.getElementById(id)! as T;
@@ -64,6 +67,7 @@ interface Options {
   renderDose: RenderDose;
   disposeDoseCards(list: HTMLElement): void;
   closeMedicationContext(): void;
+  renderBackup(panel: HTMLElement): () => void;
   renderRoutine: ReturnType<typeof installRoutines>["card"];
   refreshFields(container: HTMLElement): void;
 }
@@ -81,6 +85,7 @@ export function installNavigation({
   renderDose,
   disposeDoseCards,
   closeMedicationContext,
+  renderBackup,
   renderRoutine,
   refreshFields,
 }: Options) {
@@ -105,7 +110,9 @@ export function installNavigation({
     },
   });
   const settings = installSettings({
+    renderPreferences,
     renderSnooze: renderMedicationSnooze,
+    renderBackup,
     getState: getPersonalState,
     mutate,
     refreshFields,
@@ -143,13 +150,12 @@ export function installNavigation({
     formatShortMonth: (day: number) => dates.shortMonth(day),
   });
   const insights = installInsights({
-    root: document.querySelector('[data-screen="insights"]'),
+    root: document.querySelector<HTMLElement>('[data-screen="insights"]')!,
     today,
     getFamilyView,
     getDates: () => dates,
     render,
     renderDose,
-    disposeDoseCards,
     renderRoutine,
     visitCard: appointments.visitCard,
     openWaterHistory: () => show("water"),
@@ -203,15 +209,25 @@ export function installNavigation({
     requestDeletion,
     refreshFields,
     editCycle: cycle.open,
+    openEditor: installCycleDayEditor({
+      getState,
+      today,
+      formatDay,
+      refreshFields,
+      mutate,
+      requestDeletion,
+      canOpen: () =>
+        !getFamilyView() && Boolean(getState() && cycleIsEnabled(getState())),
+    }),
     openSettings: () => {
       settings();
       $("settings-open-cycle").click();
     },
   });
-  $("report-sleep-card").addEventListener("click", (event) => {
+  $("reports-panel").addEventListener("click", (event) => {
     if (
       !(event.target instanceof Element) ||
-      !event.target.closest(".report-card-open")
+      !event.target.closest("#report-sleep-card .report-card-open")
     )
       return;
     queueMicrotask(() => {
@@ -246,18 +262,23 @@ export function installNavigation({
   }
   $("program-cycle").addEventListener("click", showCycleHistory);
 
-  function renderTodayHeader(day: number) {
-    $<HTMLTimeElement>("story-date").dateTime = iso(day);
-    $("story-date").textContent =
-      dates.weekday(day) + listSeparator + dates.shortDate(day);
-    $("story-date").setAttribute("aria-label", formatDay(day, true));
+  function renderTodayHeader(day: number, summary: string) {
     const view = getFamilyView();
-    $("story-title").textContent = view
+    const title = view
       ? t(day === today() ? "امروزِ {0}" : "برنامهٔ {0}", view.firstName)
       : day === today()
         ? t("ui.today-with-medora")
         : t("ui.schedule-for-this-day");
-    $("header-date").textContent = formatDay(day, true);
+    const label = formatDay(day, true);
+    renderStory(
+      $("today-story"),
+      iso(day),
+      dates.weekday(day) + listSeparator + dates.shortDate(day),
+      label,
+      title,
+      summary,
+    );
+    $("header-date").textContent = label;
   }
 
   function renderScreen(state: CareState, day: number, index: Index) {
@@ -390,7 +411,6 @@ export function installNavigation({
       const total = index.waterTotal(day);
       const progress = Math.min(1, total / goal);
       if (screen === "today") {
-        renderTodayHeader(day);
         sleep.paintToday(state, day, sleepEnabled, sleepCompact);
         cycleDaily.paintToday(state, day, cycleShortcut, cycleCompact);
         $("cycle-companion-card").hidden =
@@ -450,6 +470,7 @@ export function installNavigation({
         search.value = "";
     }
     closeMedicationContext();
+    appointments.close();
     show("today", false, { mode: "replace" });
   }
   return {
@@ -466,6 +487,7 @@ export function installNavigation({
     openSleep: sleep.open,
     dayVisits: appointments.dayVisits,
     renderScreen,
+    renderTodayHeader,
     monthStart,
     chooseDay: days.chooseDay,
     show,

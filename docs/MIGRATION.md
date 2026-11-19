@@ -6,7 +6,7 @@ The rebuild reads the existing device database without specifying a new version.
 
 The independent journal currently supports account-scoped water operations and guest entries. Copies of legacy records are available for reconciliation. Promoting a copied archive to the live store for all features requires explicit mappings and write fencing. A device archive may contain credentials and must stay on the original device.
 
-The React onboarding and sleep editor continue to use the canonical database in place. Moving frontend build tooling to the pnpm workspace introduces no device schema change or backup conversion. The [device preservation notes](DATA_PRESERVATION.md) describe the on-origin update and retry boundaries.
+The React onboarding, appointment and routine forms, cycle period editor and backup panel continue to use the canonical database in place. The frontend change uses the existing device schema, archive formats and sync protocol. The [device preservation notes](DATA_PRESERVATION.md) describe the on-origin update and retry boundaries.
 
 ## Frozen server copies
 
