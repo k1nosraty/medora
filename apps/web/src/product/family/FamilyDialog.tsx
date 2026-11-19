@@ -14,8 +14,8 @@ import { pollFamilyView, readFamilyView, type SharedCare } from "./familyApi";
 import { Icon } from "../PlanCard";
 import type { CareState, FamilyView } from "../productState";
 import { paintFeature } from "../renderer";
+import { FamilyHome, FamilyInvitations } from "./FamilyHome";
 import {
-  Avatar,
   FamilyAction,
   FamilyContext,
   FamilyForm,
@@ -301,181 +301,44 @@ export function installFamilyDialog({
   }
 
   function invitations(back: () => void) {
-    const rows = overview?.invitations ?? [];
     return (
-      <FamilySection title="دعوت‌های دریافتی">
-        {rows.length ? (
-          rows.map((item) => (
-            <article className="family-card" key={item.id}>
-              <h4>{item.name}</h4>
-              <p className="quiet">{t("ui.invited-by-value", item.inviter)}</p>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => reviewInvite(item, back)}
-              >
-                {t("ui.review-invitation")}
-              </button>
-            </article>
-          ))
-        ) : (
-          <p className="quiet">{t("ui.no-new-invitations")}</p>
-        )}
-      </FamilySection>
+      <FamilyInvitations
+        rows={overview?.invitations ?? []}
+        review={(item) => reviewInvite(item, back)}
+      />
     );
   }
 
+  function selectHomeGroup(group: Group) {
+    chooseGroup(group);
+    showHome();
+    Array.from(
+      dialog.querySelectorAll<HTMLButtonElement>(".family-group-tabs button"),
+    ).find((button) => button.dataset.group === group.id)?.focus();
+  }
+
   function showHome() {
-    const selected = groupInView();
     page(
       "گروه‌ها و اعضا",
-      <>
-        {selected ? (
-          <>
-            <GroupBanner
-              name={selected.name}
-              icon={selected.icon}
-              caption="گروه فعال"
-            />
-            <div
-              className="family-group-tabs"
-              role="group"
-              aria-label={t("ui.choose-active-group")}
-            >
-              {overview?.groups.map((group) => (
-                <button
-                  key={group.id}
-                  type="button"
-                  className="secondary"
-                  data-group={group.id}
-                  aria-pressed={group.id === selected.id}
-                  onClick={() => {
-                    chooseGroup(group);
-                    showHome();
-                    Array.from(
-                      dialog.querySelectorAll<HTMLButtonElement>(
-                        ".family-group-tabs button",
-                      ),
-                    )
-                      .find((button) => button.dataset.group === group.id)
-                      ?.focus();
-                  }}
-                >
-                  <span className="family-group-label">{group.name}</span>
-                  {group.id === selected.id && <Icon name="check" />}
-                </button>
-              ))}
-            </div>
-            <h3 className="family-roster-title">{t("ui.members")}</h3>
-            <div className="family-roster">
-              {[...selected.members]
-                .sort(
-                  (a, b) => Number(Boolean(b.self)) - Number(Boolean(a.self)),
-                )
-                .map((member) => {
-                  const label = member.self ? personalName() : member.label;
-                  const launch = member.self
-                    ? () => {
-                        dialog.close();
-                        leave();
-                      }
-                    : member.received
-                      ? () => showCare(selected, member)
-                      : undefined;
-                  const canWrite =
-                    member.received?.record || member.received?.add;
-                  const caption = member.self
-                    ? t("ui.you")
-                    : !member.received
-                      ? t("ui.access-hasnt-been-shared")
-                      : canWrite
-                        ? policyText(member.received)
-                        : t("ui.view-only");
-                  const details = (
-                    <>
-                      <Avatar label={label} id={member.id} />
-                      <span className="family-context-copy">
-                        <strong>{label}</strong>
-                        <small>{caption}</small>
-                      </span>
-                      {!member.self && (
-                        <span className="family-access-icon">
-                          <Icon
-                            name={
-                              !member.received
-                                ? "lock"
-                                : canWrite
-                                  ? "pen"
-                                  : "eye"
-                            }
-                          />
-                        </span>
-                      )}
-                      {launch && (
-                        <svg className="family-row-arrow" aria-hidden="true">
-                          <use href="#i-expand" />
-                        </svg>
-                      )}
-                    </>
-                  );
-                  return launch ? (
-                    <FamilyAction
-                      key={member.id}
-                      className="family-roster-row"
-                      run={run}
-                      work={launch}
-                    >
-                      {details}
-                    </FamilyAction>
-                  ) : (
-                    <div className="family-roster-row" key={member.id}>
-                      {details}
-                    </div>
-                  );
-                })}
-            </div>
-          </>
-        ) : (
-          <FamilyHero
-            title={t("ui.care-groups")}
-            subtitle={t(
-              "ui.create-a-group-or-accept-an-invitation-to-see-family-sche",
-            )}
-          />
-        )}
-        <div className="family-group-links">
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => groupEditor()}
-          >
-            <Icon name="plus" />
-            {t("ui.create-group")}
-          </button>
-          {selected && (
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => showGroup(selected)}
-            >
-              <Icon name="settings" />
-              {t("ui.manage-group")}
-            </button>
-          )}
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              dialog.close();
-              openProfile();
-            }}
-          >
-            <Icon name="user" />
-            {t("ui.my-profile")}
-          </button>
-        </div>
-        {Boolean(overview?.invitations.length) && invitations(showHome)}
-      </>,
+      <FamilyHome
+        groups={overview?.groups ?? []}
+        selected={groupInView()}
+        personalName={personalName()}
+        invitations={Boolean(overview?.invitations.length) && invitations(showHome)}
+        run={run}
+        selectGroup={selectHomeGroup}
+        openOwnCare={() => {
+          dialog.close();
+          leave();
+        }}
+        openCare={showCare}
+        createGroup={() => groupEditor()}
+        manageGroup={showGroup}
+        openProfile={() => {
+          dialog.close();
+          openProfile();
+        }}
+      />,
     );
     dialog
       .querySelector('.family-group-tabs [aria-pressed="true"]')

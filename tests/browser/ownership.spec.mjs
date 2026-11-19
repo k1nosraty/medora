@@ -82,9 +82,7 @@ test("React hosts preserve the product layout under the inline-style restriction
   expect(styleViolations).toEqual([]);
 });
 
-test("React family groups, invitations and grants follow the existing action protocol", async ({
-  page,
-}) => {
+async function openFamilyFixture(page, existingGroup = false) {
   const invitation = {
     id: "f1952e93-d710-4eaf-9d35-023e380c6aa3",
     name: "Second household",
@@ -93,13 +91,13 @@ test("React family groups, invitations and grants follow the existing action pro
   const member = { id: "member-test", label: "Test member" };
   const group = {
     id: "group-test",
-    name: "",
+    name: "Local household",
     manager: true,
     icon: "group",
     members: [member],
     pending: [],
   };
-  const groups = [];
+  const groups = existingGroup ? [group] : [];
   const invitations = [
     invitation,
     {
@@ -176,9 +174,15 @@ test("React family groups, invitations and grants follow the existing action pro
 
   await product(page);
   const family = page.locator("#family-dialog");
-  const submit = family.locator('button[type="submit"]');
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.locator("#settings-open-family").click();
+  if (existingGroup)
+    await family.getByRole("button", { name: "Manage group", exact: true }).click();
+  return { family, submit: family.locator('button[type="submit"]'), actions, group, member };
+}
+
+test("React family creates, renames and confirms group deletion", async ({ page }) => {
+  const { family, submit, actions } = await openFamilyFixture(page);
   await family.getByRole("button", { name: "Create group" }).click();
   await accessible(page, "#family-dialog");
   await family.locator("[name=name]").fill("Local household");
@@ -200,6 +204,23 @@ test("React family groups, invitations and grants follow the existing action pro
   await expect(family.locator(".family-group-hero strong")).toHaveText(
     "Updated household",
   );
+  await family.getByRole("button", { name: "Delete group" }).click();
+  await family.getByRole("button", { name: "Cancel" }).click();
+  await expect(family.locator(".family-group-hero strong")).toHaveText(
+    "Updated household",
+  );
+  await family.getByRole("button", { name: "Delete group" }).click();
+  await family.locator(".family-danger").click();
+  await expect(
+    family.getByRole("button", { name: "Create group" }),
+  ).toBeVisible();
+  expect(actions.map((item) => item.action)).toEqual([
+    "create", "update-group", "delete-group",
+  ]);
+});
+
+test("React family sends and cancels outgoing invitations", async ({ page }) => {
+  const { family, submit, actions } = await openFamilyFixture(page, true);
   await family.getByRole("button", { name: "Invite a member" }).click();
   await family.locator("input[type=email]").fill("invite@example.test");
   await submit.click();
@@ -210,7 +231,11 @@ test("React family groups, invitations and grants follow the existing action pro
   await sent.locator("button").last().click();
   await expect(sent).toHaveCount(0);
   await family.locator("#family-back").click();
+  expect(actions.map((item) => item.action)).toEqual(["invite", "cancel"]);
+});
 
+test("React family grants and revokes scoped access", async ({ page }) => {
+  const { family, submit, actions, group, member } = await openFamilyFixture(page, true);
   await family
     .locator(".family-card")
     .filter({ hasText: "Test member" })
@@ -234,17 +259,20 @@ test("React family groups, invitations and grants follow the existing action pro
     family.getByRole("button", { name: "Revoke access" }),
   ).toHaveCount(0);
 
-  await family.getByRole("button", { name: "Delete group" }).click();
-  await family.getByRole("button", { name: "Cancel" }).click();
-  await expect(family.locator(".family-group-hero strong")).toHaveText(
-    "Updated household",
-  );
-  await family.getByRole("button", { name: "Delete group" }).click();
-  await family.locator(".family-danger").click();
-  await expect(
-    family.getByRole("button", { name: "Create group" }),
-  ).toBeVisible();
+  expect(actions.map((item) => item.action)).toEqual(["share", "revoke"]);
+  expect(actions[0]).toMatchObject({
+    group: group.id,
+    target: member.id,
+    all: false,
+    record: true,
+    add: false,
+    days: 7,
+  });
+  expect(actions[0].sections).not.toContain("cycle");
+});
 
+test("React family accepts and declines incoming invitations", async ({ page }) => {
+  const { family, actions } = await openFamilyFixture(page);
   await family
     .locator(".family-card")
     .filter({ hasText: "Second household" })
@@ -267,28 +295,7 @@ test("React family groups, invitations and grants follow the existing action pro
     family.locator(".family-card").filter({ hasText: "Declined household" }),
   ).toHaveCount(0);
 
-  expect(actions.map((item) => item.action)).toEqual([
-    "create",
-    "update-group",
-    "invite",
-    "cancel",
-    "share",
-    "revoke",
-    "delete-group",
-    "accept",
-    "decline",
-  ]);
-  expect(actions.find((item) => item.action === "share")).toMatchObject({
-    group: group.id,
-    target: member.id,
-    all: false,
-    record: true,
-    add: false,
-    days: 7,
-  });
-  expect(
-    actions.find((item) => item.action === "share").sections,
-  ).not.toContain("cycle");
+  expect(actions.map((item) => item.action)).toEqual(["accept", "decline"]);
 });
 
 const push = {

@@ -86,33 +86,73 @@ function planNamed(page, name) {
     .filter({ has: page.getByRole("button", { name, exact: true }) });
 }
 
-test.describe("React medication and dose journeys", () => {
-  test.use({ serviceWorkers: "block" });
+async function openPlanEditor(page, name) {
+  const dialog = page.locator("#medication-dialog");
+  await expect(page.locator("#plans p.empty")).toBeVisible();
+  await page.locator("#add").press("Enter");
+  await expect(dialog.locator("#editor-identity")).toBeFocused();
+  await dialog.locator("#editor-next").click();
+  await expect(dialog.locator("#name")).toBeFocused();
+  await dialog.locator("#name").fill(name);
+  return dialog;
+}
+
+async function seedPlan(page, name, taken = false) {
+  const id = "medication-journey";
+  await page.evaluate(async ({ id, name, taken }) => {
+    const { accessCare } = await import("/medication/shared/storage.js");
+    const { today } = await import("/medication/shared/ui/dates.js");
+    const day = today();
+    await accessCare((state) => {
+      state.medicationSnoozeMinutes = 45;
+      state.medicines[id] = {
+        id, name, unit: "tablet", icon: "capsule", color: "green",
+        stock: taken ? 14500 : 15000, threshold: 2000, revision: 1,
+        phases: [{ start: day, end: null, interval: 1, mask: 127,
+          slots: [{ minute: 570, amount: 500 }] }],
+      };
+      if (taken) state.doses[id + "|" + day + "|570"] = {
+        medicineId: id, day, minute: 570, planned: 500, actual: 500,
+        status: "taken", debit: 500,
+      };
+    });
+  }, { id, name, taken });
+  await page.reload();
+  return id;
+}
+
+const medicationTest = test.extend({
+  page: async ({ page }, use) => {
+    const legacyRequests = [];
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.route(
+      /\/medication\/features\/medicines\/(editor|view|appearance)\.js$/,
+      (route) => {
+        legacyRequests.push(route.request().url());
+        return route.abort();
+      },
+    );
+    await use(page);
+    expect(legacyRequests).toEqual([]);
+    expect(errors).toEqual([]);
+  },
+});
+
+medicationTest.describe("React medication and dose journeys", () => {
+  medicationTest.use({ serviceWorkers: "block" });
   for (const language of ["fa", "en"]) {
     for (const viewport of [
       { width: 390, height: 844 },
       { width: 1280, height: 850 },
     ]) {
-      test(`${language} ${viewport.width} owns schedule, cabinet, history and dose interactions`, async ({
-        page,
-      }, testInfo) => {
-        const legacyRequests = [];
-        const errors = [];
-        page.on("pageerror", (error) => errors.push(error.message));
-        await page.route(
-          /\/medication\/features\/medicines\/(editor|view|appearance)\.js$/,
-          (route) => {
-            legacyRequests.push(route.request().url());
-            return route.abort();
-          },
-        );
-        const name =
-          language === "fa"
-            ? "نام طولانی داروی آزمایشی برای بررسی چیدمان فهرست"
-            : "Schedule fixture";
+      const profile = language + " " + viewport.width;
+      const name = language === "fa"
+        ? "نام طولانی داروی آزمایشی برای بررسی چیدمان فهرست"
+        : "Schedule fixture";
+
+      medicationTest(profile + " validates and saves a localized snooze preference", async ({ page }) => {
         await start(page, language, viewport);
-        const dialog = page.locator("#medication-dialog");
-        await expect(page.locator("#phase-template")).toHaveCount(0);
         await expect(page.locator("#snooze-form")).toHaveCount(0);
         await page.locator(".header-tools [data-destination=settings]").click();
         await page.locator('[data-settings-panel="snooze-settings"]').click();
@@ -135,17 +175,13 @@ test.describe("React medication and dose journeys", () => {
         await page.keyboard.press("Escape");
         await page.keyboard.press("Escape");
         await expect(page.locator("#settings-dialog")).toBeHidden();
-        await expect(page.locator("#plans p.empty")).toBeVisible();
-        await page.locator("#add").press("Enter");
-        await expect(dialog.locator("#editor-identity")).toBeFocused();
-        await dialog.locator("#editor-next").click();
-        await expect(dialog.locator("#name")).toBeFocused();
-        await dialog.locator("#name").fill(name);
-        await dialog.locator("#medicine-appearance").click();
-        await page.locator('#medicine-icons [data-choice="capsule"]').click();
-        await page.locator('#medicine-colors [data-choice="green"]').click();
-        await page.locator("#appearance-confirm").click();
-        await expect(dialog.locator("#medicine-appearance")).toBeFocused();
+        expect((await stateOf(page)).medicationSnoozeMinutes).toBe(45);
+      });
+
+      medicationTest(profile + " validates exact dates, phased schedules and weekly intervals", async ({ page }) => {
+        await start(page, language, viewport);
+        await expect(page.locator("#phase-template")).toHaveCount(0);
+        const dialog = await openPlanEditor(page, name);
         await dialog.locator("#editor-next").click();
         const stage = dialog.locator(".phase").first();
         await stage.locator(".repeat").selectOption("dates");
@@ -172,6 +208,20 @@ test.describe("React medication and dose journeys", () => {
         await dialog.locator("#editor-next").click();
         await expect(stage.locator(".interval")).toBeFocused();
         await stage.locator(".repeat").selectOption("daily");
+        await dialog.locator("#editor-next").click();
+        await expect(dialog.locator("#editor-confirm")).toBeFocused();
+      });
+
+      medicationTest(profile + " saves a styled schedule with dated and timed slots", async ({ page }) => {
+        await start(page, language, viewport);
+        const dialog = await openPlanEditor(page, name);
+        await dialog.locator("#medicine-appearance").click();
+        await page.locator('#medicine-icons [data-choice="capsule"]').click();
+        await page.locator('#medicine-colors [data-choice="green"]').click();
+        await page.locator("#appearance-confirm").click();
+        await expect(dialog.locator("#medicine-appearance")).toBeFocused();
+        await dialog.locator("#editor-next").click();
+        const stage = dialog.locator(".phase").first();
         await stage.locator('[data-for="end"]').click();
         await page.locator("#picker-date-confirm").click();
         await expect(stage.locator("input.end")).not.toHaveValue("");
@@ -212,6 +262,12 @@ test.describe("React medication and dose journeys", () => {
           "capsule",
         );
         await expect(page.locator("#med-day-doses article")).toHaveCount(1);
+      });
+
+      medicationTest(profile + " snoozes, records, edits, skips and undoes a dose with stock", async ({ page }) => {
+        await start(page, language, viewport);
+        const id = await seedPlan(page, name);
+        const plan = planNamed(page, name);
         await plan.locator(".refill summary").click();
         await plan.locator(".refill input").fill("2");
         await plan.locator(".refill button").click();
@@ -266,6 +322,12 @@ test.describe("React medication and dose journeys", () => {
           "data-status",
           "taken",
         );
+      });
+
+      medicationTest(profile + " searches the cabinet, checks dose history and keeps browser navigation", async ({ page }) => {
+        await start(page, language, viewport);
+        const id = await seedPlan(page, name, true);
+        const plan = planNamed(page, name);
         await plan.locator(".treatment-name").click();
         const details = page.locator("#medicine-details");
         await expect(details.locator(".dose-history li")).toHaveCount(1);
@@ -288,6 +350,26 @@ test.describe("React medication and dose journeys", () => {
         await expect
           .poll(async () => (await stateOf(page)).medicines[id].paused)
           .toBe(false);
+        await page.goBack();
+        await expect(page.locator("#app")).toHaveAttribute(
+          "data-active-screen",
+          "today",
+        );
+        await expect(page.locator("#doses [data-react-dose]")).not.toHaveCount(
+          0,
+        );
+        await page.goForward();
+        await expect(page.locator("#app")).toHaveAttribute(
+          "data-active-screen",
+          "medications",
+        );
+      });
+
+      medicationTest(profile + " audits the cabinet, details and editor", async ({ page }, testInfo) => {
+        await start(page, language, viewport);
+        await seedPlan(page, name, true);
+        const plan = planNamed(page, name);
+        await expect(plan).toBeVisible();
         await page.screenshot({
           path: testInfo.outputPath("cabinet.png"),
           animations: "disabled",
@@ -304,6 +386,7 @@ test.describe("React medication and dose journeys", () => {
           }));
         expect(await audit()).toEqual([]);
         await plan.locator(".treatment-name").click();
+        const details = page.locator("#medicine-details");
         await page.screenshot({
           path: testInfo.outputPath("details.png"),
           animations: "disabled",
@@ -319,21 +402,6 @@ test.describe("React medication and dose journeys", () => {
         });
         expect(await audit()).toEqual([]);
         await page.keyboard.press("Escape");
-        await page.goBack();
-        await expect(page.locator("#app")).toHaveAttribute(
-          "data-active-screen",
-          "today",
-        );
-        await expect(page.locator("#doses [data-react-dose]")).not.toHaveCount(
-          0,
-        );
-        await page.goForward();
-        await expect(page.locator("#app")).toHaveAttribute(
-          "data-active-screen",
-          "medications",
-        );
-        expect(legacyRequests).toEqual([]);
-        expect(errors).toEqual([]);
       });
     }
   }
