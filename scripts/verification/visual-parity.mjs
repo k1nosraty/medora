@@ -406,10 +406,18 @@ try {
     serve(publicCandidate, 48972),
   ]);
   for (const engine of engines) {
-    const options =
-      engine === chromium && process.env.MEDORA_CHROMIUM
-        ? { executablePath: process.env.MEDORA_CHROMIUM }
-        : {};
+    const options = {};
+    if (engine === chromium && process.env.MEDORA_CHROMIUM)
+      options.executablePath = process.env.MEDORA_CHROMIUM;
+    if (engine === webkit && process.platform === "linux") {
+      // Paint both builds' translucent layers synchronously with the same Skia
+      // backend. The product/browser suites still use WebKit's normal renderer.
+      options.env = {
+        ...process.env,
+        WEBKIT_SKIA_ENABLE_CPU_RENDERING: "1",
+        WEBKIT_SKIA_CPU_PAINTING_THREADS: "0",
+      };
+    }
     // Replay the exact same interactions in a second incumbent WebKit process.
     // An independent incumbent paint can confirm an exact candidate raster
     // when WebKit composites the same layout differently in separate processes.
