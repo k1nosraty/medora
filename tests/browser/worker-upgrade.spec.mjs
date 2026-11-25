@@ -4,6 +4,35 @@ import { join } from "node:path";
 import { expect, test } from "./runner.mjs";
 import { browserServer } from "./server.mjs";
 
+test("default artwork is available offline immediately after installing the product", async ({ page, context }) => {
+  test.skip(!process.env.MEDORA_PUBLIC_DIR, "Runs against the rebuilt product");
+  // Install without opening the dashboard, so none of its images are in the HTTP or runtime cache.
+  await page.route("**/medication/install-fixture", route => route.fulfill({
+    contentType: "text/html", body: "<!doctype html><title>Install fixture</title>",
+  }));
+  await page.goto("/medication/install-fixture");
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register("/medication/sw.js");
+    await navigator.serviceWorker.ready;
+  });
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await context.setOffline(true);
+  const artwork = [
+    "matte-3d/water", "optical-glass/water", "optical-glass/bottle",
+    "optical-glass/control-calendar", "optical-glass/cycle",
+    "optical-glass/visit-main", "optical-glass/routine-main",
+  ];
+  const missing = await page.evaluate(async names => {
+    const results = await Promise.all(names.map(async name => {
+      const img = new Image();
+      img.src = "/design/" + name + ".webp";
+      return img.decode().then(() => null, () => name);
+    }));
+    return results.filter(Boolean);
+  }, artwork);
+  expect(missing).toEqual([]);
+});
+
 test("the product installs an updated worker and keeps IndexedDB through offline reload", async ({
   page,
   context,

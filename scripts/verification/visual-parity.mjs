@@ -35,14 +35,6 @@ const accessibility = [];
 const rendererControls = [];
 const visualMismatches = [];
 const cases = [];
-const webkitControlScenes = new Set([
-  "medications",
-  "medicine-snooze-settings",
-  "medicine-details",
-  "medicine-editor",
-  "medicine-schedule",
-  "medicine-appearance",
-]);
 
 // Playwright WebKit 27.2 produced both RGB rasters with unchanged incumbent
 // code during the English mobile medicine dialog control. Require those exact
@@ -419,8 +411,8 @@ try {
         ? { executablePath: process.env.MEDORA_CHROMIUM }
         : {};
     // Replay the exact same interactions in a second incumbent WebKit process.
-    // It supplies a naturally occurring alternate reference paint only for the
-    // medicine screens where CI observed different paints with identical layouts.
+    // An independent incumbent paint can confirm an exact candidate raster
+    // when WebKit composites the same layout differently in separate processes.
     const sceneOrigins = engine === webkit ? [...origins, origins[0]] : origins;
     const instances = await Promise.all(
       sceneOrigins.map(() => engine.launch(options)),
@@ -521,7 +513,7 @@ try {
           }
           const control = pages[2];
           let independent;
-          if (!before.equals(after) && control && webkitControlScenes.has(name)) {
+          if (!before.equals(after) && control) {
             independent = await capture(control, prepare);
             const controlLayout = await visibleLayout(
               control,

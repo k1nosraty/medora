@@ -27,7 +27,7 @@ self.addEventListener("activate", event => {
 });
 
 MedoraWorkbox.registerRoute(
-  ({ sameOrigin, url }) => sameOrigin && optionalArt.test(url.pathname),
+  ({ sameOrigin, url }) => sameOrigin && optionalArt.test(url.pathname) && !shell.includes(url.pathname),
   async ({ request, url }) => {
     const cache = await caches.open(artworkCache);
     const saved = await cache.match(url.pathname);
