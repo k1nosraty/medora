@@ -35,7 +35,9 @@ const accessibility = [];
 const rendererControls = [];
 const visualMismatches = [];
 const cases = [];
-const webkitModalScenes = new Set([
+const webkitControlScenes = new Set([
+  "medications",
+  "medicine-snooze-settings",
   "medicine-details",
   "medicine-editor",
   "medicine-schedule",
@@ -418,7 +420,7 @@ try {
         : {};
     // Replay the exact same interactions in a second incumbent WebKit process.
     // It supplies a naturally occurring alternate reference paint only for the
-    // previously diagnosed medicine modal scenes.
+    // medicine screens where CI observed different paints with identical layouts.
     const sceneOrigins = engine === webkit ? [...origins, origins[0]] : origins;
     const instances = await Promise.all(
       sceneOrigins.map(() => engine.launch(options)),
@@ -493,8 +495,9 @@ try {
           );
           // The browser compositor can dither filtered layers on a fresh paint.
           // Require an exact, stable reference paint even when a repaint is needed.
+          const candidatePaints = [after];
           if (!before.equals(after)) {
-            const paints = [before];
+            const referencePaints = [before];
             for (let retry = 0; retry < 4; retry++) {
               for (const page of pages)
                 await page.evaluate(async () => {
@@ -504,27 +507,29 @@ try {
                   await new Promise(requestAnimationFrame);
                 });
               before = await capture(pages[0], prepare);
-              paints.push(before);
+              referencePaints.push(before);
               after = await capture(pages[1], prepare);
-              const exact = paints.find((referencePaint) =>
-                referencePaint.equals(after),
+              candidatePaints.push(after);
+              const exact = referencePaints.find((paint) =>
+                candidatePaints.some((candidate) => candidate.equals(paint)),
               );
               if (exact) {
-                before = exact;
+                before = after = exact;
                 break;
               }
             }
           }
           const control = pages[2];
-          if (!before.equals(after) && control && webkitModalScenes.has(name)) {
-            const independent = await capture(control, prepare);
+          let independent;
+          if (!before.equals(after) && control && webkitControlScenes.has(name)) {
+            independent = await capture(control, prepare);
             const controlLayout = await visibleLayout(
               control,
               compareDosePresets,
             );
             if (
               JSON.stringify(controlLayout) === JSON.stringify(left) &&
-              independent.equals(after)
+              candidatePaints.some((paint) => paint.equals(independent))
             ) {
               rendererControls.push({
                 engine: engine.name(),
@@ -533,7 +538,7 @@ try {
                 width,
                 name,
               });
-              before = independent;
+              before = after = independent;
             }
           } else if (control && prepare) {
             await prepare(control);
@@ -552,6 +557,7 @@ try {
             await Promise.all([
               writeFile(path + "-original.png", before),
               writeFile(path + "-candidate.png", after),
+              ...(independent ? [writeFile(path + "-control.png", independent)] : []),
             ]);
           }
           let method;

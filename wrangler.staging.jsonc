@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "medora-frontend-staging",
+  "main": "apps/compat-worker/src/worker.mjs",
+  "compatibility_date": "2026-10-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": { "MEDORA_PAUSE_PUSH": "true" },
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "assets": {
+    "directory": "apps/web/dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "ratelimits": [
+    { "name": "PUSH_ENROLL_LIMIT", "namespace_id": "862501", "simple": { "limit": 30, "period": 60 } },
+    { "name": "PUSH_DEVICE_LIMIT", "namespace_id": "862502", "simple": { "limit": 60, "period": 60 } },
+    { "name": "PROMOTION_EVENT_LIMIT", "namespace_id": "862504", "simple": { "limit": 60, "period": 60 } },
+    { "name": "EMAIL_AUTH_LIMIT", "namespace_id": "862503", "simple": { "limit": 8, "period": 60 } }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "PILOT", "class_name": "PushPilot" },
+      { "name": "REMINDERS", "class_name": "MedicationReminders" },
+      { "name": "EMAIL_ACCOUNTS", "class_name": "EmailAccount" },
+      { "name": "CREDENTIALS", "class_name": "Credentials" },
+      { "name": "PROMOTIONS", "class_name": "Promotions" },
+      { "name": "OPERATIONS", "class_name": "Operations" },
+      { "name": "FAMILIES", "class_name": "Families" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["PushPilot"] },
+    { "tag": "v2", "new_sqlite_classes": ["MedicationReminders"] },
+    { "tag": "v3", "new_sqlite_classes": ["EmailAccount"] },
+    { "tag": "v4", "new_sqlite_classes": ["Promotions"] },
+    { "tag": "v5", "new_sqlite_classes": ["Credentials"] },
+    { "tag": "v6", "new_sqlite_classes": ["Operations"] },
+    { "tag": "v7", "new_sqlite_classes": ["Families"] }
+  ]
+}

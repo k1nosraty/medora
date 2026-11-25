@@ -1,6 +1,16 @@
 # Cloudflare architecture and capacity
 
-**Local verification only. Cloudflare readiness remains open until an authorized dedicated hosted environment is verified.** Use external PostgreSQL from day one. The portable Worker entry is `apps/api/src/adapters/worker.ts`. The combined legacy-compatible Worker remains available for migration rehearsals. A fresh portable installation uses a dedicated database, after applying the checked SQL migrations and initializing it with `postgres-handoff.mjs initialize`.
+## React on the existing Medora Worker
+
+`wrangler.production.jsonc` serves the React build in `apps/web/dist` from `medora` on `medorapp.ir`. The compatibility Worker handles `/api/*` using its seven existing Durable Object bindings and migration tags through `v7`. Build with `pnpm --filter @medora/web build`. A local smoke test can use `pnpm exec wrangler dev --local --config wrangler.production.jsonc --env-file <fixture-env>`.
+
+The product entry is `/medication/`. A missing `/api/v2/product-writer` followed by a successful `/api/auth/session` selects the legacy API. The separate `/journal/` entry is experimental on this deployment. Its guest data is local. Its account, family and server backup features require the v2 API and return 404 on this backend.
+
+`wrangler.staging.jsonc` targets `medora-frontend-staging` on workers.dev and pauses push delivery. Give this Worker fresh test keys and leave email delivery unconfigured. Its Durable Objects belong to the staging script and its rate-limit counters have dedicated IDs. Check the script name, account, live version, domain binding and migration tag before publishing. Production release status stays **NOT READY** until the source snapshot, rollout and verification gates have passed.
+
+## Portable backend for a future migration
+
+The portable Worker entry is `apps/api/src/adapters/worker.ts`. The combined legacy-compatible Worker remains available for migration rehearsals. A fresh portable installation uses a dedicated database, after applying the checked SQL migrations and initializing it with `postgres-handoff.mjs initialize`. A future VPS move uses `scripts/migration/objects.mjs` for a verified source copy and `scripts/migration/postgres-handoff.mjs` for the PostgreSQL handoff. Keep the product origin and fence writers before transferring write authority. The migration requires its own approval.
 
 ## Bindings and local verification
 

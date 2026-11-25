@@ -134,7 +134,15 @@ jobs:
           done
           node scripts/verification/postgres-handoff.mjs > dist/postgres-handoff.json
       - run: pnpm test:compat
-      - run: node scripts/verification/visual-parity.mjs > dist/visual-parity.json
+      - id: visual_parity
+        run: node scripts/verification/visual-parity.mjs > dist/visual-parity.json
+      - name: Preserve synthetic screenshots for a failed comparison
+        if: failure() && steps.visual_parity.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-parity-${{ github.run_attempt }}
+          path: test-results/visual-parity/*.png
+          retention-days: 7
       - run: node tests/browser/measure.mjs apps/web/dist 3 > dist/performance-product.json
       - run: node tests/browser/measure.mjs apps/web/dist 3 --insights > dist/performance-insights.json
       - run: pnpm test:e2e
@@ -182,6 +190,11 @@ jobs:
         run: |
           node scripts/verification/artifacts.mjs dist/worker > dist/release-manifest.json
           tar -czf "$RUNNER_TEMP/medora-candidate.tar.gz" apps/web/dist apps/api/dist dist/worker dist/release-manifest.json dist/reconciliation.json dist/recovery-refusal.json dist/imported-account-erasure.json dist/postgres-handoff.json dist/source-copy.json dist/visual-parity.json dist/performance-product.json dist/performance-insights.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest
+          path: dist/release-manifest.json
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch' && inputs.archive_candidate
         with:
