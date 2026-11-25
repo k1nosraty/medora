@@ -12,7 +12,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    uses: ./.github/workflows/rebuild.yml
+    with:
+      publish_web_artifact: true
+
   deploy:
+    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -24,18 +30,25 @@ jobs:
         with:
           node-version: '24.18.0'
           cache: pnpm
-      - name: Install and test the web app
+      - name: Install deployment tools
         run: |
           pnpm install --frozen-lockfile
-          pnpm --filter @medora/compat-worker run typecheck
           pnpm audit --audit-level=high
-          pnpm --filter @medora/compat-worker test
-          pnpm --filter @medora/compat-worker run test:care
-          pnpm --filter @medora/compat-worker run test:alarms
-      - name: Verify Chromium and WebKit flows
+      - uses: actions/download-artifact@v4
+        with:
+          name: medora-react-web
+          path: apps/web/dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-manifest
+          path: dist
+      - name: Check the verified React files for this commit
+        shell: bash
         run: |
-          pnpm exec playwright install --with-deps chromium webkit
-          pnpm test:incumbent --reporter=list
+          jq -e --arg sha "$GITHUB_SHA" '.commit == $sha and (.web | length > 0)' dist/release-manifest.json
+          jq -r '.web[] | "\(.sha256)  \(.name)"' dist/release-manifest.json > "$RUNNER_TEMP/medora-web.sha256"
+          (cd apps/web/dist && sha256sum --quiet -c "$RUNNER_TEMP/medora-web.sha256")
+          grep -Fq "name=\"medora-release\" content=\"$GITHUB_SHA\"" apps/web/dist/medication/index.html
       - name: Publish to Cloudflare Workers
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -45,7 +58,19 @@ jobs:
             echo "::error::Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to the repository's Actions secrets."
             exit 1
           fi
-          pnpm --filter @medora/compat-worker run deploy --keep-vars --tag "$GITHUB_SHA" --var "MEDORA_RELEASE:$GITHUB_SHA"
+          pnpm exec wrangler deploy --config wrangler.production.jsonc --keep-vars --tag "$GITHUB_SHA" --var "MEDORA_RELEASE:$GITHUB_SHA"
+      - name: Verify the frontend served by the production domain
+        run: |
+          for attempt in {1..8}; do
+            if curl --fail --silent --show-error --max-time 15 \
+              "https://medorapp.ir/medication/?release=$GITHUB_SHA&check=$attempt" -o "$RUNNER_TEMP/medora-live.html" &&
+              grep -Fq "name=\"medora-release\" content=\"$GITHUB_SHA\"" "$RUNNER_TEMP/medora-live.html"; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::The production frontend did not serve the deployed commit."
+          exit 1
       - name: Check the scheduled release notification
         run: |
           curl --fail-with-body --silent --show-error --retry 5 --retry-all-errors --retry-delay 4 --max-time 20 \

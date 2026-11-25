@@ -4,6 +4,8 @@
 
 `wrangler.production.jsonc` serves the React build in `apps/web/dist` from `medora` on `medorapp.ir`. The compatibility Worker handles `/api/*` using its seven existing Durable Object bindings and migration tags through `v7`. Build with `pnpm --filter @medora/web build`. A local smoke test can use `pnpm exec wrangler dev --local --config wrangler.production.jsonc --env-file <fixture-env>`.
 
+For an approved production release, push the feature commit to the `deploy` branch. The deployment workflow runs rebuild verification on that exact commit, downloads its tested React assets, checks the release manifest and publishes with `wrangler.production.jsonc`. The final checks read the release stamp and notification status from `medorapp.ir`.
+
 The product entry is `/medication/`. A missing `/api/v2/product-writer` followed by a successful `/api/auth/session` selects the legacy API. The separate `/journal/` entry is experimental on this deployment. Its guest data is local. Its account, family and server backup features require the v2 API and return 404 on this backend.
 
 `wrangler.staging.jsonc` targets `medora-frontend-staging` on workers.dev and pauses push delivery. Give this Worker fresh test keys and leave email delivery unconfigured. Its Durable Objects belong to the staging script and its rate-limit counters have dedicated IDs. Check the script name, account, live version, domain binding and migration tag before publishing. Production release status stays **NOT READY** until the source snapshot, rollout and verification gates have passed.

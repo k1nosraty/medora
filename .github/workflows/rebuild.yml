@@ -1,5 +1,11 @@
 name: Verify Medora rebuild
 on:
+  workflow_call:
+    inputs:
+      publish_web_artifact:
+        description: Provide the verified React assets to the deployment job
+        type: boolean
+        default: false
   pull_request:
   push:
     branches: ['codex/medora-2-full-rebuild']
@@ -195,6 +201,13 @@ jobs:
           name: release-manifest
           path: dist/release-manifest.json
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: inputs.publish_web_artifact
+        with:
+          name: medora-react-web
+          path: apps/web/dist/
+          if-no-files-found: error
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch' && inputs.archive_candidate
         with:
